@@ -505,8 +505,8 @@ class ARCDataAugmenter:
                     inputs[i].cpu().numpy(),
                     outputs[i].cpu().numpy()
                 )
-                augmented_inputs.append(torch.tensor(aug_input))
-                augmented_outputs.append(torch.tensor(aug_output))
+                augmented_inputs.append(torch.tensor(aug_input.copy()))
+                augmented_outputs.append(torch.tensor(aug_output.copy()))
             else:
                 augmented_inputs.append(inputs[i])
                 augmented_outputs.append(outputs[i])
@@ -520,13 +520,13 @@ class ARCDataAugmenter:
         
         if aug_type == 'rotate':
             k = random.choice([1, 2, 3])
-            return np.rot90(input_grid, k), np.rot90(output_grid, k)
+            return np.rot90(input_grid, k).copy(), np.rot90(output_grid, k).copy()
         
         elif aug_type == 'flip':
             if random.random() < 0.5:
-                return np.fliplr(input_grid), np.fliplr(output_grid)
+                return np.fliplr(input_grid).copy(), np.fliplr(output_grid).copy()
             else:
-                return np.flipud(input_grid), np.flipud(output_grid)
+                return np.flipud(input_grid).copy(), np.flipud(output_grid).copy()
         
         elif aug_type == 'color_permute':
             # Create random color permutation

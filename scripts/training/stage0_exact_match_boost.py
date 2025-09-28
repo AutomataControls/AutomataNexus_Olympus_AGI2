@@ -443,12 +443,17 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
     # COMPREHENSIVE: Use AggressiveLoss with proper LR for injection training
     initial_lr = 0.02  # Even higher LR for faster convergence
     optimizer = torch.optim.AdamW(model.parameters(), lr=initial_lr, weight_decay=1e-5, betas=(0.9, 0.98))
-    # OneCycleLR for super convergence
+    
+    # Gradient accumulation
+    accumulation_steps = 4
+    
+    # OneCycleLR for super convergence - adjust for gradient accumulation
+    steps_per_epoch = (len(dataloader) + accumulation_steps - 1) // accumulation_steps
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer, 
         max_lr=0.1,  # Peak LR of 0.1
         epochs=num_epochs,
-        steps_per_epoch=len(dataloader),
+        steps_per_epoch=steps_per_epoch,
         pct_start=0.3,  # 30% warmup
         anneal_strategy='cos',
         div_factor=25,  # Start at max_lr/25
@@ -467,9 +472,6 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
     
     # Mixed precision training
     scaler = torch.amp.GradScaler('cuda')
-    
-    # Gradient accumulation
-    accumulation_steps = 4
     
     for epoch in range(num_epochs):
         loss_fn.current_epoch = epoch
@@ -524,7 +526,7 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
             scaler.scale(loss).backward()
             
             # Gradient accumulation
-            if (batch_idx + 1) % accumulation_steps == 0:
+            if (batch_idx + 1) % accumulation_steps == 0 or (batch_idx + 1) == len(dataloader):
                 # Unscale gradients
                 scaler.unscale_(optimizer)
                 
@@ -537,14 +539,14 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
                 
                 # Zero gradients
                 optimizer.zero_grad()
+                
+                # OneCycleLR step after optimizer update
+                scheduler.step()
             
             # Track exact matches
             total_exact += losses['exact_count'].item()
             total_samples += B
             accumulated_loss += losses['total'].item()
-            
-            # OneCycleLR step after each batch
-            scheduler.step()
         
         exact_pct = total_exact / total_samples * 100
         print(f"Epoch {epoch+1}/{num_epochs}: Exact Match: {exact_pct:.1f}% | LR: {optimizer.param_groups[0]['lr']:.5f} | Total samples: {total_samples}")

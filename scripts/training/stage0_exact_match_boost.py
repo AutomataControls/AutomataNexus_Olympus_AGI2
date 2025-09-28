@@ -332,14 +332,14 @@ class AggressiveLoss(nn.Module):
         pred_probs = torch.softmax(pred.permute(0, 2, 3, 1).reshape(-1, C), dim=-1)
         target_probs = pred_probs.gather(1, target_indices.reshape(-1, 1)).squeeze()  
         focal_weight = (1 - target_probs) ** 2  # gamma=2 for more balanced focus
-        ce_loss = ce_loss * (1 + incorrect_mask * 4 + focal_weight * 2)  # More balanced weighting
+        ce_loss = ce_loss * (1 + incorrect_mask * 2 + focal_weight * 1)  # Even more balanced
         ce_loss = ce_loss.mean()
         
         # 2. Exact match bonus (negative loss) - PROGRESSIVE
         exact_matches = (pred_indices == target_indices).all(dim=[1, 2]).float()
         # Progressive bonus that increases over time
         epoch_progress = min(1.0, self.current_epoch / 50.0) if hasattr(self, 'current_epoch') else 0.5
-        bonus_weight = 5.0 + 10.0 * epoch_progress  # From 5.0 to 15.0 - much stronger!
+        bonus_weight = 1.0 + 2.0 * epoch_progress  # From 1.0 to 3.0 - more conservative
         exact_bonus = -bonus_weight * exact_matches.mean()
         
         # 3. Heavy penalty for copying when shouldn't
@@ -485,14 +485,14 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
     )
     
     # COMPREHENSIVE: Use AggressiveLoss with proper LR for injection training
-    # Scale learning rate with batch size (linear scaling rule)
-    initial_lr = 0.04  # Doubled for 512 batch size
+    # Start with lower LR to prevent exploding gradients
+    initial_lr = 0.001  # Much lower to start
     optimizer = torch.optim.AdamW(model.parameters(), lr=initial_lr, weight_decay=1e-5, betas=(0.9, 0.98))
     
     # Linear warmup + CosineAnnealingWarmRestarts
     warmup_epochs = 5
     warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
-        optimizer, start_factor=0.1, total_iters=warmup_epochs * len(dataloader)
+        optimizer, start_factor=0.01, total_iters=warmup_epochs * len(dataloader)  # Even lower start
     )
     main_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
         optimizer, 
@@ -570,10 +570,14 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
             # Scaled backward pass
             scaler.scale(loss).backward()
             
-            # Don't unscale manually - let scaler.step handle it
             # Gradient clipping with scaler
             scaler.unscale_(optimizer)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)  # Lower clip value
+            
+            if torch.isnan(grad_norm) or torch.isinf(grad_norm):
+                print(f"WARNING: NaN/Inf gradients detected, skipping step")
+                optimizer.zero_grad()
+                continue
             
             # Optimizer step with scaler
             scaler.step(optimizer)

@@ -206,16 +206,21 @@ class CurriculumMegaScaleDataset(Dataset):
                 self.samples.append(sample)
                 
                 # Stage 0: Add identity tasks to help model learn exact copying
-                if self.curriculum_stage == 0 and np.random.random() < 0.3:
-                    # Create identity task (output = input)
-                    identity_sample = {
-                        'input': input_grid.copy(),
-                        'output': input_grid.copy()
-                    }
-                    self.samples.append(identity_sample)
+                if self.curriculum_stage == 0:
+                    # 50% chance for identity task to really emphasize exact copying
+                    if np.random.random() < 0.5:
+                        # Create identity task (output = input)
+                        identity_sample = {
+                            'input': input_grid.copy(),
+                            'output': input_grid.copy()
+                        }
+                        self.samples.append(identity_sample)
+                        # Add multiple copies to emphasize
+                        for _ in range(2):
+                            self.samples.append(identity_sample)
                     
-                    # Also add simple color mapping tasks
-                    if n_colors_in == 2:
+                    # Also add simple transformations
+                    if n_colors_in == 2 and np.random.random() < 0.4:
                         # Swap colors
                         swapped = input_grid.copy()
                         unique_colors = np.unique(input_grid)
@@ -227,6 +232,18 @@ class CurriculumMegaScaleDataset(Dataset):
                                 'output': swapped
                             }
                             self.samples.append(swap_sample)
+                            # Add extra copy
+                            self.samples.append(swap_sample)
+                    
+                    # Add single color fill tasks
+                    if np.random.random() < 0.3:
+                        # Fill with most common color
+                        filled = np.full_like(input_grid, np.bincount(input_grid.flat).argmax())
+                        fill_sample = {
+                            'input': input_grid.copy(),
+                            'output': filled
+                        }
+                        self.samples.append(fill_sample)
                 
                 # Add augmentations
                 for _ in range(self.augment_factor - 1):
@@ -948,7 +965,7 @@ def train_megascale_curriculum():
         
         # Stage-adaptive optimizer
         # Use higher LR for Stage 0 to learn exact patterns faster
-        stage_lrs = [LEARNING_RATE * 2.0, LEARNING_RATE, LEARNING_RATE * 0.5]
+        stage_lrs = [LEARNING_RATE * 3.0, LEARNING_RATE, LEARNING_RATE * 0.5]  # Even higher for Stage 0
         
         optimizer = optim.SGD(
             model.parameters(), 

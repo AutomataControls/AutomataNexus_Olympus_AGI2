@@ -21,6 +21,7 @@ import shutil
 from typing import Dict, List, Tuple, Optional
 import time
 import gc
+import random
 from torch.amp import GradScaler, autocast
 import plotly.graph_objects as go
 import plotly.express as px
@@ -44,6 +45,7 @@ sys.path.append('/content')
 from src.models.arc_models_enhanced import create_enhanced_models
 from src.dsl import DSLTrainingIntegration, DSLProgramGenerator
 from src.program_synthesis.synthesis_integration import LightweightProgramSynthesizer, ProgramSynthesisDataGenerator
+from src.data.arc_data_synthesis import ARCDataSynthesizer, ARCDataAugmenter
 
 # MEGA-SCALE HYPERPARAMETERS FOR A100 80GB
 BATCH_SIZE = 512  # 16x larger!
@@ -158,12 +160,26 @@ class MegaScaleLoss(nn.Module):
 
 
 class CurriculumMegaScaleDataset(Dataset):
-    """High-performance dataset with curriculum learning"""
+    """High-performance dataset with curriculum learning and ARC synthesis"""
     
-    def __init__(self, data_dir: str, curriculum_stage: int = 0, augment_factor: int = 10):
+    def __init__(self, data_dir: str, curriculum_stage: int = 0, augment_factor: int = 10, 
+                 use_arc_synthesis: bool = True, synthesis_ratio: float = 0.3):
         self.samples = []
         self.curriculum_stage = curriculum_stage
         self.augment_factor = augment_factor
+        self.use_arc_synthesis = use_arc_synthesis
+        self.synthesis_ratio = synthesis_ratio
+        
+        # Initialize ARC synthesizer
+        if self.use_arc_synthesis:
+            try:
+                self.arc_synthesizer = ARCDataSynthesizer(data_dir)
+                self.arc_augmenter = ARCDataAugmenter()
+                print(f"✅ ARC Data Synthesizer initialized for stage {curriculum_stage}")
+            except Exception as e:
+                print(f"⚠️ Could not initialize ARC synthesizer: {e}")
+                self.use_arc_synthesis = False
+        
         self._load_data(data_dir)
         
     def _load_data(self, data_dir: str):
@@ -191,11 +207,15 @@ class CurriculumMegaScaleDataset(Dataset):
                 if self.curriculum_stage == 0:  # Easy
                     # Stage 0: Only include very simple patterns
                     # Priority: same size, few colors, small grids
-                    if grid_size > 10 or n_colors_in > 3 or n_colors_out > 3:
+                    if grid_size > 12 or n_colors_in > 4 or n_colors_out > 4:  # Slightly relaxed
                         continue
                     # Give preference to same-size transformations
                     if size_diff == 0:
                         # Add extra copies for same-size patterns
+                        for _ in range(5):  # More copies of perfect patterns
+                            self.samples.append(sample)
+                    # Also prioritize very small grids for exact learning
+                    if grid_size <= 5:
                         for _ in range(3):
                             self.samples.append(sample)
                 elif self.curriculum_stage == 1:  # Medium
@@ -210,8 +230,8 @@ class CurriculumMegaScaleDataset(Dataset):
                 
                 # Stage 0: Add identity tasks to help model learn exact copying
                 if self.curriculum_stage == 0:
-                    # 50% chance for identity task to really emphasize exact copying
-                    if np.random.random() < 0.5:
+                    # 60% chance for identity task to really emphasize exact copying
+                    if np.random.random() < 0.6:
                         # Create identity task (output = input)
                         identity_sample = {
                             'input': input_grid.copy(),
@@ -219,8 +239,17 @@ class CurriculumMegaScaleDataset(Dataset):
                         }
                         self.samples.append(identity_sample)
                         # Add multiple copies to emphasize
-                        for _ in range(2):
+                        for _ in range(4):  # More identity copies
                             self.samples.append(identity_sample)
+                    
+                    # Add pure color fill tasks (easy exact matches)
+                    if grid_size <= 5 and np.random.random() < 0.3:
+                        for color in range(1, min(4, n_colors_in + 1)):
+                            filled = np.full_like(input_grid, color)
+                            self.samples.append({
+                                'input': input_grid.copy(),
+                                'output': filled
+                            })
                     
                     # Also add simple transformations
                     if n_colors_in == 2 and np.random.random() < 0.4:
@@ -238,15 +267,31 @@ class CurriculumMegaScaleDataset(Dataset):
                             # Add extra copy
                             self.samples.append(swap_sample)
                     
-                    # Add single color fill tasks
-                    if np.random.random() < 0.3:
-                        # Fill with most common color
-                        filled = np.full_like(input_grid, np.bincount(input_grid.flat).argmax())
-                        fill_sample = {
+                    # Add single color extraction tasks
+                    if np.random.random() < 0.3 and n_colors_in <= 3:
+                        # Extract each color as separate task
+                        for color in np.unique(input_grid):
+                            if color > 0:  # Don't extract background
+                                extracted = np.where(input_grid == color, color, 0)
+                                self.samples.append({
+                                    'input': input_grid.copy(),
+                                    'output': extracted
+                                })
+                    
+                    # Add binary patterns (on/off)
+                    if grid_size <= 5 and np.random.random() < 0.2:
+                        # Convert to binary (non-zero becomes 1)
+                        binary = np.where(input_grid > 0, 1, 0)
+                        self.samples.append({
                             'input': input_grid.copy(),
-                            'output': filled
-                        }
-                        self.samples.append(fill_sample)
+                            'output': binary
+                        })
+                        # Inverted binary
+                        inverted = np.where(input_grid == 0, 1, 0)
+                        self.samples.append({
+                            'input': input_grid.copy(),
+                            'output': inverted
+                        })
                 
                 # Add augmentations
                 for _ in range(self.augment_factor - 1):
@@ -302,6 +347,37 @@ class CurriculumMegaScaleDataset(Dataset):
                 'output': ps_sample['output']
             })
         print(f"Added {len(stage_samples)} program synthesis samples")
+        
+        # Add ARC synthetic samples if available
+        if self.use_arc_synthesis:
+            print(f"Generating synthetic ARC samples (ratio: {self.synthesis_ratio})...")
+            n_synthetic = int(len(self.samples) * self.synthesis_ratio)
+            
+            # Generate in batches for efficiency
+            batch_size = 100
+            n_batches = (n_synthetic + batch_size - 1) // batch_size
+            
+            for batch_idx in range(n_batches):
+                current_batch_size = min(batch_size, n_synthetic - batch_idx * batch_size)
+                
+                # Generate synthetic batch
+                synthetic_data = self.arc_synthesizer.generate_synthetic_batch(
+                    batch_size=current_batch_size,
+                    stage=self.curriculum_stage,
+                    exact_match_ratio=0.7 if self.curriculum_stage == 0 else 0.5
+                )
+                
+                # Convert tensors back to numpy and add to samples
+                inputs = synthetic_data['inputs'].cpu().numpy()
+                outputs = synthetic_data['outputs'].cpu().numpy()
+                
+                for i in range(current_batch_size):
+                    self.samples.append({
+                        'input': inputs[i],
+                        'output': outputs[i]
+                    })
+            
+            print(f"Added {n_synthetic} synthetic ARC samples")
         
         print(f"Loaded {len(self.samples)} samples for stage {self.curriculum_stage}")
     
@@ -1044,12 +1120,20 @@ def train_megascale_curriculum():
                     param_group['lr'] = stage_lrs[stage]
                 print(f"Learning rate adjusted to: {stage_lrs[stage]}")
             
-            # Create dataset for this stage
-            dataset = CurriculumMegaScaleDataset(DATA_DIR, curriculum_stage=stage)
+            # Create dataset for this stage with ARC synthesis
+            dataset = CurriculumMegaScaleDataset(
+                DATA_DIR, 
+                curriculum_stage=stage,
+                use_arc_synthesis=True,
+                synthesis_ratio=0.4 if stage == 0 else 0.3  # More synthesis for Stage 0
+            )
             train_size = int(0.9 * len(dataset))
             val_size = len(dataset) - train_size
             
             train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+            
+            # Initialize augmenter for this stage
+            arc_augmenter = ARCDataAugmenter(device=device)
             
             # High-performance dataloaders
             train_loader = DataLoader(
@@ -1089,6 +1173,12 @@ def train_megascale_curriculum():
                 for batch_idx, batch in enumerate(pbar):
                     input_grids = batch['input'].to(device, non_blocking=True)
                     output_grids = batch['output'].to(device, non_blocking=True)
+                    
+                    # Apply ARC augmentation for Stage 0 (more augmentation for exact match training)
+                    if stage == 0 and random.random() < 0.3:
+                        input_grids, output_grids = arc_augmenter.augment_batch(
+                            input_grids, output_grids, augment_prob=0.5
+                        )
                     
                     with autocast('cuda'):
                         # Handle CHRONOS differently - it expects a list of tensors

@@ -111,6 +111,11 @@ class MegaScaleLoss(nn.Module):
         target_flat = target_indices.reshape(-1)
         ce_loss = self.ce_loss(pred_flat, target_flat).reshape(B, H, W)
         
+        # Check for NaN in ce_loss
+        if torch.isnan(ce_loss).any():
+            print(f"WARNING: NaN in ce_loss! pred range: {pred.min()}-{pred.max()}, target range: {target_indices.min()}-{target_indices.max()}")
+            ce_loss = torch.where(torch.isnan(ce_loss), torch.zeros_like(ce_loss), ce_loss)
+        
         # 2. Exact match bonus - HUGE reward for getting it perfect
         exact_matches = (pred_indices == target_indices).all(dim=[1,2]).float()  # B
         exact_bonus = -exact_matches * EXACT_MATCH_BONUS  # Negative because we minimize
@@ -154,10 +159,38 @@ class MegaScaleLoss(nn.Module):
             exact_bonus  # This can make loss negative for exact matches!
         )
         
-        # NaN protection
+        # NaN protection - check each component
+        if torch.isnan(reconstruction_loss).any() or torch.isinf(reconstruction_loss).any():
+            print(f"WARNING: NaN/Inf in reconstruction_loss, using fallback")
+            reconstruction_loss = F.cross_entropy(pred_flat, target_flat, reduction='none').reshape(B)
+        
+        if torch.isnan(transformation_penalty).any() or torch.isinf(transformation_penalty).any():
+            print(f"WARNING: NaN/Inf in transformation_penalty, setting to 0")
+            transformation_penalty = torch.zeros_like(transformation_penalty)
+        
+        if torch.isnan(active_loss).any() or torch.isinf(active_loss).any():
+            print(f"WARNING: NaN/Inf in active_loss, setting to 0")
+            active_loss = torch.zeros_like(active_loss)
+        
+        # Clamp individual components
+        reconstruction_loss = torch.clamp(reconstruction_loss, min=0, max=100)
+        transformation_penalty = torch.clamp(transformation_penalty, min=0, max=10)
+        pixel_copy_penalty = torch.clamp(pixel_copy_penalty, min=0, max=10)
+        active_loss = torch.clamp(active_loss, min=0, max=100)
+        
+        # Recalculate total loss
+        total_loss = (
+            RECONSTRUCTION_WEIGHT * reconstruction_loss +
+            TRANSFORMATION_PENALTY * transformation_penalty +
+            pixel_copy_penalty +
+            0.5 * active_loss +
+            exact_bonus
+        )
+        
+        # Final NaN protection
         total_loss_mean = total_loss.mean()
         if torch.isnan(total_loss_mean) or torch.isinf(total_loss_mean):
-            # Fallback to simple CE loss if numerical issues
+            print(f"WARNING: Total loss is NaN/Inf even after protection, using simple CE")
             total_loss_mean = F.cross_entropy(pred_flat, target_flat)
         
         return {
@@ -170,15 +203,29 @@ class MegaScaleLoss(nn.Module):
         }
     
     def _detect_edges(self, grid: torch.Tensor) -> torch.Tensor:
-        """Detect edges in grid"""
-        dx = torch.abs(grid[:, 1:, :] - grid[:, :-1, :])
-        dy = torch.abs(grid[:, :, 1:] - grid[:, :, :-1])
+        """Detect edges in grid with NaN protection"""
+        # Check for empty grids
+        if grid.numel() == 0 or grid.shape[-1] < 2 or grid.shape[-2] < 2:
+            return torch.zeros_like(grid)
         
-        dx = F.pad(dx, (0, 0, 0, 1), value=0)
-        dy = F.pad(dy, (0, 1, 0, 0), value=0)
-        
-        edges = ((dx + dy) > 0).float()
-        return edges
+        try:
+            dx = torch.abs(grid[:, 1:, :] - grid[:, :-1, :])
+            dy = torch.abs(grid[:, :, 1:] - grid[:, :, :-1])
+            
+            dx = F.pad(dx, (0, 0, 0, 1), value=0)
+            dy = F.pad(dy, (0, 1, 0, 0), value=0)
+            
+            edges = ((dx + dy) > 0).float()
+            
+            # NaN check
+            if torch.isnan(edges).any():
+                print("WARNING: NaN in edge detection, returning zeros")
+                return torch.zeros_like(grid)
+            
+            return edges
+        except Exception as e:
+            print(f"ERROR in edge detection: {e}")
+            return torch.zeros_like(grid)
 
 
 class CurriculumMegaScaleDataset(Dataset):
@@ -417,12 +464,17 @@ class CurriculumMegaScaleDataset(Dataset):
     def __getitem__(self, idx):
         sample = self.samples[idx]
         
-        input_grid = self._to_tensor(sample['input'])
-        output_grid = self._to_tensor(sample['output'])
+        # Return raw numpy arrays as tensors (not one-hot)
+        input_grid = torch.tensor(sample['input'], dtype=torch.long)
+        output_grid = torch.tensor(sample['output'], dtype=torch.long)
+        
+        # Clamp to valid range
+        input_grid = torch.clamp(input_grid, 0, 9)
+        output_grid = torch.clamp(output_grid, 0, 9)
         
         return {
-            'input': input_grid,
-            'output': output_grid
+            'inputs': input_grid,
+            'outputs': output_grid
         }
     
     def _to_tensor(self, grid: np.ndarray) -> torch.Tensor:
@@ -1246,15 +1298,34 @@ def train_megascale_curriculum():
                         # Use aggressive loss for exact match batches
                         use_aggressive_loss = True
                     else:
-                        # Regular batch
-                        input_grids = batch['input'].to(device, non_blocking=True)
-                        output_grids = batch['output'].to(device, non_blocking=True)
+                        # Regular batch - handle both key formats
+                        if 'inputs' in batch:
+                            inputs = batch['inputs'].to(device, non_blocking=True)
+                            outputs = batch['outputs'].to(device, non_blocking=True)
+                        else:
+                            inputs = batch['input'].to(device, non_blocking=True)
+                            outputs = batch['output'].to(device, non_blocking=True)
+                        
+                        # Validate ranges
+                        if inputs.max() >= 10 or inputs.min() < 0:
+                            print(f"WARNING: Invalid input values! Range: {inputs.min()}-{inputs.max()}")
+                            inputs = torch.clamp(inputs, 0, 9)
+                        if outputs.max() >= 10 or outputs.min() < 0:
+                            print(f"WARNING: Invalid output values! Range: {outputs.min()}-{outputs.max()}")
+                            outputs = torch.clamp(outputs, 0, 9)
+                        
+                        # Convert to one-hot
+                        input_grids = F.one_hot(inputs, num_classes=NUM_COLORS).permute(0, 3, 1, 2).float()
+                        output_grids = F.one_hot(outputs, num_classes=NUM_COLORS).permute(0, 3, 1, 2).float()
                         
                         # Apply ARC augmentation for Stage 0 (more augmentation for exact match training)
                         if stage == 0 and random.random() < 0.3:
-                            input_grids, output_grids = arc_augmenter.augment_batch(
-                                input_grids, output_grids, augment_prob=0.5
+                            # Note: augmenter expects raw indices, not one-hot
+                            inputs_aug, outputs_aug = arc_augmenter.augment_batch(
+                                inputs, outputs, augment_prob=0.5
                             )
+                            input_grids = F.one_hot(inputs_aug, num_classes=NUM_COLORS).permute(0, 3, 1, 2).float()
+                            output_grids = F.one_hot(outputs_aug, num_classes=NUM_COLORS).permute(0, 3, 1, 2).float()
                         
                         use_aggressive_loss = False
                     

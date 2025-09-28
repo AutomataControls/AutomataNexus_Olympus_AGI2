@@ -505,8 +505,14 @@ class ARCDataAugmenter:
                     inputs[i].cpu().numpy(),
                     outputs[i].cpu().numpy()
                 )
-                augmented_inputs.append(torch.tensor(aug_input.copy()))
-                augmented_outputs.append(torch.tensor(aug_output.copy()))
+                # Ensure augmented tensors have same shape as original
+                if aug_input.shape != inputs[i].shape:
+                    # Skip augmentation if shape changed (e.g., from transpose)
+                    augmented_inputs.append(inputs[i])
+                    augmented_outputs.append(outputs[i])
+                else:
+                    augmented_inputs.append(torch.tensor(aug_input.copy()))
+                    augmented_outputs.append(torch.tensor(aug_output.copy()))
             else:
                 augmented_inputs.append(inputs[i])
                 augmented_outputs.append(outputs[i])
@@ -516,9 +522,16 @@ class ARCDataAugmenter:
     
     def _augment_sample(self, input_grid: np.ndarray, output_grid: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """Apply augmentation to a single sample"""
-        aug_type = random.choice(['rotate', 'flip', 'color_permute', 'add_noise'])
+        # Check if grid is square for rotation
+        is_square = input_grid.shape[0] == input_grid.shape[1]
         
-        if aug_type == 'rotate':
+        if is_square:
+            aug_type = random.choice(['rotate', 'flip', 'color_permute', 'add_noise'])
+        else:
+            # For non-square grids, avoid rotations
+            aug_type = random.choice(['flip', 'color_permute', 'add_noise'])
+        
+        if aug_type == 'rotate' and is_square:
             k = random.choice([1, 2, 3])
             return np.rot90(input_grid, k).copy(), np.rot90(output_grid, k).copy()
         

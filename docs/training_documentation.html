@@ -566,6 +566,10 @@
                         <li>ARC dataset synthesis (40% Stage 0, 30% others)</li>
                         <li>PyTorch-based augmentation during training</li>
                         <li>Enhanced Stage 0 exact patterns (identity, binary, color extract)</li>
+                        <li>EXACT MATCH INJECTION: Pre-training with guaranteed exact patterns</li>
+                        <li>Aggressive loss function for exact match batches</li>
+                        <li>Every 5th batch replaced with deterministic transformations</li>
+                        <li>2x transformation penalty (2.0) and 2x exact match bonus (10.0)</li>
                     </ul>
                 </div>
             </div>
@@ -646,6 +650,80 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Exact Match Boost Strategy -->
+        <section class="section">
+            <h2>Exact Match Boost Strategy</h2>
+            <p>V4 Mega-Scale introduces an aggressive exact match training strategy to overcome the 0% exact match plateau:</p>
+            
+            <div class="critical-fix">
+                <h4>Pre-Training Injection (10 epochs)</h4>
+                <p>Before curriculum training begins, models undergo intensive exact match pre-training with ultra-simple patterns:
+                <br>• Identity transformations (copy exactly)
+                <br>• Single color fills
+                <br>• Binary thresholding
+                <br>• Simple geometric patterns</p>
+            </div>
+            
+            <div class="critical-fix">
+                <h4>Stage 0 Batch Injection</h4>
+                <p>Every 5th batch during Stage 0 is replaced with guaranteed exact-match patterns using:
+                <br>• Fixed 6x6 grids for consistency
+                <br>• Deterministic transformations only
+                <br>• Aggressive loss function with 3x error penalty
+                <br>• -10 bonus for exact matches (can make loss negative!)</p>
+            </div>
+            
+            <div class="critical-fix">
+                <h4>Enhanced Loss Penalties</h4>
+                <p>The loss function now includes:
+                <br>• <strong>Transformation Penalty: 2.0</strong> (4x original) - Heavily penalizes copying
+                <br>• <strong>Exact Match Bonus: 10.0</strong> (2x original) - Massive reward for perfection
+                <br>• <strong>Pixel Copy Penalty:</strong> Additional 2.0 penalty for pixels that should change but didn't
+                <br>• <strong>Per-Pixel Error Weight:</strong> 3x weight on incorrect pixels in exact match batches</p>
+            </div>
+            
+            <h3>Exact Match Pattern Types</h3>
+            <div class="pattern-grid">
+                <div class="pattern-category">
+                    <div class="pattern-name">Identity (20%)</div>
+                    <ul class="pattern-examples">
+                        <li>Direct copy - teaches exact reproduction</li>
+                        <li>Most fundamental pattern</li>
+                        <li>Must achieve 100% accuracy</li>
+                    </ul>
+                </div>
+                
+                <div class="pattern-category">
+                    <div class="pattern-name">Color Operations (30%)</div>
+                    <ul class="pattern-examples">
+                        <li>Fill with single color</li>
+                        <li>Clear to zeros</li>
+                        <li>Swap colors (0↔1)</li>
+                        <li>Count and fill</li>
+                    </ul>
+                </div>
+                
+                <div class="pattern-category">
+                    <div class="pattern-name">Binary Patterns (20%)</div>
+                    <ul class="pattern-examples">
+                        <li>Threshold (>1 becomes 1)</li>
+                        <li>Binary inversion</li>
+                        <li>Single pixel flips</li>
+                    </ul>
+                </div>
+                
+                <div class="pattern-category">
+                    <div class="pattern-name">Simple Geometry (30%)</div>
+                    <ul class="pattern-examples">
+                        <li>Horizontal lines</li>
+                        <li>Vertical lines</li>
+                        <li>Corner dots</li>
+                        <li>Basic shapes</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
         
         <!-- DSL Integration -->
         <section class="section">

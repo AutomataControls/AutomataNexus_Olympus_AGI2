@@ -699,6 +699,84 @@
             </div>
         </section>
         
+        <section id="training" class="section">
+            <h2>Training System Enhancements</h2>
+            
+            <div class="architecture-overview" style="background: linear-gradient(135deg, #ff4136 0%, #d63031 100%);">
+                <h3>Exact Match Boost Strategy</h3>
+                <p>Aggressive training approach with guaranteed exact transformations to overcome the 0% exact match plateau</p>
+            </div>
+            
+            <p>The V4 Mega-Scale training system introduces revolutionary exact match training techniques that force models to learn deterministic transformations instead of probabilistic approximations.</p>
+            
+            <h3>Training Pipeline Enhancements</h3>
+            <div class="component-grid">
+                <div class="component-card">
+                    <div class="component-header">
+                        <div class="component-icon">🎯</div>
+                        <div class="component-title">Pre-Training Injection</div>
+                    </div>
+                    <div class="component-type">10 Epochs Exact Match</div>
+                    <p>Before curriculum training begins, models undergo intensive exact match pre-training with ultra-simple patterns including identity transformations, single color fills, and basic geometric patterns.</p>
+                </div>
+                
+                <div class="component-card">
+                    <div class="component-header">
+                        <div class="component-icon">💉</div>
+                        <div class="component-title">Batch Injection</div>
+                    </div>
+                    <div class="component-type">Every 5th Batch</div>
+                    <p>During Stage 0 training, every 5th batch is replaced with guaranteed exact-match patterns using fixed 6x6 grids and deterministic transformations with aggressive loss functions.</p>
+                </div>
+                
+                <div class="component-card">
+                    <div class="component-header">
+                        <div class="component-icon">⚡</div>
+                        <div class="component-title">Aggressive Loss</div>
+                    </div>
+                    <div class="component-type">Enhanced Penalties</div>
+                    <p>3x penalty on incorrect pixels, -10 bonus for exact matches, 2.0 transformation penalty (4x original), and additional pixel-level copy penalties for aggressive learning.</p>
+                </div>
+            </div>
+            
+            <h3>Training Data Enhancement</h3>
+            <ul class="feature-list">
+                <li><strong>ARC Data Synthesis:</strong> 40% synthetic data for Stage 0, 30% for other stages using PyTorch augmentation</li>
+                <li><strong>Exact Match Patterns:</strong> Identity (20%), color operations (30%), binary patterns (20%), simple geometry (30%)</li>
+                <li><strong>Fixed Size Training:</strong> 5x5 for injection training, 6x6 for Stage 0 to ensure consistency</li>
+                <li><strong>Deterministic Transformations:</strong> Guaranteed correct input-output pairs for fundamental operations</li>
+                <li><strong>Real-time Augmentation:</strong> Dynamic augmentation during training for Stage 0</li>
+            </ul>
+            
+            <h3>Loss Function Enhancements</h3>
+            <div class="data-flow" style="background: #f5f5f5; color: #333333;">
+                <h3 style="color: #000000; border-bottom-color: #00d4aa;">V4 Mega-Scale Loss Components</h3>
+                <div class="flow-steps">
+                    <div class="flow-step" style="background: white;">
+                        <h4 style="color: #000000;">Transform Penalty</h4>
+                        <p style="color: #666666;">2.0 weight (4x increase)</p>
+                    </div>
+                    
+                    <div class="flow-step" style="background: white;">
+                        <h4 style="color: #000000;">Exact Bonus</h4>
+                        <p style="color: #666666;">-10.0 reward (2x increase)</p>
+                    </div>
+                    
+                    <div class="flow-step" style="background: white;">
+                        <h4 style="color: #000000;">Pixel Copy Penalty</h4>
+                        <p style="color: #666666;">2.0 per incorrect pixel</p>
+                    </div>
+                    
+                    <div class="flow-step" style="background: white;">
+                        <h4 style="color: #000000;">Error Weight</h4>
+                        <p style="color: #666666;">3x on mistakes</p>
+                    </div>
+                </div>
+            </div>
+            
+            <p>For comprehensive training details and results, see the <a href="training_documentation.html" style="color: #00d4aa; font-weight: bold;">Training Documentation</a>.</p>
+        </section>
+        
         <section id="layers" class="section">
             <h2>Architectural Layers</h2>
             
@@ -812,9 +890,9 @@
             
             <div class="performance-grid">
                 <div class="performance-card">
-                    <div class="performance-value">0.1%</div>
-                    <div class="performance-label">Current Exact Match</div>
-                    <div class="performance-desc">Baseline accuracy on evaluation tasks</div>
+                    <div class="performance-value">0.1% → ?</div>
+                    <div class="performance-label">Exact Match Target</div>
+                    <div class="performance-desc">With exact match boost</div>
                 </div>
                 
                 <div class="performance-card">

@@ -390,9 +390,31 @@ def create_exact_match_curriculum(stage: int = 0, fixed_size: int = 5) -> List[D
 
 
 def exact_match_collate_fn(batch):
-    """Custom collate function to handle dictionary samples"""
-    inputs = torch.stack([torch.tensor(item['input'], dtype=torch.long) for item in batch])
-    outputs = torch.stack([torch.tensor(item['output'], dtype=torch.long) for item in batch])
+    """Custom collate function to handle dictionary samples with different sizes"""
+    # Find max size
+    max_h = max(item['input'].shape[0] for item in batch)
+    max_w = max(item['input'].shape[1] for item in batch)
+    
+    # Pad all to max size
+    inputs = []
+    outputs = []
+    for item in batch:
+        input_tensor = torch.tensor(item['input'], dtype=torch.long)
+        output_tensor = torch.tensor(item['output'], dtype=torch.long)
+        
+        # Pad if needed
+        h, w = input_tensor.shape
+        if h < max_h or w < max_w:
+            pad_h = max_h - h
+            pad_w = max_w - w
+            input_tensor = F.pad(input_tensor, (0, pad_w, 0, pad_h), value=0)
+            output_tensor = F.pad(output_tensor, (0, pad_w, 0, pad_h), value=0)
+        
+        inputs.append(input_tensor)
+        outputs.append(output_tensor)
+    
+    inputs = torch.stack(inputs)
+    outputs = torch.stack(outputs)
     return {'input': inputs, 'output': outputs}
 
 
@@ -444,7 +466,7 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
     loss_fn.current_epoch = 0
     
     # Mixed precision training
-    scaler = torch.cuda.amp.GradScaler()
+    scaler = torch.amp.GradScaler('cuda')
     
     # Gradient accumulation
     accumulation_steps = 4
@@ -480,7 +502,7 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
                 inputs_oh = inputs_oh + noise
             
             # Mixed precision forward pass
-            with torch.cuda.amp.autocast():
+            with torch.amp.autocast(device_type='cuda', dtype=torch.float16):
                 if hasattr(model, '__class__') and model.__class__.__name__ == 'CHRONOS':
                     pred = model([inputs_oh], target=outputs_oh)['predicted_output']
                 else:

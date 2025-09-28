@@ -371,11 +371,8 @@ class AggressiveLoss(nn.Module):
         
         # NaN protection - only replace NaN, don't clamp valid values
         if torch.isnan(total_loss).any():
-            total_loss = torch.tensor(2.0, device=total_loss.device, requires_grad=True)
-        
-        # Only clamp if loss is extremely large
-        if total_loss > 100.0:
-            total_loss = torch.clamp(total_loss, max=50.0)
+            print("WARNING: NaN in total loss, using fallback")
+            total_loss = ce_loss  # Use just CE loss as fallback
         
         return {
             'total': total_loss,
@@ -515,24 +512,9 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
     loss_fn.current_epoch = 0
     
     # Mixed precision training
-    scaler = torch.amp.GradScaler('cuda', init_scale=2**16)
+    scaler = torch.amp.GradScaler('cuda')
     
     # Initialize optimizer
-    optimizer.zero_grad()
-    
-    # Dummy forward/backward to initialize scaler state
-    dummy_input = torch.randn(1, 10, 5, 5).to(device)
-    dummy_target = torch.randn(1, 10, 5, 5).to(device)
-    with torch.amp.autocast(device_type='cuda', dtype=torch.float16):
-        if hasattr(model, '__class__') and model.__class__.__name__ == 'CHRONOS':
-            dummy_out = model([dummy_input], target=dummy_target)['predicted_output']
-        else:
-            dummy_out = model(dummy_input, dummy_target, mode='train')['predicted_output']
-        dummy_loss = dummy_out.mean()
-    scaler.scale(dummy_loss).backward()
-    scaler.unscale_(optimizer)
-    scaler.step(optimizer)
-    scaler.update()
     optimizer.zero_grad()
     
     for epoch in range(num_epochs):
@@ -588,14 +570,12 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
             # Scaled backward pass
             scaler.scale(loss).backward()
             
-            # Simple approach: step every batch (no accumulation for now)
-            # Unscale gradients
+            # Don't unscale manually - let scaler.step handle it
+            # Gradient clipping with scaler
             scaler.unscale_(optimizer)
-            
-            # Gradient clipping
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             
-            # Optimizer step
+            # Optimizer step with scaler
             scaler.step(optimizer)
             scaler.update()
             

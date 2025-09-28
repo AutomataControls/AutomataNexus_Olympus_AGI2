@@ -345,12 +345,12 @@ class AggressiveLoss(nn.Module):
         # 3. Heavy penalty for copying when shouldn't
         should_not_copy = (target_indices != input_indices).any(dim=[1, 2]).float()
         did_copy = (pred_indices == input_indices).all(dim=[1, 2]).float()
-        copy_penalty = 5.0 * (should_not_copy * did_copy).mean()
+        copy_penalty = 2.0 * (should_not_copy * did_copy).mean()  # Reduced from 5.0
         
         # 4. Transformation encouragement - WITH NaN protection
         changed_pixels = (pred_indices != input_indices).float().mean(dim=[1, 2])
         target_changed = (target_indices != input_indices).float().mean(dim=[1, 2])
-        transform_diff = F.mse_loss(changed_pixels, target_changed) * 1.0  # Reduced multiplier
+        transform_diff = F.mse_loss(changed_pixels, target_changed) * 0.5  # Further reduced
         
         # 5. Color usage penalty - SAFER implementation
         color_penalty = 0.0
@@ -460,8 +460,8 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
     print("\n🎯 EXACT MATCH INJECTION TRAINING")
     print("="*50)
     print("Enhanced with:")
-    print("  • Focal loss (gamma=3)")
-    print("  • Progressive exact match bonus (5x-15x)")
+    print("  • Focal loss (gamma=2)")
+    print("  • Progressive exact match bonus (1x-3x)")
     print("  • Data augmentation")
     print("  • Warmup + cosine annealing")
     print("  • 300K total samples")
@@ -555,9 +555,21 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
                 else:
                     pred = model(inputs_oh, outputs_oh, mode='train')['predicted_output']
                 
+                # Check for NaN in predictions
+                if torch.isnan(pred).any() or torch.isinf(pred).any():
+                    print(f"WARNING: NaN/Inf in model predictions, skipping batch")
+                    optimizer.zero_grad()
+                    continue
+                
                 # Comprehensive AggressiveLoss calculation
                 losses = loss_fn(pred, outputs_oh, inputs_oh)
                 loss = losses['total']
+                
+                # Check for NaN in loss
+                if torch.isnan(loss) or torch.isinf(loss):
+                    print(f"WARNING: NaN/Inf loss, skipping batch")
+                    optimizer.zero_grad()
+                    continue
             
             # DEBUG: Print some stats on first batch of first epoch
             if epoch == 0 and batch_idx == 0:
@@ -577,6 +589,7 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
             if torch.isnan(grad_norm) or torch.isinf(grad_norm):
                 print(f"WARNING: NaN/Inf gradients detected, skipping step")
                 optimizer.zero_grad()
+                scaler.update()  # Must call update even when skipping
                 continue
             
             # Optimizer step with scaler

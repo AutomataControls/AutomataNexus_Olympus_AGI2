@@ -154,13 +154,19 @@ class MegaScaleLoss(nn.Module):
             exact_bonus  # This can make loss negative for exact matches!
         )
         
+        # NaN protection
+        total_loss_mean = total_loss.mean()
+        if torch.isnan(total_loss_mean) or torch.isinf(total_loss_mean):
+            # Fallback to simple CE loss if numerical issues
+            total_loss_mean = F.cross_entropy(pred_flat, target_flat)
+        
         return {
             'reconstruction': reconstruction_loss.mean(),
             'transformation': transformation_penalty.mean(),
             'active': active_loss.mean(),
             'exact_bonus': -exact_bonus.mean(),  # Show as positive in logs
             'exact_count': exact_matches.sum(),
-            'total': total_loss.mean()
+            'total': total_loss_mean
         }
     
     def _detect_edges(self, grid: torch.Tensor) -> torch.Tensor:
@@ -218,6 +224,14 @@ class CurriculumMegaScaleDataset(Dataset):
                 n_colors_out = len(np.unique(output_grid))
                 grid_size = max(h, w, oh, ow)
                 size_diff = abs(h*w - oh*ow)
+                
+                # Create sample dictionary first
+                sample = {
+                    'input': input_grid,
+                    'output': output_grid,
+                    'task_id': task_id,
+                    'example_idx': i
+                }
                 
                 # Curriculum filtering
                 if self.curriculum_stage == 0:  # Easy

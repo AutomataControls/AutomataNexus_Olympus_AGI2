@@ -42,6 +42,7 @@ sys.path.append('/content')
 
 from src.models.arc_models_enhanced import create_enhanced_models
 from src.dsl import DSLTrainingIntegration, DSLProgramGenerator
+from src.program_synthesis.synthesis_integration import LightweightProgramSynthesizer, ProgramSynthesisDataGenerator
 
 # MEGA-SCALE HYPERPARAMETERS FOR A100 80GB
 BATCH_SIZE = 512  # 16x larger!
@@ -277,6 +278,17 @@ class CurriculumMegaScaleDataset(Dataset):
                     'output': dsl_sample['output']
                 })
             print(f"Added {len(dsl_samples)} DSL samples")
+            
+            # Add program synthesis samples
+            print("Adding program synthesis samples...")
+            ps_generator = ProgramSynthesisDataGenerator()
+            ps_samples = ps_generator.generate_programmatic_examples(200)
+            for ps_sample in ps_samples:
+                self.samples.append({
+                    'input': ps_sample['input'],
+                    'output': ps_sample['output']
+                })
+            print(f"Added {len(ps_samples)} program synthesis samples")
         
         print(f"Loaded {len(self.samples)} samples for stage {self.curriculum_stage}")
     
@@ -961,6 +973,14 @@ def train_megascale_curriculum():
     models = create_enhanced_models()
     loss_fn = MegaScaleLoss()
     
+    # Initialize program synthesizer
+    synthesizer = LightweightProgramSynthesizer()
+    synthesis_stats = {
+        'total_attempts': 0,
+        'successful_syntheses': 0,
+        'exact_improvements': 0
+    }
+    
     os.makedirs('/content/AutomataNexus_Olympus_AGI2/arc_models_v4', exist_ok=True)
     
     # Train all models
@@ -1091,6 +1111,7 @@ def train_megascale_curriculum():
                 if epoch % 5 == 0:
                     model.eval()
                     val_metrics = {'loss': 0, 'exact': 0, 'pixel_acc': 0, 'samples': 0}
+                    synthesis_metrics = {'attempts': 0, 'successes': 0, 'exact_via_synthesis': 0}
                     
                     with torch.no_grad():
                         for batch in tqdm(val_loader, desc="Validation"):
@@ -1117,6 +1138,20 @@ def train_megascale_curriculum():
                             val_metrics['exact'] += exact
                             val_metrics['pixel_acc'] += pixel_acc * input_grids.size(0)
                             val_metrics['samples'] += input_grids.size(0)
+                            
+                            # Try program synthesis on a subset of validation samples
+                            if stage == 0 and synthesis_metrics['attempts'] < 50:  # Limit for speed
+                                for i in range(min(5, input_grids.size(0))):
+                                    synthesis_metrics['attempts'] += 1
+                                    input_np = input_grids[i].cpu().numpy().argmax(axis=0)
+                                    output_np = output_grids[i].cpu().numpy().argmax(axis=0)
+                                    
+                                    program = synthesizer.quick_synthesize(input_np, output_np, max_depth=2)
+                                    if program and program.verified:
+                                        synthesis_metrics['successes'] += 1
+                                        # Check if neural network failed but synthesis succeeded
+                                        if not (pred_indices[i] == target_indices[i]).all():
+                                            synthesis_metrics['exact_via_synthesis'] += 1
                     
                     # Calculate averages
                     train_loss = train_metrics['loss'] / train_metrics['samples']
@@ -1129,6 +1164,15 @@ def train_megascale_curriculum():
                     print(f"\nGlobal Epoch {global_epoch} (Stage {stage}): "
                           f"Train Loss: {train_loss:.4f}, Train Exact: {train_exact_pct:.2f}%")
                     print(f"Val Loss: {val_loss:.4f}, Val Exact: {val_exact_pct:.2f}%, Pixel: {val_pixel_acc:.2f}%")
+                    
+                    # Report synthesis results if any
+                    if synthesis_metrics['attempts'] > 0:
+                        synthesis_success_rate = synthesis_metrics['successes'] / synthesis_metrics['attempts'] * 100
+                        print(f"🔧 Program Synthesis: {synthesis_success_rate:.1f}% success rate, "
+                              f"{synthesis_metrics['exact_via_synthesis']} additional exact matches")
+                        synthesis_stats['total_attempts'] += synthesis_metrics['attempts']
+                        synthesis_stats['successful_syntheses'] += synthesis_metrics['successes']
+                        synthesis_stats['exact_improvements'] += synthesis_metrics['exact_via_synthesis']
                     
                     # Add metrics to reporter
                     reporter.add_metrics(
@@ -1176,6 +1220,15 @@ def train_megascale_curriculum():
         gc.collect()
     
     print("\n🎉 V4 MEGA-SCALE + CURRICULUM Training complete!")
+    
+    # Report overall synthesis statistics
+    if synthesis_stats['total_attempts'] > 0:
+        overall_success_rate = synthesis_stats['successful_syntheses'] / synthesis_stats['total_attempts'] * 100
+        print(f"\n📊 Program Synthesis Summary:")
+        print(f"  Total synthesis attempts: {synthesis_stats['total_attempts']}")
+        print(f"  Successful syntheses: {synthesis_stats['successful_syntheses']} ({overall_success_rate:.1f}%)")
+        print(f"  Additional exact matches via synthesis: {synthesis_stats['exact_improvements']}")
+        print(f"  Synthesis cache size: {len(synthesizer.synthesis_cache)} programs")
 
 
 if __name__ == "__main__":

@@ -3,19 +3,21 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.data import Dataset, DataLoader
 import numpy as np
 from typing import Dict, List, Tuple
 import random
 
 
-class ExactMatchBoostDataset:
+class ExactMatchBoostDataset(Dataset):
     """
     Ultra-focused dataset for Stage 0 that GUARANTEES exact match learning
     by using only simple, deterministic transformations
     """
     
-    def __init__(self, num_samples: int = 50000):
+    def __init__(self, num_samples: int = 50000, fixed_size: int = 5):
         self.num_samples = num_samples
+        self.fixed_size = fixed_size  # Fix size for all samples
         self.samples = []
         self._generate_samples()
     
@@ -26,8 +28,7 @@ class ExactMatchBoostDataset:
         
         # 1. Pure Identity (20% of data) - MUST learn to copy exactly
         for _ in range(samples_per_type * 2):
-            size = random.randint(3, 5)
-            grid = np.random.randint(0, 3, (size, size))
+            grid = np.random.randint(0, 3, (self.fixed_size, self.fixed_size))
             self.samples.append({
                 'input': grid,
                 'output': grid.copy(),
@@ -36,8 +37,7 @@ class ExactMatchBoostDataset:
         
         # 2. Single color fill (10%) - Fill everything with color 1
         for _ in range(samples_per_type):
-            size = random.randint(3, 5)
-            grid = np.random.randint(0, 3, (size, size))
+            grid = np.random.randint(0, 3, (self.fixed_size, self.fixed_size))
             output = np.ones_like(grid)
             self.samples.append({
                 'input': grid,
@@ -47,8 +47,7 @@ class ExactMatchBoostDataset:
         
         # 3. Clear grid (10%) - Everything becomes 0
         for _ in range(samples_per_type):
-            size = random.randint(3, 5)
-            grid = np.random.randint(1, 4, (size, size))
+            grid = np.random.randint(1, 4, (self.fixed_size, self.fixed_size))
             output = np.zeros_like(grid)
             self.samples.append({
                 'input': grid,
@@ -58,8 +57,7 @@ class ExactMatchBoostDataset:
         
         # 4. Binary threshold (10%) - >1 becomes 1, else 0
         for _ in range(samples_per_type):
-            size = random.randint(3, 5)
-            grid = np.random.randint(0, 4, (size, size))
+            grid = np.random.randint(0, 4, (self.fixed_size, self.fixed_size))
             output = (grid > 1).astype(int)
             self.samples.append({
                 'input': grid,
@@ -69,10 +67,9 @@ class ExactMatchBoostDataset:
         
         # 5. Flip single pixel (10%) - Change just one pixel
         for _ in range(samples_per_type):
-            size = random.randint(3, 5)
-            grid = np.zeros((size, size), dtype=int)
+            grid = np.zeros((self.fixed_size, self.fixed_size), dtype=int)
             # Add one pixel
-            x, y = random.randint(0, size-1), random.randint(0, size-1)
+            x, y = random.randint(0, self.fixed_size-1), random.randint(0, self.fixed_size-1)
             grid[x, y] = 1
             output = grid.copy()
             # Flip it
@@ -85,8 +82,7 @@ class ExactMatchBoostDataset:
         
         # 6. Horizontal line (10%) - Draw horizontal line at row 0
         for _ in range(samples_per_type):
-            size = random.randint(4, 6)
-            grid = np.zeros((size, size), dtype=int)
+            grid = np.zeros((self.fixed_size, self.fixed_size), dtype=int)
             output = grid.copy()
             output[0, :] = 1
             self.samples.append({
@@ -97,8 +93,7 @@ class ExactMatchBoostDataset:
         
         # 7. Vertical line (10%) - Draw vertical line at col 0
         for _ in range(samples_per_type):
-            size = random.randint(4, 6)
-            grid = np.zeros((size, size), dtype=int)
+            grid = np.zeros((self.fixed_size, self.fixed_size), dtype=int)
             output = grid.copy()
             output[:, 0] = 1
             self.samples.append({
@@ -109,8 +104,7 @@ class ExactMatchBoostDataset:
         
         # 8. Corner dot (10%) - Put a dot in top-left corner
         for _ in range(samples_per_type):
-            size = random.randint(4, 6)
-            grid = np.zeros((size, size), dtype=int)
+            grid = np.zeros((self.fixed_size, self.fixed_size), dtype=int)
             output = grid.copy()
             output[0, 0] = 1
             self.samples.append({
@@ -121,8 +115,7 @@ class ExactMatchBoostDataset:
         
         # 9. Simple color swap 0<->1 (10%)
         for _ in range(samples_per_type):
-            size = random.randint(3, 5)
-            grid = np.random.randint(0, 2, (size, size))
+            grid = np.random.randint(0, 2, (self.fixed_size, self.fixed_size))
             output = 1 - grid  # Swap 0 and 1
             self.samples.append({
                 'input': grid,
@@ -132,8 +125,7 @@ class ExactMatchBoostDataset:
         
         # 10. Count and fill (10%) - Fill with count of non-zero
         for _ in range(samples_per_type):
-            size = random.randint(3, 4)
-            grid = np.random.randint(0, 2, (size, size))
+            grid = np.random.randint(0, 2, (self.fixed_size, self.fixed_size))
             count = min(np.count_nonzero(grid), 9)  # Cap at 9
             output = np.full_like(grid, count)
             self.samples.append({
@@ -213,7 +205,7 @@ class AggressiveLoss(nn.Module):
         }
 
 
-def create_exact_match_curriculum(stage: int = 0) -> List[Dict]:
+def create_exact_match_curriculum(stage: int = 0, fixed_size: int = 5) -> List[Dict]:
     """
     Create curriculum that gradually increases complexity
     but maintains focus on exact matches
@@ -225,33 +217,37 @@ def create_exact_match_curriculum(stage: int = 0) -> List[Dict]:
         
         # 50% identity
         for _ in range(2500):
-            size = random.randint(2, 4)
-            grid = np.random.randint(0, 2, (size, size))
+            grid = np.random.randint(0, 2, (fixed_size, fixed_size))
             samples.append({'input': grid, 'output': grid.copy()})
         
         # 25% fill with 1
         for _ in range(1250):
-            size = random.randint(2, 4)
-            grid = np.random.randint(0, 2, (size, size))
+            grid = np.random.randint(0, 2, (fixed_size, fixed_size))
             samples.append({'input': grid, 'output': np.ones_like(grid)})
         
         # 25% fill with 0
         for _ in range(1250):
-            size = random.randint(1, 3, (size, size))
-            grid = np.random.randint(1, 3, (size, size))
+            grid = np.random.randint(1, 3, (fixed_size, fixed_size))
             samples.append({'input': grid, 'output': np.zeros_like(grid)})
         
         return samples
     
     elif stage == 1:
         # Add simple transformations
-        dataset = ExactMatchBoostDataset(10000)
+        dataset = ExactMatchBoostDataset(10000, fixed_size=fixed_size)
         return dataset.samples[:5000]  # Use first half
     
     else:
         # Full complexity
-        dataset = ExactMatchBoostDataset(10000)
+        dataset = ExactMatchBoostDataset(10000, fixed_size=fixed_size)
         return dataset.samples
+
+
+def exact_match_collate_fn(batch):
+    """Custom collate function to handle dictionary samples"""
+    inputs = torch.stack([torch.tensor(item['input'], dtype=torch.long) for item in batch])
+    outputs = torch.stack([torch.tensor(item['output'], dtype=torch.long) for item in batch])
+    return {'input': inputs, 'output': outputs}
 
 
 def inject_exact_match_training(model, device='cuda', num_epochs=20):
@@ -263,9 +259,9 @@ def inject_exact_match_training(model, device='cuda', num_epochs=20):
     print("="*50)
     
     # Create ultra-focused dataset
-    dataset = ExactMatchBoostDataset(5000)
+    dataset = ExactMatchBoostDataset(5000, fixed_size=5)
     dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=32, shuffle=True
+        dataset, batch_size=32, shuffle=True, collate_fn=exact_match_collate_fn
     )
     
     # Aggressive optimizer
@@ -279,9 +275,9 @@ def inject_exact_match_training(model, device='cuda', num_epochs=20):
         total_samples = 0
         
         for batch in dataloader:
-            # Convert to tensors
-            inputs = torch.stack([torch.tensor(s['input']) for s in batch]).to(device)
-            outputs = torch.stack([torch.tensor(s['output']) for s in batch]).to(device)
+            # Get tensors from batch
+            inputs = batch['input'].to(device)
+            outputs = batch['output'].to(device)
             
             # One-hot encode
             B, H, W = inputs.shape

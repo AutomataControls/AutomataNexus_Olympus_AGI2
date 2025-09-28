@@ -1192,7 +1192,7 @@ def train_megascale_curriculum():
                 
                 # Create exact match dataset for Stage 0 injection
                 if stage == 0 and EXACT_BOOST_AVAILABLE:
-                    exact_dataset = ExactMatchBoostDataset(1000)
+                    exact_dataset = ExactMatchBoostDataset(1000, fixed_size=6)  # Use 6x6 for training
                     aggressive_loss = AggressiveLoss()
                 
                 pbar = tqdm(train_loader, desc=f"Stage {stage}, Epoch {epoch+1}/{EPOCHS_PER_STAGE}")
@@ -1217,8 +1217,15 @@ def train_megascale_curriculum():
                         exact_inputs = torch.tensor(np.stack(exact_inputs), device=device)
                         exact_outputs = torch.tensor(np.stack(exact_outputs), device=device)
                         
-                        # One-hot encode
+                        # One-hot encode and pad to MAX_GRID_SIZE
                         B, H, W = exact_inputs.shape
+                        # Pad to MAX_GRID_SIZE if needed
+                        if H < MAX_GRID_SIZE or W < MAX_GRID_SIZE:
+                            pad_h = MAX_GRID_SIZE - H
+                            pad_w = MAX_GRID_SIZE - W
+                            exact_inputs = F.pad(exact_inputs, (0, pad_w, 0, pad_h), value=0)
+                            exact_outputs = F.pad(exact_outputs, (0, pad_w, 0, pad_h), value=0)
+                        
                         input_grids = F.one_hot(exact_inputs, num_classes=NUM_COLORS).permute(0, 3, 1, 2).float()
                         output_grids = F.one_hot(exact_outputs, num_classes=NUM_COLORS).permute(0, 3, 1, 2).float()
                         

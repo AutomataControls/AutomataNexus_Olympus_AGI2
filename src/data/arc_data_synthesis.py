@@ -511,14 +511,13 @@ class ARCDataAugmenter:
                     augmented_inputs.append(inputs[i])
                     augmented_outputs.append(outputs[i])
                 else:
-                    augmented_inputs.append(torch.tensor(aug_input.copy()))
-                    augmented_outputs.append(torch.tensor(aug_output.copy()))
+                    augmented_inputs.append(torch.tensor(aug_input.copy()).to(self.device))
+                    augmented_outputs.append(torch.tensor(aug_output.copy()).to(self.device))
             else:
                 augmented_inputs.append(inputs[i])
                 augmented_outputs.append(outputs[i])
         
-        return torch.stack(augmented_inputs).to(self.device), \
-               torch.stack(augmented_outputs).to(self.device)
+        return torch.stack(augmented_inputs), torch.stack(augmented_outputs)
     
     def _augment_sample(self, input_grid: np.ndarray, output_grid: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """Apply augmentation to a single sample"""

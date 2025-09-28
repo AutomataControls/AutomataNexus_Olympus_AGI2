@@ -28,7 +28,7 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 from datetime import datetime
 import pandas as pd
-from collections import deque
+from collections import deque, defaultdict
 
 # Check GPU
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -87,6 +87,8 @@ print(f"  Workers: {NUM_WORKERS}")
 print(f"  Curriculum stages: {CURRICULUM_STAGES}")
 print(f"  Transformation penalty: {TRANSFORMATION_PENALTY} (2x stronger!)")
 print(f"  Exact match bonus: {EXACT_MATCH_BONUS} (2x bigger!)")
+print(f"  MEPT: {'Enabled' if USE_MEPT else 'Disabled'}")
+print(f"  LEAP: {'Enabled' if USE_LEAP else 'Disabled'}")
 
 # Data setup
 DATA_DIR = '/content/AutomataNexus_Olympus_AGI2/data'
@@ -471,8 +473,300 @@ class MEPTAugmentedDataset(Dataset):
         return self.base_dataset[idx]
 
 
-# Enable/Disable MEPT
+# Enable/Disable MEPT and LEAP
 USE_MEPT = True
+USE_LEAP = True  # NEW: Learning Enhancement through Adaptive Patterns
+
+# ================================================================================
+# LEAP (Learning Enhancement through Adaptive Patterns) Components for Stage 0
+# ================================================================================
+
+class AdaptivePatternGenerator:
+    """Generates patterns that adapt based on model's current weaknesses"""
+    
+    def __init__(self, grid_size: int = 6):
+        self.grid_size = grid_size
+        self.performance_tracker = defaultdict(lambda: {'attempts': 0, 'successes': 0})
+        
+        # Core pattern generators for Stage 0
+        self.pattern_generators = {
+            'identity': self._generate_identity,
+            'solid_color': self._generate_solid_color,
+            'horizontal_stripes': self._generate_horizontal_stripes,
+            'vertical_stripes': self._generate_vertical_stripes,
+            'checkerboard': self._generate_checkerboard,
+            'center_dot': self._generate_center_dot,
+            'border': self._generate_border,
+            'corners': self._generate_corners,
+            'color_swap': self._generate_color_swap,
+            'extract_color': self._generate_extract_color,
+            'binary_threshold': self._generate_binary_threshold,
+            'counting': self._generate_counting,
+            'diagonal': self._generate_diagonal,
+            'cross': self._generate_cross,
+            'invert': self._generate_invert
+        }
+    
+    def generate_adaptive_batch(self, batch_size: int, weak_patterns: List[str] = None) -> List[Dict]:
+        """Generate batch focusing on weak patterns"""
+        if weak_patterns is None:
+            weak_patterns = self._identify_weak_patterns()
+        
+        batch = []
+        # 40% weak patterns, 30% identity (fundamental), 30% random
+        weak_count = int(batch_size * 0.4)
+        identity_count = int(batch_size * 0.3)
+        random_count = batch_size - weak_count - identity_count
+        
+        # Generate weak patterns
+        if weak_patterns:
+            for _ in range(weak_count):
+                pattern_type = random.choice(weak_patterns)
+                pattern = self.pattern_generators[pattern_type]()
+                pattern['pattern_type'] = pattern_type
+                batch.append(pattern)
+        else:
+            # If no weak patterns, use random
+            for _ in range(weak_count):
+                pattern_type = random.choice(list(self.pattern_generators.keys()))
+                pattern = self.pattern_generators[pattern_type]()
+                pattern['pattern_type'] = pattern_type
+                batch.append(pattern)
+        
+        # Always include identity
+        for _ in range(identity_count):
+            pattern = self._generate_identity()
+            pattern['pattern_type'] = 'identity'
+            batch.append(pattern)
+        
+        # Random patterns
+        for _ in range(random_count):
+            pattern_type = random.choice(list(self.pattern_generators.keys()))
+            pattern = self.pattern_generators[pattern_type]()
+            pattern['pattern_type'] = pattern_type
+            batch.append(pattern)
+        
+        return batch
+    
+    def _identify_weak_patterns(self, threshold: float = 0.5) -> List[str]:
+        """Identify patterns with low success rate"""
+        weak_patterns = []
+        for pattern_name, stats in self.performance_tracker.items():
+            if stats['attempts'] > 10:  # Need sufficient attempts
+                success_rate = stats['successes'] / stats['attempts']
+                if success_rate < threshold:
+                    weak_patterns.append(pattern_name)
+        return weak_patterns
+    
+    def update_performance(self, pattern_type: str, success: bool):
+        """Update performance tracking"""
+        self.performance_tracker[pattern_type]['attempts'] += 1
+        if success:
+            self.performance_tracker[pattern_type]['successes'] += 1
+    
+    # Pattern generators
+    def _generate_identity(self) -> Dict:
+        """Identity - most fundamental"""
+        grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
+        return {'input': grid, 'output': grid.copy()}
+    
+    def _generate_solid_color(self) -> Dict:
+        """Fill with single color"""
+        input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
+        color = np.random.randint(0, 4)
+        output_grid = np.full_like(input_grid, color)
+        return {'input': input_grid, 'output': output_grid}
+    
+    def _generate_horizontal_stripes(self) -> Dict:
+        """Horizontal stripes"""
+        input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
+        output_grid = np.zeros_like(input_grid)
+        colors = [1, 2]
+        for i in range(self.grid_size):
+            output_grid[i, :] = colors[i % 2]
+        return {'input': input_grid, 'output': output_grid}
+    
+    def _generate_vertical_stripes(self) -> Dict:
+        """Vertical stripes"""
+        input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
+        output_grid = np.zeros_like(input_grid)
+        colors = [1, 3]
+        for j in range(self.grid_size):
+            output_grid[:, j] = colors[j % 2]
+        return {'input': input_grid, 'output': output_grid}
+    
+    def _generate_checkerboard(self) -> Dict:
+        """Checkerboard pattern"""
+        input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
+        output_grid = np.zeros_like(input_grid)
+        for i in range(self.grid_size):
+            for j in range(self.grid_size):
+                output_grid[i, j] = 1 if (i + j) % 2 == 0 else 2
+        return {'input': input_grid, 'output': output_grid}
+    
+    def _generate_center_dot(self) -> Dict:
+        """Single center pixel"""
+        input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
+        output_grid = np.zeros_like(input_grid)
+        center = self.grid_size // 2
+        output_grid[center, center] = 2
+        return {'input': input_grid, 'output': output_grid}
+    
+    def _generate_border(self) -> Dict:
+        """Border pattern"""
+        input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
+        output_grid = np.zeros_like(input_grid)
+        output_grid[0, :] = 1
+        output_grid[-1, :] = 1
+        output_grid[:, 0] = 1
+        output_grid[:, -1] = 1
+        return {'input': input_grid, 'output': output_grid}
+    
+    def _generate_corners(self) -> Dict:
+        """Corner dots"""
+        input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
+        output_grid = np.zeros_like(input_grid)
+        output_grid[0, 0] = 2
+        output_grid[0, -1] = 2
+        output_grid[-1, 0] = 2
+        output_grid[-1, -1] = 2
+        return {'input': input_grid, 'output': output_grid}
+    
+    def _generate_color_swap(self) -> Dict:
+        """Swap two colors"""
+        input_grid = np.random.randint(0, 3, (self.grid_size, self.grid_size))
+        output_grid = input_grid.copy()
+        # Swap colors 1 and 2
+        mask1 = input_grid == 1
+        mask2 = input_grid == 2
+        output_grid[mask1] = 2
+        output_grid[mask2] = 1
+        return {'input': input_grid, 'output': output_grid}
+    
+    def _generate_extract_color(self) -> Dict:
+        """Extract single color"""
+        input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
+        # Ensure at least one non-zero color
+        if np.all(input_grid == 0):
+            input_grid[0, 0] = 1
+        color_to_extract = np.random.choice(np.unique(input_grid[input_grid > 0]))
+        output_grid = np.where(input_grid == color_to_extract, color_to_extract, 0)
+        return {'input': input_grid, 'output': output_grid}
+    
+    def _generate_binary_threshold(self) -> Dict:
+        """Binary threshold"""
+        input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
+        output_grid = np.where(input_grid > 1, 1, 0)
+        return {'input': input_grid, 'output': output_grid}
+    
+    def _generate_counting(self) -> Dict:
+        """Count non-zero and fill"""
+        input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
+        count = np.count_nonzero(input_grid)
+        color = min(3, count // 5)
+        output_grid = np.full_like(input_grid, color)
+        return {'input': input_grid, 'output': output_grid}
+    
+    def _generate_diagonal(self) -> Dict:
+        """Diagonal line"""
+        input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
+        output_grid = np.zeros_like(input_grid)
+        for i in range(min(self.grid_size, self.grid_size)):
+            output_grid[i, i] = 3
+        return {'input': input_grid, 'output': output_grid}
+    
+    def _generate_cross(self) -> Dict:
+        """Cross pattern"""
+        input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
+        output_grid = np.zeros_like(input_grid)
+        center = self.grid_size // 2
+        output_grid[center, :] = 3
+        output_grid[:, center] = 3
+        return {'input': input_grid, 'output': output_grid}
+    
+    def _generate_invert(self) -> Dict:
+        """Invert 0/1"""
+        input_grid = np.random.randint(0, 2, (self.grid_size, self.grid_size))
+        output_grid = 1 - input_grid
+        return {'input': input_grid, 'output': output_grid}
+
+
+class LEAPTrainer:
+    """Manages LEAP training integration for Stage 0"""
+    
+    def __init__(self, device: str = 'cuda'):
+        self.device = device
+        self.pattern_generator = AdaptivePatternGenerator()
+        self.pattern_stats = defaultdict(lambda: {'correct': 0, 'total': 0})
+        self.leap_iterations = 0
+        self.enabled = USE_LEAP
+        
+    def generate_leap_batch(self, batch_size: int = 64) -> Dict[str, torch.Tensor]:
+        """Generate a LEAP training batch"""
+        # Get weak patterns for focused training
+        weak_patterns = self.pattern_generator._identify_weak_patterns()
+        
+        # Generate adaptive batch
+        patterns = self.pattern_generator.generate_adaptive_batch(batch_size, weak_patterns)
+        
+        # Convert to tensors
+        inputs = []
+        outputs = []
+        pattern_types = []
+        
+        for pattern in patterns:
+            inputs.append(torch.tensor(pattern['input'], dtype=torch.long))
+            outputs.append(torch.tensor(pattern['output'], dtype=torch.long))
+            pattern_types.append(pattern['pattern_type'])
+        
+        return {
+            'inputs': torch.stack(inputs),
+            'outputs': torch.stack(outputs),
+            'pattern_types': pattern_types
+        }
+    
+    def update_pattern_stats(self, pattern_types: List[str], predictions: torch.Tensor, 
+                           targets: torch.Tensor):
+        """Update pattern performance statistics"""
+        pred_indices = predictions.argmax(dim=1)
+        target_indices = targets.argmax(dim=1)
+        
+        for i, pattern_type in enumerate(pattern_types):
+            correct = (pred_indices[i] == target_indices[i]).all().item()
+            self.pattern_stats[pattern_type]['total'] += 1
+            if correct:
+                self.pattern_stats[pattern_type]['correct'] += 1
+            self.pattern_generator.update_performance(pattern_type, correct)
+    
+    def get_performance_report(self) -> str:
+        """Get LEAP performance report"""
+        if not self.enabled or not self.pattern_stats:
+            return ""
+            
+        report_lines = ["\n🎯 LEAP Pattern Performance:"]
+        
+        # Sort by accuracy (lowest first)
+        pattern_accs = []
+        for pattern, stats in self.pattern_stats.items():
+            if stats['total'] > 0:
+                acc = stats['correct'] / stats['total']
+                pattern_accs.append((pattern, acc, stats['total']))
+        
+        pattern_accs.sort(key=lambda x: x[1])
+        
+        # Show worst 5 and best 5
+        if len(pattern_accs) > 0:
+            report_lines.append("Weakest patterns:")
+            for pattern, acc, total in pattern_accs[:5]:
+                report_lines.append(f"  {pattern}: {acc*100:.1f}% ({total} attempts)")
+            
+            if len(pattern_accs) > 5:
+                report_lines.append("Strongest patterns:")
+                for pattern, acc, total in pattern_accs[-5:]:
+                    report_lines.append(f"  {pattern}: {acc*100:.1f}% ({total} attempts)")
+        
+        return "\n".join(report_lines)
+
 
 class CurriculumMegaScaleDataset(Dataset):
     """High-performance dataset with curriculum learning and ARC synthesis"""
@@ -1409,6 +1703,12 @@ def train_megascale_curriculum():
         pattern_bank = PatternBank(max_patterns=1)
         loss_fn = MEPTLoss(replay_buffer, pattern_bank, use_mept=False)
     
+    # Initialize LEAP components if enabled
+    if USE_LEAP:
+        print("\n🎯 Initializing LEAP (Learning Enhancement through Adaptive Patterns)")
+        leap_trainer = LEAPTrainer(device=device)
+        print("✅ LEAP initialized for Stage 0 adaptive pattern training")
+    
     # Initialize program synthesizer
     synthesizer = LightweightProgramSynthesizer()
     synthesis_stats = {
@@ -1635,6 +1935,9 @@ def train_megascale_curriculum():
                 pbar = tqdm(train_loader, desc=f"Stage {stage}, Epoch {epoch+1}/{EPOCHS_PER_STAGE}")
                 optimizer.zero_grad()
                 
+                # LEAP integration for Stage 0
+                leap_batch_counter = 0
+                
                 for batch_idx, batch in enumerate(pbar):
                     # EXACT MATCH INJECTION for Stage 0 - every 5th batch
                     if stage == 0 and EXACT_BOOST_AVAILABLE and batch_idx % 5 == 0:
@@ -1736,6 +2039,50 @@ def train_megascale_curriculum():
                         'exact': f"{losses['exact_count'].item():.0f}",
                         'trans': f"{losses['transformation'].item():.2f}"
                     })
+                    
+                    # LEAP training for Stage 0 - adaptive pattern injection
+                    if USE_LEAP and stage == 0 and batch_idx % 3 == 0:  # Every 3rd batch
+                        leap_batch = leap_trainer.generate_leap_batch(batch_size=64)
+                        leap_inputs = leap_batch['inputs'].to(device)
+                        leap_outputs = leap_batch['outputs'].to(device)
+                        pattern_types = leap_batch['pattern_types']
+                        
+                        # Pad to MAX_GRID_SIZE if needed
+                        if leap_inputs.shape[1] < MAX_GRID_SIZE or leap_inputs.shape[2] < MAX_GRID_SIZE:
+                            pad_h = MAX_GRID_SIZE - leap_inputs.shape[1]
+                            pad_w = MAX_GRID_SIZE - leap_inputs.shape[2]
+                            leap_inputs = F.pad(leap_inputs, (0, pad_w, 0, pad_h), value=0)
+                            leap_outputs = F.pad(leap_outputs, (0, pad_w, 0, pad_h), value=0)
+                        
+                        # Convert to one-hot
+                        leap_input_oh = F.one_hot(leap_inputs, num_classes=NUM_COLORS).permute(0, 3, 1, 2).float()
+                        leap_output_oh = F.one_hot(leap_outputs, num_classes=NUM_COLORS).permute(0, 3, 1, 2).float()
+                        
+                        with autocast('cuda'):
+                            # Forward pass
+                            if model_name == 'chronos':
+                                leap_pred = model([leap_input_oh], target=leap_output_oh)['predicted_output']
+                            else:
+                                leap_pred = model(leap_input_oh, leap_output_oh, mode='train')['predicted_output']
+                            
+                            # Compute loss with higher exact match bonus for LEAP patterns
+                            leap_losses = loss_fn(leap_pred, leap_output_oh, leap_input_oh)
+                            leap_loss = leap_losses['total'] / GRADIENT_ACCUMULATION_STEPS
+                        
+                        # Backward pass
+                        scaler.scale(leap_loss).backward()
+                        
+                        # Update pattern statistics
+                        leap_trainer.update_pattern_stats(pattern_types, leap_pred, leap_output_oh)
+                        leap_batch_counter += 1
+                        
+                        # Apply gradients more frequently for LEAP
+                        if leap_batch_counter % 2 == 0:
+                            scaler.unscale_(optimizer)
+                            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                            scaler.step(optimizer)
+                            scaler.update()
+                            optimizer.zero_grad()
                 
                 # Step scheduler at end of epoch
                 scheduler.step()
@@ -1816,6 +2163,12 @@ def train_megascale_curriculum():
                               f"({buffer_stats['exact_matches']:,} exact matches)")
                         print(f"   Pattern Bank: {len(pattern_bank.patterns):,} unique patterns")
                         print(f"   Loss weights: {loss_fn.weights}")
+                    
+                    # Report LEAP status if enabled and in Stage 0
+                    if USE_LEAP and stage == 0:
+                        leap_report = leap_trainer.get_performance_report()
+                        if leap_report:
+                            print(leap_report)
                     
                     # Report synthesis results if any
                     if synthesis_metrics['attempts'] > 0:

@@ -355,6 +355,7 @@ class AggressiveLoss(nn.Module):
         # 5. Color usage penalty - SAFER implementation
         color_penalty = 0.0
         try:
+            batch_penalties = []
             for b in range(B):
                 pred_colors = torch.unique(pred_indices[b])
                 target_colors = torch.unique(target_indices[b])
@@ -363,7 +364,9 @@ class AggressiveLoss(nn.Module):
                     target_set = set(target_colors.cpu().numpy())
                     intersection = len(pred_set & target_set)
                     missing_colors = max(0, len(target_set) - intersection)
-                    color_penalty += missing_colors * 0.1  # Reduced penalty
+                    batch_penalties.append(missing_colors * 0.01)
+            if batch_penalties:
+                color_penalty = sum(batch_penalties) / len(batch_penalties)  # Average over batch
         except Exception:
             color_penalty = 0.0  # Fallback if any issues
         
@@ -381,7 +384,8 @@ class AggressiveLoss(nn.Module):
             'exact_bonus': -exact_bonus,  # Show as positive in logs
             'exact_count': exact_matches.sum(),
             'copy_penalty': copy_penalty,
-            'transform_diff': transform_diff
+            'transform_diff': transform_diff,
+            'color_penalty': color_penalty
         }
 
 
@@ -572,12 +576,13 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
                     continue
             
             # DEBUG: Print some stats on first batch of first epoch
-            if epoch == 0 and batch_idx == 0:
+            if epoch == 0 and batch_idx < 5:
                 pred_classes = pred.argmax(dim=1)
                 target_classes = outputs[:, :pred_classes.shape[1], :pred_classes.shape[2]]  # Handle padding
                 print(f"DEBUG - Pred range: {pred_classes.min()}-{pred_classes.max()}, Target range: {target_classes.min()}-{target_classes.max()}")
                 print(f"DEBUG - Pred unique: {torch.unique(pred_classes)}, Target unique: {torch.unique(target_classes)}")
                 print(f"DEBUG - Loss components: recon={losses['reconstruction']:.4f}, exact_bonus={losses['exact_bonus']:.4f}, total={losses['total']:.4f}")
+                print(f"DEBUG - Other: copy={losses['copy_penalty']:.4f}, transform={losses['transform_diff']:.4f}, color={losses['color_penalty']:.4f}")
             
             # Scaled backward pass
             scaler.scale(loss).backward()

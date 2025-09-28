@@ -54,7 +54,7 @@
         }
         
         .nav-links a:hover {
-            color: #00d4aa;
+            color: #00cccc;
         }
         
         .hero {
@@ -94,7 +94,7 @@
             color: #000000;
             margin-bottom: 30px;
             padding-bottom: 20px;
-            border-bottom: 4px solid #00d4aa;
+            border-bottom: 4px solid #00cccc;
         }
         
         h3 {
@@ -113,7 +113,7 @@
         
         .insight-box {
             background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
-            border-left: 5px solid #00d4aa;
+            border-left: 5px solid #00cccc;
             padding: 30px;
             margin: 40px 0;
             border-radius: 10px;
@@ -155,7 +155,7 @@
         }
         
         .architecture-card:hover {
-            border-color: #00d4aa;
+            border-color: #00cccc;
             box-shadow: 0 10px 30px rgba(0, 212, 170, 0.15);
         }
         
@@ -169,7 +169,7 @@
         .architecture-icon {
             width: 60px;
             height: 60px;
-            background: linear-gradient(135deg, #00d4aa 0%, #00a88a 100%);
+            background: linear-gradient(135deg, #00cccc 0%, #009999 100%);
             border-radius: 12px;
             display: flex;
             align-items: center;
@@ -196,12 +196,12 @@
         
         .primitive-card:hover {
             background: white;
-            border-color: #00d4aa;
+            border-color: #00cccc;
             transform: translateY(-2px);
         }
         
         .primitive-card h5 {
-            color: #00a88a;
+            color: #009999;
             font-size: 16px;
             margin-bottom: 10px;
         }
@@ -214,7 +214,7 @@
         
         .code-example {
             background: #000000;
-            color: #00d4aa;
+            color: #00cccc;
             padding: 25px;
             border-radius: 10px;
             font-family: 'Consolas', 'Monaco', monospace;
@@ -252,7 +252,7 @@
             top: 50%;
             transform: translateY(-50%);
             font-size: 24px;
-            color: #00d4aa;
+            color: #00cccc;
             font-weight: bold;
         }
         
@@ -263,7 +263,7 @@
         .flow-number {
             width: 40px;
             height: 40px;
-            background: #00d4aa;
+            background: #00cccc;
             color: white;
             border-radius: 50%;
             display: flex;
@@ -276,7 +276,7 @@
         
         .performance-metrics {
             background: white;
-            border: 2px solid #00d4aa;
+            border: 2px solid #00cccc;
             border-radius: 15px;
             padding: 40px;
             margin: 40px 0;
@@ -296,7 +296,7 @@
         .metric-value {
             font-size: 36px;
             font-weight: 700;
-            color: #00d4aa;
+            color: #00cccc;
             margin-bottom: 10px;
         }
         
@@ -336,7 +336,7 @@
         .arrow {
             text-align: center;
             font-size: 24px;
-            color: #00d4aa;
+            color: #00cccc;
         }
         
         .comparison-table {
@@ -363,7 +363,7 @@
         }
         
         .comparison-table .checkmark {
-            color: #00d4aa;
+            color: #00cccc;
             font-weight: bold;
         }
         
@@ -443,43 +443,34 @@
             
             <div class="mermaid-container">
                 <div class="mermaid">
-                    graph TB
-                        subgraph "Input Processing"
-                            A[ARC Task Examples] --> B[Feature Extraction]
-                            B --> C[Pattern Analysis]
-                        end
+                    graph TD
+                        A["ARC Task Examples"] --> B["Feature Extraction"]
+                        B --> C["Pattern Analysis"]
+                        C --> D["NeuralProgramPredictor"]
+                        D --> E["Primitive Ranking"]
+                        D --> F["Parameter Prediction"]
+                        D --> G["Composition Strategy"]
+                        E --> H["Beam Search"]
+                        F --> H
+                        G --> H
+                        H --> I["Program Candidates"]
+                        I --> J["Program Executor"]
+                        J --> K["Output Validation"]
+                        K --> L{"Exact Match?"}
+                        L -->|No| H
+                        L -->|Yes| M["Verified Program"]
+                        M --> N["Program Cache"]
+                        N --> O["Fast Lookup"]
                         
-                        subgraph "Neural Guidance"
-                            C --> D[NeuralProgramPredictor]
-                            D --> E[Primitive Ranking]
-                            D --> F[Parameter Prediction]
-                            D --> G[Composition Strategy]
-                        end
+                        classDef neural fill:#ff9999
+                        classDef search fill:#99ccff
+                        classDef verified fill:#90EE90
+                        classDef cache fill:#00cccc
                         
-                        subgraph "Program Search"
-                            E --> H[Beam Search]
-                            F --> H
-                            G --> H
-                            H --> I[Program Candidates]
-                        end
-                        
-                        subgraph "Execution & Verification"
-                            I --> J[Program Executor]
-                            J --> K[Output Validation]
-                            K --> L{Exact Match?}
-                            L -->|No| H
-                            L -->|Yes| M[Verified Program]
-                        end
-                        
-                        subgraph "Optimization"
-                            M --> N[Program Cache]
-                            N --> O[Fast Lookup]
-                        end
-                        
-                        style D fill:#ff9999
-                        style H fill:#99ccff
-                        style M fill:#90EE90
-                        style N fill:#00d4aa
+                        class D neural
+                        class H search
+                        class M verified
+                        class N cache
                 </div>
             </div>
             
@@ -881,9 +872,9 @@ result = program.execute(test_input)
             startOnLoad: true,
             theme: 'neutral',
             themeVariables: {
-                primaryColor: '#00d4aa',
+                primaryColor: '#00cccc',
                 primaryTextColor: '#333333',
-                primaryBorderColor: '#00a88a',
+                primaryBorderColor: '#009999',
                 lineColor: '#666666',
                 secondaryColor: '#f5f5f5',
                 tertiaryColor: '#ffffff'

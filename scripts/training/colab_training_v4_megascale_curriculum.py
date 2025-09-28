@@ -1390,7 +1390,6 @@ def train_megascale_curriculum():
                         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)  # More conservative clipping
                         scaler.step(optimizer)
                         scaler.update()
-                        scheduler.step()  # Move scheduler step here, after optimizer step
                         optimizer.zero_grad()
                     
                     # Update metrics
@@ -1403,6 +1402,9 @@ def train_megascale_curriculum():
                         'exact': f"{losses['exact_count'].item():.0f}",
                         'trans': f"{losses['transformation'].item():.2f}"
                     })
+                
+                # Step scheduler at end of epoch
+                scheduler.step()
                 
                 # Validation every 5 epochs
                 if epoch % 5 == 0:
@@ -1428,10 +1430,10 @@ def train_megascale_curriculum():
                             with autocast('cuda'):
                                 # Handle CHRONOS differently - it expects a list of tensors
                                 if model_name == 'chronos':
-                                    outputs = model([input_grids])  # Pass as single-frame sequence
+                                    model_outputs = model([input_grids])  # Pass as single-frame sequence
                                 else:
-                                    outputs = model(input_grids)
-                                pred_output = outputs['predicted_output']
+                                    model_outputs = model(input_grids)
+                                pred_output = model_outputs['predicted_output']
                                 losses = loss_fn(pred_output, output_grids, input_grids)
                             
                             # Metrics

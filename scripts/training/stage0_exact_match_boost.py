@@ -671,12 +671,12 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
         else:
             patience_counter += 1
             
-        # Early stopping with patience
-        if exact_pct > 70:  # Even higher threshold
-            print("✅ Achieved >70% exact match! Stopping injection training.")
+        # Early stopping with patience - aim for 90%+
+        if exact_pct > 90 and epoch > 5:  # Much higher threshold and wait for stability
+            print("✅ Achieved >90% exact match! Stopping injection training.")
             break
-        elif patience_counter > 20:  # More patience
-            print(f"🛑 No improvement for 20 epochs. Best: {best_exact_match:.1f}%")
+        elif patience_counter > 30 and exact_pct > 50:  # More patience, only stop if decent
+            print(f"🛑 No improvement for 30 epochs. Best: {best_exact_match:.1f}%")
             # Restore best model
             if best_model_state is not None:
                 model.load_state_dict(best_model_state)

@@ -465,8 +465,9 @@ class CurriculumMegaScaleDataset(Dataset):
         sample = self.samples[idx]
         
         # Return raw numpy arrays as tensors (not one-hot)
-        input_grid = torch.tensor(sample['input'], dtype=torch.long)
-        output_grid = torch.tensor(sample['output'], dtype=torch.long)
+        # Use .copy() to avoid negative stride issues
+        input_grid = torch.tensor(sample['input'].copy(), dtype=torch.long)
+        output_grid = torch.tensor(sample['output'].copy(), dtype=torch.long)
         
         # Clamp to valid range
         input_grid = torch.clamp(input_grid, 0, 9)
@@ -1195,7 +1196,7 @@ def train_megascale_curriculum():
         if EXACT_BOOST_AVAILABLE and model_name in ['minerva', 'atlas', 'iris']:  # Skip for CHRONOS/PROMETHEUS
             print(f"\n🎯 Running EXACT MATCH INJECTION for {model_name.upper()}")
             print("="*40)
-            model = inject_exact_match_training(model, device=device, num_epochs=10)
+            model = inject_exact_match_training(model, device=device, num_epochs=50)  # More epochs for higher %
             print("✅ Exact match injection complete!")
         
         # CURRICULUM LOOP

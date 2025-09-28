@@ -657,30 +657,33 @@
             <p>V4 Mega-Scale introduces an aggressive exact match training strategy to overcome the 0% exact match plateau:</p>
             
             <div class="critical-fix">
-                <h4>Pre-Training Injection (10 epochs)</h4>
-                <p>Before curriculum training begins, models undergo intensive exact match pre-training with ultra-simple patterns:
-                <br>• Identity transformations (copy exactly)
-                <br>• Single color fills
-                <br>• Binary thresholding
-                <br>• Simple geometric patterns</p>
+                <h4>Enhanced Pre-Training Injection (20 epochs)</h4>
+                <p>Before curriculum training begins, models undergo intensive exact match pre-training with expanded patterns:
+                <br>• <strong>10,000 samples</strong> (doubled from 5,000) with batch size 64
+                <br>• <strong>Cosine annealing with warm restarts</strong> (T_0=5) for optimal convergence
+                <br>• <strong>Dynamic LR adaptation:</strong> Reduces learning rate by 50% if performance degrades
+                <br>• <strong>Early stopping at 50%</strong> exact match achievement
+                <br>• <strong>Best performance tracking</strong> to prevent overfitting</p>
             </div>
             
             <div class="critical-fix">
-                <h4>Stage 0 Batch Injection</h4>
-                <p>Every 5th batch during Stage 0 is replaced with guaranteed exact-match patterns using:
-                <br>• Fixed 6x6 grids for consistency
-                <br>• Deterministic transformations only
-                <br>• Aggressive loss function with 3x error penalty
-                <br>• -10 bonus for exact matches (can make loss negative!)</p>
+                <h4>Expanded Pattern Categories (15 types)</h4>
+                <p>Enhanced deterministic pattern set for guaranteed exact matches:
+                <br>• <strong>Identity (30%):</strong> Increased from 20% - fundamental for exact copying
+                <br>• <strong>Geometric patterns:</strong> Checkerboard, diagonal, border, center dot
+                <br>• <strong>Fill operations:</strong> All zeros, all ones, single color fills
+                <br>• <strong>Binary operations:</strong> Threshold, swap, simple transformations
+                <br>• <strong>Structural patterns:</strong> Lines, corners, counting operations</p>
             </div>
             
             <div class="critical-fix">
-                <h4>Enhanced Loss Penalties</h4>
-                <p>The loss function now includes:
-                <br>• <strong>Transformation Penalty: 2.0</strong> (4x original) - Heavily penalizes copying
-                <br>• <strong>Exact Match Bonus: 10.0</strong> (2x original) - Massive reward for perfection
-                <br>• <strong>Pixel Copy Penalty:</strong> Additional 2.0 penalty for pixels that should change but didn't
-                <br>• <strong>Per-Pixel Error Weight:</strong> 3x weight on incorrect pixels in exact match batches</p>
+                <h4>Ultra-Aggressive Loss Function</h4>
+                <p>Revolutionary loss design to force exact match learning:
+                <br>• <strong>5x Error Penalty:</strong> Increased from 3x - massive punishment for mistakes
+                <br>• <strong>-20 Exact Match Bonus:</strong> Doubled from -10 - huge reward for perfection
+                <br>• <strong>Improved CE Loss:</strong> Using nn.CrossEntropyLoss with reduction='none'
+                <br>• <strong>Heavy Copy Penalty:</strong> 10.0 penalty when model copies but shouldn't
+                <br>• <strong>Transform Encouragement:</strong> MSE loss between changed pixels and target changes</p>
             </div>
             
             <h3>Exact Match Pattern Types</h3>

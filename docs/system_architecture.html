@@ -714,28 +714,28 @@
                 <div class="component-card">
                     <div class="component-header">
                         <div class="component-icon">🎯</div>
-                        <div class="component-title">Pre-Training Injection</div>
+                        <div class="component-title">Enhanced Pre-Training</div>
                     </div>
-                    <div class="component-type">10 Epochs Exact Match</div>
-                    <p>Before curriculum training begins, models undergo intensive exact match pre-training with ultra-simple patterns including identity transformations, single color fills, and basic geometric patterns.</p>
+                    <div class="component-type">20 Epochs with 10K Samples</div>
+                    <p>Intensive exact match pre-training with 10,000 samples (doubled), batch size 64, cosine annealing with warm restarts (T_0=5), dynamic learning rate adaptation, and early stopping at 50% exact match achievement.</p>
                 </div>
                 
                 <div class="component-card">
                     <div class="component-header">
                         <div class="component-icon">💉</div>
-                        <div class="component-title">Batch Injection</div>
+                        <div class="component-title">Expanded Patterns</div>
                     </div>
-                    <div class="component-type">Every 5th Batch</div>
-                    <p>During Stage 0 training, every 5th batch is replaced with guaranteed exact-match patterns using fixed 6x6 grids and deterministic transformations with aggressive loss functions.</p>
+                    <div class="component-type">15 Deterministic Types</div>
+                    <p>Enhanced pattern set: Identity (30%), checkerboard, diagonal, border, center dot, all ones, all zeros, binary operations, color swaps, counting operations, and more geometric patterns for guaranteed exact matches.</p>
                 </div>
                 
                 <div class="component-card">
                     <div class="component-header">
                         <div class="component-icon">⚡</div>
-                        <div class="component-title">Aggressive Loss</div>
+                        <div class="component-title">Ultra-Aggressive Loss</div>
                     </div>
-                    <div class="component-type">Enhanced Penalties</div>
-                    <p>3x penalty on incorrect pixels, -10 bonus for exact matches, 2.0 transformation penalty (4x original), and additional pixel-level copy penalties for aggressive learning.</p>
+                    <div class="component-type">Revolutionary Design</div>
+                    <p>5x error penalty (up from 3x), -20 exact match bonus (doubled), improved CE loss with reduction='none', 10.0 copy penalty when shouldn't, MSE loss for transform encouragement, and color usage penalties.</p>
                 </div>
             </div>
             
@@ -759,17 +759,17 @@
                     
                     <div class="flow-step" style="background: white;">
                         <h4 style="color: #000000;">Exact Bonus</h4>
-                        <p style="color: #666666;">-10.0 reward (2x increase)</p>
+                        <p style="color: #666666;">-20.0 reward (4x increase)</p>
                     </div>
                     
                     <div class="flow-step" style="background: white;">
                         <h4 style="color: #000000;">Pixel Copy Penalty</h4>
-                        <p style="color: #666666;">2.0 per incorrect pixel</p>
+                        <p style="color: #666666;">10.0 when shouldn't copy</p>
                     </div>
                     
                     <div class="flow-step" style="background: white;">
                         <h4 style="color: #000000;">Error Weight</h4>
-                        <p style="color: #666666;">3x on mistakes</p>
+                        <p style="color: #666666;">5x on mistakes</p>
                     </div>
                 </div>
             </div>

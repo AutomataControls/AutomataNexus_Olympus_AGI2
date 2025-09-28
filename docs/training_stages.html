@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Stages & Cascade Effects - OLYMPUS AGI2</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        .hero {
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%);
+            padding: 100px 0;
+            text-align: center;
+            border-bottom: 2px solid #00cccc;
+        }
+        
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #00cccc 0%, #00ffff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .hero p {
+            font-size: 1.4rem;
+            color: #ccc;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 80px 40px;
+        }
+        
+        .section {
+            margin-bottom: 100px;
+        }
+        
+        h2 {
+            font-size: 2.5rem;
+            color: #00cccc;
+            margin-bottom: 40px;
+            text-align: center;
+            position: relative;
+            padding-bottom: 20px;
+        }
+        
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #00cccc, transparent);
+        }
+        
+        .stage-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 60px;
+        }
+        
+        .stage-card {
+            background: rgba(0, 204, 204, 0.1);
+            border: 2px solid #00cccc;
+            border-radius: 20px;
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .stage-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #00cccc, #00ffff, #00cccc);
+            border-radius: 20px;
+            opacity: 0;
+            z-index: -1;
+            transition: opacity 0.3s ease;
+        }
+        
+        .stage-card:hover::before {
+            opacity: 1;
+            animation: gradient-rotate 3s linear infinite;
+        }
+        
+        .stage-card:hover {
+            transform: translateY(-5px);
+            background: rgba(0, 204, 204, 0.2);
+        }
+        
+        @keyframes gradient-rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .stage-number {
+            font-size: 4rem;
+            font-weight: 800;
+            color: #00cccc;
+            opacity: 0.3;
+            position: absolute;
+            top: 20px;
+            right: 30px;
+        }
+        
+        .stage-card h3 {
+            font-size: 1.8rem;
+            color: #fff;
+            margin-bottom: 20px;
+        }
+        
+        .stage-card p {
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+        
+        .stage-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .metric {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #00cccc;
+        }
+        
+        .metric-label {
+            font-size: 0.9rem;
+            color: #999;
+            margin-top: 5px;
+        }
+        
+        .cascade-diagram {
+            background: rgba(0, 204, 204, 0.05);
+            border-radius: 20px;
+            padding: 40px;
+            margin: 40px 0;
+        }
+        
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+        
+        .technique-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin: 40px 0;
+        }
+        
+        .technique-card {
+            background: linear-gradient(135deg, rgba(0, 204, 204, 0.1) 0%, rgba(0, 204, 204, 0.05) 100%);
+            border: 1px solid rgba(0, 204, 204, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+        
+        .technique-card:hover {
+            border-color: #00cccc;
+            box-shadow: 0 0 20px rgba(0, 204, 204, 0.3);
+        }
+        
+        .technique-card h4 {
+            color: #00cccc;
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+        }
+        
+        .technique-card ul {
+            list-style: none;
+            color: #ccc;
+        }
+        
+        .technique-card li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+        
+        .technique-card li::before {
+            content: '▸';
+            color: #00cccc;
+            position: absolute;
+            left: 0;
+        }
+        
+        .cascade-flow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 60px 0;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+        
+        .flow-stage {
+            flex: 1;
+            min-width: 200px;
+            background: rgba(0, 204, 204, 0.1);
+            border: 2px solid #00cccc;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .flow-stage::after {
+            content: '→';
+            position: absolute;
+            right: -40px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 2rem;
+            color: #00cccc;
+        }
+        
+        .flow-stage:last-child::after {
+            display: none;
+        }
+        
+        .flow-stage h4 {
+            color: #00cccc;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+        
+        .flow-stage p {
+            color: #ccc;
+            font-size: 0.95rem;
+        }
+        
+        .progress-visualization {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 40px;
+            margin: 40px 0;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 30px 0;
+        }
+        
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .benefit-card {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            border: 1px solid rgba(0, 204, 204, 0.2);
+        }
+        
+        .benefit-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        
+        .benefit-card h4 {
+            color: #00cccc;
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+        }
+        
+        .benefit-card p {
+            color: #ccc;
+        }
+        
+        .timeline {
+            position: relative;
+            margin: 60px 0;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 3px;
+            height: 100%;
+            background: linear-gradient(180deg, #00cccc, transparent);
+        }
+        
+        .timeline-item {
+            display: flex;
+            align-items: center;
+            margin: 40px 0;
+            position: relative;
+        }
+        
+        .timeline-item:nth-child(even) {
+            flex-direction: row-reverse;
+        }
+        
+        .timeline-content {
+            flex: 1;
+            padding: 0 60px;
+        }
+        
+        .timeline-marker {
+            width: 30px;
+            height: 30px;
+            background: #00cccc;
+            border-radius: 50%;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 0 20px rgba(0, 204, 204, 0.5);
+        }
+        
+        .timeline-content h4 {
+            color: #00cccc;
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+        }
+        
+        .timeline-content p {
+            color: #ccc;
+        }
+        
+        .author-credit {
+            text-align: center;
+            margin-top: 80px;
+            padding: 40px;
+            border-top: 1px solid rgba(0, 204, 204, 0.3);
+            color: #999;
+            font-size: 1.1rem;
+        }
+        
+        .author-credit a {
+            color: #00cccc;
+            text-decoration: none;
+        }
+        
+        @media (max-width: 768px) {
+            .cascade-flow {
+                flex-direction: column;
+            }
+            
+            .flow-stage::after {
+                display: none;
+            }
+            
+            .timeline::before {
+                left: 30px;
+            }
+            
+            .timeline-item {
+                flex-direction: column !important;
+            }
+            
+            .timeline-content {
+                padding: 20px 20px 20px 80px;
+            }
+            
+            .timeline-marker {
+                left: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <h1>Training Stages & Cascade Effects</h1>
+        <p>How OLYMPUS AGI2's multi-stage training creates compounding improvements through positive feedback loops</p>
+    </div>
+    
+    <div class="container">
+        <section class="section">
+            <h2>Training Stage Overview</h2>
+            
+            <div class="stage-overview">
+                <div class="stage-card">
+                    <div class="stage-number">0</div>
+                    <h3>Exact Match Injection</h3>
+                    <p>Pre-training phase that forces the model to learn exact transformations on simple, deterministic patterns.</p>
+                    <div class="stage-metrics">
+                        <div class="metric">
+                            <div class="metric-value">50</div>
+                            <div class="metric-label">Epochs</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">100K</div>
+                            <div class="metric-label">Samples</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">23.8%</div>
+                            <div class="metric-label">Exact Match</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">5x5</div>
+                            <div class="metric-label">Grid Size</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stage-card">
+                    <div class="stage-number">1</div>
+                    <h3>Stage 0: Foundation</h3>
+                    <p>Simple patterns with small grids, few colors, and basic transformations to establish core capabilities.</p>
+                    <div class="stage-metrics">
+                        <div class="metric">
+                            <div class="metric-value">≤12</div>
+                            <div class="metric-label">Max Grid</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">≤4</div>
+                            <div class="metric-label">Max Colors</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">100</div>
+                            <div class="metric-label">Epochs</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">Basic</div>
+                            <div class="metric-label">Patterns</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stage-card">
+                    <div class="stage-number">2</div>
+                    <h3>Stage 1: Expansion</h3>
+                    <p>Medium complexity with larger grids, more colors, and compound transformations.</p>
+                    <div class="stage-metrics">
+                        <div class="metric">
+                            <div class="metric-value">≤20</div>
+                            <div class="metric-label">Max Grid</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">≤5</div>
+                            <div class="metric-label">Max Colors</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">100</div>
+                            <div class="metric-label">Epochs</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">Complex</div>
+                            <div class="metric-label">Patterns</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stage-card">
+                    <div class="stage-number">3</div>
+                    <h3>Stage 2: Mastery</h3>
+                    <p>Full complexity with all grid sizes, all colors, and sophisticated multi-step reasoning tasks.</p>
+                    <div class="stage-metrics">
+                        <div class="metric">
+                            <div class="metric-value">≤30</div>
+                            <div class="metric-label">Max Grid</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">10</div>
+                            <div class="metric-label">Max Colors</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">100</div>
+                            <div class="metric-label">Epochs</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">All ARC</div>
+                            <div class="metric-label">Patterns</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section class="section">
+            <h2>The Cascade Effect</h2>
+            
+            <div class="cascade-diagram">
+                <div class="mermaid">
+                    graph LR
+                        A[Exact Match<br/>Injection] --> B[Basic Pattern<br/>Recognition]
+                        B --> C[Transformation<br/>Understanding]
+                        C --> D[Complex<br/>Reasoning]
+                        D --> E[Full ARC<br/>Mastery]
+                        
+                        A --> F[Precise Output<br/>Generation]
+                        F --> B
+                        
+                        B --> G[Color<br/>Consistency]
+                        G --> C
+                        
+                        C --> H[Spatial<br/>Awareness]
+                        H --> D
+                        
+                        D --> I[Multi-step<br/>Planning]
+                        I --> E
+                        
+                        style A fill:#00cccc,stroke:#fff,stroke-width:2px
+                        style E fill:#00ffff,stroke:#fff,stroke-width:2px
+                        style B fill:#009999,stroke:#fff,stroke-width:2px
+                        style C fill:#009999,stroke:#fff,stroke-width:2px
+                        style D fill:#009999,stroke:#fff,stroke-width:2px
+                </div>
+            </div>
+            
+            <div class="cascade-flow">
+                <div class="flow-stage">
+                    <h4>Exact Outputs</h4>
+                    <p>Learn to produce pixel-perfect transformations</p>
+                </div>
+                <div class="flow-stage">
+                    <h4>Pattern Recognition</h4>
+                    <p>Identify common transformation types</p>
+                </div>
+                <div class="flow-stage">
+                    <h4>Generalization</h4>
+                    <p>Apply learned patterns to new contexts</p>
+                </div>
+                <div class="flow-stage">
+                    <h4>Composition</h4>
+                    <p>Combine simple rules for complex tasks</p>
+                </div>
+            </div>
+        </section>
+        
+        <section class="section">
+            <h2>Training Techniques</h2>
+            
+            <div class="technique-grid">
+                <div class="technique-card">
+                    <h4>🎯 Aggressive Loss Function</h4>
+                    <ul>
+                        <li>10x penalty for incorrect pixels</li>
+                        <li>2x bonus for exact matches</li>
+                        <li>Transformation-aware penalties</li>
+                        <li>Edge-focused attention</li>
+                    </ul>
+                </div>
+                
+                <div class="technique-card">
+                    <h4>📈 Adaptive Learning Rates</h4>
+                    <ul>
+                        <li>Cosine annealing schedule</li>
+                        <li>Stage-specific LR multipliers</li>
+                        <li>Automatic LR reduction on plateau</li>
+                        <li>Warm restarts for exploration</li>
+                    </ul>
+                </div>
+                
+                <div class="technique-card">
+                    <h4>🔄 Data Augmentation</h4>
+                    <ul>
+                        <li>Rotation & reflection variants</li>
+                        <li>Color permutations</li>
+                        <li>Synthetic pattern generation</li>
+                        <li>10x augmentation factor</li>
+                    </ul>
+                </div>
+                
+                <div class="technique-card">
+                    <h4>🧠 Mixed Precision Training</h4>
+                    <ul>
+                        <li>FP16 compute with FP32 master weights</li>
+                        <li>Gradient scaling for stability</li>
+                        <li>2x memory efficiency</li>
+                        <li>1.5x speed improvement</li>
+                    </ul>
+                </div>
+                
+                <div class="technique-card">
+                    <h4>🎲 Curriculum Sampling</h4>
+                    <ul>
+                        <li>Prioritize learnable patterns</li>
+                        <li>Gradually increase complexity</li>
+                        <li>Replay successful examples</li>
+                        <li>Balance pattern diversity</li>
+                    </ul>
+                </div>
+                
+                <div class="technique-card">
+                    <h4>⚡ Gradient Optimization</h4>
+                    <ul>
+                        <li>AdamW with weight decay</li>
+                        <li>Gradient clipping at 1.0</li>
+                        <li>Batch accumulation (2048 effective)</li>
+                        <li>Momentum tuning per stage</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+        
+        <section class="section">
+            <h2>Cascading Benefits</h2>
+            
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <div class="benefit-icon">🎯</div>
+                    <h4>Precision Cascade</h4>
+                    <p>Early exact match training creates a foundation of precision that propagates through all stages, improving accuracy on complex tasks.</p>
+                </div>
+                
+                <div class="benefit-card">
+                    <div class="benefit-icon">🧩</div>
+                    <h4>Pattern Recognition Cascade</h4>
+                    <p>Simple patterns learned in Stage 0 become building blocks for complex transformations in later stages.</p>
+                </div>
+                
+                <div class="benefit-card">
+                    <div class="benefit-icon">🚀</div>
+                    <h4>Confidence Cascade</h4>
+                    <p>Success on easy tasks builds model confidence, enabling more aggressive exploration in complex scenarios.</p>
+                </div>
+                
+                <div class="benefit-card">
+                    <div class="benefit-icon">🔗</div>
+                    <h4>Knowledge Transfer Cascade</h4>
+                    <p>Features learned for basic transformations transfer directly to advanced reasoning tasks.</p>
+                </div>
+                
+                <div class="benefit-card">
+                    <div class="benefit-icon">⚡</div>
+                    <h4>Optimization Cascade</h4>
+                    <p>Well-conditioned gradients from early training stabilize and accelerate later stage learning.</p>
+                </div>
+                
+                <div class="benefit-card">
+                    <div class="benefit-icon">🎨</div>
+                    <h4>Representation Cascade</h4>
+                    <p>Rich internal representations developed early enable efficient encoding of complex patterns.</p>
+                </div>
+            </div>
+        </section>
+        
+        <section class="section">
+            <h2>Training Progress Visualization</h2>
+            
+            <div class="progress-visualization">
+                <canvas id="progressChart" class="chart-container"></canvas>
+            </div>
+        </section>
+        
+        <section class="section">
+            <h2>Stage Progression Timeline</h2>
+            
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <h4>Pre-Training: Exact Match Injection</h4>
+                        <p>50 epochs of intensive exact match training on 100K deterministic patterns. Achieves 23.8% exact match rate.</p>
+                    </div>
+                    <div class="timeline-marker"></div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <h4>Stage 0: Foundation Building</h4>
+                        <p>100 epochs on simple patterns. Exact match rate climbs to 35-40% on basic transformations.</p>
+                    </div>
+                    <div class="timeline-marker"></div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <h4>Stage 1: Capability Expansion</h4>
+                        <p>100 epochs on medium complexity. Generalizes to 25-30% exact match on diverse patterns.</p>
+                    </div>
+                    <div class="timeline-marker"></div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <h4>Stage 2: Full Mastery</h4>
+                        <p>100 epochs on all ARC tasks. Achieves 15-20% exact match on full complexity tasks.</p>
+                    </div>
+                    <div class="timeline-marker"></div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <h4>Ensemble Integration</h4>
+                        <p>All 5 models combine their specialized knowledge for final predictions.</p>
+                    </div>
+                    <div class="timeline-marker"></div>
+                </div>
+            </div>
+        </section>
+        
+        <div class="author-credit">
+            Created by <a href="#">Andrew Jewell Sr.-AutomataNexus</a> | OLYMPUS AGI2 Training Architecture
+        </div>
+    </div>
+    
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#00cccc',
+                primaryTextColor: '#fff',
+                primaryBorderColor: '#00cccc',
+                lineColor: '#00cccc',
+                secondaryColor: '#006666',
+                tertiaryColor: '#003333',
+                background: '#1a1a1a',
+                mainBkg: '#1a1a1a',
+                secondBkg: '#2d2d2d'
+            }
+        });
+        
+        // Progress chart
+        const ctx = document.getElementById('progressChart').getContext('2d');
+        const progressChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Pre-Train', 'Stage 0 Start', 'Stage 0 End', 'Stage 1 Start', 'Stage 1 End', 'Stage 2 Start', 'Stage 2 End'],
+                datasets: [
+                    {
+                        label: 'Exact Match Rate (%)',
+                        data: [0, 23.8, 40, 35, 30, 25, 20],
+                        borderColor: '#00cccc',
+                        backgroundColor: 'rgba(0, 204, 204, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Training Loss',
+                        data: [10, 5, 2, 3, 1.5, 2, 1],
+                        borderColor: '#ff6666',
+                        backgroundColor: 'rgba(255, 102, 102, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        yAxisID: 'y1'
+                    },
+                    {
+                        label: 'Task Complexity',
+                        data: [1, 1, 3, 3, 6, 6, 10],
+                        borderColor: '#66ff66',
+                        backgroundColor: 'rgba(102, 255, 102, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        yAxisID: 'y2'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Training Progression Across Stages',
+                        color: '#fff',
+                        font: {
+                            size: 18
+                        }
+                    },
+                    legend: {
+                        labels: {
+                            color: '#fff'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#fff'
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#fff'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Exact Match %',
+                            color: '#00cccc'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false
+                        },
+                        ticks: {
+                            color: '#fff'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Loss',
+                            color: '#ff6666'
+                        }
+                    },
+                    y2: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        offset: true,
+                        grid: {
+                            drawOnChartArea: false
+                        },
+                        ticks: {
+                            color: '#fff'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Complexity',
+                            color: '#66ff66'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

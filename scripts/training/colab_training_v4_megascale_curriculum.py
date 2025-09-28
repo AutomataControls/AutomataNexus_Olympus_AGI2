@@ -73,7 +73,7 @@ EDGE_WEIGHT = 0.3
 COLOR_BALANCE_WEIGHT = 0.2
 STRUCTURE_WEIGHT = 0.3
 TRANSFORMATION_PENALTY = 2.0  # INCREASED: Much stronger penalty for copying!
-EXACT_MATCH_BONUS = 10.0  # DOUBLED: Huge reward for exact matches!
+EXACT_MATCH_BONUS = 5.0  # Reduced from 10.0 to prevent instability
 
 # Curriculum settings
 CURRICULUM_STAGES = 3
@@ -1103,7 +1103,7 @@ def train_megascale_curriculum():
         # Stage-adaptive optimizer with better scaling for Stage 1
         # Use higher LR for Stage 0 to learn exact patterns faster
         # Lower LR for Stage 1 to prevent overfitting
-        stage_lrs = [LEARNING_RATE * 3.0, LEARNING_RATE * 0.5, LEARNING_RATE * 0.25]  # Reduced for Stage 1 & 2
+        stage_lrs = [LEARNING_RATE, LEARNING_RATE * 0.5, LEARNING_RATE * 0.2]  # Much safer
         
         optimizer = optim.SGD(
             model.parameters(), 
@@ -1265,7 +1265,7 @@ def train_megascale_curriculum():
                     
                     if (batch_idx + 1) % GRADIENT_ACCUMULATION_STEPS == 0:
                         scaler.unscale_(optimizer)
-                        torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)  # More aggressive clipping
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)  # More conservative clipping
                         scaler.step(optimizer)
                         scaler.update()
                         optimizer.zero_grad()

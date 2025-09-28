@@ -74,12 +74,7 @@ print(f"  Transformation penalty: {TRANSFORMATION_PENALTY} (positive!)")
 
 # Data setup
 DATA_DIR = '/content/data'
-if not os.path.exists(DATA_DIR):
-    print("Downloading ARC data...")
-    os.makedirs(DATA_DIR, exist_ok=True)
-    os.system(f"wget https://github.com/fchollet/ARC-AGI/raw/master/data/training/arc-agi_training_challenges.json -O {DATA_DIR}/arc-agi_training_challenges.json")
-    os.system(f"wget https://github.com/fchollet/ARC-AGI/raw/master/data/training/arc-agi_training_solutions.json -O {DATA_DIR}/arc-agi_training_solutions.json")
-    print("✓ ARC data downloaded")
+print(f"Using data directory: {DATA_DIR}")
 
 class MegaScaleLoss(nn.Module):
     """Enhanced loss with exact match bonus and proper transformation penalty"""

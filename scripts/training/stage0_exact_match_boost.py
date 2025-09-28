@@ -603,7 +603,7 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
                 continue
             
             # DEBUG: Print some stats on first batch of first epoch
-            if epoch == 0 and batch_idx < 5:
+            if epoch == 0 and batch_idx < 2:
                 pred_classes = pred.argmax(dim=1)
                 target_classes = outputs[:, :pred_classes.shape[1], :pred_classes.shape[2]]  # Handle padding
                 print(f"DEBUG - Pred range: {pred_classes.min()}-{pred_classes.max()}, Target range: {target_classes.min()}-{target_classes.max()}")
@@ -622,23 +622,16 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
                     total_norm += param_norm.item() ** 2
             total_norm = total_norm ** 0.5
             
-            if epoch == 0 and batch_idx < 5:
+            if epoch == 0 and batch_idx < 2:
                 print(f"DEBUG - Gradient norm before clipping: {total_norm:.4f}")
             
             grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)  # Less aggressive clipping
             
-            # Allow some steps through even with high gradients
+            # Only skip if NaN/Inf
             if torch.isnan(grad_norm) or torch.isinf(grad_norm):
                 print(f"WARNING: NaN/Inf gradients detected, skipping step")
                 optimizer.zero_grad()
                 continue
-            elif grad_norm > 10.0 and epoch == 0 and batch_idx < 100:
-                # For first 100 batches, let some through to initialize
-                if batch_idx % 10 == 0:
-                    print(f"INFO: High gradient (norm={grad_norm:.4f}) but allowing through for initialization")
-                else:
-                    optimizer.zero_grad()
-                    continue
             
             # Optimizer step without scaler
             optimizer.step()

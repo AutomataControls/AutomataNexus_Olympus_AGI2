@@ -470,6 +470,16 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
     print("  • Warmup + cosine annealing")
     print("  • 300K total samples")
     
+    # Initialize model weights for stable training
+    for module in model.modules():
+        if isinstance(module, (nn.Conv2d, nn.Linear)):
+            nn.init.xavier_uniform_(module.weight, gain=0.1)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.ones_(module.weight)
+            nn.init.zeros_(module.bias)
+    
     # Create ultra-focused dataset with curriculum - start with easier sizes
     datasets = []
     # Progressive difficulty: 3x3 -> 4x4 -> 5x5
@@ -589,10 +599,22 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
             
             # Gradient clipping with scaler
             scaler.unscale_(optimizer)
+            
+            # Calculate gradient norm before clipping
+            total_norm = 0.0
+            for p in model.parameters():
+                if p.grad is not None:
+                    param_norm = p.grad.data.norm(2)
+                    total_norm += param_norm.item() ** 2
+            total_norm = total_norm ** 0.5
+            
+            if epoch == 0 and batch_idx < 5:
+                print(f"DEBUG - Gradient norm before clipping: {total_norm:.4f}")
+            
             grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 0.1)  # Very aggressive clipping
             
             if torch.isnan(grad_norm) or torch.isinf(grad_norm) or grad_norm > 10.0:
-                print(f"WARNING: Bad gradients detected (norm={grad_norm:.4f}), skipping step")
+                print(f"WARNING: Bad gradients detected (norm={grad_norm:.4f}, pre-clip={total_norm:.4f}), skipping step")
                 optimizer.zero_grad()
                 scaler.update()  # Must call update even when skipping
                 continue

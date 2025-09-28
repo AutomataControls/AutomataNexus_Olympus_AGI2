@@ -1,5 +1,6 @@
 # AutomataNexus OLYMPUS AGI2 - V4 MEGA-SCALE with Curriculum Learning
 # Combines massive scale with proven curriculum strategy
+# Enhanced with: Early stopping, adaptive LR, stronger regularization, gradient clipping
 
 import subprocess
 import sys
@@ -268,27 +269,39 @@ class CurriculumMegaScaleDataset(Dataset):
                         'output': aug_output
                     })
         
-        # Add DSL-generated samples for Stage 0
-        if self.curriculum_stage == 0:
-            print("Adding DSL-generated deterministic samples...")
-            dsl_samples = DSLTrainingIntegration.create_stage0_dsl_samples(0)
-            for dsl_sample in dsl_samples:
-                self.samples.append({
-                    'input': dsl_sample['input'],
-                    'output': dsl_sample['output']
-                })
-            print(f"Added {len(dsl_samples)} DSL samples")
-            
-            # Add program synthesis samples
-            print("Adding program synthesis samples...")
-            ps_generator = ProgramSynthesisDataGenerator()
-            ps_samples = ps_generator.generate_programmatic_examples(200)
-            for ps_sample in ps_samples:
-                self.samples.append({
-                    'input': ps_sample['input'],
-                    'output': ps_sample['output']
-                })
-            print(f"Added {len(ps_samples)} program synthesis samples")
+        # Add DSL-generated samples for all stages
+        print(f"Adding DSL-generated deterministic samples for stage {self.curriculum_stage}...")
+        dsl_samples = DSLTrainingIntegration.create_stage0_dsl_samples(self.curriculum_stage)
+        for dsl_sample in dsl_samples:
+            self.samples.append({
+                'input': dsl_sample['input'],
+                'output': dsl_sample['output']
+            })
+        print(f"Added {len(dsl_samples)} DSL samples")
+        
+        # Add program synthesis samples for all stages
+        print("Adding program synthesis samples...")
+        ps_generator = ProgramSynthesisDataGenerator()
+        # More complex programs for higher stages
+        num_ps_samples = 200 if self.curriculum_stage == 0 else 300
+        ps_samples = ps_generator.generate_programmatic_examples(num_ps_samples)
+        
+        # Filter by difficulty for each stage
+        stage_samples = []
+        for ps_sample in ps_samples:
+            if self.curriculum_stage == 0 and ps_sample['difficulty'] == 'easy':
+                stage_samples.append(ps_sample)
+            elif self.curriculum_stage == 1 and ps_sample['difficulty'] in ['easy', 'medium']:
+                stage_samples.append(ps_sample)
+            elif self.curriculum_stage == 2:  # Stage 2 gets all difficulties
+                stage_samples.append(ps_sample)
+        
+        for ps_sample in stage_samples:
+            self.samples.append({
+                'input': ps_sample['input'],
+                'output': ps_sample['output']
+            })
+        print(f"Added {len(stage_samples)} program synthesis samples")
         
         print(f"Loaded {len(self.samples)} samples for stage {self.curriculum_stage}")
     
@@ -995,15 +1008,16 @@ def train_megascale_curriculum():
         # Initialize reporter for this model
         reporter = TrainingReporter(model_name)
         
-        # Stage-adaptive optimizer
+        # Stage-adaptive optimizer with better scaling for Stage 1
         # Use higher LR for Stage 0 to learn exact patterns faster
-        stage_lrs = [LEARNING_RATE * 3.0, LEARNING_RATE, LEARNING_RATE * 0.5]  # Even higher for Stage 0
+        # Lower LR for Stage 1 to prevent overfitting
+        stage_lrs = [LEARNING_RATE * 3.0, LEARNING_RATE * 0.5, LEARNING_RATE * 0.25]  # Reduced for Stage 1 & 2
         
         optimizer = optim.SGD(
             model.parameters(), 
             lr=stage_lrs[0],  # Start with Stage 0 LR
             momentum=0.9,
-            weight_decay=0.0001,
+            weight_decay=0.0005,  # Increased weight decay
             nesterov=True
         )
         
@@ -1016,6 +1030,8 @@ def train_megascale_curriculum():
         best_exact = 0
         best_val_loss = float('inf')
         global_epoch = 0
+        patience_counter = 0
+        max_patience = 20  # Early stopping patience
         
         # CURRICULUM LOOP
         for stage in range(CURRICULUM_STAGES):
@@ -1089,7 +1105,7 @@ def train_megascale_curriculum():
                     
                     if (batch_idx + 1) % GRADIENT_ACCUMULATION_STEPS == 0:
                         scaler.unscale_(optimizer)
-                        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)  # More aggressive clipping
                         scaler.step(optimizer)
                         scaler.update()
                         optimizer.zero_grad()
@@ -1140,7 +1156,7 @@ def train_megascale_curriculum():
                             val_metrics['samples'] += input_grids.size(0)
                             
                             # Try program synthesis on a subset of validation samples
-                            if stage == 0 and synthesis_metrics['attempts'] < 50:  # Limit for speed
+                            if synthesis_metrics['attempts'] < 50:  # Limit for speed across all stages
                                 for i in range(min(5, input_grids.size(0))):
                                     synthesis_metrics['attempts'] += 1
                                     input_np = input_grids[i].cpu().numpy().argmax(axis=0)
@@ -1187,7 +1203,17 @@ def train_megascale_curriculum():
                         trans_penalty=TRANSFORMATION_PENALTY
                     )
                     
-                    # Save best model
+                    # Early stopping and model saving
+                    if val_loss < best_val_loss:
+                        best_val_loss = val_loss
+                        patience_counter = 0
+                    else:
+                        patience_counter += 1
+                        if patience_counter >= max_patience and stage > 0:
+                            print(f"⚠️ Early stopping triggered! Val loss not improving for {max_patience} validations")
+                            break
+                    
+                    # Save best model based on exact match
                     if val_exact_pct > best_exact:
                         best_exact = val_exact_pct
                         torch.save({
@@ -1196,7 +1222,8 @@ def train_megascale_curriculum():
                             'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict(),
                             'val_exact': val_exact_pct,
-                            'val_pixel_acc': val_pixel_acc
+                            'val_pixel_acc': val_pixel_acc,
+                            'val_loss': val_loss
                         }, f'/content/AutomataNexus_Olympus_AGI2/arc_models_v4/{model_name}_best.pt')
                         
                         print(f"✅ New best model! Exact: {val_exact_pct:.2f}%")
@@ -1204,6 +1231,20 @@ def train_megascale_curriculum():
                         # Log milestone achievements
                         if val_exact_pct >= 10.0 and val_exact_pct == best_exact:
                             print(f"🎉 Milestone: {val_exact_pct:.2f}% exact match!")
+                    
+                    # Warning for exploding validation loss
+                    if val_loss > 10.0:
+                        print(f"⚠️ Warning: Validation loss is very high ({val_loss:.2f}), possible overfitting!")
+                        # Reduce learning rate on explosion
+                        if stage > 0:
+                            for param_group in optimizer.param_groups:
+                                param_group['lr'] *= 0.5
+                            print(f"   Reduced learning rate to: {optimizer.param_groups[0]['lr']:.6f}")
+            
+            # Check if early stopping was triggered
+            if patience_counter >= max_patience and stage > 0:
+                print(f"📛 Stage {stage} terminated early due to overfitting")
+                break
         
         # Generate comprehensive report
         print(f"\n📊 Generating training report for {model_name.upper()}...")

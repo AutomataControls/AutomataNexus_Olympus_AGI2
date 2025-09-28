@@ -541,15 +541,15 @@
             </div>
             
             <div class="version-card">
-                <h3>V4 Mega-Scale <span class="version-badge">CURRENT</span></h3>
+                <h3>V4 Mega-Scale Enhanced <span class="version-badge">CURRENT</span></h3>
                 <div class="stats">
                     <div class="stat">
                         <div class="stat-value">512</div>
                         <div class="stat-label">Batch Size</div>
                     </div>
                     <div class="stat">
-                        <div class="stat-value">10x Data</div>
-                        <div class="stat-label">Augmentation</div>
+                        <div class="stat-value">Early Stop</div>
+                        <div class="stat-label">Overfitting Control</div>
                     </div>
                 </div>
                 <div class="features">
@@ -557,8 +557,12 @@
                     <ul class="feature-list">
                         <li>Massive batch size (512)</li>
                         <li>Exact match bonus system</li>
-                        <li>High-momentum SGD</li>
-                        <li>8 parallel workers</li>
+                        <li>Stage-adaptive learning rates</li>
+                        <li>Early stopping (patience=20)</li>
+                        <li>Aggressive gradient clipping (0.5)</li>
+                        <li>Increased weight decay (0.0005)</li>
+                        <li>Auto LR reduction on val loss explosion</li>
+                        <li>DSL + Program Synthesis in ALL stages</li>
                     </ul>
                 </div>
             </div>
@@ -790,7 +794,7 @@
                 <div class="timeline-item">
                     <div class="timeline-content">
                         <h4>Stage 0: Easy (START HERE)</h4>
-                        <p>Simple transformations: rotations, reflections, basic color mappings. 5910 samples.</p>
+                        <p>Simple transformations: rotations, reflections, basic color mappings. LR: 0.03 (3x base)</p>
                     </div>
                     <div class="timeline-dot"></div>
                 </div>
@@ -798,7 +802,7 @@
                 <div class="timeline-item">
                     <div class="timeline-content">
                         <h4>Stage 1: Medium</h4>
-                        <p>Size changes, moderate complexity patterns. Expect temporary accuracy drop.</p>
+                        <p>Size changes, moderate complexity. LR: 0.005 (0.5x base) to prevent overfitting.</p>
                     </div>
                     <div class="timeline-dot"></div>
                 </div>
@@ -806,7 +810,7 @@
                 <div class="timeline-item">
                     <div class="timeline-content">
                         <h4>Stage 2: Hard</h4>
-                        <p>Complex transformations, large grids, multi-object interactions.</p>
+                        <p>Complex transformations, multi-object interactions. LR: 0.0025 (0.25x base).</p>
                     </div>
                     <div class="timeline-dot"></div>
                 </div>

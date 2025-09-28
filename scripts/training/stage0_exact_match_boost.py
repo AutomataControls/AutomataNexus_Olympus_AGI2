@@ -489,9 +489,9 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
     )
     
     # COMPREHENSIVE: Use AggressiveLoss with proper LR for injection training
-    # Start with lower LR to prevent exploding gradients
-    initial_lr = 0.001  # Much lower to start
-    optimizer = torch.optim.AdamW(model.parameters(), lr=initial_lr, weight_decay=1e-5, betas=(0.9, 0.98))
+    # Start with very low LR to prevent exploding gradients
+    initial_lr = 0.0001  # Even lower to prevent NaN
+    optimizer = torch.optim.AdamW(model.parameters(), lr=initial_lr, weight_decay=1e-5, betas=(0.9, 0.999))  # More stable betas
     
     # Linear warmup + CosineAnnealingWarmRestarts
     warmup_epochs = 5
@@ -552,8 +552,8 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
                 noise = torch.randn_like(inputs_oh) * 0.01
                 inputs_oh = inputs_oh + noise
             
-            # Mixed precision forward pass
-            with torch.amp.autocast(device_type='cuda', dtype=torch.float16):
+            # Mixed precision forward pass - try float32 for stability
+            with torch.amp.autocast(device_type='cuda', dtype=torch.float32):  # Use float32 for now
                 if hasattr(model, '__class__') and model.__class__.__name__ == 'CHRONOS':
                     pred = model([inputs_oh], target=outputs_oh)['predicted_output']
                 else:
@@ -589,10 +589,10 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
             
             # Gradient clipping with scaler
             scaler.unscale_(optimizer)
-            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)  # Lower clip value
+            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 0.1)  # Very aggressive clipping
             
-            if torch.isnan(grad_norm) or torch.isinf(grad_norm):
-                print(f"WARNING: NaN/Inf gradients detected, skipping step")
+            if torch.isnan(grad_norm) or torch.isinf(grad_norm) or grad_norm > 10.0:
+                print(f"WARNING: Bad gradients detected (norm={grad_norm:.4f}), skipping step")
                 optimizer.zero_grad()
                 scaler.update()  # Must call update even when skipping
                 continue

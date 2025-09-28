@@ -28,6 +28,7 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 from datetime import datetime
 import pandas as pd
+from collections import deque
 
 # Check GPU
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -91,120 +92,322 @@ print(f"  Exact match bonus: {EXACT_MATCH_BONUS} (2x bigger!)")
 DATA_DIR = '/content/AutomataNexus_Olympus_AGI2/data'
 print(f"Using data directory: {DATA_DIR}")
 
-class MegaScaleLoss(nn.Module):
-    """Enhanced loss with exact match bonus and proper transformation penalty"""
+# ================================================================================
+# MEPT (Memory-Enhanced Progressive Training) Components
+# ================================================================================
+
+class ExperienceReplayBuffer:
+    """Maintains a buffer of successful exact match examples to prevent forgetting"""
+    def __init__(self, capacity: int = 50000, prioritize_exact: bool = True):
+        self.capacity = capacity
+        self.prioritize_exact = prioritize_exact
+        self.buffer = deque(maxlen=capacity)
+        self.exact_matches = deque(maxlen=capacity // 2)  # Half for exact matches
+        self.total_seen = 0
+        
+    def add(self, input_grid: torch.Tensor, output_grid: torch.Tensor, 
+            predicted_grid: torch.Tensor, loss: float, is_exact: bool):
+        """Add experience to buffer with priority for exact matches"""
+        experience = {
+            'input': input_grid.cpu(),
+            'output': output_grid.cpu(),
+            'predicted': predicted_grid.cpu(),
+            'loss': loss,
+            'is_exact': is_exact,
+            'timestamp': self.total_seen
+        }
+        
+        self.total_seen += 1
+        
+        if is_exact and self.prioritize_exact:
+            self.exact_matches.append(experience)
+        else:
+            self.buffer.append(experience)
     
-    def __init__(self):
+    def sample(self, batch_size: int, exact_ratio: float = 0.5) -> List[Dict]:
+        """Sample from buffer with specified ratio of exact matches"""
+        n_exact = int(batch_size * exact_ratio)
+        n_regular = batch_size - n_exact
+        
+        exact_samples = []
+        regular_samples = []
+        
+        # Sample exact matches
+        if len(self.exact_matches) > 0:
+            n_exact = min(n_exact, len(self.exact_matches))
+            exact_indices = np.random.choice(len(self.exact_matches), n_exact, replace=True)
+            exact_samples = [self.exact_matches[i] for i in exact_indices]
+        
+        # Sample regular experiences
+        if len(self.buffer) > 0:
+            n_regular = batch_size - len(exact_samples)
+            regular_indices = np.random.choice(len(self.buffer), n_regular, replace=True)
+            regular_samples = [self.buffer[i] for i in regular_indices]
+        
+        return exact_samples + regular_samples
+    
+    def get_stats(self) -> Dict:
+        """Get buffer statistics"""
+        return {
+            'total_experiences': len(self.buffer) + len(self.exact_matches),
+            'exact_matches': len(self.exact_matches),
+            'regular_experiences': len(self.buffer),
+            'total_seen': self.total_seen
+        }
+
+
+class PatternBank:
+    """Stores successful transformation patterns for quick lookup"""
+    def __init__(self, max_patterns: int = 10000):
+        self.max_patterns = max_patterns
+        self.patterns = {}  # hash -> (input, output, count)
+        self.transformation_rules = {}  # transformation_type -> examples
+        
+    def add_pattern(self, input_grid: np.ndarray, output_grid: np.ndarray):
+        """Add a successful pattern to the bank"""
+        # Create hash for quick lookup
+        input_hash = hash(input_grid.tobytes())
+        
+        if input_hash not in self.patterns:
+            self.patterns[input_hash] = {
+                'input': input_grid,
+                'output': output_grid,
+                'count': 1
+            }
+        else:
+            self.patterns[input_hash]['count'] += 1
+        
+        # Analyze transformation type
+        trans_type = self._analyze_transformation(input_grid, output_grid)
+        if trans_type not in self.transformation_rules:
+            self.transformation_rules[trans_type] = []
+        
+        self.transformation_rules[trans_type].append((input_grid, output_grid))
+        
+        # Limit size
+        if len(self.patterns) > self.max_patterns:
+            # Remove least frequent patterns
+            sorted_patterns = sorted(self.patterns.items(), 
+                                   key=lambda x: x[1]['count'])
+            to_remove = len(self.patterns) - self.max_patterns
+            for hash_key, _ in sorted_patterns[:to_remove]:
+                del self.patterns[hash_key]
+    
+    def _analyze_transformation(self, input_grid: np.ndarray, 
+                               output_grid: np.ndarray) -> str:
+        """Analyze the type of transformation"""
+        if input_grid.shape != output_grid.shape:
+            return 'resize'
+        elif np.array_equal(input_grid, output_grid):
+            return 'identity'
+        elif np.array_equal(np.rot90(input_grid), output_grid):
+            return 'rotate_90'
+        elif np.array_equal(np.flip(input_grid, axis=0), output_grid):
+            return 'flip_vertical'
+        elif np.array_equal(np.flip(input_grid, axis=1), output_grid):
+            return 'flip_horizontal'
+        elif len(np.unique(output_grid)) < len(np.unique(input_grid)):
+            return 'color_reduction'
+        elif np.sum(output_grid > 0) < np.sum(input_grid > 0):
+            return 'pattern_extraction'
+        else:
+            return 'complex'
+    
+    def lookup_pattern(self, input_grid: np.ndarray) -> Optional[np.ndarray]:
+        """Look up a pattern in the bank"""
+        input_hash = hash(input_grid.tobytes())
+        if input_hash in self.patterns:
+            return self.patterns[input_hash]['output']
+        return None
+    
+    def get_similar_transformations(self, input_grid: np.ndarray, 
+                                   output_grid: np.ndarray, k: int = 5) -> List:
+        """Get similar transformations from the bank"""
+        trans_type = self._analyze_transformation(input_grid, output_grid)
+        
+        if trans_type in self.transformation_rules:
+            examples = self.transformation_rules[trans_type]
+            # Return up to k random examples
+            k = min(k, len(examples))
+            return random.sample(examples, k)
+        return []
+
+
+class MEPTLoss(nn.Module):
+    """Memory-Enhanced Progressive Training Loss with dynamic weighting"""
+    def __init__(self, replay_buffer: ExperienceReplayBuffer, 
+                 pattern_bank: PatternBank, use_mept: bool = True):
         super().__init__()
+        self.replay_buffer = replay_buffer
+        self.pattern_bank = pattern_bank
+        self.use_mept = use_mept
         self.ce_loss = nn.CrossEntropyLoss(reduction='none')
         
-    def forward(self, pred: torch.Tensor, target: torch.Tensor, input_grid: torch.Tensor) -> Dict[str, torch.Tensor]:
+        # Dynamic weights that adapt during training
+        self.weights = {
+            'reconstruction': 1.0,
+            'exact_match': 5.0,
+            'consistency': 0.5,
+            'diversity': 0.3,
+            'memory_alignment': 0.4
+        }
+        
+        # Track performance for dynamic adjustment
+        self.performance_history = deque(maxlen=100)
+        
+    def forward(self, pred: torch.Tensor, target: torch.Tensor, 
+                input_grid: torch.Tensor) -> Dict[str, torch.Tensor]:
         B, C, H, W = pred.shape
         
-        # Get predictions and targets
+        # Get predictions
         pred_indices = pred.argmax(dim=1)
         target_indices = target.argmax(dim=1)
         input_indices = input_grid.argmax(dim=1)
         
-        # 1. Standard reconstruction loss
+        if self.use_mept:
+            # MEPT Loss calculation
+            # 1. Reconstruction loss with focal adjustment
+            pred_flat = pred.permute(0, 2, 3, 1).reshape(-1, C)
+            target_flat = target_indices.reshape(-1)
+            ce_loss = self.ce_loss(pred_flat, target_flat)
+            
+            # Focal loss modification for hard examples
+            pt = torch.exp(-ce_loss)
+            focal_loss = ((1 - pt) ** 2) * ce_loss
+            reconstruction_loss = focal_loss.reshape(B, H, W).mean(dim=[1,2])
+            
+            # 2. Exact match bonus with progressive scaling
+            exact_matches = (pred_indices == target_indices).all(dim=[1,2]).float()
+            exact_bonus = -exact_matches * self.weights['exact_match']
+            
+            # 3. Diversity loss - encourage diverse predictions
+            pred_entropy = -(pred.softmax(dim=1) * pred.log_softmax(dim=1)).sum(dim=1).mean(dim=[1,2])
+            diversity_loss = -pred_entropy  # Negative because we want to maximize entropy
+            
+            # 4. Memory alignment loss - align with successful past examples
+            memory_loss = self._calculate_memory_loss(pred, input_indices, target_indices)
+            
+            # 5. Transformation penalty - prevent copying
+            is_identity_task = (input_indices == target_indices).all(dim=[1,2]).float()
+            same_as_input = (pred_indices == input_indices).float().mean(dim=[1,2])
+            transformation_penalty = same_as_input * (1 - is_identity_task) * TRANSFORMATION_PENALTY
+            
+            # Combine losses with dynamic weighting
+            total_loss = (
+                self.weights['reconstruction'] * reconstruction_loss +
+                exact_bonus +
+                self.weights['diversity'] * diversity_loss +
+                self.weights['memory_alignment'] * memory_loss +
+                transformation_penalty
+            )
+            
+            # Store experiences in replay buffer
+            for i in range(B):
+                self.replay_buffer.add(
+                    input_grid[i], target[i], pred[i],
+                    total_loss[i].item(), exact_matches[i].item() > 0.5
+                )
+            
+            # Update pattern bank with exact matches
+            for i in range(B):
+                if exact_matches[i] > 0.5:
+                    self.pattern_bank.add_pattern(
+                        input_indices[i].cpu().numpy(),
+                        target_indices[i].cpu().numpy()
+                    )
+            
+            # Update performance history and adjust weights
+            self.performance_history.append(exact_matches.mean().item())
+            self._adjust_weights()
+            
+            return {
+                'total': total_loss.mean(),
+                'reconstruction': reconstruction_loss.mean(),
+                'exact_bonus': -exact_bonus.mean(),
+                'transformation': transformation_penalty.mean(),
+                'diversity': diversity_loss.mean(),
+                'memory': memory_loss.mean(),
+                'exact_count': exact_matches.sum()
+            }
+        else:
+            # Fall back to regular MegaScaleLoss behavior
+            return self._regular_loss(pred, target, input_grid)
+    
+    def _regular_loss(self, pred: torch.Tensor, target: torch.Tensor, 
+                     input_grid: torch.Tensor) -> Dict[str, torch.Tensor]:
+        """Regular loss calculation (non-MEPT)"""
+        B, C, H, W = pred.shape
+        
+        pred_indices = pred.argmax(dim=1)
+        target_indices = target.argmax(dim=1)
+        input_indices = input_grid.argmax(dim=1)
+        
+        # Standard reconstruction loss
         pred_flat = pred.permute(0, 2, 3, 1).reshape(-1, C)
         target_flat = target_indices.reshape(-1)
         ce_loss = self.ce_loss(pred_flat, target_flat).reshape(B, H, W)
         
-        # Check for NaN in ce_loss
-        if torch.isnan(ce_loss).any():
-            print(f"WARNING: NaN in ce_loss! pred range: {pred.min()}-{pred.max()}, target range: {target_indices.min()}-{target_indices.max()}")
-            ce_loss = torch.where(torch.isnan(ce_loss), torch.zeros_like(ce_loss), ce_loss)
+        # Exact match bonus
+        exact_matches = (pred_indices == target_indices).all(dim=[1,2]).float()
+        exact_bonus = -exact_matches * EXACT_MATCH_BONUS
         
-        # 2. Exact match bonus - HUGE reward for getting it perfect
-        exact_matches = (pred_indices == target_indices).all(dim=[1,2]).float()  # B
-        exact_bonus = -exact_matches * EXACT_MATCH_BONUS  # Negative because we minimize
-        
-        # 3. Edge-aware loss
+        # Edge-aware loss
         target_edges = self._detect_edges(target_indices)
         edge_weight = 1.0 + target_edges * (EDGE_WEIGHT * 10)
         weighted_loss = ce_loss * edge_weight
+        reconstruction_loss = weighted_loss.mean(dim=[1,2])
         
-        reconstruction_loss = weighted_loss.mean(dim=[1,2])  # B
-        
-        # 4. Transformation PENALTY - only apply if not an identity task
-        # Check if this is an identity task (where copying IS correct)
-        is_identity_task = (input_indices == target_indices).all(dim=[1,2]).float()  # B
-        
-        # Calculate similarity to input
-        same_as_input = (pred_indices == input_indices).float().mean(dim=[1,2])  # B
-        
-        # Apply penalty ONLY for non-identity tasks
+        # Transformation penalty
+        is_identity_task = (input_indices == target_indices).all(dim=[1,2]).float()
+        same_as_input = (pred_indices == input_indices).float().mean(dim=[1,2])
         transformation_penalty = same_as_input * (1 - is_identity_task)
         
-        # EXTRA: Pixel-level penalty for Stage 0 - penalize each pixel that should change but didn't
-        pixel_should_change = (target_indices != input_indices).float()
-        pixel_didnt_change = (pred_indices == input_indices).float()
-        pixel_copy_penalty = (pixel_should_change * pixel_didnt_change).mean() * 2.0  # Strong penalty
-        
-        # 5. Active region focus
-        active_mask = (target_indices != 0)
-        if active_mask.any():
-            active_loss = ce_loss * active_mask.float()
-            active_loss = active_loss.sum(dim=[1,2]) / (active_mask.sum(dim=[1,2]).float() + 1e-6)
-        else:
-            active_loss = torch.zeros(B).to(pred.device)
-        
-        # Combine with exact match bonus
-        total_loss = (
-            RECONSTRUCTION_WEIGHT * reconstruction_loss +
-            TRANSFORMATION_PENALTY * transformation_penalty +  # Now properly penalizes copying
-            pixel_copy_penalty +  # Additional pixel-level penalty
-            0.5 * active_loss +
-            exact_bonus  # This can make loss negative for exact matches!
-        )
-        
-        # NaN protection - check each component
-        if torch.isnan(reconstruction_loss).any() or torch.isinf(reconstruction_loss).any():
-            print(f"WARNING: NaN/Inf in reconstruction_loss, using fallback")
-            reconstruction_loss = F.cross_entropy(pred_flat, target_flat, reduction='none').reshape(B)
-        
-        if torch.isnan(transformation_penalty).any() or torch.isinf(transformation_penalty).any():
-            print(f"WARNING: NaN/Inf in transformation_penalty, setting to 0")
-            transformation_penalty = torch.zeros_like(transformation_penalty)
-        
-        if torch.isnan(active_loss).any() or torch.isinf(active_loss).any():
-            print(f"WARNING: NaN/Inf in active_loss, setting to 0")
-            active_loss = torch.zeros_like(active_loss)
-        
-        # Clamp individual components
-        reconstruction_loss = torch.clamp(reconstruction_loss, min=0, max=100)
-        transformation_penalty = torch.clamp(transformation_penalty, min=0, max=10)
-        pixel_copy_penalty = torch.clamp(pixel_copy_penalty, min=0, max=10)
-        active_loss = torch.clamp(active_loss, min=0, max=100)
-        
-        # Recalculate total loss
         total_loss = (
             RECONSTRUCTION_WEIGHT * reconstruction_loss +
             TRANSFORMATION_PENALTY * transformation_penalty +
-            pixel_copy_penalty +
-            0.5 * active_loss +
             exact_bonus
         )
         
-        # Final NaN protection
-        total_loss_mean = total_loss.mean()
-        if torch.isnan(total_loss_mean) or torch.isinf(total_loss_mean):
-            print(f"WARNING: Total loss is NaN/Inf even after protection, using simple CE")
-            total_loss_mean = F.cross_entropy(pred_flat, target_flat)
-        
         return {
+            'total': total_loss.mean(),
             'reconstruction': reconstruction_loss.mean(),
             'transformation': transformation_penalty.mean(),
-            'active': active_loss.mean(),
-            'exact_bonus': -exact_bonus.mean(),  # Show as positive in logs
-            'exact_count': exact_matches.sum(),
-            'total': total_loss_mean
+            'exact_bonus': -exact_bonus.mean(),
+            'exact_count': exact_matches.sum()
         }
+    
+    def _calculate_memory_loss(self, pred: torch.Tensor, 
+                              input_indices: torch.Tensor,
+                              target_indices: torch.Tensor) -> torch.Tensor:
+        """Calculate loss based on memory bank patterns"""
+        B = pred.shape[0]
+        memory_losses = []
+        
+        for i in range(B):
+            # Look up pattern in bank
+            input_np = input_indices[i].cpu().numpy()
+            stored_output = self.pattern_bank.lookup_pattern(input_np)
+            
+            if stored_output is not None:
+                # Convert to tensor
+                stored_tensor = torch.tensor(stored_output, device=pred.device)
+                stored_one_hot = F.one_hot(stored_tensor, num_classes=pred.shape[1])
+                stored_one_hot = stored_one_hot.permute(2, 0, 1).float()
+                
+                # Calculate similarity loss
+                memory_loss = F.kl_div(
+                    pred[i].log_softmax(dim=0),
+                    stored_one_hot,
+                    reduction='mean'
+                )
+                memory_losses.append(memory_loss)
+            else:
+                memory_losses.append(torch.tensor(0.0, device=pred.device))
+        
+        return torch.stack(memory_losses)
     
     def _detect_edges(self, grid: torch.Tensor) -> torch.Tensor:
         """Detect edges in grid with NaN protection"""
-        # Check for empty grids
         if grid.numel() == 0 or grid.shape[-1] < 2 or grid.shape[-2] < 2:
             return torch.zeros_like(grid)
         
@@ -217,16 +420,59 @@ class MegaScaleLoss(nn.Module):
             
             edges = ((dx + dy) > 0).float()
             
-            # NaN check
             if torch.isnan(edges).any():
-                print("WARNING: NaN in edge detection, returning zeros")
                 return torch.zeros_like(grid)
             
             return edges
         except Exception as e:
-            print(f"ERROR in edge detection: {e}")
             return torch.zeros_like(grid)
+    
+    def _adjust_weights(self):
+        """Dynamically adjust weights based on performance"""
+        if len(self.performance_history) < 10:
+            return
+        
+        recent_performance = np.mean(list(self.performance_history)[-10:])
+        
+        # If exact match rate is low, increase exact match weight
+        if recent_performance < 0.1:
+            self.weights['exact_match'] = min(10.0, self.weights['exact_match'] * 1.1)
+            self.weights['diversity'] = max(0.1, self.weights['diversity'] * 0.9)
+        
+        # If exact match rate is improving, balance weights
+        elif recent_performance > 0.3:
+            self.weights['exact_match'] = max(3.0, self.weights['exact_match'] * 0.95)
+            self.weights['memory_alignment'] = min(1.0, self.weights['memory_alignment'] * 1.05)
 
+
+class MEPTAugmentedDataset(Dataset):
+    """Dataset that combines regular data with replay buffer samples"""
+    def __init__(self, base_dataset, replay_buffer: ExperienceReplayBuffer,
+                 replay_ratio: float = 0.3):
+        self.base_dataset = base_dataset
+        self.replay_buffer = replay_buffer
+        self.replay_ratio = replay_ratio
+        
+    def __len__(self):
+        return len(self.base_dataset)
+    
+    def __getitem__(self, idx):
+        # With probability replay_ratio, return a replay sample
+        if random.random() < self.replay_ratio and len(self.replay_buffer.buffer) > 0:
+            experiences = self.replay_buffer.sample(1, exact_ratio=0.7)
+            if experiences:
+                exp = experiences[0]
+                return {
+                    'inputs': exp['input'],
+                    'outputs': exp['output']
+                }
+        
+        # Otherwise return regular sample
+        return self.base_dataset[idx]
+
+
+# Enable/Disable MEPT
+USE_MEPT = True
 
 class CurriculumMegaScaleDataset(Dataset):
     """High-performance dataset with curriculum learning and ARC synthesis"""
@@ -1140,13 +1386,28 @@ class TrainingReporter:
 
 
 def train_megascale_curriculum():
-    """V4 Mega-scale training with curriculum learning"""
+    """V4 Mega-scale training with curriculum learning and MEPT"""
     print("\n🚀 Starting V4 MEGA-SCALE + CURRICULUM Training")
     print("="*60)
     
-    # Create models and loss
+    # Create models
     models = create_enhanced_models()
-    loss_fn = MegaScaleLoss()
+    
+    # Initialize MEPT components if enabled
+    if USE_MEPT:
+        print("\n🧠 Initializing MEPT (Memory-Enhanced Progressive Training)")
+        replay_buffer = ExperienceReplayBuffer(capacity=100000)
+        pattern_bank = PatternBank(max_patterns=20000)
+        loss_fn = MEPTLoss(replay_buffer, pattern_bank, use_mept=True)
+        print(f"✅ MEPT initialized with:")
+        print(f"   Replay buffer capacity: {replay_buffer.capacity}")
+        print(f"   Pattern bank capacity: {pattern_bank.max_patterns}")
+        print(f"   Dynamic loss weighting enabled")
+    else:
+        # Fallback to regular loss if MEPT disabled
+        replay_buffer = ExperienceReplayBuffer(capacity=1)  # Minimal buffer
+        pattern_bank = PatternBank(max_patterns=1)
+        loss_fn = MEPTLoss(replay_buffer, pattern_bank, use_mept=False)
     
     # Initialize program synthesizer
     synthesizer = LightweightProgramSynthesizer()
@@ -1330,6 +1591,30 @@ def train_megascale_curriculum():
             
             print(f"Stage {stage} - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
             print(f"Batches per epoch: {len(train_loader):,}")
+            
+            # Apply MEPT augmentation if enabled and buffer has samples
+            if USE_MEPT and replay_buffer.get_stats()['total_experiences'] > 100:
+                print(f"🔄 Applying MEPT augmentation with replay buffer...")
+                print(f"   Buffer stats: {replay_buffer.get_stats()}")
+                
+                # Create augmented dataset
+                augmented_dataset = MEPTAugmentedDataset(
+                    train_dataset,
+                    replay_buffer,
+                    replay_ratio=0.3 if stage == 0 else 0.2  # More replay in early stages
+                )
+                
+                # Recreate train loader with augmented dataset
+                train_loader = DataLoader(
+                    augmented_dataset,
+                    batch_size=BATCH_SIZE,
+                    shuffle=True,
+                    num_workers=NUM_WORKERS,
+                    pin_memory=PIN_MEMORY,
+                    prefetch_factor=PREFETCH_FACTOR,
+                    persistent_workers=True,
+                    collate_fn=custom_collate_fn
+                )
             
             # Train for this stage - Resume from the correct epoch if needed
             start_epoch = resume_epoch if stage == resume_stage else 0
@@ -1522,6 +1807,15 @@ def train_megascale_curriculum():
                     print(f"\nGlobal Epoch {global_epoch} (Stage {stage}): "
                           f"Train Loss: {train_loss:.4f}, Train Exact: {train_exact_pct:.2f}%")
                     print(f"Val Loss: {val_loss:.4f}, Val Exact: {val_exact_pct:.2f}%, Pixel: {val_pixel_acc:.2f}%")
+                    
+                    # Report MEPT status if enabled
+                    if USE_MEPT:
+                        buffer_stats = replay_buffer.get_stats()
+                        print(f"📊 MEPT Status:")
+                        print(f"   Experience Buffer: {buffer_stats['total_experiences']:,} samples "
+                              f"({buffer_stats['exact_matches']:,} exact matches)")
+                        print(f"   Pattern Bank: {len(pattern_bank.patterns):,} unique patterns")
+                        print(f"   Loss weights: {loss_fn.weights}")
                     
                     # Report synthesis results if any
                     if synthesis_metrics['attempts'] > 0:

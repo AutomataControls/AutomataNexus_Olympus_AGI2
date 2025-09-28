@@ -3,7 +3,7 @@
 
 import subprocess
 import sys
-subprocess.check_call([sys.executable, "-m", "pip", "install", "torch", "torchvision", "matplotlib", "numpy", "pandas", "tqdm", "plotly", "kaleido", "-q"])
+subprocess.check_call([sys.executable, "-m", "pip", "install", "torch", "torchvision", "matplotlib", "numpy", "pandas", "tqdm", "plotly>=6.1.1", "kaleido", "-q"])
 print("✓ Packages installed")
 
 import torch
@@ -394,7 +394,10 @@ class TrainingReporter:
         fig.update_yaxes(title_text="Learning Rate", row=2, col=2)
         
         fig.write_html(os.path.join(self.report_dir, 'training_curves.html'))
-        fig.write_image(os.path.join(self.report_dir, 'training_curves.png'))
+        try:
+            fig.write_image(os.path.join(self.report_dir, 'training_curves.png'))
+        except Exception as e:
+            print(f"Warning: Could not save PNG image: {e}")
     
     def _create_radar_chart(self):
         """Create radar chart showing model performance across metrics"""
@@ -425,7 +428,10 @@ class TrainingReporter:
         )
         
         fig.write_html(os.path.join(self.report_dir, 'performance_radar.html'))
-        fig.write_image(os.path.join(self.report_dir, 'performance_radar.png'))
+        try:
+            fig.write_image(os.path.join(self.report_dir, 'performance_radar.png'))
+        except Exception as e:
+            print(f"Warning: Could not save PNG image: {e}")
     
     def _create_3d_surface_plot(self):
         """Create 3D surface plot of loss landscape"""
@@ -464,7 +470,10 @@ class TrainingReporter:
         )
         
         fig.write_html(os.path.join(self.report_dir, 'loss_landscape_3d.html'))
-        fig.write_image(os.path.join(self.report_dir, 'loss_landscape_3d.png'))
+        try:
+            fig.write_image(os.path.join(self.report_dir, 'loss_landscape_3d.png'))
+        except Exception as e:
+            print(f"Warning: Could not save PNG image: {e}")
     
     def _create_loss_decomposition_plot(self):
         """Create stacked area plot showing loss component breakdown"""

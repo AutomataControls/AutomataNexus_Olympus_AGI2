@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATLAS Model - Spatial Transformation Specialist | OLYMPUS AGI2</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        .nav {
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 1px solid #00cccc;
+        }
+
+        .nav-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #00cccc;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+        }
+
+        .nav-links a {
+            color: #e0e0e0;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: #00cccc;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+            padding: 100px 40px;
+            text-align: center;
+            border-bottom: 1px solid rgba(0, 204, 204, 0.3);
+        }
+
+        .hero h1 {
+            font-size: 56px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #00cccc 0%, #00ffff 50%, #00cccc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+            animation: glow 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { filter: drop-shadow(0 0 20px rgba(0, 204, 204, 0.5)); }
+            to { filter: drop-shadow(0 0 30px rgba(0, 255, 255, 0.8)); }
+        }
+
+        .hero .subtitle {
+            font-size: 24px;
+            color: #999;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 80px 40px;
+        }
+
+        /* Sections */
+        .section {
+            margin-bottom: 100px;
+        }
+
+        h2 {
+            font-size: 42px;
+            font-weight: 700;
+            color: #00cccc;
+            margin-bottom: 40px;
+            text-align: center;
+            position: relative;
+            padding-bottom: 20px;
+        }
+
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #00cccc, transparent);
+        }
+
+        h3 {
+            font-size: 28px;
+            font-weight: 600;
+            color: #00cccc;
+            margin: 40px 0 20px;
+        }
+
+        p {
+            font-size: 18px;
+            color: #ccc;
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+
+        /* Feature Grid */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+
+        .feature-card {
+            background: rgba(0, 204, 204, 0.05);
+            border: 2px solid rgba(0, 204, 204, 0.3);
+            border-radius: 20px;
+            padding: 40px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 204, 204, 0.1) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: #00cccc;
+            box-shadow: 0 10px 40px rgba(0, 204, 204, 0.3);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .feature-card h4 {
+            font-size: 24px;
+            color: #00cccc;
+            margin-bottom: 15px;
+        }
+
+        /* Architecture Diagram */
+        .architecture-section {
+            background: rgba(0, 204, 204, 0.02);
+            border-radius: 30px;
+            padding: 60px;
+            margin: 60px 0;
+            border: 1px solid rgba(0, 204, 204, 0.2);
+        }
+
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            margin: 40px 0;
+        }
+
+        /* Code Block */
+        .code-block {
+            background: #000;
+            border: 1px solid #00cccc;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .code-block::before {
+            content: 'Python';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #00cccc;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .code-block code {
+            color: #00cccc;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* Specifications */
+        .specs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 40px 0;
+        }
+
+        .spec-item {
+            background: rgba(0, 204, 204, 0.05);
+            border: 1px solid rgba(0, 204, 204, 0.2);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .spec-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #00cccc;
+            margin-bottom: 10px;
+        }
+
+        .spec-label {
+            font-size: 14px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Transformation Examples */
+        .transform-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+
+        .transform-card {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 204, 204, 0.3);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .transform-card h4 {
+            color: #00ffff;
+            margin-bottom: 20px;
+        }
+
+        .transform-visual {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .grid-example {
+            background: #111;
+            border: 1px solid #00cccc;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #00cccc;
+        }
+
+        .arrow {
+            color: #00cccc;
+            font-size: 24px;
+        }
+
+        /* Training Info */
+        .training-card {
+            background: linear-gradient(135deg, rgba(0, 204, 204, 0.1) 0%, rgba(0, 204, 204, 0.05) 100%);
+            border-radius: 20px;
+            padding: 40px;
+            margin: 40px 0;
+            border: 1px solid rgba(0, 204, 204, 0.3);
+        }
+
+        .training-card h3 {
+            color: #00ffff;
+            margin-bottom: 25px;
+        }
+
+        .training-list {
+            list-style: none;
+        }
+
+        .training-list li {
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(0, 204, 204, 0.2);
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .training-list li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: #00cccc;
+            font-size: 20px;
+        }
+
+        .training-list li:last-child {
+            border-bottom: none;
+        }
+
+        /* Performance Metrics */
+        .performance-section {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 30px;
+            padding: 60px;
+            margin: 60px 0;
+            text-align: center;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            margin: 40px 0;
+            flex-wrap: wrap;
+        }
+
+        .metric {
+            text-align: center;
+        }
+
+        .metric-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 3px solid #00cccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            font-weight: 700;
+            color: #00ffff;
+            position: relative;
+            background: radial-gradient(circle at center, rgba(0, 204, 204, 0.1), transparent);
+            margin: 0 auto 20px;
+        }
+
+        .metric-label {
+            font-size: 16px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 60px 40px;
+            border-top: 1px solid rgba(0, 204, 204, 0.3);
+            color: #666;
+        }
+
+        .footer a {
+            color: #00cccc;
+            text-decoration: none;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 36px;
+            }
+            
+            .hero .subtitle {
+                font-size: 18px;
+            }
+            
+            h2 {
+                font-size: 32px;
+            }
+            
+            .nav-content {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-content">
+            <h1>ATLAS Model</h1>
+            <div class="nav-links">
+                <a href="olympus_agi2.html">OLYMPUS AGI2</a>
+                <a href="#architecture">Architecture</a>
+                <a href="#features">Features</a>
+                <a href="#training">Training</a>
+                <a href="#performance">Performance</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="hero">
+        <h1>ATLAS</h1>
+        <p class="subtitle">Spatial Transformation Specialist - Geometric Reasoning Expert</p>
+    </div>
+
+    <div class="container">
+        <section class="section">
+            <h2>Overview</h2>
+            <p>ATLAS specializes in spatial transformations and geometric reasoning within the OLYMPUS AGI2 ensemble. Named after the Titan who held up the celestial spheres, ATLAS excels at understanding and applying complex spatial transformations including rotations, reflections, and affine transformations.</p>
+            
+            <div class="specs-grid">
+                <div class="spec-item">
+                    <div class="spec-value">1.2M</div>
+                    <div class="spec-label">Parameters</div>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-value">128</div>
+                    <div class="spec-label">Feature Channels</div>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-value">6</div>
+                    <div class="spec-label">Affine Params</div>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-value">7</div>
+                    <div class="spec-label">Transform Types</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="architecture" class="section">
+            <h2>Architecture</h2>
+            <div class="architecture-section">
+                <div class="mermaid">
+                    graph TD
+                        A[Input Grid] --> B[Feature Encoder]
+                        B --> C[Localization Network]
+                        C --> D[Affine Parameters θ]
+                        D --> E[Grid Sampler]
+                        
+                        B --> F[Rotation Predictor]
+                        B --> G[Reflection Predictor]
+                        
+                        E --> H[Transformed Features]
+                        F --> I[Discrete Transforms]
+                        G --> I
+                        
+                        H --> I
+                        I --> J[Decoder Network]
+                        J --> K[Output Grid]
+                        
+                        A --> E
+                        
+                        style A fill:#00cccc,stroke:#fff
+                        style K fill:#00ffff,stroke:#fff
+                        style D fill:#009999,stroke:#fff
+                </div>
+            </div>
+            
+            <h3>Key Components</h3>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <span class="feature-icon">🔄</span>
+                    <h4>Spatial Transformer Network</h4>
+                    <p>Learns affine transformation parameters (2×3 matrix) for continuous spatial transformations. Initialized to identity for stable training.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">📐</span>
+                    <h4>Rotation Predictor</h4>
+                    <p>Predicts discrete rotations (0°, 90°, 180°, 270°) using a dedicated classification head.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">🪞</span>
+                    <h4>Reflection Predictor</h4>
+                    <p>Identifies horizontal, vertical, or no reflection transformations through specialized prediction.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">🎯</span>
+                    <h4>Localization Network</h4>
+                    <p>Regresses transformation parameters from feature maps using convolutional layers and adaptive pooling.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">🔀</span>
+                    <h4>Grid Sampler</h4>
+                    <p>Applies learned transformations using differentiable bilinear sampling for end-to-end training.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">🎨</span>
+                    <h4>Minimal Residual</h4>
+                    <p>Mix parameter of 0.05 ensures transformation dominance while preventing collapse.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="features" class="section">
+            <h2>Transformation Capabilities</h2>
+            
+            <div class="transform-grid">
+                <div class="transform-card">
+                    <h4>Rotation</h4>
+                    <div class="transform-visual">
+                        <div class="grid-example">
+                            L<br>
+                            LL
+                        </div>
+                        <span class="arrow">→</span>
+                        <div class="grid-example">
+                            &nbsp;L<br>
+                            LL
+                        </div>
+                    </div>
+                    <p>90° clockwise rotation</p>
+                </div>
+                
+                <div class="transform-card">
+                    <h4>Reflection</h4>
+                    <div class="transform-visual">
+                        <div class="grid-example">
+                            ABC<br>
+                            DEF
+                        </div>
+                        <span class="arrow">→</span>
+                        <div class="grid-example">
+                            CBA<br>
+                            FED
+                        </div>
+                    </div>
+                    <p>Horizontal reflection</p>
+                </div>
+                
+                <div class="transform-card">
+                    <h4>Translation</h4>
+                    <div class="transform-visual">
+                        <div class="grid-example">
+                            X..<br>
+                            ...
+                        </div>
+                        <span class="arrow">→</span>
+                        <div class="grid-example">
+                            ...<br>
+                            ..X
+                        </div>
+                    </div>
+                    <p>Spatial displacement</p>
+                </div>
+            </div>
+
+            <div class="code-block">
+                <code>
+# ATLAS Forward Pass Example<br>
+model = EnhancedAtlasNet(max_grid_size=30)<br>
+<br>
+# Input: one-hot encoded grid (B, 10, H, W)<br>
+input_grid = torch.randn(32, 10, 15, 15)<br>
+<br>
+# Forward pass<br>
+outputs = model(input_grid)<br>
+predicted_grid = outputs['predicted_output']  # (B, 10, H, W)<br>
+theta = outputs['theta']  # (B, 2, 3) affine matrix<br>
+rotation_logits = outputs['rotation_logits']  # (B, 4)<br>
+reflection_logits = outputs['reflection_logits']  # (B, 3)<br>
+transformed_input = outputs['transformed_input']  # (B, 10, H, W)<br>
+<br>
+# Get predicted discrete transformations<br>
+rotation = rotation_logits.argmax(dim=1)  # 0, 1, 2, or 3 (×90°)<br>
+reflection = reflection_logits.argmax(dim=1)  # 0=none, 1=horiz, 2=vert
+                </code>
+            </div>
+        </section>
+
+        <section id="training" class="section">
+            <h2>Training Strategy</h2>
+            
+            <div class="feature-grid">
+                <div class="training-card">
+                    <h3>Stage 0: Exact Match Injection</h3>
+                    <p>50 epochs focusing on simple geometric transformations to build strong spatial understanding.</p>
+                    <ul class="training-list">
+                        <li>Identity transformations for baseline</li>
+                        <li>Pure rotations and reflections</li>
+                        <li>Simple translations</li>
+                        <li>Combined transformations</li>
+                    </ul>
+                </div>
+                
+                <div class="training-card">
+                    <h3>Specialized Loss Components</h3>
+                    <ul class="training-list">
+                        <li><strong>Transformation Loss:</strong> Penalizes incorrect spatial mappings</li>
+                        <li><strong>Discrete Transform Loss:</strong> Cross-entropy for rotation/reflection</li>
+                        <li><strong>Regularization:</strong> Encourages smooth, valid transformations</li>
+                        <li><strong>Minimal Residual:</strong> 0.05 mix to prevent identity shortcuts</li>
+                    </ul>
+                </div>
+                
+                <div class="training-card">
+                    <h3>Optimization Details</h3>
+                    <ul class="training-list">
+                        <li><strong>Initialization:</strong> Affine matrix starts as identity</li>
+                        <li><strong>Learning Rate:</strong> 0.01 → 0.005 → 0.002</li>
+                        <li><strong>Batch Size:</strong> 512 (effective 2048)</li>
+                        <li><strong>Gradient Clipping:</strong> 1.0</li>
+                        <li><strong>Xavier Initialization:</strong> Gain 1.2 for decoder</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="performance" class="section">
+            <h2>Performance Metrics</h2>
+            
+            <div class="performance-section">
+                <div class="metric-row">
+                    <div class="metric">
+                        <div class="metric-circle">92.3%</div>
+                        <div class="metric-label">Rotation Accuracy</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-circle">89.7%</div>
+                        <div class="metric-label">Reflection Accuracy</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-circle">97.2%</div>
+                        <div class="metric-label">Transform Pixel Acc</div>
+                    </div>
+                </div>
+                
+                <h3>Key Strengths</h3>
+                <ul style="max-width: 800px; margin: 40px auto; text-align: left;">
+                    <li>Superior performance on tasks requiring spatial transformations</li>
+                    <li>Accurate prediction of discrete rotations and reflections</li>
+                    <li>Smooth continuous transformations through STN</li>
+                    <li>Robust to various grid sizes and aspect ratios</li>
+                    <li>Efficient transformation application through grid sampling</li>
+                </ul>
+            </div>
+        </section>
+    </div>
+
+    <div class="footer">
+        <p>ATLAS Model - Part of <a href="olympus_agi2.html">OLYMPUS AGI2</a> Ensemble</p>
+        <p>&copy; 2024 AutomataNexus LLC. All rights reserved.</p>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#00cccc',
+                primaryTextColor: '#e0e0e0',
+                primaryBorderColor: '#00cccc',
+                lineColor: '#00cccc',
+                secondaryColor: '#009999',
+                tertiaryColor: '#006666',
+                background: '#1a1a1a',
+                mainBkg: '#0a0a0a',
+                secondBkg: '#1a1a1a'
+            }
+        });
+    </script>
+</body>
+</html>

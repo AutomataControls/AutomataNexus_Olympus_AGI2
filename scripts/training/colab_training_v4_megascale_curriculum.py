@@ -829,6 +829,9 @@ class TrainingReporter:
         param_count = self._get_param_count()
         model_size_mb = float(param_count.rstrip('M')) * 4  # Approximate MB for float32
         
+        # Get epoch number for serial
+        epoch_num = self.metrics['epoch'][-1] if self.metrics['epoch'] else 1
+        
         html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1113,7 +1116,7 @@ class TrainingReporter:
                 </div>
 
                 <div class="serial-footer">
-                    Model Serial: ANX-{self.model_name.upper()}-{datetime.now().year}-{self.metrics['epoch'][-1]:03d if self.metrics['epoch'] else 1}
+                    Model Serial: ANX-{self.model_name.upper()}-{datetime.now().year}-{epoch_num:03d}
                 </div>
             </div>
         </div>

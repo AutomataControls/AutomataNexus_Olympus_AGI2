@@ -186,8 +186,15 @@ class CurriculumMegaScaleDataset(Dataset):
                 
                 # Curriculum filtering
                 if self.curriculum_stage == 0:  # Easy
-                    if grid_size > 15 or n_colors_in > 3 or n_colors_out > 3 or size_diff > 0:
+                    # Stage 0: Only include very simple patterns
+                    # Priority: same size, few colors, small grids
+                    if grid_size > 10 or n_colors_in > 3 or n_colors_out > 3:
                         continue
+                    # Give preference to same-size transformations
+                    if size_diff == 0:
+                        # Add extra copies for same-size patterns
+                        for _ in range(3):
+                            self.samples.append(sample)
                 elif self.curriculum_stage == 1:  # Medium
                     if grid_size > 20 or n_colors_in > 5 or n_colors_out > 5:
                         continue
@@ -197,6 +204,29 @@ class CurriculumMegaScaleDataset(Dataset):
                 
                 # Add original
                 self.samples.append(sample)
+                
+                # Stage 0: Add identity tasks to help model learn exact copying
+                if self.curriculum_stage == 0 and np.random.random() < 0.3:
+                    # Create identity task (output = input)
+                    identity_sample = {
+                        'input': input_grid.copy(),
+                        'output': input_grid.copy()
+                    }
+                    self.samples.append(identity_sample)
+                    
+                    # Also add simple color mapping tasks
+                    if n_colors_in == 2:
+                        # Swap colors
+                        swapped = input_grid.copy()
+                        unique_colors = np.unique(input_grid)
+                        if len(unique_colors) == 2:
+                            swapped[input_grid == unique_colors[0]] = unique_colors[1]
+                            swapped[input_grid == unique_colors[1]] = unique_colors[0]
+                            swap_sample = {
+                                'input': input_grid.copy(),
+                                'output': swapped
+                            }
+                            self.samples.append(swap_sample)
                 
                 # Add augmentations
                 for _ in range(self.augment_factor - 1):
@@ -893,7 +923,7 @@ def train_megascale_curriculum():
     models = create_enhanced_models()
     loss_fn = MegaScaleLoss()
     
-    os.makedirs('/content/arc_models_v4', exist_ok=True)
+    os.makedirs('/content/AutomataNexus_Olympus_AGI2/arc_models_v4', exist_ok=True)
     
     # Train all models
     for model_name, model in models.items():
@@ -907,10 +937,13 @@ def train_megascale_curriculum():
         # Initialize reporter for this model
         reporter = TrainingReporter(model_name)
         
-        # High-momentum optimizer for large batches
+        # Stage-adaptive optimizer
+        # Use higher LR for Stage 0 to learn exact patterns faster
+        stage_lrs = [LEARNING_RATE * 2.0, LEARNING_RATE, LEARNING_RATE * 0.5]
+        
         optimizer = optim.SGD(
             model.parameters(), 
-            lr=LEARNING_RATE,
+            lr=stage_lrs[0],  # Start with Stage 0 LR
             momentum=0.9,
             weight_decay=0.0001,
             nesterov=True
@@ -930,6 +963,12 @@ def train_megascale_curriculum():
         for stage in range(CURRICULUM_STAGES):
             print(f"\n📚 Starting Curriculum Stage {stage}")
             print("="*40)
+            
+            # Adjust learning rate for each stage
+            if stage > 0:
+                for param_group in optimizer.param_groups:
+                    param_group['lr'] = stage_lrs[stage]
+                print(f"Learning rate adjusted to: {stage_lrs[stage]}")
             
             # Create dataset for this stage
             dataset = CurriculumMegaScaleDataset(DATA_DIR, curriculum_stage=stage)
@@ -1076,7 +1115,7 @@ def train_megascale_curriculum():
                             'optimizer_state_dict': optimizer.state_dict(),
                             'val_exact': val_exact_pct,
                             'val_pixel_acc': val_pixel_acc
-                        }, f'/content/arc_models_v4/{model_name}_best.pt')
+                        }, f'/content/AutomataNexus_Olympus_AGI2/arc_models_v4/{model_name}_best.pt')
                         
                         print(f"✅ New best model! Exact: {val_exact_pct:.2f}%")
                         

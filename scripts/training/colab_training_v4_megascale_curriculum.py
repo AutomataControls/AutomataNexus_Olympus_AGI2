@@ -1225,7 +1225,41 @@ def train_megascale_curriculum():
             # Initialize augmenter for this stage
             arc_augmenter = ARCDataAugmenter(device=device)
             
-            # High-performance dataloaders
+            # Custom collate function to handle different grid sizes
+            def custom_collate_fn(batch):
+                # Find max dimensions
+                max_h_in = max(item['inputs'].shape[0] for item in batch)
+                max_w_in = max(item['inputs'].shape[1] for item in batch)
+                max_h_out = max(item['outputs'].shape[0] for item in batch)
+                max_w_out = max(item['outputs'].shape[1] for item in batch)
+                max_h = max(max_h_in, max_h_out, MAX_GRID_SIZE)
+                max_w = max(max_w_in, max_w_out, MAX_GRID_SIZE)
+                
+                # Pad all grids to max size
+                inputs = []
+                outputs = []
+                for item in batch:
+                    # Pad inputs
+                    h_in, w_in = item['inputs'].shape
+                    pad_h = max_h - h_in
+                    pad_w = max_w - w_in
+                    padded_input = F.pad(item['inputs'], (0, pad_w, 0, pad_h), value=0)
+                    
+                    # Pad outputs
+                    h_out, w_out = item['outputs'].shape
+                    pad_h = max_h - h_out
+                    pad_w = max_w - w_out
+                    padded_output = F.pad(item['outputs'], (0, pad_w, 0, pad_h), value=0)
+                    
+                    inputs.append(padded_input)
+                    outputs.append(padded_output)
+                
+                return {
+                    'inputs': torch.stack(inputs),
+                    'outputs': torch.stack(outputs)
+                }
+            
+            # High-performance dataloaders with custom collate
             train_loader = DataLoader(
                 train_dataset, 
                 batch_size=BATCH_SIZE,
@@ -1233,7 +1267,8 @@ def train_megascale_curriculum():
                 num_workers=NUM_WORKERS,
                 pin_memory=PIN_MEMORY,
                 prefetch_factor=PREFETCH_FACTOR,
-                persistent_workers=True
+                persistent_workers=True,
+                collate_fn=custom_collate_fn
             )
             
             val_loader = DataLoader(
@@ -1243,7 +1278,8 @@ def train_megascale_curriculum():
                 num_workers=NUM_WORKERS,
                 pin_memory=PIN_MEMORY,
                 prefetch_factor=PREFETCH_FACTOR,
-                persistent_workers=True
+                persistent_workers=True,
+                collate_fn=custom_collate_fn
             )
             
             print(f"Stage {stage} - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
@@ -1376,8 +1412,18 @@ def train_megascale_curriculum():
                     
                     with torch.no_grad():
                         for batch in tqdm(val_loader, desc="Validation"):
-                            input_grids = batch['input'].to(device, non_blocking=True)
-                            output_grids = batch['output'].to(device, non_blocking=True)
+                            inputs = batch['inputs'].to(device, non_blocking=True)
+                            outputs = batch['outputs'].to(device, non_blocking=True)
+                            
+                            # Validate ranges
+                            if inputs.max() >= 10 or inputs.min() < 0:
+                                inputs = torch.clamp(inputs, 0, 9)
+                            if outputs.max() >= 10 or outputs.min() < 0:
+                                outputs = torch.clamp(outputs, 0, 9)
+                            
+                            # Convert to one-hot
+                            input_grids = F.one_hot(inputs, num_classes=NUM_COLORS).permute(0, 3, 1, 2).float()
+                            output_grids = F.one_hot(outputs, num_classes=NUM_COLORS).permute(0, 3, 1, 2).float()
                             
                             with autocast('cuda'):
                                 # Handle CHRONOS differently - it expects a list of tensors
@@ -1404,8 +1450,8 @@ def train_megascale_curriculum():
                             if synthesis_metrics['attempts'] < 50:  # Limit for speed across all stages
                                 for i in range(min(5, input_grids.size(0))):
                                     synthesis_metrics['attempts'] += 1
-                                    input_np = input_grids[i].cpu().numpy().argmax(axis=0)
-                                    output_np = output_grids[i].cpu().numpy().argmax(axis=0)
+                                    input_np = inputs[i].cpu().numpy()
+                                    output_np = outputs[i].cpu().numpy()
                                     
                                     program = synthesizer.quick_synthesize(input_np, output_np, max_depth=2)
                                     if program and program.verified:

@@ -322,8 +322,8 @@ class AggressiveLoss(nn.Module):
         target_indices = target.argmax(dim=1)
         input_indices = input_grid.argmax(dim=1)
         
-        # Simple approach for first few epochs
-        if self.current_epoch < 3:
+        # Simple approach for first several epochs to stabilize
+        if self.current_epoch < 10:
             # Just use plain cross entropy
             ce_loss = F.cross_entropy(pred, target_indices, reduction='mean')
             exact_matches = (pred_indices == target_indices).all(dim=[1, 2]).float()
@@ -522,9 +522,9 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
     optimizer = torch.optim.AdamW(model.parameters(), lr=initial_lr, weight_decay=1e-5, betas=(0.9, 0.999))  # More stable betas
     
     # Linear warmup + CosineAnnealingWarmRestarts
-    warmup_epochs = 5
+    warmup_epochs = 10  # Longer warmup
     warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
-        optimizer, start_factor=0.01, total_iters=warmup_epochs * len(dataloader)  # Even lower start
+        optimizer, start_factor=0.1, total_iters=warmup_epochs * len(dataloader)  # Not too low
     )
     main_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
         optimizer, 
@@ -657,7 +657,7 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
         
         # Print detailed stats every 5 epochs
         if (epoch + 1) % 5 == 0:
-            print(f"📊 Stats: Best exact match so far: {best_exact_match:.1f}% | Patience: {patience_counter}/15")
+            print(f"📊 Stats: Best exact match so far: {best_exact_match:.1f}% | Patience: {patience_counter}/30")
         
         # Track best performance
         if exact_pct > best_exact_match:

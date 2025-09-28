@@ -197,11 +197,12 @@ class AggressiveLoss(nn.Module):
         
         return {
             'total': total_loss,
-            'ce': ce_loss,
+            'reconstruction': ce_loss,
+            'transformation': copy_penalty,  # Use copy penalty as transformation metric
             'exact_bonus': exact_bonus,
+            'exact_count': exact_matches.sum(),
             'copy_penalty': copy_penalty,
-            'transform_diff': transform_diff,
-            'exact_count': exact_matches.sum()
+            'transform_diff': transform_diff
         }
 
 

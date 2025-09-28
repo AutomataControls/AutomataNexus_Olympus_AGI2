@@ -18,6 +18,7 @@ __pycache__/
 *.json
 !kaggle.json
 !submission.json
+!data/*.json
 
 # Environment
 .env

@@ -309,7 +309,7 @@ class AggressiveLoss(nn.Module):
     and gives massive rewards for exact matches
     """
     
-    def __init__(self, label_smoothing=0.1):
+    def __init__(self, label_smoothing=0.0):  # Disable label smoothing initially
         super().__init__()
         self.ce_loss = nn.CrossEntropyLoss(reduction='none', label_smoothing=label_smoothing)
         self.current_epoch = 0
@@ -322,6 +322,24 @@ class AggressiveLoss(nn.Module):
         target_indices = target.argmax(dim=1)
         input_indices = input_grid.argmax(dim=1)
         
+        # Simple approach for first few epochs
+        if self.current_epoch < 3:
+            # Just use plain cross entropy
+            ce_loss = F.cross_entropy(pred, target_indices, reduction='mean')
+            exact_matches = (pred_indices == target_indices).all(dim=[1, 2]).float()
+            
+            return {
+                'total': ce_loss,
+                'reconstruction': ce_loss,
+                'transformation': torch.tensor(0.0),
+                'exact_bonus': torch.tensor(0.0),
+                'exact_count': exact_matches.sum(),
+                'copy_penalty': torch.tensor(0.0),
+                'transform_diff': torch.tensor(0.0),
+                'color_penalty': torch.tensor(0.0)
+            }
+        
+        # Full loss after warmup
         # 1. Per-pixel cross entropy with heavy weight on errors
         ce_loss = self.ce_loss(pred.permute(0, 2, 3, 1).reshape(-1, C),
                                target_indices.reshape(-1))
@@ -332,7 +350,7 @@ class AggressiveLoss(nn.Module):
         pred_probs = torch.softmax(pred.permute(0, 2, 3, 1).reshape(-1, C), dim=-1)
         target_probs = pred_probs.gather(1, target_indices.reshape(-1, 1)).squeeze()  
         focal_weight = (1 - target_probs) ** 2  # gamma=2 for more balanced focus
-        ce_loss = ce_loss * (1 + incorrect_mask * 2 + focal_weight * 1)  # Even more balanced
+        ce_loss = ce_loss * (1 + incorrect_mask * 1 + focal_weight * 0.5)  # Further reduced
         ce_loss = ce_loss.mean()
         
         # 2. Exact match bonus (negative loss) - PROGRESSIVE
@@ -562,28 +580,27 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
                 noise = torch.randn_like(inputs_oh) * 0.01
                 inputs_oh = inputs_oh + noise
             
-            # Mixed precision forward pass - try float32 for stability
-            with torch.amp.autocast(device_type='cuda', dtype=torch.float32):  # Use float32 for now
-                if hasattr(model, '__class__') and model.__class__.__name__ == 'CHRONOS':
-                    pred = model([inputs_oh], target=outputs_oh)['predicted_output']
-                else:
-                    pred = model(inputs_oh, outputs_oh, mode='train')['predicted_output']
-                
-                # Check for NaN in predictions
-                if torch.isnan(pred).any() or torch.isinf(pred).any():
-                    print(f"WARNING: NaN/Inf in model predictions, skipping batch")
-                    optimizer.zero_grad()
-                    continue
-                
-                # Comprehensive AggressiveLoss calculation
-                losses = loss_fn(pred, outputs_oh, inputs_oh)
-                loss = losses['total']
-                
-                # Check for NaN in loss
-                if torch.isnan(loss) or torch.isinf(loss):
-                    print(f"WARNING: NaN/Inf loss, skipping batch")
-                    optimizer.zero_grad()
-                    continue
+            # Forward pass without autocast for debugging
+            if hasattr(model, '__class__') and model.__class__.__name__ == 'CHRONOS':
+                pred = model([inputs_oh], target=outputs_oh)['predicted_output']
+            else:
+                pred = model(inputs_oh, outputs_oh, mode='train')['predicted_output']
+            
+            # Check for NaN in predictions
+            if torch.isnan(pred).any() or torch.isinf(pred).any():
+                print(f"WARNING: NaN/Inf in model predictions, skipping batch")
+                optimizer.zero_grad()
+                continue
+            
+            # Comprehensive AggressiveLoss calculation
+            losses = loss_fn(pred, outputs_oh, inputs_oh)
+            loss = losses['total']
+            
+            # Check for NaN in loss
+            if torch.isnan(loss) or torch.isinf(loss):
+                print(f"WARNING: NaN/Inf loss, skipping batch")
+                optimizer.zero_grad()
+                continue
             
             # DEBUG: Print some stats on first batch of first epoch
             if epoch == 0 and batch_idx < 5:
@@ -594,11 +611,8 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
                 print(f"DEBUG - Loss components: recon={losses['reconstruction']:.4f}, exact_bonus={losses['exact_bonus']:.4f}, total={losses['total']:.4f}")
                 print(f"DEBUG - Other: copy={losses['copy_penalty']:.4f}, transform={losses['transform_diff']:.4f}, color={losses['color_penalty']:.4f}")
             
-            # Scaled backward pass
-            scaler.scale(loss).backward()
-            
-            # Gradient clipping with scaler
-            scaler.unscale_(optimizer)
+            # Backward pass without scaler
+            loss.backward()
             
             # Calculate gradient norm before clipping
             total_norm = 0.0
@@ -616,12 +630,10 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
             if torch.isnan(grad_norm) or torch.isinf(grad_norm) or grad_norm > 10.0:
                 print(f"WARNING: Bad gradients detected (norm={grad_norm:.4f}, pre-clip={total_norm:.4f}), skipping step")
                 optimizer.zero_grad()
-                scaler.update()  # Must call update even when skipping
                 continue
             
-            # Optimizer step with scaler
-            scaler.step(optimizer)
-            scaler.update()
+            # Optimizer step without scaler
+            optimizer.step()
             
             # Zero gradients
             optimizer.zero_grad()

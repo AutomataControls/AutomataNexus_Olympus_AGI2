@@ -259,12 +259,13 @@ class AggressiveLoss(nn.Module):
         
         total_loss = ce_loss + exact_bonus + copy_penalty + transform_diff + color_penalty
         
-        # NaN protection - clamp extreme values
-        total_loss = torch.clamp(total_loss, min=-10.0, max=10.0)
-        
-        # Replace any NaN with a reasonable fallback
+        # NaN protection - only replace NaN, don't clamp valid values
         if torch.isnan(total_loss).any():
-            total_loss = torch.tensor(1.0, device=total_loss.device, requires_grad=True)
+            total_loss = torch.tensor(2.0, device=total_loss.device, requires_grad=True)
+        
+        # Only clamp if loss is extremely large (>100)
+        if total_loss > 100.0:
+            total_loss = torch.tensor(10.0, device=total_loss.device, requires_grad=True)
         
         return {
             'total': total_loss,

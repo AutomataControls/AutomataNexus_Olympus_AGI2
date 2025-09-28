@@ -20,6 +20,8 @@ class ExactMatchBoostDataset(Dataset):
         self.fixed_size = fixed_size  # Fix size for all samples
         self.samples = []
         self._generate_samples()
+        # Add additional augmented samples
+        self._augment_samples()
     
     def _generate_samples(self):
         """Generate samples that are GUARANTEED to produce exact matches"""
@@ -27,7 +29,7 @@ class ExactMatchBoostDataset(Dataset):
         samples_per_type = self.num_samples // 20  # Even more pattern types
         
         # 1. Pure Identity (30% of data) - MUST learn to copy exactly
-        for _ in range(samples_per_type * 5):  # Increased from 20% to 30%
+        for _ in range(samples_per_type * 6):  # Increased from 30% to 30%
             grid = np.random.randint(0, 3, (self.fixed_size, self.fixed_size))
             self.samples.append({
                 'input': grid,
@@ -259,6 +261,41 @@ class ExactMatchBoostDataset(Dataset):
         random.shuffle(self.samples)
         print(f"Generated {len(self.samples)} exact-match training samples")
     
+    def _augment_samples(self):
+        """Add rotated and flipped versions of existing samples for more diversity"""
+        augmented = []
+        
+        # Only augment a subset to avoid too much growth
+        for sample in self.samples[:len(self.samples)//4]:
+            input_grid = sample['input']
+            output_grid = sample['output']
+            
+            # Skip augmentation for certain transformations that don't make sense
+            if sample['transform'] in ['identity', 'count_fill', 'all_ones', 'fill_one', 'clear']:
+                continue
+                
+            # Add 90 degree rotation
+            aug_input_90 = np.rot90(input_grid, 1)
+            aug_output_90 = np.rot90(output_grid, 1)
+            augmented.append({
+                'input': aug_input_90,
+                'output': aug_output_90,
+                'transform': sample['transform'] + '_rot90'
+            })
+            
+            # Add horizontal flip
+            aug_input_h = np.fliplr(input_grid)
+            aug_output_h = np.fliplr(output_grid)
+            augmented.append({
+                'input': aug_input_h,
+                'output': aug_output_h,
+                'transform': sample['transform'] + '_fliph'
+            })
+        
+        self.samples.extend(augmented)
+        random.shuffle(self.samples)
+        print(f"After augmentation: {len(self.samples)} total samples")
+    
     def __len__(self):
         return len(self.samples)
     
@@ -294,15 +331,15 @@ class AggressiveLoss(nn.Module):
         # Focus more on pixels that are almost correct
         pred_probs = torch.softmax(pred.permute(0, 2, 3, 1).reshape(-1, C), dim=-1)
         target_probs = pred_probs.gather(1, target_indices.reshape(-1, 1)).squeeze()  
-        focal_weight = (1 - target_probs) ** 2  # Focal loss gamma=2
-        ce_loss = ce_loss * (1 + incorrect_mask * 9 + focal_weight * 2)  # Combined weighting
+        focal_weight = (1 - target_probs) ** 3  # Increased gamma=3 for harder focus
+        ce_loss = ce_loss * (1 + incorrect_mask * 14 + focal_weight * 4)  # Stronger weighting
         ce_loss = ce_loss.mean()
         
         # 2. Exact match bonus (negative loss) - PROGRESSIVE
         exact_matches = (pred_indices == target_indices).all(dim=[1, 2]).float()
         # Progressive bonus that increases over time
         epoch_progress = min(1.0, self.current_epoch / 50.0) if hasattr(self, 'current_epoch') else 0.5
-        bonus_weight = 2.0 + 3.0 * epoch_progress  # From 2.0 to 5.0
+        bonus_weight = 5.0 + 10.0 * epoch_progress  # From 5.0 to 15.0 - much stronger!
         exact_bonus = -bonus_weight * exact_matches.mean()
         
         # 3. Heavy penalty for copying when shouldn't
@@ -425,34 +462,46 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
     
     print("\n🎯 EXACT MATCH INJECTION TRAINING")
     print("="*50)
+    print("Enhanced with:")
+    print("  • Focal loss (gamma=3)")
+    print("  • Progressive exact match bonus (5x-15x)")
+    print("  • Data augmentation")
+    print("  • Warmup + cosine annealing")
+    print("  • 300K total samples")
     
     # Create ultra-focused dataset with curriculum - start with easier sizes
     datasets = []
     # Progressive difficulty: 3x3 -> 4x4 -> 5x5
     for size in [3, 4, 5]:
-        datasets.append(ExactMatchBoostDataset(50000, fixed_size=size))
+        datasets.append(ExactMatchBoostDataset(100000, fixed_size=size))  # Double dataset size!
     
     # Combine datasets
     combined_dataset = torch.utils.data.ConcatDataset(datasets)
     
+    # With 80GB GPU, use much larger batch size
+    batch_size = 512
+    print(f"Using batch size: {batch_size} (optimized for 80GB GPU)")
+    
     dataloader = torch.utils.data.DataLoader(
-        combined_dataset, batch_size=256, shuffle=True, collate_fn=exact_match_collate_fn,  # Even larger batch
-        num_workers=4, pin_memory=True, drop_last=True  # Drop last for consistent batch size
+        combined_dataset, batch_size=batch_size, shuffle=True, collate_fn=exact_match_collate_fn,
+        num_workers=8, pin_memory=True, drop_last=True, persistent_workers=True
     )
     
     # COMPREHENSIVE: Use AggressiveLoss with proper LR for injection training
-    initial_lr = 0.02  # Even higher LR for faster convergence
+    # Scale learning rate with batch size (linear scaling rule)
+    initial_lr = 0.04  # Doubled for 512 batch size
     optimizer = torch.optim.AdamW(model.parameters(), lr=initial_lr, weight_decay=1e-5, betas=(0.9, 0.98))
     
-    # Gradient accumulation
-    accumulation_steps = 4
-    
-    # CosineAnnealingWarmRestarts for better convergence
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+    # Linear warmup + CosineAnnealingWarmRestarts
+    warmup_epochs = 5
+    warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
+        optimizer, start_factor=0.1, total_iters=warmup_epochs * len(dataloader)
+    )
+    main_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
         optimizer, 
         T_0=10,  # Initial restart period
         T_mult=2,  # Double the period after each restart
-        eta_min=1e-5  # Minimum learning rate
+        eta_min=1e-6  # Minimum learning rate
     )
     # Use AggressiveLoss for comprehensive exact match training
     loss_fn = AggressiveLoss()
@@ -468,14 +517,15 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
     # Mixed precision training
     scaler = torch.amp.GradScaler('cuda')
     
+    # Initialize optimizer
+    optimizer.zero_grad()
+    
     for epoch in range(num_epochs):
         loss_fn.current_epoch = epoch
         total_exact = 0
         total_samples = 0
         accumulated_loss = 0
-        
-        # Zero gradients at the start of each epoch
-        optimizer.zero_grad()
+        step_count = 0  # Track actual optimizer steps
         
         for batch_idx, batch in enumerate(dataloader):
             # Get tensors from batch
@@ -510,7 +560,7 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
                 
                 # Comprehensive AggressiveLoss calculation
                 losses = loss_fn(pred, outputs_oh, inputs_oh)
-                loss = losses['total'] / accumulation_steps
+                loss = losses['total']
             
             # DEBUG: Print some stats on first batch of first epoch
             if epoch == 0 and batch_idx == 0:
@@ -523,23 +573,26 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
             # Scaled backward pass
             scaler.scale(loss).backward()
             
-            # Gradient accumulation
-            if (batch_idx + 1) % accumulation_steps == 0 or (batch_idx + 1) == len(dataloader):
-                # Unscale gradients
-                scaler.unscale_(optimizer)
-                
-                # Gradient clipping
-                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-                
-                # Optimizer step
-                scaler.step(optimizer)
-                scaler.update()
-                
-                # Zero gradients
-                optimizer.zero_grad()
-                
-                # Scheduler step after optimizer update
-                scheduler.step()
+            # Simple approach: step every batch (no accumulation for now)
+            # Unscale gradients
+            scaler.unscale_(optimizer)
+            
+            # Gradient clipping
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            
+            # Optimizer step
+            scaler.step(optimizer)
+            scaler.update()
+            
+            # Zero gradients
+            optimizer.zero_grad()
+            
+            # Scheduler step after optimizer update
+            if epoch < warmup_epochs:
+                warmup_scheduler.step()
+            else:
+                main_scheduler.step()
+            step_count += 1
             
             # Track exact matches
             total_exact += losses['exact_count'].item()
@@ -566,11 +619,11 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
             patience_counter += 1
             
         # Early stopping with patience
-        if exact_pct > 60:  # Higher threshold
-            print("✅ Achieved >60% exact match! Stopping injection training.")
+        if exact_pct > 70:  # Even higher threshold
+            print("✅ Achieved >70% exact match! Stopping injection training.")
             break
-        elif patience_counter > 15:  # Stop if no improvement for 15 epochs
-            print(f"🛑 No improvement for 15 epochs. Best: {best_exact_match:.1f}%")
+        elif patience_counter > 20:  # More patience
+            print(f"🛑 No improvement for 20 epochs. Best: {best_exact_match:.1f}%")
             # Restore best model
             if best_model_state is not None:
                 model.load_state_dict(best_model_state)

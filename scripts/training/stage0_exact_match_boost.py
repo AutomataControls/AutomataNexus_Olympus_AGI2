@@ -275,8 +275,8 @@ class ExactMatchBoostDataset(Dataset):
                 continue
                 
             # Add 90 degree rotation
-            aug_input_90 = np.rot90(input_grid, 1)
-            aug_output_90 = np.rot90(output_grid, 1)
+            aug_input_90 = np.rot90(input_grid, 1).copy()
+            aug_output_90 = np.rot90(output_grid, 1).copy()
             augmented.append({
                 'input': aug_input_90,
                 'output': aug_output_90,
@@ -284,8 +284,8 @@ class ExactMatchBoostDataset(Dataset):
             })
             
             # Add horizontal flip
-            aug_input_h = np.fliplr(input_grid)
-            aug_output_h = np.fliplr(output_grid)
+            aug_input_h = np.fliplr(input_grid).copy()
+            aug_output_h = np.fliplr(output_grid).copy()
             augmented.append({
                 'input': aug_input_h,
                 'output': aug_output_h,

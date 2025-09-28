@@ -41,6 +41,7 @@ sys.path.append('/content/AutomataNexus_Olympus_AGI2/src')
 sys.path.append('/content')
 
 from src.models.arc_models_enhanced import create_enhanced_models
+from src.dsl import DSLTrainingIntegration, DSLProgramGenerator
 
 # MEGA-SCALE HYPERPARAMETERS FOR A100 80GB
 BATCH_SIZE = 512  # 16x larger!
@@ -265,6 +266,17 @@ class CurriculumMegaScaleDataset(Dataset):
                         'input': aug_input,
                         'output': aug_output
                     })
+        
+        # Add DSL-generated samples for Stage 0
+        if self.curriculum_stage == 0:
+            print("Adding DSL-generated deterministic samples...")
+            dsl_samples = DSLTrainingIntegration.create_stage0_dsl_samples(0)
+            for dsl_sample in dsl_samples:
+                self.samples.append({
+                    'input': dsl_sample['input'],
+                    'output': dsl_sample['output']
+                })
+            print(f"Added {len(dsl_samples)} DSL samples")
         
         print(f"Loaded {len(self.samples)} samples for stage {self.curriculum_stage}")
     

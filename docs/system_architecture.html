@@ -410,6 +410,7 @@
                 <a href="#overview">Overview</a>
                 <a href="#diagram">Architecture</a>
                 <a href="#components">Components</a>
+                <a href="#dsl">DSL</a>
                 <a href="#layers">Layers</a>
                 <a href="#dataflow">Data Flow</a>
                 <a href="#performance">Performance</a>
@@ -468,7 +469,8 @@
                             G4 --> H
                             G5 --> H
                             
-                            H --> I[GridSizePredictor V2]
+                            H --> H2[DSL Program Synthesis]
+                            H2 --> I[GridSizePredictor V2]
                             I --> J[Shape Validation]
                         end
                         
@@ -598,6 +600,97 @@
                     </ul>
                 </div>
             </div>
+        </section>
+        
+        <section id="dsl" class="section">
+            <h2>Domain-Specific Language (DSL) Integration</h2>
+            
+            <div class="architecture-overview">
+                <h3>Deterministic Program Synthesis</h3>
+                <p>DSL enables exact transformations through composable primitives, ensuring 100% accurate outputs for deterministic patterns</p>
+            </div>
+            
+            <p>The DSL system provides a crucial enhancement to the OLYMPUS ensemble by offering deterministic program synthesis capabilities. Instead of relying solely on probabilistic neural network outputs, the DSL generates exact transformations through a library of composable operations.</p>
+            
+            <h3>DSL Operations</h3>
+            <div class="component-grid">
+                <div class="component-card">
+                    <div class="component-header">
+                        <div class="component-icon">🔄</div>
+                        <div class="component-title">Geometric Transforms</div>
+                    </div>
+                    <div class="component-type">Spatial Operations</div>
+                    <ul class="feature-list" style="margin-top: 20px; font-size: 14px;">
+                        <li>Rotate (90°, 180°, 270°)</li>
+                        <li>Flip (horizontal, vertical)</li>
+                        <li>Transpose</li>
+                        <li>Crop and pad</li>
+                    </ul>
+                </div>
+                
+                <div class="component-card">
+                    <div class="component-header">
+                        <div class="component-icon">🎨</div>
+                        <div class="component-title">Color Operations</div>
+                    </div>
+                    <div class="component-type">Pixel Manipulation</div>
+                    <ul class="feature-list" style="margin-top: 20px; font-size: 14px;">
+                        <li>Color mapping</li>
+                        <li>Replace color</li>
+                        <li>Extract color</li>
+                        <li>Fill operations</li>
+                    </ul>
+                </div>
+                
+                <div class="component-card">
+                    <div class="component-header">
+                        <div class="component-icon">📦</div>
+                        <div class="component-title">Object Operations</div>
+                    </div>
+                    <div class="component-type">Component Analysis</div>
+                    <ul class="feature-list" style="margin-top: 20px; font-size: 14px;">
+                        <li>Extract objects</li>
+                        <li>Largest/smallest object</li>
+                        <li>Count objects</li>
+                        <li>Object manipulation</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h3>Program Synthesis Pipeline</h3>
+            <div class="data-flow" style="background: #f5f5f5; color: #333333;">
+                <h3 style="color: #000000; border-bottom-color: #00d4aa;">DSL Program Generation</h3>
+                <div class="flow-steps">
+                    <div class="flow-step" style="background: white;">
+                        <h4 style="color: #000000;">Pattern Analysis</h4>
+                        <p style="color: #666666;">Analyze input-output pairs</p>
+                    </div>
+                    
+                    <div class="flow-step" style="background: white;">
+                        <h4 style="color: #000000;">Operation Selection</h4>
+                        <p style="color: #666666;">Choose DSL primitives</p>
+                    </div>
+                    
+                    <div class="flow-step" style="background: white;">
+                        <h4 style="color: #000000;">Program Composition</h4>
+                        <p style="color: #666666;">Combine operations</p>
+                    </div>
+                    
+                    <div class="flow-step" style="background: white;">
+                        <h4 style="color: #000000;">Exact Execution</h4>
+                        <p style="color: #666666;">Deterministic output</p>
+                    </div>
+                </div>
+            </div>
+            
+            <h3>Integration with Neural Models</h3>
+            <ul class="feature-list">
+                <li><strong>Stage 0 Training:</strong> DSL generates exact transformation examples for improved learning</li>
+                <li><strong>Hybrid Approach:</strong> Neural networks predict DSL programs instead of raw pixels</li>
+                <li><strong>Exact Outputs:</strong> DSL execution guarantees pixel-perfect results for supported operations</li>
+                <li><strong>Composability:</strong> Complex transformations built from simple, verifiable primitives</li>
+                <li><strong>Interpretability:</strong> Clear understanding of applied transformations</li>
+            </ul>
         </section>
         
         <section id="layers" class="section">

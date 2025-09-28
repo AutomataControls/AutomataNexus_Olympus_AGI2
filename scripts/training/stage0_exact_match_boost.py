@@ -370,6 +370,14 @@ def inject_exact_match_training(model, device='cuda', num_epochs=20):
             # Comprehensive AggressiveLoss calculation
             losses = loss_fn(pred, outputs_oh, inputs_oh)
             
+            # DEBUG: Print some stats on first batch of first epoch
+            if epoch == 0 and total_samples == 0:
+                pred_classes = pred.argmax(dim=1)
+                target_classes = outputs
+                print(f"DEBUG - Pred range: {pred_classes.min()}-{pred_classes.max()}, Target range: {target_classes.min()}-{target_classes.max()}")
+                print(f"DEBUG - Pred unique: {torch.unique(pred_classes)}, Target unique: {torch.unique(target_classes)}")
+                print(f"DEBUG - Loss components: recon={losses['reconstruction']:.4f}, exact_bonus={losses['exact_bonus']:.4f}, total={losses['total']:.4f}")
+            
             # Backward
             optimizer.zero_grad()
             losses['total'].backward()

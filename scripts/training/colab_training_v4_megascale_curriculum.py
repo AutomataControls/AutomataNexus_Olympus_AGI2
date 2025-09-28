@@ -36,12 +36,16 @@ if torch.cuda.is_available():
     print(f'\n🚀 A100 80GB DETECTED! MEGA-SCALE + CURRICULUM MODE!')
 
 # Clone repository
-print("\n📥 Setting up ARC Prize 2025...")
+print("\n📥 Setting up AutomataNexus OLYMPUS AGI2...")
 if os.path.exists('AutomataNexus_Olympus_AGI2'):
     shutil.rmtree('AutomataNexus_Olympus_AGI2')
 os.system("git clone https://github.com/AutomataControls/AutomataNexus_Olympus_AGI2.git")
 print("✓ Repository ready")
 
+# Change to repository directory
+os.chdir('/content/AutomataNexus_Olympus_AGI2')
+
+sys.path.append('/content/AutomataNexus_Olympus_AGI2')
 sys.path.append('/content/AutomataNexus_Olympus_AGI2/src')
 sys.path.append('/content')
 

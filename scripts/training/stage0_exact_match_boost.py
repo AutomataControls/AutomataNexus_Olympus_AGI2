@@ -447,17 +447,12 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
     # Gradient accumulation
     accumulation_steps = 4
     
-    # OneCycleLR for super convergence - adjust for gradient accumulation
-    steps_per_epoch = (len(dataloader) + accumulation_steps - 1) // accumulation_steps
-    scheduler = torch.optim.lr_scheduler.OneCycleLR(
+    # CosineAnnealingWarmRestarts for better convergence
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
         optimizer, 
-        max_lr=0.1,  # Peak LR of 0.1
-        epochs=num_epochs,
-        steps_per_epoch=steps_per_epoch,
-        pct_start=0.3,  # 30% warmup
-        anneal_strategy='cos',
-        div_factor=25,  # Start at max_lr/25
-        final_div_factor=10000  # End at max_lr/10000
+        T_0=10,  # Initial restart period
+        T_mult=2,  # Double the period after each restart
+        eta_min=1e-5  # Minimum learning rate
     )
     # Use AggressiveLoss for comprehensive exact match training
     loss_fn = AggressiveLoss()
@@ -478,6 +473,9 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
         total_exact = 0
         total_samples = 0
         accumulated_loss = 0
+        
+        # Zero gradients at the start of each epoch
+        optimizer.zero_grad()
         
         for batch_idx, batch in enumerate(dataloader):
             # Get tensors from batch
@@ -540,7 +538,7 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
                 # Zero gradients
                 optimizer.zero_grad()
                 
-                # OneCycleLR step after optimizer update
+                # Scheduler step after optimizer update
                 scheduler.step()
             
             # Track exact matches

@@ -24,7 +24,7 @@ class ExactMatchBoostDataset(Dataset):
     def _generate_samples(self):
         """Generate samples that are GUARANTEED to produce exact matches"""
         
-        samples_per_type = self.num_samples // 15  # More pattern types
+        samples_per_type = self.num_samples // 20  # Even more pattern types
         
         # 1. Pure Identity (30% of data) - MUST learn to copy exactly
         for _ in range(samples_per_type * 5):  # Increased from 20% to 30%
@@ -190,6 +190,71 @@ class ExactMatchBoostDataset(Dataset):
                 'transform': 'center_dot'
             })
         
+        # 16. Simple masks (5%) - Keep only certain positions
+        for _ in range(samples_per_type):
+            grid = np.random.randint(0, 3, (self.fixed_size, self.fixed_size))
+            output = grid.copy()
+            # Keep only top-left quadrant
+            output[self.fixed_size//2:, :] = 0
+            output[:, self.fixed_size//2:] = 0
+            self.samples.append({
+                'input': grid,
+                'output': output,
+                'transform': 'quadrant_mask'
+            })
+        
+        # 17. Row/Column operations (5%) - Fill specific row/column
+        for _ in range(samples_per_type):
+            grid = np.random.randint(0, 2, (self.fixed_size, self.fixed_size))
+            output = grid.copy()
+            if random.random() < 0.5:
+                # Fill middle row
+                output[self.fixed_size//2, :] = 2
+            else:
+                # Fill middle column
+                output[:, self.fixed_size//2] = 2
+            self.samples.append({
+                'input': grid,
+                'output': output,
+                'transform': 'row_col_fill'
+            })
+        
+        # 18. Simple arithmetic (5%) - Add 1 to all non-zero
+        for _ in range(samples_per_type):
+            grid = np.random.randint(0, 3, (self.fixed_size, self.fixed_size))
+            output = np.where(grid > 0, np.minimum(grid + 1, 9), 0)
+            self.samples.append({
+                'input': grid,
+                'output': output,
+                'transform': 'increment_nonzero'
+            })
+        
+        # 19. Connectivity patterns (5%) - Simple connected components
+        for _ in range(samples_per_type):
+            grid = np.zeros((self.fixed_size, self.fixed_size), dtype=int)
+            # Create two separated objects
+            grid[0:2, 0:2] = 1  # Top-left object
+            grid[-2:, -2:] = 2  # Bottom-right object
+            output = grid.copy()
+            self.samples.append({
+                'input': grid,
+                'output': output,
+                'transform': 'separated_objects'
+            })
+        
+        # 20. Cross patterns (5%) - Draw cross
+        for _ in range(samples_per_type):
+            grid = np.zeros((self.fixed_size, self.fixed_size), dtype=int)
+            output = grid.copy()
+            center = self.fixed_size // 2
+            output[center, :] = 1
+            output[:, center] = 1
+            self.samples.append({
+                'input': grid,
+                'output': output,
+                'transform': 'cross_pattern'
+            })
+        
         # Shuffle samples
         random.shuffle(self.samples)
         print(f"Generated {len(self.samples)} exact-match training samples")
@@ -225,12 +290,12 @@ class AggressiveLoss(nn.Module):
         
         # Triple the loss for incorrect pixels
         incorrect_mask = (pred_indices != target_indices).float().reshape(-1)
-        ce_loss = ce_loss * (1 + incorrect_mask * 4)  # 5x weight on errors
+        ce_loss = ce_loss * (1 + incorrect_mask * 9)  # 10x weight on errors
         ce_loss = ce_loss.mean()
         
         # 2. Exact match bonus (negative loss) - BALANCED
         exact_matches = (pred_indices == target_indices).all(dim=[1, 2]).float()
-        exact_bonus = -1.0 * exact_matches.mean()  # Much smaller bonus to maintain gradient flow
+        exact_bonus = -2.0 * exact_matches.mean()  # Stronger bonus but still balanced
         
         # 3. Heavy penalty for copying when shouldn't
         should_not_copy = (target_indices != input_indices).any(dim=[1, 2]).float()
@@ -323,7 +388,7 @@ def exact_match_collate_fn(batch):
     return {'input': inputs, 'output': outputs}
 
 
-def inject_exact_match_training(model, device='cuda', num_epochs=20):
+def inject_exact_match_training(model, device='cuda', num_epochs=50):
     """
     Special pre-training phase that forces exact match learning
     """
@@ -332,16 +397,17 @@ def inject_exact_match_training(model, device='cuda', num_epochs=20):
     print("="*50)
     
     # Create ultra-focused dataset with more samples
-    dataset = ExactMatchBoostDataset(10000, fixed_size=5)  # Doubled samples
+    dataset = ExactMatchBoostDataset(100000, fixed_size=5)  # 10x more samples
     dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=64, shuffle=True, collate_fn=exact_match_collate_fn  # Larger batch
+        dataset, batch_size=128, shuffle=True, collate_fn=exact_match_collate_fn,  # Larger batch
+        num_workers=4, pin_memory=True  # Faster data loading
     )
     
     # COMPREHENSIVE: Use AggressiveLoss with proper LR for injection training
-    initial_lr = 0.005  # Higher LR for better learning
-    optimizer = torch.optim.Adam(model.parameters(), lr=initial_lr)
-    # No scheduler for injection training - keep LR constant
-    scheduler = None
+    initial_lr = 0.01  # Higher LR for better learning
+    optimizer = torch.optim.AdamW(model.parameters(), lr=initial_lr, weight_decay=1e-5)
+    # Cosine annealing scheduler for better convergence
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
     # Use AggressiveLoss for comprehensive exact match training
     loss_fn = AggressiveLoss()
     
@@ -395,21 +461,26 @@ def inject_exact_match_training(model, device='cuda', num_epochs=20):
         exact_pct = total_exact / total_samples * 100
         print(f"Epoch {epoch+1}/{num_epochs}: Exact Match: {exact_pct:.1f}% | LR: {optimizer.param_groups[0]['lr']:.5f} | Total samples: {total_samples}")
         
-        # No scheduler step - keeping LR constant for injection training
+        # Print detailed stats every 5 epochs
+        if (epoch + 1) % 5 == 0:
+            print(f"📊 Stats: Best exact match so far: {best_exact_match:.1f}%")
         
         # Track best performance
         if exact_pct > best_exact_match:
             best_exact_match = exact_pct
             
+        # Learning rate scheduling
+        scheduler.step()
+            
         # Early stopping with patience
-        if exact_pct > 30:  # Lower threshold since we're being more conservative
-            print("✅ Achieved >30% exact match! Stopping injection training.")
+        if exact_pct > 50:  # Higher threshold
+            print("✅ Achieved >50% exact match! Stopping injection training.")
             break
-        elif epoch > 5 and exact_pct < 1.0:  # If no learning after 5 epochs
-            # Try reducing learning rate
+        elif epoch > 10 and exact_pct < 5.0:  # If poor learning after 10 epochs
+            # Try boosting learning rate
             for param_group in optimizer.param_groups:
-                param_group['lr'] *= 0.5
-            print(f"📉 No learning detected, reducing LR to {optimizer.param_groups[0]['lr']:.5f}")
+                param_group['lr'] = initial_lr * 0.5
+            print(f"📈 Boosting LR to {optimizer.param_groups[0]['lr']:.5f}")
     
     return model
 

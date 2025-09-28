@@ -336,10 +336,11 @@ def inject_exact_match_training(model, device='cuda', num_epochs=20):
         dataset, batch_size=64, shuffle=True, collate_fn=exact_match_collate_fn  # Larger batch
     )
     
-    # Multi-stage learning rates for better convergence
-    initial_lr = 0.02
+    # FIXED: Use constant LR for exact match injection - no decay
+    initial_lr = 0.001  # Much lower, stable LR
     optimizer = torch.optim.Adam(model.parameters(), lr=initial_lr)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=5, T_mult=1)
+    # No scheduler for injection training - keep LR constant
+    scheduler = None
     loss_fn = AggressiveLoss()
     
     model.train()
@@ -384,22 +385,21 @@ def inject_exact_match_training(model, device='cuda', num_epochs=20):
         exact_pct = total_exact / total_samples * 100
         print(f"Epoch {epoch+1}/{num_epochs}: Exact Match: {exact_pct:.1f}% | LR: {optimizer.param_groups[0]['lr']:.5f}")
         
-        # Step scheduler
-        scheduler.step()
+        # No scheduler step - keeping LR constant for injection training
         
         # Track best performance
         if exact_pct > best_exact_match:
             best_exact_match = exact_pct
             
         # Early stopping with patience
-        if exact_pct > 50:
-            print("✅ Achieved >50% exact match! Stopping injection training.")
+        if exact_pct > 30:  # Lower threshold since we're being more conservative
+            print("✅ Achieved >30% exact match! Stopping injection training.")
             break
-        elif epoch > 10 and exact_pct < best_exact_match - 5:
-            # If we're getting worse, try reducing learning rate
+        elif epoch > 5 and exact_pct < 1.0:  # If no learning after 5 epochs
+            # Try reducing learning rate
             for param_group in optimizer.param_groups:
                 param_group['lr'] *= 0.5
-            print(f"📉 Performance degrading, reducing LR to {optimizer.param_groups[0]['lr']:.5f}")
+            print(f"📉 No learning detected, reducing LR to {optimizer.param_groups[0]['lr']:.5f}")
     
     return model
 

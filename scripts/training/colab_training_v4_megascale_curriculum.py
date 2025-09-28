@@ -1268,6 +1268,7 @@ def train_megascale_curriculum():
                         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)  # More conservative clipping
                         scaler.step(optimizer)
                         scaler.update()
+                        scheduler.step()  # Move scheduler step here, after optimizer step
                         optimizer.zero_grad()
                     
                     # Update metrics
@@ -1280,8 +1281,6 @@ def train_megascale_curriculum():
                         'exact': f"{losses['exact_count'].item():.0f}",
                         'trans': f"{losses['transformation'].item():.2f}"
                     })
-                
-                scheduler.step()
                 
                 # Validation every 5 epochs
                 if epoch % 5 == 0:

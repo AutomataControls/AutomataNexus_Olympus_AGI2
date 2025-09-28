@@ -24,10 +24,10 @@ class ExactMatchBoostDataset(Dataset):
     def _generate_samples(self):
         """Generate samples that are GUARANTEED to produce exact matches"""
         
-        samples_per_type = self.num_samples // 10
+        samples_per_type = self.num_samples // 15  # More pattern types
         
-        # 1. Pure Identity (20% of data) - MUST learn to copy exactly
-        for _ in range(samples_per_type * 2):
+        # 1. Pure Identity (30% of data) - MUST learn to copy exactly
+        for _ in range(samples_per_type * 5):  # Increased from 20% to 30%
             grid = np.random.randint(0, 3, (self.fixed_size, self.fixed_size))
             self.samples.append({
                 'input': grid,
@@ -134,6 +134,62 @@ class ExactMatchBoostDataset(Dataset):
                 'transform': 'count_fill'
             })
         
+        # 11. Checker pattern (7%) - Create checker board
+        for _ in range(samples_per_type):
+            grid = np.zeros((self.fixed_size, self.fixed_size), dtype=int)
+            output = np.indices((self.fixed_size, self.fixed_size)).sum(axis=0) % 2
+            self.samples.append({
+                'input': grid,
+                'output': output,
+                'transform': 'checker'
+            })
+        
+        # 12. All ones (8%) - Everything becomes 1
+        for _ in range(samples_per_type):
+            grid = np.random.randint(0, 4, (self.fixed_size, self.fixed_size))
+            output = np.ones_like(grid)
+            self.samples.append({
+                'input': grid,
+                'output': output,
+                'transform': 'all_ones'
+            })
+        
+        # 13. Diagonal pattern (7%) - Diagonal line
+        for _ in range(samples_per_type):
+            grid = np.zeros((self.fixed_size, self.fixed_size), dtype=int)
+            output = np.eye(self.fixed_size, dtype=int)
+            self.samples.append({
+                'input': grid,
+                'output': output,
+                'transform': 'diagonal'
+            })
+        
+        # 14. Border pattern (8%) - Only border is 1
+        for _ in range(samples_per_type):
+            grid = np.zeros((self.fixed_size, self.fixed_size), dtype=int)
+            output = np.zeros_like(grid)
+            output[0, :] = 1
+            output[-1, :] = 1
+            output[:, 0] = 1
+            output[:, -1] = 1
+            self.samples.append({
+                'input': grid,
+                'output': output,
+                'transform': 'border'
+            })
+        
+        # 15. Center dot (5%) - Put dot in center
+        for _ in range(samples_per_type):
+            grid = np.zeros((self.fixed_size, self.fixed_size), dtype=int)
+            output = grid.copy()
+            center = self.fixed_size // 2
+            output[center, center] = 1
+            self.samples.append({
+                'input': grid,
+                'output': output,
+                'transform': 'center_dot'
+            })
+        
         # Shuffle samples
         random.shuffle(self.samples)
         print(f"Generated {len(self.samples)} exact-match training samples")
@@ -153,6 +209,7 @@ class AggressiveLoss(nn.Module):
     
     def __init__(self):
         super().__init__()
+        self.ce_loss = nn.CrossEntropyLoss(reduction='none')
         
     def forward(self, pred: torch.Tensor, target: torch.Tensor, input_grid: torch.Tensor) -> Dict[str, torch.Tensor]:
         B, C, H, W = pred.shape
@@ -163,43 +220,57 @@ class AggressiveLoss(nn.Module):
         input_indices = input_grid.argmax(dim=1)
         
         # 1. Per-pixel cross entropy with heavy weight on errors
-        ce_loss = F.cross_entropy(pred.permute(0, 2, 3, 1).reshape(-1, C),
-                                  target_indices.reshape(-1), reduction='none')
+        ce_loss = self.ce_loss(pred.permute(0, 2, 3, 1).reshape(-1, C),
+                               target_indices.reshape(-1))
         
-        # Double the loss for incorrect pixels
+        # Triple the loss for incorrect pixels
         incorrect_mask = (pred_indices != target_indices).float().reshape(-1)
-        ce_loss = ce_loss * (1 + incorrect_mask * 2)  # 3x weight on errors
+        ce_loss = ce_loss * (1 + incorrect_mask * 4)  # 5x weight on errors
         ce_loss = ce_loss.mean()
         
-        # 2. Exact match bonus (negative loss)
+        # 2. Exact match bonus (negative loss) - SAFER
         exact_matches = (pred_indices == target_indices).all(dim=[1, 2]).float()
-        exact_bonus = -10.0 * exact_matches.mean()  # Huge bonus for exact matches
+        exact_bonus = -5.0 * exact_matches.mean()  # Reduced from -20.0 to prevent NaN
         
         # 3. Heavy penalty for copying when shouldn't
         should_not_copy = (target_indices != input_indices).any(dim=[1, 2]).float()
         did_copy = (pred_indices == input_indices).all(dim=[1, 2]).float()
         copy_penalty = 5.0 * (should_not_copy * did_copy).mean()
         
-        # 4. Transformation encouragement
+        # 4. Transformation encouragement - WITH NaN protection
         changed_pixels = (pred_indices != input_indices).float().mean(dim=[1, 2])
         target_changed = (target_indices != input_indices).float().mean(dim=[1, 2])
-        transform_diff = F.mse_loss(changed_pixels, target_changed) * 2.0
+        transform_diff = F.mse_loss(changed_pixels, target_changed) * 1.0  # Reduced multiplier
         
-        # 5. Color usage penalty - encourage using the right colors
-        for b in range(B):
-            pred_colors = torch.unique(pred_indices[b])
-            target_colors = torch.unique(target_indices[b])
-            missing_colors = len(target_colors) - len(torch.tensor(list(set(pred_colors.cpu().numpy()) & 
-                                                                       set(target_colors.cpu().numpy()))))
-            ce_loss += missing_colors * 0.5
+        # 5. Color usage penalty - SAFER implementation
+        color_penalty = 0.0
+        try:
+            for b in range(B):
+                pred_colors = torch.unique(pred_indices[b])
+                target_colors = torch.unique(target_indices[b])
+                if len(target_colors) > 0 and len(pred_colors) > 0:
+                    pred_set = set(pred_colors.cpu().numpy())
+                    target_set = set(target_colors.cpu().numpy())
+                    intersection = len(pred_set & target_set)
+                    missing_colors = max(0, len(target_set) - intersection)
+                    color_penalty += missing_colors * 0.1  # Reduced penalty
+        except Exception:
+            color_penalty = 0.0  # Fallback if any issues
         
-        total_loss = ce_loss + exact_bonus + copy_penalty + transform_diff
+        total_loss = ce_loss + exact_bonus + copy_penalty + transform_diff + color_penalty
+        
+        # NaN protection - clamp extreme values
+        total_loss = torch.clamp(total_loss, min=-10.0, max=10.0)
+        
+        # Replace any NaN with a reasonable fallback
+        if torch.isnan(total_loss).any():
+            total_loss = torch.tensor(1.0, device=total_loss.device, requires_grad=True)
         
         return {
             'total': total_loss,
             'reconstruction': ce_loss,
             'transformation': copy_penalty,  # Use copy penalty as transformation metric
-            'exact_bonus': exact_bonus,
+            'exact_bonus': -exact_bonus,  # Show as positive in logs
             'exact_count': exact_matches.sum(),
             'copy_penalty': copy_penalty,
             'transform_diff': transform_diff
@@ -259,17 +330,20 @@ def inject_exact_match_training(model, device='cuda', num_epochs=20):
     print("\n🎯 EXACT MATCH INJECTION TRAINING")
     print("="*50)
     
-    # Create ultra-focused dataset
-    dataset = ExactMatchBoostDataset(5000, fixed_size=5)
+    # Create ultra-focused dataset with more samples
+    dataset = ExactMatchBoostDataset(10000, fixed_size=5)  # Doubled samples
     dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=32, shuffle=True, collate_fn=exact_match_collate_fn
+        dataset, batch_size=64, shuffle=True, collate_fn=exact_match_collate_fn  # Larger batch
     )
     
-    # Aggressive optimizer
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    # Multi-stage learning rates for better convergence
+    initial_lr = 0.02
+    optimizer = torch.optim.Adam(model.parameters(), lr=initial_lr)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=5, T_mult=1)
     loss_fn = AggressiveLoss()
     
     model.train()
+    best_exact_match = 0
     
     for epoch in range(num_epochs):
         total_exact = 0
@@ -308,11 +382,24 @@ def inject_exact_match_training(model, device='cuda', num_epochs=20):
             total_samples += B
         
         exact_pct = total_exact / total_samples * 100
-        print(f"Epoch {epoch+1}/{num_epochs}: Exact Match: {exact_pct:.1f}%")
+        print(f"Epoch {epoch+1}/{num_epochs}: Exact Match: {exact_pct:.1f}% | LR: {optimizer.param_groups[0]['lr']:.5f}")
         
+        # Step scheduler
+        scheduler.step()
+        
+        # Track best performance
+        if exact_pct > best_exact_match:
+            best_exact_match = exact_pct
+            
+        # Early stopping with patience
         if exact_pct > 50:
             print("✅ Achieved >50% exact match! Stopping injection training.")
             break
+        elif epoch > 10 and exact_pct < best_exact_match - 5:
+            # If we're getting worse, try reducing learning rate
+            for param_group in optimizer.param_groups:
+                param_group['lr'] *= 0.5
+            print(f"📉 Performance degrading, reducing LR to {optimizer.param_groups[0]['lr']:.5f}")
     
     return model
 

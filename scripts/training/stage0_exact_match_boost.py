@@ -272,9 +272,10 @@ class AggressiveLoss(nn.Module):
     and gives massive rewards for exact matches
     """
     
-    def __init__(self):
+    def __init__(self, label_smoothing=0.1):
         super().__init__()
-        self.ce_loss = nn.CrossEntropyLoss(reduction='none')
+        self.ce_loss = nn.CrossEntropyLoss(reduction='none', label_smoothing=label_smoothing)
+        self.current_epoch = 0
         
     def forward(self, pred: torch.Tensor, target: torch.Tensor, input_grid: torch.Tensor) -> Dict[str, torch.Tensor]:
         B, C, H, W = pred.shape
@@ -288,14 +289,21 @@ class AggressiveLoss(nn.Module):
         ce_loss = self.ce_loss(pred.permute(0, 2, 3, 1).reshape(-1, C),
                                target_indices.reshape(-1))
         
-        # Triple the loss for incorrect pixels
+        # Focal loss style weighting for hard examples
         incorrect_mask = (pred_indices != target_indices).float().reshape(-1)
-        ce_loss = ce_loss * (1 + incorrect_mask * 9)  # 10x weight on errors
+        # Focus more on pixels that are almost correct
+        pred_probs = torch.softmax(pred.permute(0, 2, 3, 1).reshape(-1, C), dim=-1)
+        target_probs = pred_probs.gather(1, target_indices.reshape(-1, 1)).squeeze()  
+        focal_weight = (1 - target_probs) ** 2  # Focal loss gamma=2
+        ce_loss = ce_loss * (1 + incorrect_mask * 9 + focal_weight * 2)  # Combined weighting
         ce_loss = ce_loss.mean()
         
-        # 2. Exact match bonus (negative loss) - BALANCED
+        # 2. Exact match bonus (negative loss) - PROGRESSIVE
         exact_matches = (pred_indices == target_indices).all(dim=[1, 2]).float()
-        exact_bonus = -2.0 * exact_matches.mean()  # Stronger bonus but still balanced
+        # Progressive bonus that increases over time
+        epoch_progress = min(1.0, self.current_epoch / 50.0) if hasattr(self, 'current_epoch') else 0.5
+        bonus_weight = 2.0 + 3.0 * epoch_progress  # From 2.0 to 5.0
+        exact_bonus = -bonus_weight * exact_matches.mean()
         
         # 3. Heavy penalty for copying when shouldn't
         should_not_copy = (target_indices != input_indices).any(dim=[1, 2]).float()
@@ -388,7 +396,7 @@ def exact_match_collate_fn(batch):
     return {'input': inputs, 'output': outputs}
 
 
-def inject_exact_match_training(model, device='cuda', num_epochs=50):
+def inject_exact_match_training(model, device='cuda', num_epochs=100):
     """
     Special pre-training phase that forces exact match learning
     """
@@ -396,91 +404,155 @@ def inject_exact_match_training(model, device='cuda', num_epochs=50):
     print("\n🎯 EXACT MATCH INJECTION TRAINING")
     print("="*50)
     
-    # Create ultra-focused dataset with more samples
-    dataset = ExactMatchBoostDataset(100000, fixed_size=5)  # 10x more samples
+    # Create ultra-focused dataset with curriculum - start with easier sizes
+    datasets = []
+    # Progressive difficulty: 3x3 -> 4x4 -> 5x5
+    for size in [3, 4, 5]:
+        datasets.append(ExactMatchBoostDataset(50000, fixed_size=size))
+    
+    # Combine datasets
+    combined_dataset = torch.utils.data.ConcatDataset(datasets)
+    
     dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=128, shuffle=True, collate_fn=exact_match_collate_fn,  # Larger batch
-        num_workers=4, pin_memory=True  # Faster data loading
+        combined_dataset, batch_size=256, shuffle=True, collate_fn=exact_match_collate_fn,  # Even larger batch
+        num_workers=4, pin_memory=True, drop_last=True  # Drop last for consistent batch size
     )
     
     # COMPREHENSIVE: Use AggressiveLoss with proper LR for injection training
-    initial_lr = 0.01  # Higher LR for better learning
-    optimizer = torch.optim.AdamW(model.parameters(), lr=initial_lr, weight_decay=1e-5)
-    # Cosine annealing scheduler for better convergence
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
+    initial_lr = 0.02  # Even higher LR for faster convergence
+    optimizer = torch.optim.AdamW(model.parameters(), lr=initial_lr, weight_decay=1e-5, betas=(0.9, 0.98))
+    # OneCycleLR for super convergence
+    scheduler = torch.optim.lr_scheduler.OneCycleLR(
+        optimizer, 
+        max_lr=0.1,  # Peak LR of 0.1
+        epochs=num_epochs,
+        steps_per_epoch=len(dataloader),
+        pct_start=0.3,  # 30% warmup
+        anneal_strategy='cos',
+        div_factor=25,  # Start at max_lr/25
+        final_div_factor=10000  # End at max_lr/10000
+    )
     # Use AggressiveLoss for comprehensive exact match training
     loss_fn = AggressiveLoss()
     
     model.train()
     best_exact_match = 0
+    patience_counter = 0
+    best_model_state = None
+    
+    # Set current epoch for progressive bonus
+    loss_fn.current_epoch = 0
+    
+    # Mixed precision training
+    scaler = torch.cuda.amp.GradScaler()
+    
+    # Gradient accumulation
+    accumulation_steps = 4
     
     for epoch in range(num_epochs):
+        loss_fn.current_epoch = epoch
         total_exact = 0
         total_samples = 0
+        accumulated_loss = 0
         
-        for batch in dataloader:
+        for batch_idx, batch in enumerate(dataloader):
             # Get tensors from batch
             inputs = batch['input'].to(device)
             outputs = batch['output'].to(device)
             
             # One-hot encode
             B, H, W = inputs.shape
+            
+            # Pad smaller grids to 5x5 for consistency
+            if H < 5 or W < 5:
+                pad_h = 5 - H
+                pad_w = 5 - W
+                inputs = F.pad(inputs, (0, pad_w, 0, pad_h), value=0)
+                outputs = F.pad(outputs, (0, pad_w, 0, pad_h), value=0)
+                B, H, W = inputs.shape
+            
             inputs_oh = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
             outputs_oh = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
             
-            # Forward pass
-            if hasattr(model, '__class__') and model.__class__.__name__ == 'CHRONOS':
-                pred = model([inputs_oh], target=outputs_oh)['predicted_output']
-            else:
-                pred = model(inputs_oh, outputs_oh, mode='train')['predicted_output']
+            # Add small input noise for regularization (only during training)
+            if epoch > 10:  # Start after initial learning
+                noise = torch.randn_like(inputs_oh) * 0.01
+                inputs_oh = inputs_oh + noise
             
-            # Comprehensive AggressiveLoss calculation
-            losses = loss_fn(pred, outputs_oh, inputs_oh)
+            # Mixed precision forward pass
+            with torch.cuda.amp.autocast():
+                if hasattr(model, '__class__') and model.__class__.__name__ == 'CHRONOS':
+                    pred = model([inputs_oh], target=outputs_oh)['predicted_output']
+                else:
+                    pred = model(inputs_oh, outputs_oh, mode='train')['predicted_output']
+                
+                # Comprehensive AggressiveLoss calculation
+                losses = loss_fn(pred, outputs_oh, inputs_oh)
+                loss = losses['total'] / accumulation_steps
             
             # DEBUG: Print some stats on first batch of first epoch
-            if epoch == 0 and total_samples == 0:
+            if epoch == 0 and batch_idx == 0:
                 pred_classes = pred.argmax(dim=1)
-                target_classes = outputs
+                target_classes = outputs[:, :pred_classes.shape[1], :pred_classes.shape[2]]  # Handle padding
                 print(f"DEBUG - Pred range: {pred_classes.min()}-{pred_classes.max()}, Target range: {target_classes.min()}-{target_classes.max()}")
                 print(f"DEBUG - Pred unique: {torch.unique(pred_classes)}, Target unique: {torch.unique(target_classes)}")
                 print(f"DEBUG - Loss components: recon={losses['reconstruction']:.4f}, exact_bonus={losses['exact_bonus']:.4f}, total={losses['total']:.4f}")
             
-            # Backward
-            optimizer.zero_grad()
-            losses['total'].backward()
+            # Scaled backward pass
+            scaler.scale(loss).backward()
             
-            # Gradient clipping
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            
-            optimizer.step()
+            # Gradient accumulation
+            if (batch_idx + 1) % accumulation_steps == 0:
+                # Unscale gradients
+                scaler.unscale_(optimizer)
+                
+                # Gradient clipping
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                
+                # Optimizer step
+                scaler.step(optimizer)
+                scaler.update()
+                
+                # Zero gradients
+                optimizer.zero_grad()
             
             # Track exact matches
             total_exact += losses['exact_count'].item()
             total_samples += B
+            accumulated_loss += losses['total'].item()
+            
+            # OneCycleLR step after each batch
+            scheduler.step()
         
         exact_pct = total_exact / total_samples * 100
         print(f"Epoch {epoch+1}/{num_epochs}: Exact Match: {exact_pct:.1f}% | LR: {optimizer.param_groups[0]['lr']:.5f} | Total samples: {total_samples}")
         
         # Print detailed stats every 5 epochs
         if (epoch + 1) % 5 == 0:
-            print(f"📊 Stats: Best exact match so far: {best_exact_match:.1f}%")
+            print(f"📊 Stats: Best exact match so far: {best_exact_match:.1f}% | Patience: {patience_counter}/15")
         
         # Track best performance
         if exact_pct > best_exact_match:
             best_exact_match = exact_pct
             
-        # Learning rate scheduling
-        scheduler.step()
+        # Track best performance with patience
+        if exact_pct > best_exact_match:
+            best_exact_match = exact_pct
+            best_model_state = model.state_dict().copy()
+            patience_counter = 0
+        else:
+            patience_counter += 1
             
         # Early stopping with patience
-        if exact_pct > 50:  # Higher threshold
-            print("✅ Achieved >50% exact match! Stopping injection training.")
+        if exact_pct > 60:  # Higher threshold
+            print("✅ Achieved >60% exact match! Stopping injection training.")
             break
-        elif epoch > 10 and exact_pct < 5.0:  # If poor learning after 10 epochs
-            # Try boosting learning rate
-            for param_group in optimizer.param_groups:
-                param_group['lr'] = initial_lr * 0.5
-            print(f"📈 Boosting LR to {optimizer.param_groups[0]['lr']:.5f}")
+        elif patience_counter > 15:  # Stop if no improvement for 15 epochs
+            print(f"🛑 No improvement for 15 epochs. Best: {best_exact_match:.1f}%")
+            # Restore best model
+            if best_model_state is not None:
+                model.load_state_dict(best_model_state)
+            break
     
     return model
 

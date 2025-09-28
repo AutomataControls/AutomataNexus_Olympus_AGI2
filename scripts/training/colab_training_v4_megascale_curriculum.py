@@ -1195,15 +1195,58 @@ def train_megascale_curriculum():
         patience_counter = 0
         max_patience = 20  # Early stopping patience
         
-        # EXACT MATCH PRE-TRAINING for Stage 0
-        if EXACT_BOOST_AVAILABLE and model_name in ['minerva', 'atlas', 'iris']:  # Skip for CHRONOS/PROMETHEUS
+        # Check for existing checkpoint and resume if found
+        best_checkpoint_path = f'/content/AutomataNexus_Olympus_AGI2/arc_models_v4/{model_name}_best.pt'
+        latest_checkpoint_path = f'/content/AutomataNexus_Olympus_AGI2/arc_models_v4/{model_name}_checkpoint.pt'
+        resume_stage = 0
+        resume_epoch = 0
+        
+        # Try to load the best checkpoint first, then the latest checkpoint
+        checkpoint_path = None
+        if os.path.exists(best_checkpoint_path):
+            checkpoint_path = best_checkpoint_path
+            print(f"📂 Found best checkpoint for {model_name.upper()}, loading...")
+        elif os.path.exists(latest_checkpoint_path):
+            checkpoint_path = latest_checkpoint_path
+            print(f"📂 Found latest checkpoint for {model_name.upper()}, loading...")
+        
+        if checkpoint_path:
+            checkpoint = torch.load(checkpoint_path, map_location=device)
+            
+            # Load model and optimizer states
+            model.load_state_dict(checkpoint['model_state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            
+            # Resume from checkpoint values
+            global_epoch = checkpoint.get('epoch', checkpoint.get('global_epoch', 0))
+            resume_stage = checkpoint.get('stage', checkpoint.get('curriculum_stage', 0))
+            best_exact = checkpoint.get('val_exact', checkpoint.get('best_exact', 0))
+            best_val_loss = checkpoint.get('val_loss', checkpoint.get('best_val_loss', float('inf')))
+            
+            # Calculate resume position in curriculum
+            # Account for completed stages
+            completed_epochs_in_previous_stages = resume_stage * EPOCHS_PER_STAGE
+            resume_epoch = global_epoch - completed_epochs_in_previous_stages
+            
+            print(f"✅ Resumed from epoch {global_epoch} (Stage {resume_stage}, Epoch {resume_epoch})")
+            print(f"   Best exact match: {best_exact:.2f}%")
+            print(f"   Best val loss: {best_val_loss:.4f}")
+            
+            # Adjust scheduler state
+            for _ in range(global_epoch):
+                scheduler.step()
+        else:
+            print(f"🆕 No checkpoint found for {model_name.upper()}, starting fresh")
+        
+        # EXACT MATCH PRE-TRAINING for Stage 0 - Skip if resuming from a later stage
+        if EXACT_BOOST_AVAILABLE and model_name in ['minerva', 'atlas', 'iris'] and resume_stage == 0 and global_epoch == 0:
             print(f"\n🎯 Running EXACT MATCH INJECTION for {model_name.upper()}")
             print("="*40)
             model = inject_exact_match_training(model, device=device, num_epochs=50)  # More epochs for higher %
             print("✅ Exact match injection complete!")
         
-        # CURRICULUM LOOP
-        for stage in range(CURRICULUM_STAGES):
+        # CURRICULUM LOOP - Resume from the correct stage
+        for stage in range(resume_stage, CURRICULUM_STAGES):
             print(f"\n📚 Starting Curriculum Stage {stage}")
             print("="*40)
             
@@ -1288,9 +1331,12 @@ def train_megascale_curriculum():
             print(f"Stage {stage} - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
             print(f"Batches per epoch: {len(train_loader):,}")
             
-            # Train for this stage
-            for epoch in range(EPOCHS_PER_STAGE):
-                global_epoch += 1
+            # Train for this stage - Resume from the correct epoch if needed
+            start_epoch = resume_epoch if stage == resume_stage else 0
+            for epoch in range(start_epoch, EPOCHS_PER_STAGE):
+                # Don't increment global_epoch if we're resuming at the exact epoch
+                if not (stage == resume_stage and epoch == start_epoch and global_epoch > 0):
+                    global_epoch += 1
                 
                 # Training
                 model.train()
@@ -1514,12 +1560,19 @@ def train_megascale_curriculum():
                         best_exact = val_exact_pct
                         torch.save({
                             'epoch': global_epoch,
+                            'global_epoch': global_epoch,
                             'stage': stage,
+                            'curriculum_stage': stage,
                             'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict(),
                             'val_exact': val_exact_pct,
+                            'best_exact': val_exact_pct,
                             'val_pixel_acc': val_pixel_acc,
-                            'val_loss': val_loss
+                            'val_loss': val_loss,
+                            'best_val_loss': best_val_loss,
+                            'model_name': model_name,
+                            'transformation_penalty': TRANSFORMATION_PENALTY,
+                            'exact_match_bonus': EXACT_MATCH_BONUS
                         }, f'/content/AutomataNexus_Olympus_AGI2/arc_models_v4/{model_name}_best.pt')
                         
                         print(f"✅ New best model! Exact: {val_exact_pct:.2f}%")
@@ -1527,6 +1580,24 @@ def train_megascale_curriculum():
                         # Log milestone achievements
                         if val_exact_pct >= 10.0 and val_exact_pct == best_exact:
                             print(f"🎉 Milestone: {val_exact_pct:.2f}% exact match!")
+                    
+                    # Save periodic checkpoint for resume capability
+                    torch.save({
+                        'epoch': global_epoch,
+                        'global_epoch': global_epoch,
+                        'stage': stage,
+                        'curriculum_stage': stage,
+                        'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict(),
+                        'val_exact': val_exact_pct,
+                        'best_exact': best_exact,
+                        'val_pixel_acc': val_pixel_acc,
+                        'val_loss': val_loss,
+                        'best_val_loss': best_val_loss,
+                        'model_name': model_name,
+                        'transformation_penalty': TRANSFORMATION_PENALTY,
+                        'exact_match_bonus': EXACT_MATCH_BONUS
+                    }, f'/content/AutomataNexus_Olympus_AGI2/arc_models_v4/{model_name}_checkpoint.pt')
                     
                     # Warning for exploding validation loss
                     if val_loss > 10.0:
@@ -1541,6 +1612,10 @@ def train_megascale_curriculum():
             if patience_counter >= max_patience and stage > 0:
                 print(f"📛 Stage {stage} terminated early due to overfitting")
                 break
+            
+            # Clear resume_epoch after first stage
+            if stage == resume_stage:
+                resume_epoch = 0
         
         # Generate comprehensive report
         print(f"\n📊 Generating training report for {model_name.upper()}...")

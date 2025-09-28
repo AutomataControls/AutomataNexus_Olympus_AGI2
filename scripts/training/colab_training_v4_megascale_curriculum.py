@@ -1,4 +1,4 @@
-# ARC Prize 2025 - V4 MEGA-SCALE with Curriculum Learning
+# AutomataNexus OLYMPUS AGI2 - V4 MEGA-SCALE with Curriculum Learning
 # Combines massive scale with proven curriculum strategy
 
 import subprocess
@@ -35,16 +35,7 @@ if torch.cuda.is_available():
     print(f'Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB')
     print(f'\n🚀 A100 80GB DETECTED! MEGA-SCALE + CURRICULUM MODE!')
 
-# Clone repository
-print("\n📥 Setting up AutomataNexus OLYMPUS AGI2...")
-if os.path.exists('AutomataNexus_Olympus_AGI2'):
-    shutil.rmtree('AutomataNexus_Olympus_AGI2')
-os.system("git clone https://github.com/AutomataControls/AutomataNexus_Olympus_AGI2.git")
-print("✓ Repository ready")
-
-# Change to repository directory
-os.chdir('/content/AutomataNexus_Olympus_AGI2')
-
+# Setup paths (repository already exists in Colab)
 sys.path.append('/content/AutomataNexus_Olympus_AGI2')
 sys.path.append('/content/AutomataNexus_Olympus_AGI2/src')
 sys.path.append('/content')
@@ -82,12 +73,13 @@ print(f"  Curriculum stages: {CURRICULUM_STAGES}")
 print(f"  Transformation penalty: {TRANSFORMATION_PENALTY} (positive!)")
 
 # Data setup
-DATA_DIR = '/content/AutomataNexus_Olympus_AGI2/data' if os.path.exists('/content/AutomataNexus_Olympus_AGI2/data') else '/content/data'
+DATA_DIR = '/content/data'
 if not os.path.exists(DATA_DIR):
     print("Downloading ARC data...")
     os.makedirs(DATA_DIR, exist_ok=True)
-    os.system(f"wget -q https://github.com/fchollet/ARC-AGI/raw/master/data/training/arc-agi_training_challenges.json -O {DATA_DIR}/arc-agi_training_challenges.json")
-    os.system(f"wget -q https://github.com/fchollet/ARC-AGI/raw/master/data/training/arc-agi_training_solutions.json -O {DATA_DIR}/arc-agi_training_solutions.json")
+    os.system(f"wget https://github.com/fchollet/ARC-AGI/raw/master/data/training/arc-agi_training_challenges.json -O {DATA_DIR}/arc-agi_training_challenges.json")
+    os.system(f"wget https://github.com/fchollet/ARC-AGI/raw/master/data/training/arc-agi_training_solutions.json -O {DATA_DIR}/arc-agi_training_solutions.json")
+    print("✓ ARC data downloaded")
 
 class MegaScaleLoss(nn.Module):
     """Enhanced loss with exact match bonus and proper transformation penalty"""
@@ -908,13 +900,8 @@ def train_megascale_curriculum():
     
     os.makedirs('/content/arc_models_v4', exist_ok=True)
     
-    # Train only CHRONOS and PROMETHEUS (skip already trained models)
-    models_to_train = ['chronos', 'prometheus']
-    
+    # Train all models
     for model_name, model in models.items():
-        if model_name not in models_to_train:
-            print(f"\n⏭️  Skipping {model_name.upper()} - already trained!")
-            continue
             
         print(f"\n{'='*60}")
         print(f"🧠 Training {model_name.upper()} - MEGA-SCALE + CURRICULUM")
@@ -1098,18 +1085,9 @@ def train_megascale_curriculum():
                         
                         print(f"✅ New best model! Exact: {val_exact_pct:.2f}%")
                         
-                        # Early stopping if we hit target
-                        if val_exact_pct >= 85.0:
-                            print(f"🎉 TARGET ACHIEVED! {val_exact_pct:.2f}% exact match!")
-                            break
-                
-                # Check if we should exit early
-                if best_exact >= 85.0:
-                    break
-            
-            # Check if we should exit curriculum early
-            if best_exact >= 85.0:
-                break
+                        # Log milestone achievements
+                        if val_exact_pct >= 10.0 and val_exact_pct == best_exact:
+                            print(f"🎉 Milestone: {val_exact_pct:.2f}% exact match!")
         
         # Generate comprehensive report
         print(f"\n📊 Generating training report for {model_name.upper()}...")
@@ -1130,11 +1108,11 @@ def train_megascale_curriculum():
 
 if __name__ == "__main__":
     print("="*80)
-    print("ARC PRIZE 2025 - V4 MEGA-SCALE + CURRICULUM TRAINING")
+    print("AUTOMATANEXUS OLYMPUS AGI2 - V4 MEGA-SCALE + CURRICULUM TRAINING")
     print("="*80)
-    print("Combining massive batch sizes with proven curriculum strategy")
-    print("Fixed transformation penalty + identity task handling")
-    print("Target: 85% exact match accuracy = $700,000")
+    print("Training 5 specialized models with curriculum learning")
+    print("Batch size: 512 (effective 2048 with gradient accumulation)")
+    print("Models: MINERVA, ATLAS, IRIS, CHRONOS, PROMETHEUS")
     print("="*80)
     
     train_megascale_curriculum()

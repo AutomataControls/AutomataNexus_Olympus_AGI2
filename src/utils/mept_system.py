@@ -315,7 +315,7 @@ class MEPTLoss(nn.Module):
                 memory_loss = F.kl_div(
                     pred[i].log_softmax(dim=0),
                     stored_one_hot,
-                    reduction='mean'
+                    reduction='batchmean'
                 )
                 memory_losses.append(memory_loss)
             else:

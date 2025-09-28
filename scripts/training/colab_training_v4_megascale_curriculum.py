@@ -419,7 +419,7 @@ class MEPTLoss(nn.Module):
                 memory_loss = F.kl_div(
                     pred[i].log_softmax(dim=0),
                     stored_one_hot,
-                    reduction='mean'
+                    reduction='batchmean'
                 )
                 memory_losses.append(memory_loss)
             else:
@@ -2100,8 +2100,7 @@ def train_megascale_curriculum():
                             scaler.update()
                             optimizer.zero_grad()
                 
-                # Step scheduler at end of epoch
-                scheduler.step()
+                # Step scheduler after optimizer step (moved from here)
                 
                 # Validation every 5 epochs
                 if epoch % 5 == 0:
@@ -2217,6 +2216,9 @@ def train_megascale_curriculum():
                         if patience_counter >= max_patience and stage > 0:
                             print(f"⚠️ Early stopping triggered! Val loss not improving for {max_patience} validations")
                             break
+                
+                # Step scheduler at end of epoch (after optimizer.step())
+                scheduler.step()
                     
                     # Save best model based on exact match
                     if val_exact_pct > best_exact:

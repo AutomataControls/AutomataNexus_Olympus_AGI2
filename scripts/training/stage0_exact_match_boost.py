@@ -228,9 +228,9 @@ class AggressiveLoss(nn.Module):
         ce_loss = ce_loss * (1 + incorrect_mask * 4)  # 5x weight on errors
         ce_loss = ce_loss.mean()
         
-        # 2. Exact match bonus (negative loss) - SAFER
+        # 2. Exact match bonus (negative loss) - BALANCED
         exact_matches = (pred_indices == target_indices).all(dim=[1, 2]).float()
-        exact_bonus = -5.0 * exact_matches.mean()  # Reduced from -20.0 to prevent NaN
+        exact_bonus = -1.0 * exact_matches.mean()  # Much smaller bonus to maintain gradient flow
         
         # 3. Heavy penalty for copying when shouldn't
         should_not_copy = (target_indices != input_indices).any(dim=[1, 2]).float()
@@ -336,11 +336,12 @@ def inject_exact_match_training(model, device='cuda', num_epochs=20):
         dataset, batch_size=64, shuffle=True, collate_fn=exact_match_collate_fn  # Larger batch
     )
     
-    # FIXED: Use constant LR for exact match injection - no decay
-    initial_lr = 0.001  # Much lower, stable LR
+    # COMPREHENSIVE: Use AggressiveLoss with proper LR for injection training
+    initial_lr = 0.005  # Higher LR for better learning
     optimizer = torch.optim.Adam(model.parameters(), lr=initial_lr)
     # No scheduler for injection training - keep LR constant
     scheduler = None
+    # Use AggressiveLoss for comprehensive exact match training
     loss_fn = AggressiveLoss()
     
     model.train()
@@ -366,7 +367,7 @@ def inject_exact_match_training(model, device='cuda', num_epochs=20):
             else:
                 pred = model(inputs_oh, outputs_oh, mode='train')['predicted_output']
             
-            # Loss
+            # Comprehensive AggressiveLoss calculation
             losses = loss_fn(pred, outputs_oh, inputs_oh)
             
             # Backward
@@ -383,7 +384,7 @@ def inject_exact_match_training(model, device='cuda', num_epochs=20):
             total_samples += B
         
         exact_pct = total_exact / total_samples * 100
-        print(f"Epoch {epoch+1}/{num_epochs}: Exact Match: {exact_pct:.1f}% | LR: {optimizer.param_groups[0]['lr']:.5f}")
+        print(f"Epoch {epoch+1}/{num_epochs}: Exact Match: {exact_pct:.1f}% | LR: {optimizer.param_groups[0]['lr']:.5f} | Total samples: {total_samples}")
         
         # No scheduler step - keeping LR constant for injection training
         

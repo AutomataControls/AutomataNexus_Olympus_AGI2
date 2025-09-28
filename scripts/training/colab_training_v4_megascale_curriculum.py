@@ -47,6 +47,15 @@ from src.dsl import DSLTrainingIntegration, DSLProgramGenerator
 from src.program_synthesis.synthesis_integration import LightweightProgramSynthesizer, ProgramSynthesisDataGenerator
 from src.data.arc_data_synthesis import ARCDataSynthesizer, ARCDataAugmenter
 
+# Import exact match boost components
+sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
+try:
+    from stage0_exact_match_boost import ExactMatchBoostDataset, AggressiveLoss, inject_exact_match_training
+    EXACT_BOOST_AVAILABLE = True
+except ImportError:
+    EXACT_BOOST_AVAILABLE = False
+    print("⚠️ Exact match boost not available")
+
 # MEGA-SCALE HYPERPARAMETERS FOR A100 80GB
 BATCH_SIZE = 512  # 16x larger!
 GRADIENT_ACCUMULATION_STEPS = 4  # Effective batch size: 2048!
@@ -63,8 +72,8 @@ RECONSTRUCTION_WEIGHT = 1.0
 EDGE_WEIGHT = 0.3
 COLOR_BALANCE_WEIGHT = 0.2
 STRUCTURE_WEIGHT = 0.3
-TRANSFORMATION_PENALTY = 0.5  # POSITIVE to penalize copying!
-EXACT_MATCH_BONUS = 5.0  # Big reward for exact matches!
+TRANSFORMATION_PENALTY = 2.0  # INCREASED: Much stronger penalty for copying!
+EXACT_MATCH_BONUS = 10.0  # DOUBLED: Huge reward for exact matches!
 
 # Curriculum settings
 CURRICULUM_STAGES = 3
@@ -75,7 +84,8 @@ print(f"  Batch size: {BATCH_SIZE} (effective: {BATCH_SIZE * GRADIENT_ACCUMULATI
 print(f"  Learning rate: {LEARNING_RATE}")
 print(f"  Workers: {NUM_WORKERS}")
 print(f"  Curriculum stages: {CURRICULUM_STAGES}")
-print(f"  Transformation penalty: {TRANSFORMATION_PENALTY} (positive!)")
+print(f"  Transformation penalty: {TRANSFORMATION_PENALTY} (2x stronger!)")
+print(f"  Exact match bonus: {EXACT_MATCH_BONUS} (2x bigger!)")
 
 # Data setup
 DATA_DIR = '/content/AutomataNexus_Olympus_AGI2/data'
@@ -122,6 +132,11 @@ class MegaScaleLoss(nn.Module):
         # Apply penalty ONLY for non-identity tasks
         transformation_penalty = same_as_input * (1 - is_identity_task)
         
+        # EXTRA: Pixel-level penalty for Stage 0 - penalize each pixel that should change but didn't
+        pixel_should_change = (target_indices != input_indices).float()
+        pixel_didnt_change = (pred_indices == input_indices).float()
+        pixel_copy_penalty = (pixel_should_change * pixel_didnt_change).mean() * 2.0  # Strong penalty
+        
         # 5. Active region focus
         active_mask = (target_indices != 0)
         if active_mask.any():
@@ -134,6 +149,7 @@ class MegaScaleLoss(nn.Module):
         total_loss = (
             RECONSTRUCTION_WEIGHT * reconstruction_loss +
             TRANSFORMATION_PENALTY * transformation_penalty +  # Now properly penalizes copying
+            pixel_copy_penalty +  # Additional pixel-level penalty
             0.5 * active_loss +
             exact_bonus  # This can make loss negative for exact matches!
         )
@@ -1109,6 +1125,13 @@ def train_megascale_curriculum():
         patience_counter = 0
         max_patience = 20  # Early stopping patience
         
+        # EXACT MATCH PRE-TRAINING for Stage 0
+        if EXACT_BOOST_AVAILABLE and model_name in ['minerva', 'atlas', 'iris']:  # Skip for CHRONOS/PROMETHEUS
+            print(f"\n🎯 Running EXACT MATCH INJECTION for {model_name.upper()}")
+            print("="*40)
+            model = inject_exact_match_training(model, device=device, num_epochs=10)
+            print("✅ Exact match injection complete!")
+        
         # CURRICULUM LOOP
         for stage in range(CURRICULUM_STAGES):
             print(f"\n📚 Starting Curriculum Stage {stage}")
@@ -1167,18 +1190,52 @@ def train_megascale_curriculum():
                 model.train()
                 train_metrics = {'loss': 0, 'exact': 0, 'samples': 0}
                 
+                # Create exact match dataset for Stage 0 injection
+                if stage == 0 and EXACT_BOOST_AVAILABLE:
+                    exact_dataset = ExactMatchBoostDataset(1000)
+                    aggressive_loss = AggressiveLoss()
+                
                 pbar = tqdm(train_loader, desc=f"Stage {stage}, Epoch {epoch+1}/{EPOCHS_PER_STAGE}")
                 optimizer.zero_grad()
                 
                 for batch_idx, batch in enumerate(pbar):
-                    input_grids = batch['input'].to(device, non_blocking=True)
-                    output_grids = batch['output'].to(device, non_blocking=True)
-                    
-                    # Apply ARC augmentation for Stage 0 (more augmentation for exact match training)
-                    if stage == 0 and random.random() < 0.3:
-                        input_grids, output_grids = arc_augmenter.augment_batch(
-                            input_grids, output_grids, augment_prob=0.5
-                        )
+                    # EXACT MATCH INJECTION for Stage 0 - every 5th batch
+                    if stage == 0 and EXACT_BOOST_AVAILABLE and batch_idx % 5 == 0:
+                        # Replace with exact match batch
+                        exact_batch_size = min(64, BATCH_SIZE)  # Smaller batches for exact match
+                        exact_indices = random.sample(range(len(exact_dataset)), exact_batch_size)
+                        
+                        # Build exact match tensors
+                        exact_inputs = []
+                        exact_outputs = []
+                        for idx in exact_indices:
+                            sample = exact_dataset[idx]
+                            exact_inputs.append(sample['input'])
+                            exact_outputs.append(sample['output'])
+                        
+                        # Convert to tensors and one-hot
+                        exact_inputs = torch.tensor(np.stack(exact_inputs), device=device)
+                        exact_outputs = torch.tensor(np.stack(exact_outputs), device=device)
+                        
+                        # One-hot encode
+                        B, H, W = exact_inputs.shape
+                        input_grids = F.one_hot(exact_inputs, num_classes=NUM_COLORS).permute(0, 3, 1, 2).float()
+                        output_grids = F.one_hot(exact_outputs, num_classes=NUM_COLORS).permute(0, 3, 1, 2).float()
+                        
+                        # Use aggressive loss for exact match batches
+                        use_aggressive_loss = True
+                    else:
+                        # Regular batch
+                        input_grids = batch['input'].to(device, non_blocking=True)
+                        output_grids = batch['output'].to(device, non_blocking=True)
+                        
+                        # Apply ARC augmentation for Stage 0 (more augmentation for exact match training)
+                        if stage == 0 and random.random() < 0.3:
+                            input_grids, output_grids = arc_augmenter.augment_batch(
+                                input_grids, output_grids, augment_prob=0.5
+                            )
+                        
+                        use_aggressive_loss = False
                     
                     with autocast('cuda'):
                         # Handle CHRONOS differently - it expects a list of tensors
@@ -1188,7 +1245,13 @@ def train_megascale_curriculum():
                         else:
                             outputs = model(input_grids, output_grids, mode='train')
                             pred_output = outputs['predicted_output']
-                        losses = loss_fn(pred_output, output_grids, input_grids)
+                        
+                        # Use appropriate loss function
+                        if use_aggressive_loss and stage == 0 and EXACT_BOOST_AVAILABLE:
+                            losses = aggressive_loss(pred_output, output_grids, input_grids)
+                        else:
+                            losses = loss_fn(pred_output, output_grids, input_grids)
+                        
                         loss = losses['total'] / GRADIENT_ACCUMULATION_STEPS
                     
                     scaler.scale(loss).backward()

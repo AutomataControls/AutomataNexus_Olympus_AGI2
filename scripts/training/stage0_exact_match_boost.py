@@ -331,8 +331,8 @@ class AggressiveLoss(nn.Module):
         # Focus more on pixels that are almost correct
         pred_probs = torch.softmax(pred.permute(0, 2, 3, 1).reshape(-1, C), dim=-1)
         target_probs = pred_probs.gather(1, target_indices.reshape(-1, 1)).squeeze()  
-        focal_weight = (1 - target_probs) ** 3  # Increased gamma=3 for harder focus
-        ce_loss = ce_loss * (1 + incorrect_mask * 14 + focal_weight * 4)  # Stronger weighting
+        focal_weight = (1 - target_probs) ** 2  # gamma=2 for more balanced focus
+        ce_loss = ce_loss * (1 + incorrect_mask * 4 + focal_weight * 2)  # More balanced weighting
         ce_loss = ce_loss.mean()
         
         # 2. Exact match bonus (negative loss) - PROGRESSIVE
@@ -373,9 +373,9 @@ class AggressiveLoss(nn.Module):
         if torch.isnan(total_loss).any():
             total_loss = torch.tensor(2.0, device=total_loss.device, requires_grad=True)
         
-        # Only clamp if loss is extremely large (>100)
+        # Only clamp if loss is extremely large
         if total_loss > 100.0:
-            total_loss = torch.tensor(10.0, device=total_loss.device, requires_grad=True)
+            total_loss = torch.clamp(total_loss, max=50.0)
         
         return {
             'total': total_loss,
@@ -515,9 +515,24 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
     loss_fn.current_epoch = 0
     
     # Mixed precision training
-    scaler = torch.amp.GradScaler('cuda')
+    scaler = torch.amp.GradScaler('cuda', init_scale=2**16)
     
     # Initialize optimizer
+    optimizer.zero_grad()
+    
+    # Dummy forward/backward to initialize scaler state
+    dummy_input = torch.randn(1, 10, 5, 5).to(device)
+    dummy_target = torch.randn(1, 10, 5, 5).to(device)
+    with torch.amp.autocast(device_type='cuda', dtype=torch.float16):
+        if hasattr(model, '__class__') and model.__class__.__name__ == 'CHRONOS':
+            dummy_out = model([dummy_input], target=dummy_target)['predicted_output']
+        else:
+            dummy_out = model(dummy_input, dummy_target, mode='train')['predicted_output']
+        dummy_loss = dummy_out.mean()
+    scaler.scale(dummy_loss).backward()
+    scaler.unscale_(optimizer)
+    scaler.step(optimizer)
+    scaler.update()
     optimizer.zero_grad()
     
     for epoch in range(num_epochs):

@@ -625,12 +625,20 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
             if epoch == 0 and batch_idx < 5:
                 print(f"DEBUG - Gradient norm before clipping: {total_norm:.4f}")
             
-            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 0.1)  # Very aggressive clipping
+            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)  # Less aggressive clipping
             
-            if torch.isnan(grad_norm) or torch.isinf(grad_norm) or grad_norm > 10.0:
-                print(f"WARNING: Bad gradients detected (norm={grad_norm:.4f}, pre-clip={total_norm:.4f}), skipping step")
+            # Allow some steps through even with high gradients
+            if torch.isnan(grad_norm) or torch.isinf(grad_norm):
+                print(f"WARNING: NaN/Inf gradients detected, skipping step")
                 optimizer.zero_grad()
                 continue
+            elif grad_norm > 10.0 and epoch == 0 and batch_idx < 100:
+                # For first 100 batches, let some through to initialize
+                if batch_idx % 10 == 0:
+                    print(f"INFO: High gradient (norm={grad_norm:.4f}) but allowing through for initialization")
+                else:
+                    optimizer.zero_grad()
+                    continue
             
             # Optimizer step without scaler
             optimizer.step()
@@ -650,8 +658,9 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
             total_samples += B
             accumulated_loss += losses['total'].item()
         
-        exact_pct = total_exact / total_samples * 100
-        print(f"Epoch {epoch+1}/{num_epochs}: Exact Match: {exact_pct:.1f}% | LR: {optimizer.param_groups[0]['lr']:.5f} | Total samples: {total_samples}")
+        exact_pct = total_exact / total_samples * 100 if total_samples > 0 else 0
+        avg_loss = accumulated_loss / max(1, step_count)
+        print(f"Epoch {epoch+1}/{num_epochs}: Exact Match: {exact_pct:.1f}% | Loss: {avg_loss:.4f} | LR: {optimizer.param_groups[0]['lr']:.5f} | Steps: {step_count}/{len(dataloader)}")
         
         # Print detailed stats every 5 epochs
         if (epoch + 1) % 5 == 0:

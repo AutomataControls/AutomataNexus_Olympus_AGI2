@@ -48,6 +48,15 @@ from src.dsl import DSLTrainingIntegration, DSLProgramGenerator
 from src.program_synthesis.synthesis_integration import LightweightProgramSynthesizer, ProgramSynthesisDataGenerator
 from src.data.arc_data_synthesis import ARCDataSynthesizer, ARCDataAugmenter
 
+# Import MEPT and LEAP components
+try:
+    from src.utils.mept_system import ExperienceReplayBuffer, PatternBank, MEPTLoss, MEPTAugmentedDataset, create_mept_system
+    from src.utils.leap_system import AdaptivePatternGenerator, LEAPTrainer, WeakPatternDetector, create_leap_system
+    MEPT_LEAP_AVAILABLE = True
+except ImportError:
+    MEPT_LEAP_AVAILABLE = False
+    print("⚠️ MEPT/LEAP components not available")
+
 # Import exact match boost components
 sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
 try:
@@ -80,6 +89,10 @@ EXACT_MATCH_BONUS = 5.0  # Reduced from 10.0 to prevent instability
 CURRICULUM_STAGES = 3
 EPOCHS_PER_STAGE = 100
 
+# Enable/Disable MEPT and LEAP
+USE_MEPT = True
+USE_LEAP = True  # NEW: Learning Enhancement through Adaptive Patterns
+
 print(f"\n⚙️ V4 MEGA-SCALE + CURRICULUM Configuration:")
 print(f"  Batch size: {BATCH_SIZE} (effective: {BATCH_SIZE * GRADIENT_ACCUMULATION_STEPS})")
 print(f"  Learning rate: {LEARNING_RATE}")
@@ -95,9 +108,15 @@ DATA_DIR = '/content/AutomataNexus_Olympus_AGI2/data'
 print(f"Using data directory: {DATA_DIR}")
 
 # ================================================================================
-# MEPT (Memory-Enhanced Progressive Training) Components
+# MEPT and LEAP Components are imported from utils
 # ================================================================================
 
+# The MEPT and LEAP classes (ExperienceReplayBuffer, PatternBank, MEPTLoss, 
+# MEPTAugmentedDataset, AdaptivePatternGenerator, LEAPTrainer) are now 
+# imported from src.utils.mept_system and src.utils.leap_system
+
+'''
+# Original class definitions commented out since we're importing them
 class ExperienceReplayBuffer:
     """Maintains a buffer of successful exact match examples to prevent forgetting"""
     def __init__(self, capacity: int = 50000, prioritize_exact: bool = True):
@@ -473,10 +492,6 @@ class MEPTAugmentedDataset(Dataset):
         return self.base_dataset[idx]
 
 
-# Enable/Disable MEPT and LEAP
-USE_MEPT = True
-USE_LEAP = True  # NEW: Learning Enhancement through Adaptive Patterns
-
 # ================================================================================
 # LEAP (Learning Enhancement through Adaptive Patterns) Components for Stage 0
 # ================================================================================
@@ -766,6 +781,7 @@ class LEAPTrainer:
                     report_lines.append(f"  {pattern}: {acc*100:.1f}% ({total} attempts)")
         
         return "\n".join(report_lines)
+'''  # End of commented out MEPT/LEAP classes
 
 
 class CurriculumMegaScaleDataset(Dataset):

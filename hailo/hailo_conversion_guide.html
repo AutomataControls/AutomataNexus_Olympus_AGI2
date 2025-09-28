@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hailo Conversion Pipeline - AutomataNexus OLYMPUS AGI2</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #ffffff;
+            color: #333333;
+            line-height: 1.6;
+        }
+        
+        .nav {
+            background: #000000;
+            color: white;
+            padding: 20px 40px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .nav-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .nav h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 30px;
+        }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .nav-links a:hover {
+            color: #00d4aa;
+        }
+        
+        .hero {
+            background: #f5f5f5;
+            padding: 80px 0;
+            text-align: center;
+        }
+        
+        .hero h1 {
+            font-size: 48px;
+            font-weight: 700;
+            color: #000000;
+            margin-bottom: 20px;
+        }
+        
+        .hero .subtitle {
+            font-size: 20px;
+            color: #666666;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 60px 40px;
+        }
+        
+        .section {
+            margin-bottom: 80px;
+        }
+        
+        h2 {
+            font-size: 36px;
+            font-weight: 700;
+            color: #000000;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #00d4aa;
+        }
+        
+        h3 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #000000;
+            margin: 30px 0 20px 0;
+        }
+        
+        p {
+            font-size: 18px;
+            color: #666666;
+            margin-bottom: 20px;
+        }
+        
+        .pipeline-overview {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .pipeline-step {
+            background: white;
+            border: 2px solid #e8e8e8;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .pipeline-step:hover {
+            border-color: #00d4aa;
+            box-shadow: 0 10px 30px rgba(0, 212, 170, 0.15);
+        }
+        
+        .pipeline-step::after {
+            content: '→';
+            position: absolute;
+            right: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 24px;
+            color: #00d4aa;
+            font-weight: bold;
+        }
+        
+        .pipeline-step:last-child::after {
+            display: none;
+        }
+        
+        .step-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .step-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #000000;
+            margin-bottom: 10px;
+        }
+        
+        .step-desc {
+            font-size: 16px;
+            color: #666666;
+        }
+        
+        .script-detail {
+            background: #f5f5f5;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 40px 0;
+        }
+        
+        .script-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .script-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #00d4aa 0%, #00a88a 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            color: white;
+        }
+        
+        .script-info h4 {
+            font-size: 24px;
+            color: #000000;
+            margin-bottom: 5px;
+        }
+        
+        .script-info .script-type {
+            font-size: 14px;
+            color: #00d4aa;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .feature-list {
+            list-style: none;
+            margin: 20px 0;
+        }
+        
+        .feature-list li {
+            padding: 15px 0;
+            border-bottom: 1px solid #e8e8e8;
+            position: relative;
+            padding-left: 30px;
+        }
+        
+        .feature-list li:before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #00d4aa;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .code-block {
+            background: #000000;
+            color: #00d4aa;
+            padding: 25px;
+            border-radius: 10px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+        
+        .usage-example {
+            background: #000000;
+            color: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 40px 0;
+        }
+        
+        .usage-example h3 {
+            color: white;
+            border-bottom: 2px solid #00d4aa;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .command {
+            background: #333333;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+        
+        .command-desc {
+            color: #cccccc;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .requirements {
+            background: #fff3e0;
+            border-left: 4px solid #ff6b00;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .requirements h4 {
+            color: #ff6b00;
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 1024px) {
+            .pipeline-overview {
+                grid-template-columns: 1fr;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .pipeline-step::after {
+                display: none;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 40px 20px;
+            }
+            
+            .hero h1 {
+                font-size: 36px;
+            }
+            
+            h2 {
+                font-size: 28px;
+            }
+            
+            .usage-example {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-content">
+            <h1>Hailo Conversion Pipeline</h1>
+            <div class="nav-links">
+                <a href="#overview">Overview</a>
+                <a href="#scripts">Scripts</a>
+                <a href="#usage">Usage</a>
+                <a href="#requirements">Requirements</a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="hero">
+        <h1>Hailo-8 NPU Conversion Pipeline</h1>
+        <p class="subtitle">Convert OLYMPUS PyTorch models to Hailo-optimized format for 26 TOPS inference acceleration</p>
+    </div>
+    
+    <div class="container">
+        <section id="overview" class="section">
+            <h2>Conversion Pipeline Overview</h2>
+            
+            <p>Transform trained OLYMPUS models for deployment on Hailo-8 NPU hardware through a three-stage conversion process using Hailo Dataflow Compiler (DFC) in WSL environment.</p>
+            
+            <div class="pipeline-overview">
+                <div class="pipeline-step">
+                    <div class="step-icon">🔄</div>
+                    <div class="step-title">PyTorch to ONNX</div>
+                    <div class="step-desc">Convert .pt/.pth model files to standardized ONNX format</div>
+                </div>
+                
+                <div class="pipeline-step">
+                    <div class="step-icon">📦</div>
+                    <div class="step-title">ONNX to HAR</div>
+                    <div class="step-desc">Parse ONNX models into Hailo Archive format using DFC</div>
+                </div>
+                
+                <div class="pipeline-step">
+                    <div class="step-icon">⚡</div>
+                    <div class="step-title">HAR to HEF</div>
+                    <div class="step-desc">Compile optimized Hailo Executable Format for deployment</div>
+                </div>
+            </div>
+        </section>
+        
+        <section id="scripts" class="section">
+            <h2>Conversion Scripts</h2>
+            
+            <div class="script-detail">
+                <div class="script-header">
+                    <div class="script-icon">🐍</div>
+                    <div class="script-info">
+                        <h4>pytorch_to_onnx.py</h4>
+                        <div class="script-type">PyTorch Conversion</div>
+                    </div>
+                </div>
+                
+                <p>Converts trained OLYMPUS PyTorch models (.pt/.pth files) to ONNX format for cross-platform compatibility and Hailo optimization.</p>
+                
+                <div class="features-grid">
+                    <ul class="feature-list">
+                        <li>Supports both .pt and .pth file formats</li>
+                        <li>Automatic batch size handling</li>
+                        <li>Dynamic input shapes for flexibility</li>
+                        <li>Model validation during export</li>
+                    </ul>
+                    
+                    <ul class="feature-list">
+                        <li>ONNX opset version 11 compatibility</li>
+                        <li>Constant folding optimization</li>
+                        <li>Named input/output tensors</li>
+                        <li>Error handling and reporting</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="script-detail">
+                <div class="script-header">
+                    <div class="script-icon">🔧</div>
+                    <div class="script-info">
+                        <h4>onnx_to_har.py</h4>
+                        <div class="script-type">Hailo Archive Creation</div>
+                    </div>
+                </div>
+                
+                <p>Utilizes Hailo Dataflow Compiler (DFC) in WSL to parse ONNX models and create Hailo Archive (HAR) format for optimization.</p>
+                
+                <div class="features-grid">
+                    <ul class="feature-list">
+                        <li>WSL-based Hailo DFC integration</li>
+                        <li>Automatic configuration generation</li>
+                        <li>Batch size optimization</li>
+                        <li>Model naming conventions</li>
+                    </ul>
+                    
+                    <ul class="feature-list">
+                        <li>DFC validation and error checking</li>
+                        <li>Timeout handling for large models</li>
+                        <li>Progress reporting</li>
+                        <li>Multi-model batch processing</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="script-detail">
+                <div class="script-header">
+                    <div class="script-icon">⚡</div>
+                    <div class="script-info">
+                        <h4>har_to_hef.py</h4>
+                        <div class="script-type">Hailo Executable Format</div>
+                    </div>
+                </div>
+                
+                <p>Compiles HAR models to Hailo Executable Format (HEF) for deployment on Hailo-8 hardware with performance optimization.</p>
+                
+                <div class="features-grid">
+                    <ul class="feature-list">
+                        <li>Hailo-8 hardware targeting</li>
+                        <li>High-performance mode compilation</li>
+                        <li>Multi-context execution support</li>
+                        <li>Memory optimization</li>
+                    </ul>
+                    
+                    <ul class="feature-list">
+                        <li>Performance analysis reporting</li>
+                        <li>Compilation time tracking</li>
+                        <li>HEF size optimization</li>
+                        <li>Throughput metrics</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+        
+        <section id="usage" class="section">
+            <div class="usage-example">
+                <h3>Usage Examples</h3>
+                
+                <div class="command-desc">Step 1: Convert PyTorch models to ONNX</div>
+                <div class="command">
+python hailo/scripts/pytorch_to_onnx.py \
+  --models_dir src/models/checkpoints \
+  --output_dir hailo/hailo_models/onnx \
+  --model_names MINERVA ATLAS IRIS CHRONOS PROMETHEUS
+                </div>
+                
+                <div class="command-desc">Step 2: Parse ONNX to HAR using Hailo DFC</div>
+                <div class="command">
+python hailo/scripts/onnx_to_har.py \
+  --onnx_dir hailo/hailo_models/onnx \
+  --output_dir hailo/hailo_models/har \
+  --model_names MINERVA ATLAS IRIS CHRONOS PROMETHEUS
+                </div>
+                
+                <div class="command-desc">Step 3: Compile HAR to HEF for deployment</div>
+                <div class="command">
+python hailo/scripts/har_to_hef.py \
+  --har_dir hailo/hailo_models/har \
+  --output_dir hailo/hailo_models/hef \
+  --model_names MINERVA ATLAS IRIS CHRONOS PROMETHEUS \
+  --analyze
+                </div>
+                
+                <div class="command-desc">Complete pipeline execution</div>
+                <div class="command">
+# Run all conversion steps
+./hailo/scripts/convert_all_models.sh
+                </div>
+            </div>
+        </section>
+        
+        <section id="requirements" class="section">
+            <h2>Requirements & Installation</h2>
+            
+            <div class="requirements">
+                <h4>Prerequisites</h4>
+                <ul class="feature-list">
+                    <li>WSL2 environment with Ubuntu 20.04+</li>
+                    <li>Hailo Dataflow Compiler (DFC) installed in WSL</li>
+                    <li>Python 3.8+ with PyTorch and ONNX</li>
+                    <li>Trained OLYMPUS model checkpoints (.pt/.pth)</li>
+                </ul>
+            </div>
+            
+            <h3>Hailo DFC Installation</h3>
+            <div class="code-block">
+# In WSL environment
+wget https://hailo.ai/downloads/dfc/latest/hailo_dataflow_compiler.deb
+sudo dpkg -i hailo_dataflow_compiler.deb
+sudo apt-get install -f
+
+# Verify installation
+hailo --version
+            </div>
+            
+            <h3>Python Dependencies</h3>
+            <div class="code-block">
+pip install torch torchvision onnx onnxruntime
+pip install numpy argparse pathlib
+            </div>
+            
+            <h3>Directory Structure</h3>
+            <div class="code-block">
+AutomataNexus_Olympus_AGI2/
+├── hailo/
+│   ├── scripts/
+│   │   ├── pytorch_to_onnx.py
+│   │   ├── onnx_to_har.py
+│   │   └── har_to_hef.py
+│   └── hailo_models/
+│       ├── onnx/
+│       ├── har/
+│       └── hef/
+└── src/models/checkpoints/
+    ├── minerva_best_model.pt
+    ├── atlas_best_model.pt
+    ├── iris_best_model.pt
+    ├── chronos_best_model.pt
+    └── prometheus_best_model.pt
+            </div>
+        </section>
+    </div>
+</body>
+</html>

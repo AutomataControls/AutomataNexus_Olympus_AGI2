@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutomataNexus OLYMPUS AGI2 - Advanced Pattern Recognition System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #ffffff;
+            color: #333333;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: #000000;
+            color: white;
+            padding: 60px 0;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            letter-spacing: -1px;
+        }
+        
+        .header .subtitle {
+            font-size: 20px;
+            font-weight: 300;
+            opacity: 0.8;
+        }
+        
+        .header .prize {
+            font-size: 32px;
+            color: #00d4aa;
+            font-weight: 600;
+            margin-top: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 80px 40px;
+        }
+        
+        .section {
+            margin-bottom: 80px;
+        }
+        
+        h2 {
+            font-size: 36px;
+            font-weight: 700;
+            color: #000000;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #00d4aa;
+        }
+        
+        .overview {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            margin: 60px 0;
+            align-items: center;
+        }
+        
+        .overview-text {
+            font-size: 18px;
+            color: #666666;
+        }
+        
+        .overview-text p {
+            margin-bottom: 20px;
+        }
+        
+        .overview-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        
+        .stat-box {
+            background: #f5f5f5;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 36px;
+            font-weight: 700;
+            color: #00d4aa;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #666666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .approach {
+            background: #f5f5f5;
+            border-radius: 20px;
+            padding: 60px;
+            margin: 60px 0;
+        }
+        
+        .approach h3 {
+            font-size: 28px;
+            color: #000000;
+            margin-bottom: 30px;
+        }
+        
+        .approach-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+            margin-top: 40px;
+        }
+        
+        .approach-card {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease;
+        }
+        
+        .approach-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .approach-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .approach-card h4 {
+            font-size: 20px;
+            color: #000000;
+            margin-bottom: 15px;
+        }
+        
+        .approach-card p {
+            font-size: 16px;
+            color: #666666;
+        }
+        
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 40px 0;
+            justify-content: center;
+        }
+        
+        .tech-badge {
+            background: #000000;
+            color: white;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        .models {
+            margin: 60px 0;
+        }
+        
+        .model-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-top: 40px;
+        }
+        
+        .model-card {
+            background: white;
+            border: 2px solid #e8e8e8;
+            border-radius: 15px;
+            padding: 30px;
+            transition: all 0.3s ease;
+        }
+        
+        .model-card:hover {
+            border-color: #00d4aa;
+            box-shadow: 0 5px 20px rgba(0, 212, 170, 0.2);
+        }
+        
+        .model-card h4 {
+            font-size: 20px;
+            color: #000000;
+            margin-bottom: 10px;
+        }
+        
+        .model-card .model-type {
+            font-size: 14px;
+            color: #00d4aa;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        .model-card p {
+            font-size: 15px;
+            color: #666666;
+        }
+        
+        .cta-section {
+            text-align: center;
+            padding: 80px 0;
+            background: #f5f5f5;
+            border-radius: 20px;
+            margin-top: 80px;
+        }
+        
+        .cta-section h2 {
+            border: none;
+            margin-bottom: 20px;
+        }
+        
+        .cta-section p {
+            font-size: 20px;
+            color: #666666;
+            margin-bottom: 40px;
+        }
+        
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: #000000;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #333333;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #000000;
+            border: 2px solid #000000;
+        }
+        
+        .btn-secondary:hover {
+            background: #f5f5f5;
+            transform: translateY(-2px);
+        }
+        
+        @media (max-width: 1024px) {
+            .overview {
+                grid-template-columns: 1fr;
+            }
+            
+            .approach-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 40px 20px;
+            }
+            
+            .header h1 {
+                font-size: 36px;
+            }
+            
+            .header .prize {
+                font-size: 24px;
+            }
+            
+            h2 {
+                font-size: 28px;
+            }
+            
+            .approach {
+                padding: 40px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>AutomataNexus OLYMPUS AGI2</h1>
+        <p class="subtitle">Advanced Ensemble Learning for Abstract Reasoning</p>
+    </div>
+    
+    <div class="container">
+        <section class="section">
+            <h2>Project Overview</h2>
+            
+            <div class="overview">
+                <div class="overview-text">
+                    <p>AutomataNexus OLYMPUS AGI2 combines cutting-edge neural architectures with sophisticated pattern recognition to tackle abstract reasoning challenges.</p>
+                    <p>The system leverages ensemble learning across five specialized models, each designed to capture different aspects of visual reasoning and pattern transformation.</p>
+                    <p>By focusing on reconstruction rather than classification, we achieve precise grid transformations for Abstract Reasoning Corpus tasks.</p>
+                </div>
+                
+                <div class="overview-stats">
+                    <div class="stat-box">
+                        <div class="stat-number">0.1%</div>
+                        <div class="stat-label">Current Exact Match</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">2048</div>
+                        <div class="stat-label">Effective Batch Size</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">5</div>
+                        <div class="stat-label">Model Ensemble</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">10</div>
+                        <div class="stat-label">Color Classes</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section class="section">
+            <div class="approach">
+                <h3>Technical Approach</h3>
+                
+                <div class="approach-grid">
+                    <div class="approach-card">
+                        <div class="approach-icon">🎯</div>
+                        <h4>Reconstruction Focus</h4>
+                        <p>Direct grid-to-grid transformation instead of pattern classification</p>
+                    </div>
+                    
+                    <div class="approach-card">
+                        <div class="approach-icon">🧠</div>
+                        <h4>Advanced Loss Functions</h4>
+                        <p>Focal loss, edge-aware weighting, and structure preservation</p>
+                    </div>
+                    
+                    <div class="approach-card">
+                        <div class="approach-icon">📊</div>
+                        <h4>Curriculum Learning</h4>
+                        <p>Progressive difficulty scaling from simple to complex patterns</p>
+                    </div>
+                </div>
+                
+                <div class="tech-stack">
+                    <span class="tech-badge">PyTorch</span>
+                    <span class="tech-badge">CUDA</span>
+                    <span class="tech-badge">Mixed Precision</span>
+                    <span class="tech-badge">A100 GPU</span>
+                    <span class="tech-badge">Python</span>
+                    <span class="tech-badge">NumPy</span>
+                    <span class="tech-badge">Plotly</span>
+                </div>
+            </div>
+        </section>
+        
+        <section class="section models">
+            <h2>Model Architecture</h2>
+            
+            <p style="font-size: 18px; color: #666666; margin-bottom: 40px;">
+                The OLYMPUS ensemble combines five specialized neural networks, each targeting specific pattern types found in ARC tasks.
+            </p>
+            
+            <div class="model-grid">
+                <div class="model-card">
+                    <h4>MINERVA</h4>
+                    <p class="model-type">Strategic Analysis</p>
+                    <p>Grid attention mechanisms with relational reasoning for complex pattern understanding</p>
+                </div>
+                
+                <div class="model-card">
+                    <h4>ATLAS</h4>
+                    <p class="model-type">Spatial Transformer</p>
+                    <p>Handles rotations, reflections, and affine transformations with learned parameters</p>
+                </div>
+                
+                <div class="model-card">
+                    <h4>IRIS</h4>
+                    <p class="model-type">Color Reasoning</p>
+                    <p>Specialized in color mappings, replacements, and pattern-based color rules</p>
+                </div>
+                
+                <div class="model-card">
+                    <h4>CHRONOS</h4>
+                    <p class="model-type">Temporal Analysis</p>
+                    <p>LSTM-based architecture for sequence patterns and movement prediction</p>
+                </div>
+                
+                <div class="model-card">
+                    <h4>PROMETHEUS</h4>
+                    <p class="model-type">Creative Generation</p>
+                    <p>VAE architecture for complex transformations and pattern synthesis</p>
+                </div>
+            </div>
+        </section>
+        
+        <div class="cta-section">
+            <h2>Ready to Explore</h2>
+            <p>Dive into our advanced ensemble system for abstract reasoning tasks</p>
+            
+            <div class="cta-buttons">
+                <a href="https://github.com/AutomataControls/AutomataNexus_Olympus_AGI2" class="btn btn-primary">View on GitHub</a>
+                <a href="technical_overview.html" class="btn btn-secondary">Technical Documentation</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

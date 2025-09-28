@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARC Prize 2025 - Training System Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 50%, #e8e8e8 100%);
+            min-height: 100vh;
+            color: #333333;
+        }
+        
+        .header {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 30px 0;
+            text-align: center;
+            border-bottom: 3px solid #00d4aa;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #00d4aa 0%, #00a88a 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0, 212, 170, 0.3);
+        }
+        
+        h1 {
+            font-size: 42px;
+            font-weight: 800;
+            color: #000000;
+            margin-bottom: 10px;
+            letter-spacing: -1px;
+        }
+        
+        .subtitle {
+            font-size: 20px;
+            color: #666666;
+            font-weight: 300;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 60px 40px;
+        }
+        
+        .breakthrough-banner {
+            background: linear-gradient(135deg, #00d4aa 0%, #00a88a 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            margin-bottom: 40px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 212, 170, 0.3);
+            animation: pulse 2s infinite;
+        }
+        
+        .breakthrough-banner h2 {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+        
+        .breakthrough-banner p {
+            font-size: 20px;
+            opacity: 0.9;
+        }
+        
+        .version-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 60px;
+        }
+        
+        .version-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-top: 4px solid #00d4aa;
+        }
+        
+        .version-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .version-card h3 {
+            font-size: 28px;
+            color: #000000;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .version-badge {
+            background: #00d4aa;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .version-card.latest .version-badge {
+            background: linear-gradient(135deg, #00d4aa 0%, #00a88a 100%);
+        }
+        
+        .version-card.breakthrough {
+            border-top: 4px solid #ff4136;
+        }
+        
+        .version-card.breakthrough .version-badge {
+            background: #ff4136;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #00a88a;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #666666;
+            margin-top: 5px;
+        }
+        
+        .features {
+            margin-top: 20px;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .feature-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #e8e8e8;
+            position: relative;
+            padding-left: 30px;
+        }
+        
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .feature-list li:before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #00d4aa;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .critical-fix {
+            background: #fff3e0;
+            border-left: 4px solid #ff6b00;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .critical-fix h4 {
+            color: #ff6b00;
+            margin-bottom: 10px;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        }
+        
+        .section h2 {
+            font-size: 32px;
+            color: #000000;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #00d4aa;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .metric-card h4 {
+            font-size: 18px;
+            color: #666666;
+            margin-bottom: 10px;
+        }
+        
+        .metric-value {
+            font-size: 36px;
+            font-weight: 800;
+            color: #00d4aa;
+        }
+        
+        .code-block {
+            background: #f5f5f5;
+            border-left: 4px solid #00d4aa;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+        }
+        
+        .gpu-specs {
+            background: linear-gradient(135deg, #00d4aa 0%, #00a88a 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        .gpu-specs h3 {
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+        
+        .gpu-specs .specs {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 20px;
+        }
+        
+        .gpu-specs .spec {
+            text-align: center;
+        }
+        
+        .gpu-specs .spec-value {
+            font-size: 32px;
+            font-weight: 800;
+        }
+        
+        .gpu-specs .spec-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .loss-functions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .loss-card {
+            background: white;
+            border: 2px solid #e8e8e8;
+            border-radius: 15px;
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+        
+        .loss-card:hover {
+            border-color: #00d4aa;
+            box-shadow: 0 5px 15px rgba(0, 212, 170, 0.2);
+        }
+        
+        .loss-card h4 {
+            color: #00a88a;
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+        
+        .loss-weight {
+            display: inline-block;
+            background: #f5f5f5;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            color: #666666;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+            margin: 40px 0;
+        }
+        
+        .timeline:before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #00d4aa;
+            transform: translateX(-50%);
+        }
+        
+        .timeline-item {
+            position: relative;
+            margin: 40px 0;
+            display: flex;
+            align-items: center;
+        }
+        
+        .timeline-item:nth-child(odd) {
+            justify-content: flex-end;
+            text-align: right;
+        }
+        
+        .timeline-item:nth-child(even) {
+            justify-content: flex-start;
+        }
+        
+        .timeline-content {
+            width: 45%;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .timeline-dot {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 20px;
+            background: #00d4aa;
+            border-radius: 50%;
+            border: 4px solid white;
+            box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.3);
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 40px;
+            color: #666666;
+            border-top: 1px solid #e8e8e8;
+            margin-top: 80px;
+        }
+        
+        .footer a {
+            color: #00d4aa;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo pulse">OLY</div>
+        <h1>OLYMPUS Training System</h1>
+        <p class="subtitle">AutomataNexus AGI2 - Advanced Ensemble Learning</p>
+    </div>
+    
+    <div class="container">
+        <!-- System Overview -->
+        <div class="breakthrough-banner">
+            <h2>V4 MEGA-SCALE TRAINING</h2>
+            <p>512 batch size with curriculum learning - Training all 5 OLYMPUS models to mastery</p>
+        </div>
+        
+        <!-- Training Versions Overview -->
+        <div class="version-cards">
+            <div class="version-card">
+                <h3>Version 1 <span class="version-badge">Base</span></h3>
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value">70%</div>
+                        <div class="stat-label">Peak Accuracy</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">Classification</div>
+                        <div class="stat-label">Approach</div>
+                    </div>
+                </div>
+                <div class="features">
+                    <h4>Key Features:</h4>
+                    <ul class="feature-list">
+                        <li>Pattern classification (10 types)</li>
+                        <li>Basic CNN architectures</li>
+                        <li>Standard cross-entropy loss</li>
+                        <li>Simple data augmentation</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="version-card">
+                <h3>Version 2 <span class="version-badge">Enhanced</span></h3>
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value">0%</div>
+                        <div class="stat-label">Exact Match</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">97%</div>
+                        <div class="stat-label">Copying Input</div>
+                    </div>
+                </div>
+                <div class="features">
+                    <h4>Key Issues:</h4>
+                    <ul class="feature-list">
+                        <li>Negative transformation penalty</li>
+                        <li>Started at hardest difficulty</li>
+                        <li>Dropout killing exact matches</li>
+                        <li>Wrong scheduler usage</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="version-card breakthrough">
+                <h3>Version 3 <span class="version-badge">FIXED!</span></h3>
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value">0.68%</div>
+                        <div class="stat-label">Exact Match!</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">95%</div>
+                        <div class="stat-label">Pixel Accuracy</div>
+                    </div>
+                </div>
+                <div class="features">
+                    <h4>Critical Fixes:</h4>
+                    <ul class="feature-list">
+                        <li>Positive transformation penalty (1.5)</li>
+                        <li>Start at stage 0 (easy)</li>
+                        <li>Removed ALL dropout from decoders</li>
+                        <li>ReduceLROnPlateau scheduler</li>
+                        <li>Visual diagnostics added</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="version-card">
+                <h3>V4 Mega-Scale <span class="version-badge">CURRENT</span></h3>
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value">512</div>
+                        <div class="stat-label">Batch Size</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">10x Data</div>
+                        <div class="stat-label">Augmentation</div>
+                    </div>
+                </div>
+                <div class="features">
+                    <h4>Key Features:</h4>
+                    <ul class="feature-list">
+                        <li>Massive batch size (512)</li>
+                        <li>Exact match bonus system</li>
+                        <li>High-momentum SGD</li>
+                        <li>8 parallel workers</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="version-card">
+                <h3>V3 Aggressive <span class="version-badge">Experimental</span></h3>
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value">5.0</div>
+                        <div class="stat-label">Transform Penalty</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">10x LR</div>
+                        <div class="stat-label">Learning Rate</div>
+                    </div>
+                </div>
+                <div class="features">
+                    <h4>Extreme Measures:</h4>
+                    <ul class="feature-list">
+                        <li>Exponential copy penalty</li>
+                        <li>Diversity rewards</li>
+                        <li>Double penalty in active regions</li>
+                        <li>Dynamic penalty increase</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Critical Fixes That Led to Breakthrough -->
+        <section class="section">
+            <h2>Critical Fixes That Enabled the Breakthrough</h2>
+            
+            <div class="critical-fix">
+                <h4>1. TRANSFORMATION_PENALTY: -0.3 → +1.5</h4>
+                <p>The most critical bug - we were <strong>rewarding</strong> the model for copying input! 
+                The negative penalty made the loss smaller when predictions matched the input. 
+                Fixing this immediately dropped copying from 97% to 28% on epoch 1.</p>
+            </div>
+            
+            <div class="critical-fix">
+                <h4>2. Curriculum Stage: 2 → 0</h4>
+                <p>We were starting with the hardest tasks! By starting at stage 0 (easy tasks), 
+                the model could learn basic transformations before tackling complex reasoning.</p>
+            </div>
+            
+            <div class="critical-fix">
+                <h4>3. Removed ALL Dropout from Decoders</h4>
+                <p>Dropout was destroying exact matches by randomly zeroing predictions. 
+                Even 20% dropout can prevent pixel-perfect reconstruction.</p>
+            </div>
+            
+            <div class="critical-fix">
+                <h4>4. ReduceLROnPlateau with Validation Accuracy</h4>
+                <p>Moved scheduler.step() outside batch loop and made it track validation accuracy 
+                instead of loss. This allows adaptive learning rate based on actual performance.</p>
+            </div>
+        </section>
+        
+        <!-- GPU Configuration -->
+        <div class="gpu-specs">
+            <h3>Optimized for NVIDIA A100-SXM4-80GB</h3>
+            <div class="specs">
+                <div class="spec">
+                    <div class="spec-value">80GB</div>
+                    <div class="spec-label">VRAM</div>
+                </div>
+                <div class="spec">
+                    <div class="spec-value">32-512</div>
+                    <div class="spec-label">Batch Size Range</div>
+                </div>
+                <div class="spec">
+                    <div class="spec-value">FP16</div>
+                    <div class="spec-label">Mixed Precision</div>
+                </div>
+                <div class="spec">
+                    <div class="spec-value">Only 4.1GB</div>
+                    <div class="spec-label">Currently Used!</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- V3 Loss Function Details -->
+        <section class="section">
+            <h2>V3 Loss Function Architecture (Updated)</h2>
+            <p>The fixed multi-component loss function that achieved the breakthrough:</p>
+            
+            <div class="loss-functions">
+                <div class="loss-card">
+                    <h4>Focal Loss</h4>
+                    <p>Focuses training on hard-to-classify pixels. Uses gamma=1.5 to emphasize difficult cases without being too aggressive.</p>
+                    <span class="loss-weight">Weight: 1.0</span>
+                </div>
+                
+                <div class="loss-card">
+                    <h4>Edge-Aware Loss</h4>
+                    <p>Applies 2x weight to pixels on object boundaries (reduced from 3x for better balance).</p>
+                    <span class="loss-weight">Weight: 0.5</span>
+                </div>
+                
+                <div class="loss-card">
+                    <h4>Color Balance Loss</h4>
+                    <p>KL divergence between predicted and target color distributions to ensure all colors are learned.</p>
+                    <span class="loss-weight">Weight: 0.3</span>
+                </div>
+                
+                <div class="loss-card">
+                    <h4>Structure Loss</h4>
+                    <p>Preserves object connectivity by computing IoU for each color channel independently.</p>
+                    <span class="loss-weight">Weight: 0.4</span>
+                </div>
+                
+                <div class="loss-card">
+                    <h4>Transformation Penalty</h4>
+                    <p>CRITICAL: Penalizes copying input. Must be positive! Currently set to 1.5.</p>
+                    <span class="loss-weight">Weight: 1.5 (positive!)</span>
+                </div>
+                
+                <div class="loss-card">
+                    <h4>Consistency Loss</h4>
+                    <p>Entropy-based loss to encourage confident predictions. Kept minimal to avoid overconfidence.</p>
+                    <span class="loss-weight">Weight: 0.01</span>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Understanding the Breakthrough -->
+        <section class="section">
+            <h2>Understanding the Breakthrough</h2>
+            
+            <h3>The "Smart Copying" Phenomenon</h3>
+            <p>An interesting pattern emerged: after initially dropping to 28%, the copying accuracy rose back to 92% by epoch 11. 
+            This is actually a <strong>positive sign</strong>!</p>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <h4>Epoch 1</h4>
+                    <div class="metric-value">28%</div>
+                    <p style="margin-top: 10px;">Model forced to experiment with transformations</p>
+                </div>
+                
+                <div class="metric-card">
+                    <h4>Epoch 11</h4>
+                    <div class="metric-value">92%</div>
+                    <p style="margin-top: 10px;">Model learned when copying IS the correct answer</p>
+                </div>
+                
+                <div class="metric-card">
+                    <h4>Active Accuracy</h4>
+                    <div class="metric-value">49%</div>
+                    <p style="margin-top: 10px;">Up from 4% - real learning on puzzle regions</p>
+                </div>
+                
+                <div class="metric-card">
+                    <h4>First Exact Match</h4>
+                    <div class="metric-value">0.68%</div>
+                    <p style="margin-top: 10px;">The hardest step is done!</p>
+                </div>
+            </div>
+            
+            <p style="margin-top: 20px;">The model isn't blindly copying anymore - it's making intelligent decisions about when to copy and when to transform. 
+            For easy tasks that require minimal changes, high copying accuracy is correct behavior.</p>
+        </section>
+        
+        <!-- Curriculum Learning Timeline (Updated) -->
+        <section class="section">
+            <h2>Curriculum Learning Progression (Fixed)</h2>
+            <p>Now correctly starting at Stage 0 for gradual learning:</p>
+            
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <h4>Stage 0: Easy (START HERE)</h4>
+                        <p>Simple transformations: rotations, reflections, basic color mappings. 5910 samples.</p>
+                    </div>
+                    <div class="timeline-dot"></div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <h4>Stage 1: Medium</h4>
+                        <p>Size changes, moderate complexity patterns. Expect temporary accuracy drop.</p>
+                    </div>
+                    <div class="timeline-dot"></div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <h4>Stage 2: Hard</h4>
+                        <p>Complex transformations, large grids, multi-object interactions.</p>
+                    </div>
+                    <div class="timeline-dot"></div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Quick Start (Updated) -->
+        <section class="section">
+            <h2>Quick Start Guide</h2>
+            <p>Get started with the fixed V3 training system:</p>
+            
+            <div class="code-block">
+# Clone the repository
+git clone https://github.com/AutomataControls/AutomataNexus_Olympus_AGI2.git
+cd AutomataNexus_Olympus_AGI2
+
+# Run V4 mega-scale training with curriculum learning
+python scripts/training/colab_training_v4_megascale_curriculum.py
+
+# Monitor training progress
+watch -n 1 nvidia-smi  # GPU utilization
+            </div>
+            
+            <h3 style="margin-top: 30px;">What to Watch For:</h3>
+            <ul class="feature-list" style="margin-top: 20px;">
+                <li><strong>Exact Match %:</strong> Every increase is a victory - we started at 0.68%!</li>
+                <li><strong>Copying Accuracy:</strong> High values are OK for easy tasks - watch for intelligent copying</li>
+                <li><strong>Stage Transitions:</strong> Expect temporary drops when difficulty increases</li>
+                <li><strong>Active Region Accuracy:</strong> Should steadily improve (started at 4%, reached 49%)</li>
+                <li><strong>Missing Colors:</strong> Model should predict all 10 colors (was missing color 6)</li>
+            </ul>
+        </section>
+        
+        <!-- Results Summary (Updated) -->
+        <section class="section">
+            <h2>Training Results Summary</h2>
+            <p>Performance comparison across versions:</p>
+            
+            <table style="width: 100%; margin-top: 20px; border-collapse: collapse;">
+                <tr style="background: #f5f5f5;">
+                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #00d4aa;">Version</th>
+                    <th style="padding: 15px; text-align: center; border-bottom: 2px solid #00d4aa;">Key Issue/Fix</th>
+                    <th style="padding: 15px; text-align: center; border-bottom: 2px solid #00d4aa;">Best Result</th>
+                    <th style="padding: 15px; text-align: center; border-bottom: 2px solid #00d4aa;">Status</th>
+                </tr>
+                <tr>
+                    <td style="padding: 15px; border-bottom: 1px solid #e8e8e8;">V1</td>
+                    <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e8e8e8;">Classification approach</td>
+                    <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e8e8e8;">70% pattern accuracy</td>
+                    <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e8e8e8; color: #666666;">Plateau</td>
+                </tr>
+                <tr>
+                    <td style="padding: 15px; border-bottom: 1px solid #e8e8e8;">V2</td>
+                    <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e8e8e8;">Negative penalty bug</td>
+                    <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e8e8e8;">0% exact, 97% copying</td>
+                    <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e8e8e8; color: #ff4136;">Failed</td>
+                </tr>
+                <tr style="background: #e8f9f5;">
+                    <td style="padding: 15px; border-bottom: 1px solid #e8e8e8; font-weight: bold;">V3 Fixed</td>
+                    <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e8e8e8;">All critical bugs fixed</td>
+                    <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e8e8e8; color: #00d4aa; font-weight: bold;">0.68% exact match!</td>
+                    <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e8e8e8; color: #00d4aa;">BREAKTHROUGH!</td>
+                </tr>
+                <tr>
+                    <td style="padding: 15px; border-bottom: 1px solid #e8e8e8;">V4 Mega</td>
+                    <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e8e8e8;">Full GPU utilization</td>
+                    <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e8e8e8;">Pending</td>
+                    <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e8e8e8; color: #00a88a;">Ready</td>
+                </tr>
+            </table>
+        </section>
+    </div>
+    
+    <div class="footer">
+        <p>AutomataNexus OLYMPUS AGI2 - Built by Andrew Jewell Sr.</p>
+        <p style="margin-top: 10px;">Advanced ensemble system for abstract reasoning</p>
+        <p style="margin-top: 10px;">
+            <a href="https://github.com/AutomataControls/AutomataNexus_Olympus_AGI2">GitHub</a> • 
+            <a href="olympus_ensemble.html">Architecture</a> • 
+            <a href="technical_overview.html">Technical Docs</a>
+        </p>
+    </div>
+</body>
+</html>

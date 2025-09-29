@@ -368,7 +368,8 @@ def train_chronos():
                 output_grids = F.one_hot(outputs, num_classes=NUM_COLORS).permute(0, 3, 1, 2).float()
                 
                 with autocast('cuda'):
-                    model_outputs = model(input_grids, output_grids, mode='train')
+                    # CHRONOS expects a list of tensors as input
+                    model_outputs = model([input_grids])
                     pred_output = model_outputs['predicted_output']
                     losses = loss_fn(pred_output, output_grids, input_grids)
                     loss = losses['total'] / GRADIENT_ACCUMULATION_STEPS
@@ -412,7 +413,8 @@ def train_chronos():
                     leap_output_oh = F.one_hot(leap_outputs, num_classes=NUM_COLORS).permute(0, 3, 1, 2).float()
                     
                     with autocast('cuda'):
-                        leap_pred = model(leap_input_oh, leap_output_oh, mode='train')['predicted_output']
+                        # CHRONOS expects a list of tensors as input
+                        leap_pred = model([leap_input_oh])['predicted_output']
                         leap_losses = loss_fn(leap_pred, leap_output_oh, leap_input_oh)
                         leap_loss = leap_losses['total'] / GRADIENT_ACCUMULATION_STEPS
                     
@@ -457,7 +459,8 @@ def train_chronos():
                         output_grids = F.one_hot(outputs, num_classes=NUM_COLORS).permute(0, 3, 1, 2).float()
                         
                         with autocast('cuda'):
-                            model_outputs = model(input_grids)
+                            # CHRONOS expects a list of tensors as input
+                            model_outputs = model([input_grids])
                             pred_output = model_outputs['predicted_output']
                             losses = loss_fn(pred_output, output_grids, input_grids)
                         

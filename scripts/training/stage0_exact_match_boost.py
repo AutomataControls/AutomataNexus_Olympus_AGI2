@@ -581,8 +581,9 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
                 inputs_oh = inputs_oh + noise
             
             # Forward pass without autocast for debugging
-            if hasattr(model, '__class__') and model.__class__.__name__ == 'CHRONOS':
-                pred = model([inputs_oh], target=outputs_oh)['predicted_output']
+            if hasattr(model, '__class__') and 'Chronos' in model.__class__.__name__:
+                # CHRONOS expects a list of tensors as input
+                pred = model([inputs_oh])['predicted_output']
             else:
                 pred = model(inputs_oh, outputs_oh, mode='train')['predicted_output']
             

@@ -135,7 +135,7 @@ EDGE_WEIGHT = 0.3
 COLOR_BALANCE_WEIGHT = 0.2
 STRUCTURE_WEIGHT = 0.3
 TRANSFORMATION_PENALTY = 0.5  # Further reduced to help identity learning
-EXACT_MATCH_BONUS = 5.0
+EXACT_MATCH_BONUS = 10.0  # Doubled to incentivize exact matches
 
 # Curriculum settings
 CURRICULUM_STAGES = 3
@@ -611,7 +611,18 @@ def train_minerva():
                 
                 # LEAP training for Stage 0
                 if USE_LEAP and stage == 0 and batch_idx % 3 == 0:
-                    leap_batch = leap_trainer.generate_leap_batch(batch_size=64)
+                    # Every 10th LEAP batch, focus on identity patterns
+                    if leap_batch_counter % 10 == 0:
+                        # Force 50% identity patterns to help model learn
+                        leap_batch = leap_trainer.generate_leap_batch(batch_size=64)
+                        # Replace half with identity patterns
+                        for i in range(32):
+                            grid = torch.randint(0, 4, (8, 8))
+                            leap_batch['inputs'][i] = grid
+                            leap_batch['outputs'][i] = grid.clone()
+                            leap_batch['pattern_types'][i] = 'identity'
+                    else:
+                        leap_batch = leap_trainer.generate_leap_batch(batch_size=64)
                     leap_inputs = leap_batch['inputs'].to(device)
                     leap_outputs = leap_batch['outputs'].to(device)
                     pattern_types = leap_batch['pattern_types']
@@ -636,8 +647,9 @@ def train_minerva():
                     with autocast('cuda'):
                         leap_pred = model(leap_input_oh, leap_output_oh, mode='train')['predicted_output']
                         leap_losses = loss_fn(leap_pred, leap_output_oh, leap_input_oh)
-                        # Give LEAP patterns higher weight to ensure they're learned
-                        leap_loss = leap_losses['total'] * 2.0 / GRADIENT_ACCUMULATION_STEPS
+                        # Give LEAP patterns much higher weight to ensure they're learned
+                        leap_weight = 5.0 if epoch < 20 else 3.0  # Higher weight early on
+                        leap_loss = leap_losses['total'] * leap_weight / GRADIENT_ACCUMULATION_STEPS
                     
                     scaler.scale(leap_loss).backward()
                     
@@ -652,7 +664,7 @@ def train_minerva():
                         leap_exact = (leap_pred_idx == leap_target_idx).all(dim=[1,2]).sum().item()
                         # Also check pixel accuracy
                         leap_pixel_correct = (leap_pred_idx == leap_target_idx).float().mean().item()
-                        print(f"LEAP exact: {leap_exact}/{len(pattern_types)} = {leap_exact/len(pattern_types)*100:.1f}%, pixel: {leap_pixel_correct*100:.1f}%")
+                        print(f"\nLEAP exact: {leap_exact}/{len(pattern_types)} = {leap_exact/len(pattern_types)*100:.1f}%, pixel: {leap_pixel_correct*100:.1f}%, weight: {leap_weight:.1f}")
                     
                     # Analyze failed patterns with LEAP-PRISM bridge
                     if leap_prism_bridge and leap_batch_counter % 10 == 0:
@@ -779,9 +791,10 @@ def train_minerva():
                     'best_val_loss': best_val_loss
                 }, checkpoint_path)
                 
-                # Early stopping check
-                if val_loss < best_val_loss:
-                    best_val_loss = val_loss
+                # Early stopping check - prioritize exact match over loss
+                if val_exact_pct > best_exact * 0.95:  # Within 5% of best
+                    if val_loss < best_val_loss:
+                        best_val_loss = val_loss
                     patience_counter = 0
                 else:
                     patience_counter += 1

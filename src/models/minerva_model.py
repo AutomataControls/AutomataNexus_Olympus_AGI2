@@ -261,15 +261,9 @@ class EnhancedMinervaNet(nn.Module):
             transformed = self._apply_transform(combined_features, transform_params)
             predicted_output = self.decoder(torch.cat([combined_features, transformed], dim=1))
             
-            # Mix prediction with input using learnable parameter
-            # Sigmoid to keep in [0, 1] range - but favor the prediction!
-            mix = torch.sigmoid(self.mix_param)
-            
-            # During training, use even less input mixing to learn transformations
-            if self.training:
-                mix = mix * 0.2  # Reduce input contribution by 80% during training
-                
-            predicted_output = predicted_output * (1 - mix) + input_grid * mix  # Inverted to favor prediction
+            # REMOVED input mixing - it prevents exact matches!
+            # The model should learn to predict the output directly
+            # predicted_output = predicted_output  # Pure prediction, no mixing
             
             return {
                 'predicted_output': predicted_output,
@@ -283,16 +277,8 @@ class EnhancedMinervaNet(nn.Module):
             transformed = self._apply_transform(combined_features, best_transform)
             predicted_output = self.decoder(torch.cat([combined_features, transformed], dim=1))
             
-            # Mix prediction with input
-            mix = torch.sigmoid(self.mix_param)
-            
-            # During inference, still favor the transformation heavily
-            if self.training:
-                mix = mix * 0.2
-            else:
-                mix = mix * 0.3
-                
-            predicted_output = predicted_output * (1 - mix) + input_grid * mix  # Inverted to favor prediction
+            # REMOVED input mixing for inference too - consistency is key
+            # predicted_output = predicted_output  # Pure prediction
             
             return {
                 'predicted_output': predicted_output,
@@ -310,9 +296,9 @@ class EnhancedMinervaNet(nn.Module):
         # Use transform params to modulate features
         transform_matrix = transform_params.view(B, C, 1, 1)
         
-        # Apply EVEN STRONGER transformation - use tanh for wider range [-1, 1]
-        # Then scale up to allow big changes
-        transformed = features * (1.0 + 3.0 * torch.tanh(transform_matrix))
+        # Apply transformation - but make it learnable to handle identity
+        # For identity tasks, the model should learn transform_matrix near 0
+        transformed = features * (1.0 + torch.tanh(transform_matrix))  # Reduced from 3.0 to 1.0
         
         return transformed
     

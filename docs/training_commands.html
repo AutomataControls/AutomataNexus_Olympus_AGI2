@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutomataNexus OLYMPUS AGI2 - Training Commands</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            color: #fff;
+            line-height: 1.6;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .title {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #00cccc;
+            margin-bottom: 15px;
+            text-shadow: 0 0 20px rgba(0, 212, 170, 0.3);
+        }
+
+        .subtitle {
+            font-size: 1.4rem;
+            color: #ccc;
+            font-weight: 300;
+        }
+
+        .section {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border: 2px solid #00cccc;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .section h2 {
+            color: #00cccc;
+            font-size: 2rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .prerequisites {
+            background: rgba(0, 212, 170, 0.1);
+            border: 2px solid #00cccc;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .prerequisites h3 {
+            color: #00cccc;
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+        }
+
+        .setup-steps {
+            list-style: none;
+            padding: 0;
+        }
+
+        .setup-steps li {
+            position: relative;
+            padding-left: 25px;
+            margin-bottom: 8px;
+            color: #ccc;
+        }
+
+        .setup-steps li:before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #00cccc;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .command-box {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #00cccc;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .command-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .command-title {
+            color: #00cccc;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .copy-button {
+            background: #00cccc;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .copy-button:hover {
+            background: #009999;
+            transform: translateY(-1px);
+        }
+
+        pre {
+            margin: 0;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            color: #00cccc;
+            border: 1px solid rgba(0, 204, 204, 0.3);
+        }
+
+        .model-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin: 25px 0;
+        }
+
+        .model-card {
+            background: rgba(0, 212, 170, 0.1);
+            border: 2px solid #00cccc;
+            border-radius: 15px;
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .model-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 212, 170, 0.3);
+        }
+
+        .model-card h3 {
+            color: #00cccc;
+            font-size: 1.4rem;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .model-emoji {
+            font-size: 1.5rem;
+        }
+
+        .model-description {
+            color: #ccc;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .feature-list {
+            list-style: none;
+            margin-top: 15px;
+        }
+
+        .feature-list li {
+            position: relative;
+            padding-left: 20px;
+            margin-bottom: 8px;
+            color: #ccc;
+        }
+
+        .feature-list li:before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #00cccc;
+            font-weight: bold;
+        }
+
+        .note {
+            background: rgba(255, 193, 7, 0.1);
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .note h4 {
+            color: #ffc107;
+            margin-bottom: 10px;
+        }
+
+        .warning {
+            background: rgba(220, 53, 69, 0.1);
+            border-left: 4px solid #dc3545;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .warning h4 {
+            color: #dc3545;
+            margin-bottom: 10px;
+        }
+
+        .copy-feedback {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #00cccc;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            font-weight: bold;
+            z-index: 1000;
+        }
+
+        .copy-feedback.show {
+            opacity: 1;
+        }
+
+        @media (max-width: 1024px) {
+            .model-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .title {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">OLYMPUS AGI2 Training Commands</h1>
+            <p class="subtitle">V4 Enhanced Training with MEPT, LEAP, and PRISM</p>
+        </div>
+
+        <div class="prerequisites">
+            <h3>📋 Prerequisites - Run These First</h3>
+            <ul class="setup-steps">
+                <li>Clone the repository in Colab</li>
+                <li>Install dependencies</li>
+                <li>Download ARC datasets</li>
+                <li>Verify GPU availability (A100 80GB recommended)</li>
+            </ul>
+            
+            <div class="command-box">
+                <div class="command-header">
+                    <span class="command-title">Initial Setup Commands</span>
+                    <button class="copy-button" onclick="copyToClipboard('setup-commands')">Copy All</button>
+                </div>
+                <pre id="setup-commands"># Cell 1: Clone repository and install dependencies
+!git clone https://github.com/AutomataControls/AutomataNexus_Olympus_AGI2.git /content/AutomataNexus_Olympus_AGI2
+!cd /content/AutomataNexus_Olympus_AGI2 && pip install -r requirements.txt -q
+
+# Cell 2: Download ARC datasets
+!cd /content/AutomataNexus_Olympus_AGI2 && python scripts/download_arc_datasets.py
+
+# Cell 3: Verify environment
+import torch
+print(f"PyTorch Version: {torch.__version__}")
+print(f"CUDA Available: {torch.cuda.is_available()}")
+if torch.cuda.is_available():
+    print(f"GPU: {torch.cuda.get_device_name(0)}")
+    print(f"Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB")</pre>
+                <div class="copy-feedback">Copied!</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🎯 Individual Model Training</h2>
+            
+            <div class="model-grid">
+                <div class="model-card">
+                    <h3><span class="model-emoji">🧠</span>MINERVA</h3>
+                    <p class="model-description">Strategic Pattern Analysis - Analyzes overall patterns and strategies</p>
+                    <div class="command-box">
+                        <div class="command-header">
+                            <span class="command-title">Training Command</span>
+                            <button class="copy-button" onclick="copyToClipboard('minerva-command')">Copy</button>
+                        </div>
+                        <pre id="minerva-command">!cd /content/AutomataNexus_Olympus_AGI2 && python scripts/training/train_minerva.py</pre>
+                        <div class="copy-feedback">Copied!</div>
+                    </div>
+                    <ul class="feature-list">
+                        <li>Pattern recognition and analysis</li>
+                        <li>Strategic reasoning</li>
+                        <li>Global pattern understanding</li>
+                    </ul>
+                </div>
+
+                <div class="model-card">
+                    <h3><span class="model-emoji">🗺️</span>ATLAS</h3>
+                    <p class="model-description">Spatial Transformation Specialist - Handles rotations, reflections, and translations</p>
+                    <div class="command-box">
+                        <div class="command-header">
+                            <span class="command-title">Training Command</span>
+                            <button class="copy-button" onclick="copyToClipboard('atlas-command')">Copy</button>
+                        </div>
+                        <pre id="atlas-command">!cd /content/AutomataNexus_Olympus_AGI2 && python scripts/training/train_atlas.py</pre>
+                        <div class="copy-feedback">Copied!</div>
+                    </div>
+                    <ul class="feature-list">
+                        <li>Spatial transformer networks</li>
+                        <li>Rotation/reflection detection</li>
+                        <li>Affine transformations</li>
+                    </ul>
+                </div>
+
+                <div class="model-card">
+                    <h3><span class="model-emoji">🎨</span>IRIS</h3>
+                    <p class="model-description">Color Pattern Recognition - Identifies and extracts key visual features</p>
+                    <div class="command-box">
+                        <div class="command-header">
+                            <span class="command-title">Training Command</span>
+                            <button class="copy-button" onclick="copyToClipboard('iris-command')">Copy</button>
+                        </div>
+                        <pre id="iris-command">!cd /content/AutomataNexus_Olympus_AGI2 && python scripts/training/train_iris.py</pre>
+                        <div class="copy-feedback">Copied!</div>
+                    </div>
+                    <ul class="feature-list">
+                        <li>Color pattern recognition</li>
+                        <li>Feature extraction</li>
+                        <li>Visual analysis</li>
+                    </ul>
+                </div>
+
+                <div class="model-card">
+                    <h3><span class="model-emoji">⏱️</span>CHRONOS</h3>
+                    <p class="model-description">Temporal Reasoning Specialist - Handles sequence-based transformations</p>
+                    <div class="command-box">
+                        <div class="command-header">
+                            <span class="command-title">Training Command</span>
+                            <button class="copy-button" onclick="copyToClipboard('chronos-command')">Copy</button>
+                        </div>
+                        <pre id="chronos-command">!cd /content/AutomataNexus_Olympus_AGI2 && python scripts/training/train_chronos.py</pre>
+                        <div class="copy-feedback">Copied!</div>
+                    </div>
+                    <ul class="feature-list">
+                        <li>Sequential pattern analysis</li>
+                        <li>Temporal dependencies</li>
+                        <li>State transitions</li>
+                    </ul>
+                </div>
+
+                <div class="model-card">
+                    <h3><span class="model-emoji">🔥</span>PROMETHEUS</h3>
+                    <p class="model-description">Creative Pattern Generation - Meta-learning and strategy synthesis</p>
+                    <div class="command-box">
+                        <div class="command-header">
+                            <span class="command-title">Training Command</span>
+                            <button class="copy-button" onclick="copyToClipboard('prometheus-command')">Copy</button>
+                        </div>
+                        <pre id="prometheus-command">!cd /content/AutomataNexus_Olympus_AGI2 && python scripts/training/train_prometheus.py</pre>
+                        <div class="copy-feedback">Copied!</div>
+                    </div>
+                    <ul class="feature-list">
+                        <li>Meta-learning capabilities</li>
+                        <li>Strategy synthesis</li>
+                        <li>Adaptive reasoning</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🌟 Combined Training - All Models</h2>
+            
+            <div class="note">
+                <h4>💡 Note:</h4>
+                <p>Training all models sequentially requires significant time and GPU resources. Each model trains for ~300 epochs with curriculum learning.</p>
+            </div>
+
+            <div class="command-box">
+                <div class="command-header">
+                    <span class="command-title">Sequential Training Script</span>
+                    <button class="copy-button" onclick="copyToClipboard('sequential-training')">Copy</button>
+                </div>
+                <pre id="sequential-training"># Train all models sequentially
+import subprocess
+import time
+
+models = [
+    ('MINERVA', 'train_minerva.py', '🧠'),
+    ('ATLAS', 'train_atlas.py', '🗺️'),
+    ('IRIS', 'train_iris.py', '🎨'),
+    ('CHRONOS', 'train_chronos.py', '⏱️'),
+    ('PROMETHEUS', 'train_prometheus.py', '🔥')
+]
+
+for model_name, script_name, emoji in models:
+    print(f"\n{'='*60}")
+    print(f"{emoji} Starting training for {model_name}")
+    print(f"{'='*60}\n")
+    
+    start_time = time.time()
+    
+    result = subprocess.run([
+        'python', f'/content/AutomataNexus_Olympus_AGI2/scripts/training/{script_name}'
+    ], capture_output=True, text=True)
+    
+    elapsed_time = time.time() - start_time
+    
+    print(f"\n{model_name} training completed in {elapsed_time/3600:.2f} hours")
+    
+    if result.returncode != 0:
+        print(f"⚠️ Error training {model_name}:")
+        print(result.stderr)
+    else:
+        print(f"✅ {model_name} trained successfully!")
+
+print("\n🎉 All models training completed!")</pre>
+                <div class="copy-feedback">Copied!</div>
+            </div>
+
+            <div class="command-box">
+                <div class="command-header">
+                    <span class="command-title">Main V4 Training Script (Ensemble)</span>
+                    <button class="copy-button" onclick="copyToClipboard('v4-training')">Copy</button>
+                </div>
+                <pre id="v4-training"># Run the main V4 training script with all enhancements
+!cd /content/AutomataNexus_Olympus_AGI2 && python scripts/training/colab_training_v4_megascale_curriculum.py</pre>
+                <div class="copy-feedback">Copied!</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔧 Training Configuration</h2>
+            
+            <div class="command-box">
+                <div class="command-header">
+                    <span class="command-title">View/Modify Training Parameters</span>
+                    <button class="copy-button" onclick="copyToClipboard('config-check')">Copy</button>
+                </div>
+                <pre id="config-check"># Check current training configuration
+config = {
+    'BATCH_SIZE': 512,
+    'LEARNING_RATE': 0.005,
+    'GRADIENT_ACCUMULATION_STEPS': 4,
+    'EFFECTIVE_BATCH_SIZE': 2048,
+    'NUM_EPOCHS': 300,
+    'CURRICULUM_STAGES': 3,
+    'TRANSFORMATION_PENALTY': 1.0,
+    'EXACT_MATCH_BONUS': 5.0,
+    'USE_MEPT': True,  # Memory-Enhanced Progressive Training
+    'USE_LEAP': True,  # Learning Enhancement through Adaptive Patterns
+    'USE_PRISM': True  # Program Reasoning through Inductive Synthesis
+}
+
+print("Current V4 Training Configuration:")
+for key, value in config.items():
+    print(f"  {key}: {value}")
+
+# GPU Memory Usage Estimation
+print(f"\nEstimated GPU Memory Usage:")
+print(f"  Per Model: ~20-30 GB")
+print(f"  Recommended GPU: A100 80GB")
+print(f"  Minimum GPU: V100 32GB (with reduced batch size)")</pre>
+                <div class="copy-feedback">Copied!</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Monitoring Training Progress</h2>
+            
+            <div class="command-box">
+                <div class="command-header">
+                    <span class="command-title">Real-time Training Monitor</span>
+                    <button class="copy-button" onclick="copyToClipboard('monitor-training')">Copy</button>
+                </div>
+                <pre id="monitor-training"># Monitor training progress and GPU usage
+import subprocess
+import time
+import IPython.display as display
+
+def monitor_training():
+    while True:
+        # Clear output
+        display.clear_output(wait=True)
+        
+        # Show GPU usage
+        gpu_info = subprocess.run(['nvidia-smi'], capture_output=True, text=True)
+        print("GPU Status:")
+        print(gpu_info.stdout)
+        
+        # Check for latest checkpoint
+        import os
+        import glob
+        
+        checkpoints = glob.glob('/content/AutomataNexus_Olympus_AGI2/arc_models_v4/*_checkpoint.pt')
+        if checkpoints:
+            print("\nLatest Checkpoints:")
+            for checkpoint in sorted(checkpoints):
+                size = os.path.getsize(checkpoint) / (1024**2)  # Size in MB
+                mtime = os.path.getmtime(checkpoint)
+                print(f"  {os.path.basename(checkpoint)}: {size:.1f} MB - {time.ctime(mtime)}")
+        
+        # Check training reports
+        reports = glob.glob('/content/AutomataNexus_Olympus_AGI2/arc_models_v4/*_report.json')
+        if reports:
+            print("\nTraining Reports Available:")
+            for report in reports:
+                print(f"  {os.path.basename(report)}")
+        
+        time.sleep(30)  # Update every 30 seconds
+
+# Run monitor in background
+# monitor_training()  # Uncomment to run</pre>
+                <div class="copy-feedback">Copied!</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🚨 Troubleshooting</h2>
+            
+            <div class="warning">
+                <h4>⚠️ Common Issues and Solutions</h4>
+                <ul class="feature-list">
+                    <li><strong>CUDA Out of Memory:</strong> Reduce BATCH_SIZE in the training script (try 256 or 128)</li>
+                    <li><strong>RuntimeError with .view():</strong> Update to latest version (already fixed)</li>
+                    <li><strong>Import errors:</strong> Ensure all dependencies are installed with requirements.txt</li>
+                    <li><strong>Data not found:</strong> Run the download_arc_datasets.py script first</li>
+                </ul>
+            </div>
+
+            <div class="command-box">
+                <div class="command-header">
+                    <span class="command-title">Quick Fixes</span>
+                    <button class="copy-button" onclick="copyToClipboard('quick-fixes')">Copy</button>
+                </div>
+                <pre id="quick-fixes"># Fix 1: Clear GPU memory
+import torch
+import gc
+torch.cuda.empty_cache()
+gc.collect()
+
+# Fix 2: Check available GPU memory
+print(f"Allocated: {torch.cuda.memory_allocated() / 1e9:.2f} GB")
+print(f"Reserved: {torch.cuda.memory_reserved() / 1e9:.2f} GB")
+print(f"Free: {(torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_reserved()) / 1e9:.2f} GB")
+
+# Fix 3: Reduce batch size for smaller GPUs
+# Edit the training script and change:
+# BATCH_SIZE = 512  # to
+# BATCH_SIZE = 256  # or even 128 for smaller GPUs
+
+# Fix 4: Resume from checkpoint
+# Training automatically resumes from latest checkpoint if interrupted</pre>
+                <div class="copy-feedback">Copied!</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📈 Post-Training Evaluation</h2>
+            
+            <div class="command-box">
+                <div class="command-header">
+                    <span class="command-title">Evaluate Trained Models</span>
+                    <button class="copy-button" onclick="copyToClipboard('evaluation')">Copy</button>
+                </div>
+                <pre id="evaluation"># Load and evaluate trained models
+import torch
+import json
+import glob
+
+# Find all trained models
+model_files = glob.glob('/content/AutomataNexus_Olympus_AGI2/arc_models_v4/*_best.pt')
+
+print("Trained Models Found:")
+for model_file in model_files:
+    model_name = model_file.split('/')[-1].replace('_best.pt', '').upper()
+    checkpoint = torch.load(model_file, map_location='cpu')
+    
+    print(f"\n{model_name}:")
+    print(f"  Best Validation Exact Match: {checkpoint.get('val_exact', 'N/A'):.2f}%")
+    print(f"  Training Epoch: {checkpoint.get('epoch', 'N/A')}")
+    print(f"  Stage: {checkpoint.get('stage', 'N/A')}")
+
+# Load training reports
+report_files = glob.glob('/content/AutomataNexus_Olympus_AGI2/arc_models_v4/*_training_report_*.json')
+for report_file in sorted(report_files)[-5:]:  # Show last 5 reports
+    with open(report_file, 'r') as f:
+        report = json.load(f)
+    print(f"\nReport: {report_file.split('/')[-1]}")
+    print(f"  Model: {report['model_name']}")
+    print(f"  Best Exact: {report['best_exact']:.2f}%")
+    print(f"  Final Loss: {report['best_val_loss']:.4f}")</pre>
+                <div class="copy-feedback">Copied!</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                // Show feedback
+                const feedback = element.parentElement.querySelector('.copy-feedback');
+                feedback.classList.add('show');
+                
+                // Change button text temporarily
+                const button = element.parentElement.querySelector('.copy-button');
+                const originalText = button.textContent;
+                button.textContent = '✓ Copied!';
+                
+                setTimeout(() => {
+                    feedback.classList.remove('show');
+                    button.textContent = originalText;
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                alert('Failed to copy to clipboard. Please select and copy manually.');
+            });
+        }
+    </script>
+</body>
+</html>

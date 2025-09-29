@@ -46,6 +46,11 @@ sys.path.append('/content')
 from src.models.arc_models_enhanced import create_enhanced_models
 from src.dsl import DSLTrainingIntegration, DSLProgramGenerator
 from src.program_synthesis.synthesis_integration import LightweightProgramSynthesizer, ProgramSynthesisDataGenerator
+try:
+    from src.program_synthesis.prism_system import PRISMSynthesizer, create_prism_system
+    PRISM_AVAILABLE = True
+except ImportError:
+    PRISM_AVAILABLE = False
 from src.data.arc_data_synthesis import ARCDataSynthesizer, ARCDataAugmenter
 
 # Import MEPT and LEAP components
@@ -89,9 +94,10 @@ EXACT_MATCH_BONUS = 5.0  # Reduced from 10.0 to prevent instability
 CURRICULUM_STAGES = 3
 EPOCHS_PER_STAGE = 100
 
-# Enable/Disable MEPT and LEAP
+# Enable/Disable MEPT, LEAP, and PRISM
 USE_MEPT = True
 USE_LEAP = True  # NEW: Learning Enhancement through Adaptive Patterns
+USE_PRISM = True and PRISM_AVAILABLE  # NEW: Advanced program synthesis
 
 print(f"\n⚙️ V4 MEGA-SCALE + CURRICULUM Configuration:")
 print(f"  Batch size: {BATCH_SIZE} (effective: {BATCH_SIZE * GRADIENT_ACCUMULATION_STEPS})")
@@ -102,6 +108,7 @@ print(f"  Transformation penalty: {TRANSFORMATION_PENALTY} (2x stronger!)")
 print(f"  Exact match bonus: {EXACT_MATCH_BONUS} (2x bigger!)")
 print(f"  MEPT: {'Enabled' if USE_MEPT else 'Disabled'}")
 print(f"  LEAP: {'Enabled' if USE_LEAP else 'Disabled'}")
+print(f"  PRISM: {'Enabled' if USE_PRISM else 'Disabled'}")
 
 # Data setup
 DATA_DIR = '/content/AutomataNexus_Olympus_AGI2/data'
@@ -1726,11 +1733,19 @@ def train_megascale_curriculum():
         print("✅ LEAP initialized for Stage 0 adaptive pattern training")
     
     # Initialize program synthesizer
-    synthesizer = LightweightProgramSynthesizer()
+    if USE_PRISM:
+        print("\n🔮 Initializing PRISM (Program Reasoning through Inductive Synthesis)")
+        prism_system = create_prism_system()
+        synthesizer = prism_system['synthesizer']
+        print("✅ PRISM initialized with meta-programming and constraint solving")
+    else:
+        synthesizer = LightweightProgramSynthesizer()
+    
     synthesis_stats = {
         'total_attempts': 0,
         'successful_syntheses': 0,
-        'exact_improvements': 0
+        'exact_improvements': 0,
+        'prism_meta_programs': defaultdict(int)
     }
     
     os.makedirs('/content/AutomataNexus_Olympus_AGI2/arc_models_v4', exist_ok=True)
@@ -2151,12 +2166,26 @@ def train_megascale_curriculum():
                                     input_np = inputs[i].cpu().numpy()
                                     output_np = outputs[i].cpu().numpy()
                                     
-                                    program = synthesizer.quick_synthesize(input_np, output_np, max_depth=2)
-                                    if program and program.verified:
-                                        synthesis_metrics['successes'] += 1
-                                        # Check if neural network failed but synthesis succeeded
-                                        if not (pred_indices[i] == target_indices[i]).all():
-                                            synthesis_metrics['exact_via_synthesis'] += 1
+                                    # Handle different synthesizer types
+                                    if USE_PRISM and hasattr(synthesizer, 'synthesize'):
+                                        # PRISM synthesizer
+                                        program = synthesizer.synthesize(input_np, output_np, time_limit=0.5)
+                                        if program:
+                                            synthesis_metrics['successes'] += 1
+                                            # Track meta-program usage
+                                            if hasattr(program, 'meta_program'):
+                                                synthesis_stats['prism_meta_programs'][str(program.meta_program)] += 1
+                                            # Check if neural network failed but synthesis succeeded
+                                            if not (pred_indices[i] == target_indices[i]).all():
+                                                synthesis_metrics['exact_via_synthesis'] += 1
+                                    else:
+                                        # Lightweight synthesizer
+                                        program = synthesizer.quick_synthesize(input_np, output_np, max_depth=2)
+                                        if program and program.verified:
+                                            synthesis_metrics['successes'] += 1
+                                            # Check if neural network failed but synthesis succeeded
+                                            if not (pred_indices[i] == target_indices[i]).all():
+                                                synthesis_metrics['exact_via_synthesis'] += 1
                     
                     # Calculate averages
                     train_loss = train_metrics['loss'] / train_metrics['samples']
@@ -2305,7 +2334,17 @@ def train_megascale_curriculum():
         print(f"  Total synthesis attempts: {synthesis_stats['total_attempts']}")
         print(f"  Successful syntheses: {synthesis_stats['successful_syntheses']} ({overall_success_rate:.1f}%)")
         print(f"  Additional exact matches via synthesis: {synthesis_stats['exact_improvements']}")
-        print(f"  Synthesis cache size: {len(synthesizer.synthesis_cache)} programs")
+        
+        # Report PRISM meta-program usage if available
+        if USE_PRISM and synthesis_stats['prism_meta_programs']:
+            print(f"\n🔮 PRISM Meta-Program Usage:")
+            for meta_program, count in sorted(synthesis_stats['prism_meta_programs'].items(), 
+                                             key=lambda x: x[1], reverse=True):
+                print(f"    {meta_program}: {count} times")
+        
+        # Cache size only for lightweight synthesizer
+        if hasattr(synthesizer, 'synthesis_cache'):
+            print(f"  Synthesis cache size: {len(synthesizer.synthesis_cache)} programs")
 
 
 if __name__ == "__main__":

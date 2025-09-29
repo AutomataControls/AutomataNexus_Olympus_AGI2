@@ -71,9 +71,21 @@ LEARNING_RATE = 0.005  # Reduced for stability
 NUM_EPOCHS = 300
 MAX_GRID_SIZE = 30
 NUM_COLORS = 10
-NUM_WORKERS = 8
-PREFETCH_FACTOR = 4
-PIN_MEMORY = True
+# Adaptive DataLoader configuration based on device and CPU cores
+import os
+import multiprocessing
+
+# Determine optimal number of workers
+cpu_count = multiprocessing.cpu_count()
+if torch.cuda.is_available():
+    NUM_WORKERS = min(8, cpu_count)
+    PIN_MEMORY = True
+else:
+    # For CPU training, use fewer workers to avoid overhead
+    NUM_WORKERS = min(2, cpu_count)
+    PIN_MEMORY = False
+
+PREFETCH_FACTOR = 2 if NUM_WORKERS > 0 else None
 
 # Enhanced loss weights - V4 FIXED!
 RECONSTRUCTION_WEIGHT = 1.0
@@ -308,28 +320,34 @@ def train_atlas():
                 replay_ratio=0.3 if stage == 0 else 0.2
             )
         
-        # Create data loaders
-        train_loader = DataLoader(
-            train_dataset, 
-            batch_size=BATCH_SIZE,
-            shuffle=True,
-            num_workers=NUM_WORKERS,
-            pin_memory=PIN_MEMORY,
-            prefetch_factor=PREFETCH_FACTOR,
-            persistent_workers=True,
-            collate_fn=custom_collate_fn
-        )
+        # Create data loaders with adaptive configuration
+        train_loader_kwargs = {
+            'dataset': train_dataset,
+            'batch_size': BATCH_SIZE,
+            'shuffle': True,
+            'num_workers': NUM_WORKERS,
+            'pin_memory': PIN_MEMORY,
+            'persistent_workers': NUM_WORKERS > 0,
+            'collate_fn': custom_collate_fn
+        }
         
-        val_loader = DataLoader(
-            val_dataset,
-            batch_size=BATCH_SIZE,
-            shuffle=False,
-            num_workers=NUM_WORKERS,
-            pin_memory=PIN_MEMORY,
-            prefetch_factor=PREFETCH_FACTOR,
-            persistent_workers=True,
-            collate_fn=custom_collate_fn
-        )
+        val_loader_kwargs = {
+            'dataset': val_dataset,
+            'batch_size': BATCH_SIZE,
+            'shuffle': False,
+            'num_workers': NUM_WORKERS,
+            'pin_memory': PIN_MEMORY,
+            'persistent_workers': NUM_WORKERS > 0,
+            'collate_fn': custom_collate_fn
+        }
+        
+        # Add prefetch_factor only if workers > 0
+        if NUM_WORKERS > 0 and PREFETCH_FACTOR is not None:
+            train_loader_kwargs['prefetch_factor'] = PREFETCH_FACTOR
+            val_loader_kwargs['prefetch_factor'] = PREFETCH_FACTOR
+        
+        train_loader = DataLoader(**train_loader_kwargs)
+        val_loader = DataLoader(**val_loader_kwargs)
         
         print(f"Stage {stage} - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
         

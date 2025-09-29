@@ -36,6 +36,9 @@ class LightweightProgramSynthesizer:
     def _build_primitive_library(self) -> Dict:
         """Build library of fast primitive operations"""
         return {
+            # Identity - MOST IMPORTANT for LEAP patterns
+            'identity': lambda g: g.copy(),
+            
             # Simple geometric transforms (very fast)
             'rotate_90': lambda g: np.rot90(g, k=1),
             'rotate_180': lambda g: np.rot90(g, k=2),
@@ -108,12 +111,12 @@ class LightweightProgramSynthesizer:
         return None
     
     def _invert_colors(self, grid: np.ndarray) -> np.ndarray:
-        """Invert all non-zero colors"""
+        """Invert all non-zero colors (swap within valid range 1-9)"""
         result = grid.copy()
-        unique_colors = np.unique(grid)
-        color_map = {c: 9-c if c > 0 else 0 for c in unique_colors}
-        for old, new in color_map.items():
-            result[grid == old] = new
+        # Only invert non-zero colors, keep 0 as 0
+        # Map 1->9, 2->8, 3->7, 4->6, 5->5, 6->4, 7->3, 8->2, 9->1
+        for color in range(1, 10):
+            result[grid == color] = 10 - color
         return result
     
     def _fill_background(self, grid: np.ndarray) -> np.ndarray:

@@ -657,14 +657,15 @@ class PRISMSynthesizer:
     def _build_primitive_library(self) -> Dict[str, callable]:
         """Build library of primitive operations"""
         return {
+            'identity': lambda g: g.copy(),  # CRITICAL for LEAP patterns
             'rotate_90': lambda g: np.rot90(g),
             'rotate_180': lambda g: np.rot90(g, k=2),
             'rotate_270': lambda g: np.rot90(g, k=3),
             'flip_h': lambda g: np.fliplr(g),
             'flip_v': lambda g: np.flipud(g),
             'scale_2x': lambda g: np.repeat(np.repeat(g, 2, axis=0), 2, axis=1),
-            'color_shift': lambda g: np.where(g > 0, (g % 9) + 1, 0),
-            'invert': lambda g: np.where(g > 0, 10 - g, 0),
+            'color_shift': lambda g: np.where(g > 0, ((g - 1) % 9) + 1, 0),  # Fixed to stay in 1-9 range
+            'invert': lambda g: np.where(g > 0, 10 - g, 0) if g.max() <= 9 else g,  # Fixed to handle edge case
             'transpose': lambda g: g.T,
         }
 

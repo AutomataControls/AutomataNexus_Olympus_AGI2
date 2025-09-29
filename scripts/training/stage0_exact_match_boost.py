@@ -474,9 +474,15 @@ def exact_match_collate_fn(batch):
     return {'input': inputs, 'output': outputs}
 
 
-def inject_exact_match_training(model, device='cuda', num_epochs=100):
+def inject_exact_match_training(model, device='cuda', num_epochs=100, target_accuracy=99.0):
     """
     Special pre-training phase that forces exact match learning
+    
+    Args:
+        model: The model to train
+        device: Device to use for training
+        num_epochs: Maximum number of epochs
+        target_accuracy: Target exact match accuracy (default: 99.0%)
     """
     
     print("\n🎯 EXACT MATCH INJECTION TRAINING")
@@ -487,6 +493,7 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
     print("  • Data augmentation")
     print("  • Warmup + cosine annealing")
     print("  • 300K total samples")
+    print(f"  • TARGET: {target_accuracy}% exact match accuracy")
     
     # Initialize model weights for stable training
     for module in model.modules():
@@ -687,14 +694,14 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100):
         else:
             patience_counter += 1
             
-        # Early stopping with patience - aim for 90%+
-        if exact_pct > 90 and epoch > 5:  # Much higher threshold and wait for stability
-            print("✅ Achieved >90% exact match! Stopping injection training.")
+        # Early stopping with patience - aim for user specified target
+        if exact_pct >= target_accuracy and epoch > 10:  # Much higher threshold and wait for stability
+            print(f"✅ Achieved >{target_accuracy}% exact match! Stopping injection training.")
             break
-        elif patience_counter > 30 and exact_pct > 50:  # More patience, only stop if decent
-            print(f"🛑 No improvement for 30 epochs. Best: {best_exact_match:.1f}%")
-            # Restore best model
-            if best_model_state is not None:
+        elif patience_counter > 50 and exact_pct > (target_accuracy - 10):  # More patience, stop if close to target
+            print(f"🛑 No improvement for 50 epochs. Best: {best_exact_match:.1f}% (Target: {target_accuracy}%)")
+            # Only restore if we're significantly below target
+            if best_exact_match < (target_accuracy - 5) and best_model_state is not None:
                 model.load_state_dict(best_model_state)
             break
     

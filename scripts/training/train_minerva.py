@@ -381,11 +381,9 @@ def train_minerva():
         train_size = int(0.9 * len(dataset))
         val_size = len(dataset) - train_size
         
-        print(f"\nDEBUG: Stage {stage} dataset created with {len(dataset)} total samples")
-        
         # For Stage 1+, limit dataset size to prevent hanging
         if stage > 0 and len(dataset) > 10000:
-            print(f"WARNING: Stage {stage} dataset has {len(dataset)} samples, limiting to 10000 to prevent hanging")
+            print(f"Stage {stage} dataset has {len(dataset)} samples, limiting to 10000")
             # Create indices for subset
             indices = torch.randperm(len(dataset))[:10000]
             dataset = torch.utils.data.Subset(dataset, indices)
@@ -419,11 +417,6 @@ def train_minerva():
         # Reduce batch size for Stage 1+ to prevent memory issues
         stage_batch_size = BATCH_SIZE if stage == 0 else BATCH_SIZE // 2
         
-        print(f"\nDEBUG: DataLoader configuration for Stage {stage}:")
-        print(f"  Workers: {stage_workers}")
-        print(f"  Batch size: {stage_batch_size}")
-        print(f"  Dataset length: {len(train_dataset)}")
-        print(f"  Dataset type: {type(train_dataset)}")
         
         train_loader_kwargs = {
             'dataset': train_dataset,
@@ -479,19 +472,6 @@ def train_minerva():
             val_loader = DataLoader(**val_loader_kwargs)
         
         print(f"Stage {stage} - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
-        actual_pin_memory = PIN_MEMORY if stage_workers > 0 else False
-        print(f"DataLoader config: workers={stage_workers}, pin_memory={actual_pin_memory}")
-        
-        # Test dataset access before creating DataLoader
-        print(f"\nDEBUG: Testing dataset access...")
-        try:
-            test_item = train_dataset[0]
-            print(f"DEBUG: Successfully accessed first item from dataset")
-            print(f"DEBUG: Item type: {type(test_item)}, keys: {test_item.keys() if hasattr(test_item, 'keys') else 'N/A'}")
-        except Exception as e:
-            print(f"ERROR: Failed to access dataset item: {e}")
-            import traceback
-            traceback.print_exc()
         
         # Train for this stage
         start_epoch = resume_epoch if stage == resume_stage else 0
@@ -519,9 +499,6 @@ def train_minerva():
             # LEAP integration
             leap_batch_counter = 0
             
-            print(f"\nDEBUG: Starting training loop for Stage {stage}, Epoch {epoch+1}")
-            print(f"DEBUG: DataLoader has {len(train_loader)} batches")
-            print(f"DEBUG: About to iterate over DataLoader...")
             
             # Additional debugging for Stage 1
             if stage >= 1 and epoch == 0:
@@ -590,10 +567,6 @@ def train_minerva():
                     traceback.print_exc()
             
             for batch_idx, batch in enumerate(pbar):
-                # Only print debug for first few batches
-                if batch_idx < 3:
-                    print(f"\nDEBUG: Successfully retrieved batch {batch_idx}")
-                    print(f"DEBUG: Batch type: {type(batch)}, keys: {batch.keys() if hasattr(batch, 'keys') else 'N/A'}")
                 # Process batch similar to V4 training...
                 inputs = batch['inputs'].to(device, non_blocking=True)
                 outputs = batch['outputs'].to(device, non_blocking=True)
@@ -626,9 +599,13 @@ def train_minerva():
                 train_metrics['exact'] += losses['exact_count'].item()
                 train_metrics['samples'] += input_grids.size(0)
                 
+                # Calculate running exact match percentage
+                exact_pct = train_metrics['exact'] / max(1, train_metrics['samples']) * 100
+                
                 pbar.set_postfix({
                     'loss': f"{losses['total'].item():.3f}",
                     'exact': f"{losses['exact_count'].item():.0f}",
+                    'exact%': f"{exact_pct:.1f}",
                     'trans': f"{losses.get('transformation', torch.tensor(0)).item():.2f}"
                 })
                 
@@ -638,6 +615,11 @@ def train_minerva():
                     leap_inputs = leap_batch['inputs'].to(device)
                     leap_outputs = leap_batch['outputs'].to(device)
                     pattern_types = leap_batch['pattern_types']
+                    
+                    # Debug: Print LEAP batch info occasionally
+                    if leap_batch_counter % 100 == 0:
+                        unique_patterns = set(pattern_types)
+                        print(f"\nLEAP Batch {leap_batch_counter}: {len(unique_patterns)} unique patterns")
                     
                     # Pad to MAX_GRID_SIZE
                     if leap_inputs.shape[1] < MAX_GRID_SIZE or leap_inputs.shape[2] < MAX_GRID_SIZE:
@@ -660,6 +642,13 @@ def train_minerva():
                     # Update pattern statistics
                     leap_trainer.update_pattern_stats(pattern_types, leap_pred, leap_output_oh)
                     leap_batch_counter += 1
+                    
+                    # Debug: Check LEAP accuracy occasionally
+                    if leap_batch_counter % 50 == 0:
+                        leap_pred_idx = leap_pred.argmax(dim=1)
+                        leap_target_idx = leap_output_oh.argmax(dim=1)
+                        leap_exact = (leap_pred_idx == leap_target_idx).all(dim=[1,2]).sum().item()
+                        print(f"LEAP exact: {leap_exact}/{len(pattern_types)} = {leap_exact/len(pattern_types)*100:.1f}%")
                     
                     # Analyze failed patterns with LEAP-PRISM bridge
                     if leap_prism_bridge and leap_batch_counter % 10 == 0:

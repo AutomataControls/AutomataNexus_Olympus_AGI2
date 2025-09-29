@@ -294,6 +294,8 @@
                         <li>Relational networks</li>
                         <li>~2.1M parameters</li>
                         <li>Strategic pattern analysis</li>
+                        <li>✨ Iterative training with checkpoints</li>
+                        <li>🎛️ Hyperparameter tuning support</li>
                     </ul>
                 </div>
 
@@ -305,6 +307,8 @@
                         <li>Affine transformations</li>
                         <li>~1.2M parameters</li>
                         <li>Geometric pattern recognition</li>
+                        <li>✨ Iterative training with checkpoints</li>
+                        <li>🎛️ STN dropout tuning</li>
                     </ul>
                 </div>
 
@@ -316,6 +320,8 @@
                         <li>Mapping rule extraction</li>
                         <li>~0.9M parameters</li>
                         <li>Color relationship analysis</li>
+                        <li>✨ Iterative training with checkpoints</li>
+                        <li>🎛️ Color embedding & attention tuning</li>
                     </ul>
                 </div>
 
@@ -327,6 +333,9 @@
                         <li>Sequence modeling</li>
                         <li>~2.4M parameters</li>
                         <li>Temporal pattern analysis</li>
+                        <li>✨ Iterative training with checkpoints</li>
+                        <li>🎛️ LSTM & sequence length tuning</li>
+                        <li>🔧 Fixed tensor size mismatch</li>
                     </ul>
                 </div>
 
@@ -338,6 +347,9 @@
                         <li>Creative synthesis</li>
                         <li>~1.8M parameters</li>
                         <li>Novel pattern generation</li>
+                        <li>✨ Iterative training with checkpoints</li>
+                        <li>🎛️ VAE latent & β parameter tuning</li>
+                        <li>🔧 Fixed tensor reshape error</li>
                     </ul>
                 </div>
 
@@ -349,6 +361,25 @@
                         <li>V4 enhanced training</li>
                         <li>Revolutionary loss functions</li>
                         <li>Neural-program synthesis</li>
+                        <li>✨ Iterative training with checkpoints</li>
+                        <li>🎛️ Cross-model coordination tuning</li>
+                        <li>🔧 12-hour timeout for full training</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="success">
+                <h4>🆕 New Addition: Kaggle Competition Submission</h4>
+                <div class="notebook-card" style="margin-top: 15px;">
+                    <h4><span class="notebook-emoji">🏆</span>kaggle_arc_submission.ipynb</h4>
+                    <p class="notebook-description">Competition-ready submission notebook for ARC Prize 2025 with optimized inference pipeline.</p>
+                    <ul class="feature-list">
+                        <li>All 5 OLYMPUS models integrated</li>
+                        <li>Intelligent routing system</li>
+                        <li>2 candidate solutions per test</li>
+                        <li>Optimized for Kaggle environment</li>
+                        <li>Complete inference pipeline</li>
+                        <li>Ready for competition submission</li>
                     </ul>
                 </div>
             </div>
@@ -487,6 +518,31 @@ print(f"Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB"
                     <li>Stable internet connection for long training</li>
                 </ul>
             </div>
+
+            <h3>✨ New: Iterative Training Features</h3>
+            <div class="success">
+                <h4>🔄 Enhanced Training Capabilities:</h4>
+                <ul class="feature-list">
+                    <li><strong>Checkpoint Resuming</strong> - Automatically resumes from last checkpoint</li>
+                    <li><strong>Hyperparameter Tuning</strong> - Model-specific parameter optimization</li>
+                    <li><strong>Adaptive DataLoaders</strong> - CPU/GPU optimized worker configuration</li>
+                    <li><strong>Extended Timeouts</strong> - 12-hour sessions for full mega-scale training</li>
+                    <li><strong>Bug Fixes</strong> - Resolved tensor size mismatches and reshape errors</li>
+                    <li><strong>Iterative Controllers</strong> - Fine-tune specific model parameters between runs</li>
+                </ul>
+            </div>
+
+            <div class="note">
+                <h4>💡 Iterative Training Benefits:</h4>
+                <p>Each notebook now includes an iterative training controller that lets you:</p>
+                <ul class="feature-list">
+                    <li>Resume training from any checkpoint</li>
+                    <li>Adjust model-specific hyperparameters</li>
+                    <li>Experiment with different configurations</li>
+                    <li>Monitor convergence and performance</li>
+                    <li>Save multiple training runs</li>
+                </ul>
+            </div>
         </div>
 
         <div class="section">
@@ -562,6 +618,7 @@ for checkpoint in checkpoints:
                     <li>Increase gradient accumulation steps</li>
                     <li>Use mixed precision training (already enabled)</li>
                     <li>Clear GPU cache with <code>torch.cuda.empty_cache()</code></li>
+                    <li>✨ Use adaptive DataLoader (automatically configured)</li>
                 </ul>
             </div>
 
@@ -573,6 +630,18 @@ for checkpoint in checkpoints:
                     <li>Verify GPU is still available</li>
                     <li>Monitor system resources</li>
                     <li>Restart runtime if necessary</li>
+                    <li>✨ Use checkpoint resuming to continue training</li>
+                </ul>
+            </div>
+
+            <div class="success">
+                <h4>🔧 Recent Bug Fixes:</h4>
+                <ul class="feature-list">
+                    <li><strong>CHRONOS Tensor Mismatch</strong> - Fixed forward signature to use List[Tensor]</li>
+                    <li><strong>PROMETHEUS Reshape Error</strong> - Changed .view() to .reshape() for non-contiguous tensors</li>
+                    <li><strong>DataLoader Warnings</strong> - Adaptive worker configuration based on CPU/GPU</li>
+                    <li><strong>Training Timeouts</strong> - Extended from 2 hours to 12 hours for full training</li>
+                    <li><strong>Stage 0 Detection</strong> - Improved CHRONOS model detection in exact match boost</li>
                 </ul>
             </div>
 

@@ -381,6 +381,17 @@ def train_minerva():
         train_size = int(0.9 * len(dataset))
         val_size = len(dataset) - train_size
         
+        print(f"\nDEBUG: Stage {stage} dataset created with {len(dataset)} total samples")
+        
+        # For Stage 1+, limit dataset size to prevent hanging
+        if stage > 0 and len(dataset) > 10000:
+            print(f"WARNING: Stage {stage} dataset has {len(dataset)} samples, limiting to 10000 to prevent hanging")
+            # Create indices for subset
+            indices = torch.randperm(len(dataset))[:10000]
+            dataset = torch.utils.data.Subset(dataset, indices)
+            train_size = int(0.9 * len(dataset))
+            val_size = len(dataset) - train_size
+        
         train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
         
         # Initialize augmenter
@@ -444,13 +455,15 @@ def train_minerva():
             train_loader_kwargs.pop('prefetch_factor', None)
             val_loader_kwargs.pop('prefetch_factor', None)
             # Force simple DataLoader for Stage 1+ to prevent hanging
+            # Also set drop_last=True to avoid issues with partial batches
             train_loader = DataLoader(
                 train_dataset,
                 batch_size=stage_batch_size,
                 shuffle=True,
                 num_workers=0,
                 pin_memory=False,
-                collate_fn=custom_collate_fn
+                collate_fn=custom_collate_fn,
+                drop_last=True  # Drop incomplete batches
             )
             val_loader = DataLoader(
                 val_dataset,
@@ -458,7 +471,8 @@ def train_minerva():
                 shuffle=False,
                 num_workers=0,
                 pin_memory=False,
-                collate_fn=custom_collate_fn
+                collate_fn=custom_collate_fn,
+                drop_last=False  # Keep all validation data
             )
         else:
             train_loader = DataLoader(**train_loader_kwargs)
@@ -510,11 +524,11 @@ def train_minerva():
             print(f"DEBUG: About to iterate over DataLoader...")
             
             # Additional debugging for Stage 1
-            if stage == 1 and epoch == 0:
-                print(f"\nDEBUG Stage 1: Creating iterator...")
+            if stage >= 1 and epoch == 0:
+                print(f"\nDEBUG Stage {stage}: Testing DataLoader...")
                 try:
                     # Try to get the first batch manually with timeout
-                    print(f"DEBUG Stage 1: Getting first batch manually...")
+                    print(f"DEBUG Stage {stage}: Getting first batch manually...")
                     import time
                     import threading
                     import queue
@@ -526,12 +540,12 @@ def train_minerva():
                         try:
                             start_time = time.time()
                             data_iter = iter(train_loader)
-                            print(f"DEBUG Stage 1: Iterator created in {time.time() - start_time:.2f}s")
+                            print(f"DEBUG Stage {stage}: Iterator created in {time.time() - start_time:.2f}s")
                             
-                            print(f"DEBUG Stage 1: Calling next()...")
+                            print(f"DEBUG Stage {stage}: Calling next()...")
                             start_time = time.time()
                             first_batch = next(data_iter)
-                            print(f"DEBUG Stage 1: Got first batch in {time.time() - start_time:.2f}s")
+                            print(f"DEBUG Stage {stage}: Got first batch in {time.time() - start_time:.2f}s")
                             result_queue.put(first_batch)
                         except Exception as e:
                             exception_queue.put(e)
@@ -543,30 +557,35 @@ def train_minerva():
                     thread.join(timeout=30)  # 30 second timeout
                     
                     if thread.is_alive():
-                        print(f"ERROR Stage 1: Timeout after 30 seconds trying to get first batch!")
-                        print(f"DEBUG Stage 1: This suggests the DataLoader is hanging in:")
+                        print(f"ERROR Stage {stage}: Timeout after 30 seconds trying to get first batch!")
+                        print(f"DEBUG Stage {stage}: This suggests the DataLoader is hanging in:")
                         print(f"  - Dataset __getitem__ method")
                         print(f"  - Custom collate function")
                         print(f"  - Data loading/preprocessing")
                         
                         # Try to access dataset directly
-                        print(f"\nDEBUG Stage 1: Testing direct dataset access...")
+                        print(f"\nDEBUG Stage {stage}: Testing direct dataset access...")
                         try:
                             for i in range(min(3, len(train_dataset))):
+                                start = time.time()
                                 item = train_dataset[i]
-                                print(f"  Item {i}: input shape: {item['inputs'].shape}, output shape: {item['outputs'].shape}")
+                                elapsed = time.time() - start
+                                print(f"  Item {i}: input shape: {item['inputs'].shape}, output shape: {item['outputs'].shape} (took {elapsed:.3f}s)")
                         except Exception as e:
                             print(f"  Failed to access dataset: {e}")
+                            import traceback
+                            traceback.print_exc()
                     elif not exception_queue.empty():
                         e = exception_queue.get()
-                        print(f"ERROR Stage 1: Failed to get first batch: {e}")
+                        print(f"ERROR Stage {stage}: Failed to get first batch: {e}")
                         import traceback
                         traceback.print_exc()
                     elif not result_queue.empty():
                         first_batch = result_queue.get()
-                        print(f"DEBUG Stage 1: First batch shape - inputs: {first_batch['inputs'].shape}, outputs: {first_batch['outputs'].shape}")
+                        print(f"DEBUG Stage {stage}: First batch shape - inputs: {first_batch['inputs'].shape}, outputs: {first_batch['outputs'].shape}")
+                        print(f"SUCCESS: DataLoader is working for Stage {stage}!")
                 except Exception as e:
-                    print(f"ERROR Stage 1: Unexpected error: {e}")
+                    print(f"ERROR Stage {stage}: Unexpected error: {e}")
                     import traceback
                     traceback.print_exc()
             

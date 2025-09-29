@@ -345,6 +345,12 @@ def train_iris():
             use_arc_synthesis=True,
             synthesis_ratio=0.4 if stage == 0 else 0.3
         )
+        
+        # Limit Stage 1+ dataset size to prevent hanging
+        if stage > 0 and len(dataset) > 10000:
+            print(f"⚠️ Stage {stage}: Limiting dataset from {len(dataset):,} to 10,000 samples")
+            dataset = torch.utils.data.Subset(dataset, list(range(10000)))
+        
         train_size = int(0.9 * len(dataset))
         val_size = len(dataset) - train_size
         
@@ -377,7 +383,8 @@ def train_iris():
             'num_workers': stage_workers,
             'pin_memory': PIN_MEMORY if stage_workers > 0 else False,
             'persistent_workers': stage_workers > 0,
-            'collate_fn': custom_collate_fn
+            'collate_fn': custom_collate_fn,
+            'drop_last': True if stage > 0 else False  # Add drop_last for Stage 1+
         }
         
         val_loader_kwargs = {
@@ -404,6 +411,9 @@ def train_iris():
         val_loader = DataLoader(**val_loader_kwargs)
         
         print(f"Stage {stage} - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
+        print(f"  Workers: {stage_workers}, Batch size: {stage_batch_size}, Drop last: {stage > 0}")
+        if stage > 0:
+            print(f"  ⚡ Stage 1+ optimizations active to prevent hanging")
         
         # Train for this stage
         start_epoch = resume_epoch if stage == resume_stage else 0

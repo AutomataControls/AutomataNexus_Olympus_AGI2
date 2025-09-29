@@ -335,24 +335,27 @@ def train_minerva():
         
         # Create data loaders with stage-adaptive configuration
         # Reduce workers for larger datasets to prevent Colab freezes
-        stage_workers = NUM_WORKERS if stage == 0 else max(2, NUM_WORKERS // 2)
+        stage_workers = NUM_WORKERS if stage == 0 else 0  # Zero workers for Stage 1+ to prevent hanging
+        
+        # Reduce batch size for Stage 1+ to prevent memory issues
+        stage_batch_size = BATCH_SIZE if stage == 0 else BATCH_SIZE // 2
         
         train_loader_kwargs = {
             'dataset': train_dataset,
-            'batch_size': BATCH_SIZE,
+            'batch_size': stage_batch_size,
             'shuffle': True,
             'num_workers': stage_workers,
-            'pin_memory': PIN_MEMORY,
+            'pin_memory': PIN_MEMORY if stage_workers > 0 else False,
             'persistent_workers': stage_workers > 0,
             'collate_fn': custom_collate_fn
         }
         
         val_loader_kwargs = {
             'dataset': val_dataset,
-            'batch_size': BATCH_SIZE,
+            'batch_size': stage_batch_size,
             'shuffle': False,
             'num_workers': stage_workers,
-            'pin_memory': PIN_MEMORY,
+            'pin_memory': PIN_MEMORY if stage_workers > 0 else False,
             'persistent_workers': stage_workers > 0,
             'collate_fn': custom_collate_fn
         }
@@ -366,6 +369,7 @@ def train_minerva():
         val_loader = DataLoader(**val_loader_kwargs)
         
         print(f"Stage {stage} - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
+        print(f"DataLoader config: workers={stage_workers}, pin_memory={PIN_MEMORY}")
         
         # Train for this stage
         start_epoch = resume_epoch if stage == resume_stage else 0

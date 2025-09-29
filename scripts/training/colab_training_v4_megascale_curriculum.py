@@ -81,7 +81,7 @@ except ImportError:
 # MEGA-SCALE HYPERPARAMETERS FOR A100 80GB
 BATCH_SIZE = 512  # 16x larger!
 GRADIENT_ACCUMULATION_STEPS = 4  # Effective batch size: 2048!
-LEARNING_RATE = 0.01  # Scaled with batch size
+LEARNING_RATE = 0.005  # Reduced for stability with large batch
 NUM_EPOCHS = 300
 MAX_GRID_SIZE = 30
 NUM_COLORS = 10
@@ -94,7 +94,7 @@ RECONSTRUCTION_WEIGHT = 1.0
 EDGE_WEIGHT = 0.3
 COLOR_BALANCE_WEIGHT = 0.2
 STRUCTURE_WEIGHT = 0.3
-TRANSFORMATION_PENALTY = 2.0  # INCREASED: Much stronger penalty for copying!
+TRANSFORMATION_PENALTY = 1.0  # REDUCED: Was preventing identity learning
 EXACT_MATCH_BONUS = 5.0  # Reduced from 10.0 to prevent instability
 
 # Curriculum settings
@@ -2201,9 +2201,6 @@ def train_megascale_curriculum():
                             scaler.update()
                             optimizer.zero_grad()
                 
-                # Step scheduler after optimizer step
-                scheduler.step()
-                
                 # Validation every 5 epochs
                 if epoch % 5 == 0:
                     model.eval()
@@ -2255,8 +2252,8 @@ def train_megascale_curriculum():
                                     
                                     # Handle different synthesizer types
                                     if USE_PRISM and hasattr(synthesizer, 'synthesize'):
-                                        # PRISM synthesizer
-                                        program = synthesizer.synthesize(input_np, output_np, time_limit=0.5)
+                                        # PRISM synthesizer - give it more time to find programs
+                                        program = synthesizer.synthesize(input_np, output_np, time_limit=2.0)
                                         if program:
                                             synthesis_metrics['successes'] += 1
                                             # Track meta-program usage
@@ -2403,6 +2400,10 @@ def train_megascale_curriculum():
                                 for param_group in optimizer.param_groups:
                                     param_group['lr'] *= 0.5
                                 print(f"   Reduced learning rate to: {optimizer.param_groups[0]['lr']:.6f}")
+                
+                # Step scheduler ONCE per epoch (not per batch!)
+                scheduler.step()
+                
             # Check if early stopping was triggered
             if patience_counter >= max_patience and stage > 0:
                 print(f"📛 Stage {stage} terminated early due to overfitting")

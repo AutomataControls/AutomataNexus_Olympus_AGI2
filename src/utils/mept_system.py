@@ -330,10 +330,10 @@ class MEPTLoss(nn.Module):
         
         recent_performance = np.mean(list(self.performance_history)[-10:])
         
-        # If exact match rate is low, increase exact match weight
+        # If exact match rate is low, increase exact match weight (but cap at 7.0 to prevent instability)
         if recent_performance < 0.1:
-            self.weights['exact_match'] = min(10.0, self.weights['exact_match'] * 1.1)
-            self.weights['diversity'] = max(0.1, self.weights['diversity'] * 0.9)
+            self.weights['exact_match'] = min(7.0, self.weights['exact_match'] * 1.05)  # Slower increase, lower cap
+            self.weights['diversity'] = max(0.1, self.weights['diversity'] * 0.95)
         
         # If exact match rate is improving, balance weights
         elif recent_performance > 0.3:

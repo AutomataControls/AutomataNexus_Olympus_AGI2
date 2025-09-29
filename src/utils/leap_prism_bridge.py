@@ -38,7 +38,7 @@ class LEAPPRISMBridge:
         if self.prism_synthesizer:
             try:
                 program = self.prism_synthesizer.synthesize(
-                    input_grid, expected_output, time_limit=1.0
+                    input_grid, expected_output, time_limit=2.0  # Give more time for synthesis
                 )
                 if program:
                     # Record successful synthesis

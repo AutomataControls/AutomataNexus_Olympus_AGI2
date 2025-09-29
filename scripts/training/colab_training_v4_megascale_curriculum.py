@@ -62,6 +62,13 @@ except ImportError:
     MEPT_LEAP_AVAILABLE = False
     print("⚠️ MEPT/LEAP components not available")
 
+# Import LEAP-PRISM bridge
+try:
+    from src.utils.leap_prism_bridge import create_leap_prism_bridge, LEAPPatternEnhancer
+    LEAP_PRISM_BRIDGE_AVAILABLE = True
+except ImportError:
+    LEAP_PRISM_BRIDGE_AVAILABLE = False
+
 # Import exact match boost components
 sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
 try:
@@ -490,9 +497,26 @@ class MEPTAugmentedDataset(Dataset):
             experiences = self.replay_buffer.sample(1, exact_ratio=0.7)
             if experiences:
                 exp = experiences[0]
+                # Convert from one-hot back to indices if needed
+                input_tensor = exp['input']
+                output_tensor = exp['output']
+                
+                # Check if one-hot encoded (4D tensor with channels)
+                if input_tensor.dim() == 4:
+                    # Convert from one-hot to indices: [C, H, W] -> [H, W]
+                    input_tensor = input_tensor.argmax(dim=0)
+                elif input_tensor.dim() == 3:
+                    # Already indices, just remove batch dim if present
+                    input_tensor = input_tensor.squeeze(0)
+                    
+                if output_tensor.dim() == 4:
+                    output_tensor = output_tensor.argmax(dim=0)
+                elif output_tensor.dim() == 3:
+                    output_tensor = output_tensor.squeeze(0)
+                
                 return {
-                    'inputs': exp['input'],
-                    'outputs': exp['output']
+                    'inputs': input_tensor,
+                    'outputs': output_tensor
                 }
         
         # Otherwise return regular sample
@@ -1732,6 +1756,12 @@ def train_megascale_curriculum():
         leap_trainer = LEAPTrainer(device=device)
         print("✅ LEAP initialized for Stage 0 adaptive pattern training")
     
+    # Initialize LEAP-PRISM bridge after both components exist
+    leap_prism_bridge = None
+    if USE_LEAP and USE_PRISM and LEAP_PRISM_BRIDGE_AVAILABLE:
+        print("\n🌉 Initializing LEAP-PRISM Bridge")
+        leap_prism_bridge = None  # Will be initialized after synthesizer is created
+    
     # Initialize program synthesizer
     if USE_PRISM:
         print("\n🔮 Initializing PRISM (Program Reasoning through Inductive Synthesis)")
@@ -1740,6 +1770,11 @@ def train_megascale_curriculum():
         print("✅ PRISM initialized with meta-programming and constraint solving")
     else:
         synthesizer = LightweightProgramSynthesizer()
+    
+    # Create LEAP-PRISM bridge now that both components exist
+    if USE_LEAP and USE_PRISM and LEAP_PRISM_BRIDGE_AVAILABLE:
+        leap_prism_bridge = create_leap_prism_bridge(leap_trainer, synthesizer)
+        print("✅ LEAP-PRISM Bridge created to enhance pattern learning")
     
     synthesis_stats = {
         'total_attempts': 0,
@@ -1865,36 +1900,68 @@ def train_megascale_curriculum():
             
             # Custom collate function to handle different grid sizes
             def custom_collate_fn(batch):
+                # Handle both regular samples and MEPT replay samples
+                inputs = []
+                outputs = []
+                
+                for item in batch:
+                    # Get input and output tensors
+                    inp = item['inputs']
+                    out = item['outputs']
+                    
+                    # Handle case where tensors might already have batch dimension
+                    if inp.dim() == 3:
+                        # Remove batch dimension if present
+                        inp = inp.squeeze(0)
+                    if out.dim() == 3:
+                        out = out.squeeze(0)
+                    
+                    # Ensure 2D tensors
+                    if inp.dim() != 2 or out.dim() != 2:
+                        print(f"Warning: Unexpected tensor dimensions - input: {inp.shape}, output: {out.shape}")
+                        continue
+                    
+                    inputs.append(inp)
+                    outputs.append(out)
+                
+                if not inputs:
+                    # Return a dummy batch if all items were skipped
+                    return {
+                        'inputs': torch.zeros(1, MAX_GRID_SIZE, MAX_GRID_SIZE, dtype=torch.long),
+                        'outputs': torch.zeros(1, MAX_GRID_SIZE, MAX_GRID_SIZE, dtype=torch.long)
+                    }
+                
                 # Find max dimensions
-                max_h_in = max(item['inputs'].shape[0] for item in batch)
-                max_w_in = max(item['inputs'].shape[1] for item in batch)
-                max_h_out = max(item['outputs'].shape[0] for item in batch)
-                max_w_out = max(item['outputs'].shape[1] for item in batch)
+                max_h_in = max(inp.shape[0] for inp in inputs)
+                max_w_in = max(inp.shape[1] for inp in inputs)
+                max_h_out = max(out.shape[0] for out in outputs)
+                max_w_out = max(out.shape[1] for out in outputs)
                 max_h = max(max_h_in, max_h_out, MAX_GRID_SIZE)
                 max_w = max(max_w_in, max_w_out, MAX_GRID_SIZE)
                 
                 # Pad all grids to max size
-                inputs = []
-                outputs = []
-                for item in batch:
+                padded_inputs = []
+                padded_outputs = []
+                
+                for inp, out in zip(inputs, outputs):
                     # Pad inputs
-                    h_in, w_in = item['inputs'].shape
+                    h_in, w_in = inp.shape
                     pad_h = max_h - h_in
                     pad_w = max_w - w_in
-                    padded_input = F.pad(item['inputs'], (0, pad_w, 0, pad_h), value=0)
+                    padded_input = F.pad(inp, (0, pad_w, 0, pad_h), value=0)
                     
                     # Pad outputs
-                    h_out, w_out = item['outputs'].shape
+                    h_out, w_out = out.shape
                     pad_h = max_h - h_out
                     pad_w = max_w - w_out
-                    padded_output = F.pad(item['outputs'], (0, pad_w, 0, pad_h), value=0)
+                    padded_output = F.pad(out, (0, pad_w, 0, pad_h), value=0)
                     
-                    inputs.append(padded_input)
-                    outputs.append(padded_output)
+                    padded_inputs.append(padded_input)
+                    padded_outputs.append(padded_output)
                 
                 return {
-                    'inputs': torch.stack(inputs),
-                    'outputs': torch.stack(outputs)
+                    'inputs': torch.stack(padded_inputs),
+                    'outputs': torch.stack(padded_outputs)
                 }
             
             # High-performance dataloaders with custom collate
@@ -2107,6 +2174,25 @@ def train_megascale_curriculum():
                         leap_trainer.update_pattern_stats(pattern_types, leap_pred, leap_output_oh)
                         leap_batch_counter += 1
                         
+                        # Analyze failed patterns with LEAP-PRISM bridge
+                        if leap_prism_bridge and leap_batch_counter % 10 == 0:
+                            pred_indices = leap_pred.argmax(dim=1)
+                            target_indices = leap_output_oh.argmax(dim=1)
+                            
+                            for i, pattern_type in enumerate(pattern_types):
+                                if not (pred_indices[i] == target_indices[i]).all():
+                                    # Pattern failed - analyze with bridge
+                                    analysis = leap_prism_bridge.analyze_failed_leap_pattern(
+                                        pattern_type,
+                                        leap_inputs[i].cpu().numpy(),
+                                        leap_outputs[i].cpu().numpy(),
+                                        pred_indices[i].cpu().numpy()
+                                    )
+                                    
+                                    # Log insights periodically
+                                    if leap_batch_counter % 50 == 0 and analysis['synthesis_hint']:
+                                        print(f"\n💡 LEAP-PRISM insight for {pattern_type}: Use {analysis['synthesis_hint']}")
+                        
                         # Apply gradients more frequently for LEAP
                         if leap_batch_counter % 2 == 0:
                             scaler.unscale_(optimizer)
@@ -2213,6 +2299,24 @@ def train_megascale_curriculum():
                         leap_report = leap_trainer.get_performance_report()
                         if leap_report:
                             print(leap_report)
+                        
+                        # Get LEAP-PRISM bridge suggestions if available
+                        if leap_prism_bridge:
+                            pattern_stats = {}
+                            for pattern_type, stats in leap_trainer.pattern_stats.items():
+                                if stats['total'] > 0:
+                                    pattern_stats[pattern_type] = {
+                                        'success_rate': stats['correct'] / stats['total'],
+                                        'total_attempts': stats['total']
+                                    }
+                            
+                            suggestions = leap_prism_bridge.suggest_pattern_improvements(pattern_stats)
+                            if suggestions:
+                                print("\n🔮 LEAP-PRISM Enhancement Suggestions:")
+                                for suggestion in suggestions[:3]:  # Show top 3
+                                    print(f"\n  Pattern: {suggestion['pattern_type']} (Success: {suggestion['current_success_rate']*100:.1f}%)")
+                                    for rec in suggestion['recommendations']:
+                                        print(f"    • {rec}")
                     
                     # Report synthesis results if any
                     if synthesis_metrics['attempts'] > 0:

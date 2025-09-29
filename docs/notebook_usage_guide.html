@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutomataNexus OLYMPUS AGI2 - Notebook Usage Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            color: #fff;
+            line-height: 1.6;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .title {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #00cccc;
+            margin-bottom: 15px;
+            text-shadow: 0 0 20px rgba(0, 212, 170, 0.3);
+        }
+
+        .subtitle {
+            font-size: 1.4rem;
+            color: #ccc;
+            font-weight: 300;
+        }
+
+        .section {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border: 2px solid #00cccc;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .section h2 {
+            color: #00cccc;
+            font-size: 2rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .section h3 {
+            color: #00cccc;
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            margin-top: 25px;
+        }
+
+        .notebook-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin: 25px 0;
+        }
+
+        .notebook-card {
+            background: rgba(0, 212, 170, 0.1);
+            border: 2px solid #00cccc;
+            border-radius: 15px;
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .notebook-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 212, 170, 0.3);
+        }
+
+        .notebook-card h4 {
+            color: #00cccc;
+            font-size: 1.4rem;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .notebook-emoji {
+            font-size: 1.5rem;
+        }
+
+        .notebook-description {
+            color: #ccc;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .feature-list {
+            list-style: none;
+            margin-top: 15px;
+        }
+
+        .feature-list li {
+            position: relative;
+            padding-left: 20px;
+            margin-bottom: 8px;
+            color: #ccc;
+        }
+
+        .feature-list li:before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #00cccc;
+            font-weight: bold;
+        }
+
+        .step-box {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #00cccc;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .step-number {
+            background: #00cccc;
+            color: #000;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+
+        .step-content {
+            display: inline-block;
+            vertical-align: top;
+            width: calc(100% - 45px);
+        }
+
+        .code-snippet {
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(0, 204, 204, 0.3);
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #00cccc;
+            overflow-x: auto;
+        }
+
+        .note {
+            background: rgba(255, 193, 7, 0.1);
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .note h4 {
+            color: #ffc107;
+            margin-bottom: 10px;
+        }
+
+        .warning {
+            background: rgba(220, 53, 69, 0.1);
+            border-left: 4px solid #dc3545;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .warning h4 {
+            color: #dc3545;
+            margin-bottom: 10px;
+        }
+
+        .success {
+            background: rgba(40, 167, 69, 0.1);
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .success h4 {
+            color: #28a745;
+            margin-bottom: 10px;
+        }
+
+        .workflow-diagram {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .workflow-step {
+            display: inline-block;
+            background: rgba(0, 212, 170, 0.2);
+            border: 2px solid #00cccc;
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin: 10px;
+            color: #00cccc;
+            font-weight: bold;
+            position: relative;
+        }
+
+        .workflow-arrow {
+            display: inline-block;
+            color: #00cccc;
+            font-size: 1.5rem;
+            margin: 0 10px;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: rgba(0, 0, 0, 0.3);
+            font-size: 0.9rem;
+        }
+
+        .comparison-table th {
+            background: #00cccc;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .comparison-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #444;
+        }
+
+        .comparison-table tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        @media (max-width: 1024px) {
+            .notebook-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .title {
+                font-size: 2.5rem;
+            }
+
+            .workflow-step {
+                display: block;
+                margin: 10px 0;
+            }
+
+            .workflow-arrow {
+                display: block;
+                transform: rotate(90deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">OLYMPUS AGI2 Notebook Usage Guide</h1>
+            <p class="subtitle">Complete Guide to Training and Using the OLYMPUS Ensemble</p>
+        </div>
+
+        <div class="section">
+            <h2>📚 Available Notebooks</h2>
+            
+            <div class="notebook-grid">
+                <div class="notebook-card">
+                    <h4><span class="notebook-emoji">🧠</span>train_minerva.ipynb</h4>
+                    <p class="notebook-description">Strategic Pattern Analysis specialist focused on complex spatial relationships and object detection.</p>
+                    <ul class="feature-list">
+                        <li>Grid attention mechanisms</li>
+                        <li>Relational networks</li>
+                        <li>~2.1M parameters</li>
+                        <li>Strategic pattern analysis</li>
+                    </ul>
+                </div>
+
+                <div class="notebook-card">
+                    <h4><span class="notebook-emoji">🗺️</span>train_atlas.ipynb</h4>
+                    <p class="notebook-description">Spatial transformation specialist handling rotations, reflections, and geometric operations.</p>
+                    <ul class="feature-list">
+                        <li>Spatial transformer networks</li>
+                        <li>Affine transformations</li>
+                        <li>~1.2M parameters</li>
+                        <li>Geometric pattern recognition</li>
+                    </ul>
+                </div>
+
+                <div class="notebook-card">
+                    <h4><span class="notebook-emoji">🎨</span>train_iris.ipynb</h4>
+                    <p class="notebook-description">Color pattern recognition specialist with advanced embedding techniques.</p>
+                    <ul class="feature-list">
+                        <li>Color attention networks</li>
+                        <li>Mapping rule extraction</li>
+                        <li>~0.9M parameters</li>
+                        <li>Color relationship analysis</li>
+                    </ul>
+                </div>
+
+                <div class="notebook-card">
+                    <h4><span class="notebook-emoji">⏱️</span>train_chronos.ipynb</h4>
+                    <p class="notebook-description">Temporal sequence analysis for movement trajectories and multi-step processes.</p>
+                    <ul class="feature-list">
+                        <li>LSTM + attention layers</li>
+                        <li>Sequence modeling</li>
+                        <li>~2.4M parameters</li>
+                        <li>Temporal pattern analysis</li>
+                    </ul>
+                </div>
+
+                <div class="notebook-card">
+                    <h4><span class="notebook-emoji">🔥</span>train_prometheus.ipynb</h4>
+                    <p class="notebook-description">Creative pattern generation through latent space exploration and synthesis.</p>
+                    <ul class="feature-list">
+                        <li>Variational autoencoder</li>
+                        <li>Creative synthesis</li>
+                        <li>~1.8M parameters</li>
+                        <li>Novel pattern generation</li>
+                    </ul>
+                </div>
+
+                <div class="notebook-card">
+                    <h4><span class="notebook-emoji">🏛️</span>train_olympus_ensemble.ipynb</h4>
+                    <p class="notebook-description">Complete V4 mega-scale training with MEPT, LEAP, and PRISM enhancements.</p>
+                    <ul class="feature-list">
+                        <li>All 5 models together</li>
+                        <li>V4 enhanced training</li>
+                        <li>Revolutionary loss functions</li>
+                        <li>Neural-program synthesis</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🚀 Quick Start Guide</h2>
+
+            <div class="workflow-diagram">
+                <div class="workflow-step">Choose Platform</div>
+                <div class="workflow-arrow">→</div>
+                <div class="workflow-step">Upload Notebook</div>
+                <div class="workflow-arrow">→</div>
+                <div class="workflow-step">Run Cells</div>
+                <div class="workflow-arrow">→</div>
+                <div class="workflow-step">Monitor Training</div>
+                <div class="workflow-arrow">→</div>
+                <div class="workflow-step">Evaluate Results</div>
+            </div>
+
+            <h3>Step 1: Choose Your Platform</h3>
+            <div class="step-box">
+                <span class="step-number">1</span>
+                <div class="step-content">
+                    <strong>Recommended Platforms:</strong>
+                    <ul class="feature-list">
+                        <li><strong>Google Colab Pro+</strong> - A100 GPU, 80GB VRAM (ideal for ensemble training)</li>
+                        <li><strong>Kaggle Notebooks</strong> - P100/T4 GPUs (good for individual models)</li>
+                        <li><strong>Paperspace Gradient</strong> - Various GPU options</li>
+                        <li><strong>Local Jupyter</strong> - If you have sufficient GPU hardware</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Step 2: Upload and Setup</h3>
+            <div class="step-box">
+                <span class="step-number">2</span>
+                <div class="step-content">
+                    <strong>Upload Process:</strong>
+                    <ul class="feature-list">
+                        <li>Navigate to <code>/notebooks/</code> folder in the repository</li>
+                        <li>Download the desired notebook (.ipynb file)</li>
+                        <li>Upload to your chosen platform</li>
+                        <li>Ensure GPU runtime is selected</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="code-snippet"># Example: Colab setup verification
+import torch
+print(f"CUDA Available: {torch.cuda.is_available()}")
+print(f"GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'None'}")
+print(f"Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB")</div>
+
+            <h3>Step 3: Execute Training</h3>
+            <div class="step-box">
+                <span class="step-number">3</span>
+                <div class="step-content">
+                    <strong>Execution Order:</strong>
+                    <ul class="feature-list">
+                        <li>Run setup cells (repository cloning, dependencies)</li>
+                        <li>Verify environment and GPU status</li>
+                        <li>Start training cell</li>
+                        <li>Monitor progress with monitoring cells</li>
+                        <li>Evaluate results when complete</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>⚙️ Training Options</h2>
+
+            <h3>Option 1: Individual Model Training</h3>
+            <p>Train each OLYMPUS model separately for focused development or testing.</p>
+
+            <table class="comparison-table">
+                <tr>
+                    <th>Model</th>
+                    <th>Training Time</th>
+                    <th>GPU Memory</th>
+                    <th>Recommended For</th>
+                </tr>
+                <tr>
+                    <td>🧠 MINERVA</td>
+                    <td>~2-3 hours</td>
+                    <td>~15-20 GB</td>
+                    <td>Strategic pattern research</td>
+                </tr>
+                <tr>
+                    <td>🗺️ ATLAS</td>
+                    <td>~1-2 hours</td>
+                    <td>~10-15 GB</td>
+                    <td>Geometric transformation focus</td>
+                </tr>
+                <tr>
+                    <td>🎨 IRIS</td>
+                    <td>~1-2 hours</td>
+                    <td>~8-12 GB</td>
+                    <td>Color pattern analysis</td>
+                </tr>
+                <tr>
+                    <td>⏱️ CHRONOS</td>
+                    <td>~2-3 hours</td>
+                    <td>~18-25 GB</td>
+                    <td>Temporal sequence research</td>
+                </tr>
+                <tr>
+                    <td>🔥 PROMETHEUS</td>
+                    <td>~2-3 hours</td>
+                    <td>~12-18 GB</td>
+                    <td>Creative pattern exploration</td>
+                </tr>
+            </table>
+
+            <h3>Option 2: Complete Ensemble Training</h3>
+            <p>Train all models together with V4 enhancements for coordinated optimization.</p>
+
+            <div class="success">
+                <h4>🏛️ Ensemble Training Benefits:</h4>
+                <ul class="feature-list">
+                    <li>V4 mega-scale training with curriculum learning</li>
+                    <li>MEPT, LEAP, and PRISM integration</li>
+                    <li>Revolutionary loss functions</li>
+                    <li>Neural-guided program synthesis</li>
+                    <li>Coordinated model optimization</li>
+                </ul>
+            </div>
+
+            <div class="warning">
+                <h4>⚠️ Ensemble Requirements:</h4>
+                <ul class="feature-list">
+                    <li>A100 80GB GPU strongly recommended</li>
+                    <li>8-12 hours training time</li>
+                    <li>~60-70 GB GPU memory usage</li>
+                    <li>Stable internet connection for long training</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Monitoring Training Progress</h2>
+
+            <h3>Real-Time Monitoring</h3>
+            <p>All notebooks include comprehensive monitoring capabilities:</p>
+
+            <div class="step-box">
+                <strong>GPU Monitoring:</strong>
+                <div class="code-snippet"># Monitor GPU usage
+!nvidia-smi
+
+# Check memory usage
+import torch
+print(f"Allocated: {torch.cuda.memory_allocated() / 1e9:.2f} GB")
+print(f"Reserved: {torch.cuda.memory_reserved() / 1e9:.2f} GB")</div>
+            </div>
+
+            <div class="step-box">
+                <strong>Training Progress:</strong>
+                <ul class="feature-list">
+                    <li>Real-time loss tracking</li>
+                    <li>Validation accuracy updates</li>
+                    <li>Checkpoint creation monitoring</li>
+                    <li>Training stage progression</li>
+                    <li>Memory usage alerts</li>
+                </ul>
+            </div>
+
+            <div class="step-box">
+                <strong>Model Checkpoints:</strong>
+                <div class="code-snippet"># Check for saved models
+import glob
+checkpoints = glob.glob('/content/AutomataNexus_Olympus_AGI2/arc_models_v4/*.pt')
+for checkpoint in checkpoints:
+    print(f"Found: {checkpoint}")</div>
+            </div>
+
+            <h3>Performance Metrics</h3>
+            <div class="notebook-grid">
+                <div class="notebook-card">
+                    <h4>📈 Training Metrics</h4>
+                    <ul class="feature-list">
+                        <li>Validation exact match rate</li>
+                        <li>Pixel-wise accuracy</li>
+                        <li>Loss progression</li>
+                        <li>Learning rate scheduling</li>
+                    </ul>
+                </div>
+                <div class="notebook-card">
+                    <h4>🎯 Model Statistics</h4>
+                    <ul class="feature-list">
+                        <li>Parameter count</li>
+                        <li>Model size in MB</li>
+                        <li>Training duration</li>
+                        <li>Best checkpoint epoch</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔧 Troubleshooting</h2>
+
+            <h3>Common Issues</h3>
+
+            <div class="warning">
+                <h4>❌ CUDA Out of Memory</h4>
+                <p><strong>Solutions:</strong></p>
+                <ul class="feature-list">
+                    <li>Reduce batch size in training configuration</li>
+                    <li>Increase gradient accumulation steps</li>
+                    <li>Use mixed precision training (already enabled)</li>
+                    <li>Clear GPU cache with <code>torch.cuda.empty_cache()</code></li>
+                </ul>
+            </div>
+
+            <div class="warning">
+                <h4>⚠️ Training Hangs or Stops</h4>
+                <p><strong>Solutions:</strong></p>
+                <ul class="feature-list">
+                    <li>Check internet connection stability</li>
+                    <li>Verify GPU is still available</li>
+                    <li>Monitor system resources</li>
+                    <li>Restart runtime if necessary</li>
+                </ul>
+            </div>
+
+            <div class="note">
+                <h4>💡 Performance Optimization</h4>
+                <p><strong>Tips:</strong></p>
+                <ul class="feature-list">
+                    <li>Use Google Colab Pro+ for best performance</li>
+                    <li>Train during off-peak hours</li>
+                    <li>Monitor GPU utilization to ensure full usage</li>
+                    <li>Save checkpoints frequently</li>
+                </ul>
+            </div>
+
+            <h3>Memory Management</h3>
+            <div class="code-snippet"># Clear GPU memory
+import torch
+import gc
+
+torch.cuda.empty_cache()
+gc.collect()
+
+# Check available memory
+total_memory = torch.cuda.get_device_properties(0).total_memory / 1e9
+allocated = torch.cuda.memory_allocated() / 1e9
+free_memory = total_memory - allocated
+
+print(f"Total: {total_memory:.2f} GB")
+print(f"Allocated: {allocated:.2f} GB") 
+print(f"Free: {free_memory:.2f} GB")</div>
+        </div>
+
+        <div class="section">
+            <h2>📈 Training Results</h2>
+
+            <h3>Individual Model Capabilities</h3>
+            <table class="comparison-table">
+                <tr>
+                    <th>Model</th>
+                    <th>Specialization</th>
+                    <th>Architecture</th>
+                    <th>Key Strength</th>
+                </tr>
+                <tr>
+                    <td>🧠 MINERVA</td>
+                    <td>Strategic Analysis</td>
+                    <td>Grid Attention + Relational Networks</td>
+                    <td>Complex pattern recognition</td>
+                </tr>
+                <tr>
+                    <td>🗺️ ATLAS</td>
+                    <td>Spatial Transform</td>
+                    <td>Spatial Transformer Network</td>
+                    <td>Geometric operations</td>
+                </tr>
+                <tr>
+                    <td>🎨 IRIS</td>
+                    <td>Color Patterns</td>
+                    <td>Color Attention + Mapping Networks</td>
+                    <td>Color relationship mapping</td>
+                </tr>
+                <tr>
+                    <td>⏱️ CHRONOS</td>
+                    <td>Temporal Analysis</td>
+                    <td>LSTM + Temporal Attention</td>
+                    <td>Sequential transformations</td>
+                </tr>
+                <tr>
+                    <td>🔥 PROMETHEUS</td>
+                    <td>Creative Synthesis</td>
+                    <td>Variational Autoencoder</td>
+                    <td>Novel pattern generation</td>
+                </tr>
+            </table>
+
+            <h3>Ensemble System Features</h3>
+            <div class="success">
+                <h4>🏆 OLYMPUS Ensemble Features:</h4>
+                <ul class="feature-list">
+                    <li><strong>Neural-Symbolic Integration</strong> - Combines neural pattern recognition with program synthesis</li>
+                    <li><strong>V4 Training System</strong> - Advanced curriculum learning and loss functions</li>
+                    <li><strong>Edge Deployment Ready</strong> - Optimized for Hailo-8 NPU inference</li>
+                    <li><strong>Modular Architecture</strong> - Each model specializes in different reasoning aspects</li>
+                    <li><strong>8.4M Total Parameters</strong> - Efficient ensemble architecture</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🚀 Next Steps</h2>
+
+            <h3>After Training Completion</h3>
+            <div class="notebook-grid">
+                <div class="notebook-card">
+                    <h4>🧪 Model Testing</h4>
+                    <ul class="feature-list">
+                        <li>Test on ARC evaluation set</li>
+                        <li>Validate ensemble performance</li>
+                        <li>Compare individual vs ensemble results</li>
+                        <li>Generate performance reports</li>
+                    </ul>
+                </div>
+                <div class="notebook-card">
+                    <h4>🏭 Deployment</h4>
+                    <ul class="feature-list">
+                        <li>Convert models for Hailo-8 NPU</li>
+                        <li>Implement edge inference</li>
+                        <li>Integrate with PRISM system</li>
+                        <li>Set up production pipeline</li>
+                    </ul>
+                </div>
+                <div class="notebook-card">
+                    <h4>🔬 Advanced Research</h4>
+                    <ul class="feature-list">
+                        <li>Experiment with LEAP-PRISM bridge</li>
+                        <li>Develop hierarchical programs</li>
+                        <li>Explore learned primitives</li>
+                        <li>Scale to larger datasets</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Integration with Other Systems</h3>
+            <p>The trained models can be integrated with:</p>
+            <ul class="feature-list">
+                <li><strong>PRISM System</strong> - Program reasoning through inductive synthesis</li>
+                <li><strong>LEAP Bridge</strong> - Enhanced adaptive pattern learning</li>
+                <li><strong>MEPT Framework</strong> - Memory-enhanced progressive training</li>
+                <li><strong>Hailo NPU</strong> - Edge deployment for real-time inference</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>📋 Checklist</h2>
+
+            <h3>Before Training</h3>
+            <div class="step-box">
+                <ul class="feature-list">
+                    <li>✅ GPU with sufficient VRAM (15GB+ for individual, 80GB for ensemble)</li>
+                    <li>✅ Stable internet connection</li>
+                    <li>✅ Platform account (Colab Pro+, Kaggle, etc.)</li>
+                    <li>✅ Repository access and notebook download</li>
+                    <li>✅ GPU runtime enabled on platform</li>
+                </ul>
+            </div>
+
+            <h3>During Training</h3>
+            <div class="step-box">
+                <ul class="feature-list">
+                    <li>✅ Monitor GPU utilization and memory</li>
+                    <li>✅ Check checkpoint creation</li>
+                    <li>✅ Verify loss is decreasing</li>
+                    <li>✅ Watch for any error messages</li>
+                    <li>✅ Ensure stable connection</li>
+                </ul>
+            </div>
+
+            <h3>After Training</h3>
+            <div class="step-box">
+                <ul class="feature-list">
+                    <li>✅ Download trained model files</li>
+                    <li>✅ Save training reports and logs</li>
+                    <li>✅ Test model inference</li>
+                    <li>✅ Backup checkpoints</li>
+                    <li>✅ Document performance results</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section" style="text-align: center; background: linear-gradient(135deg, #00cccc 0%, #009999 100%); color: white;">
+            <h2 style="color: white;">🎉 Ready to Train OLYMPUS AGI2!</h2>
+            <p style="font-size: 1.2rem; margin: 20px 0;">You now have everything needed to train the OLYMPUS ensemble.</p>
+            <p style="font-size: 1rem; opacity: 0.9;">Start with individual models or dive straight into the complete ensemble training.</p>
+            <p style="font-size: 0.9rem; margin-top: 30px;"><strong>Andrew Jewell Sr. - AutomataNexus, LLC</strong></p>
+        </div>
+    </div>
+</body>
+</html>

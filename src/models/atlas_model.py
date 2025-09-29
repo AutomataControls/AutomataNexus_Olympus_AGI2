@@ -106,13 +106,10 @@ class EnhancedAtlasNet(nn.Module):
         # Decode to output
         predicted_output = self.decoder(transformed_features)
         
-        # Add minimal residual for ATLAS to prevent collapse
-        mix = torch.sigmoid(self.mix_param)
-        if self.training:
-            mix = mix * 0.2  # Use much less residual for ATLAS
-        else:
-            mix = mix * 0.3
-        predicted_output = predicted_output * (1 - mix) + input_grid * mix
+        # REMOVED input mixing - it prevents exact matches!
+        # The model should learn to predict the output directly
+        # For ATLAS, spatial transformations should be learned, not mixed
+        # predicted_output = predicted_output  # Pure prediction, no mixing
         
         return {
             'predicted_output': predicted_output,

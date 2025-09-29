@@ -272,8 +272,8 @@
             <ul class="setup-steps">
                 <li>Clone the repository in Colab</li>
                 <li>Install dependencies</li>
-                <li>Download ARC datasets</li>
                 <li>Verify GPU availability (A100 80GB recommended)</li>
+                <li>ARC datasets are included in the repository</li>
             </ul>
             
             <div class="command-box">
@@ -285,10 +285,7 @@
 !git clone https://github.com/AutomataControls/AutomataNexus_Olympus_AGI2.git /content/AutomataNexus_Olympus_AGI2
 !cd /content/AutomataNexus_Olympus_AGI2 && pip install -r requirements.txt -q
 
-# Cell 2: Download ARC datasets
-!cd /content/AutomataNexus_Olympus_AGI2 && python scripts/download_arc_datasets.py
-
-# Cell 3: Verify environment
+# Cell 2: Verify environment
 import torch
 print(f"PyTorch Version: {torch.__version__}")
 print(f"CUDA Available: {torch.cuda.is_available()}")

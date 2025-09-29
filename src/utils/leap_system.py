@@ -33,7 +33,13 @@ class AdaptivePatternGenerator:
             'counting': self._generate_counting,
             'diagonal': self._generate_diagonal,
             'cross': self._generate_cross,
-            'invert': self._generate_invert
+            'invert': self._generate_invert,
+            # Add simpler patterns
+            'fill_background': self._generate_fill_background,
+            'keep_largest': self._generate_keep_largest,
+            'remove_color': self._generate_remove_color,
+            'flip_horizontal': self._generate_flip_horizontal,
+            'flip_vertical': self._generate_flip_vertical
         }
     
     def generate_adaptive_batch(self, batch_size: int, weak_patterns: List[str] = None) -> List[Dict]:
@@ -112,65 +118,76 @@ class AdaptivePatternGenerator:
         return {'input': grid, 'output': grid.copy()}
     
     def _generate_solid_color(self) -> Dict:
-        """Fill with single color"""
+        """Fill non-zero pixels with single color"""
         input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
-        color = np.random.randint(0, 4)
-        output_grid = np.full_like(input_grid, color)
+        # Only fill where input is non-zero
+        color = np.random.randint(1, 4)
+        output_grid = np.where(input_grid > 0, color, 0)
         return {'input': input_grid, 'output': output_grid}
     
     def _generate_horizontal_stripes(self) -> Dict:
-        """Horizontal stripes"""
+        """Color rows based on input presence"""
         input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
         output_grid = np.zeros_like(input_grid)
         colors = [1, 2]
         for i in range(self.grid_size):
-            output_grid[i, :] = colors[i % 2]
+            # Only color where input has values
+            row_mask = input_grid[i, :] > 0
+            if np.any(row_mask):
+                output_grid[i, row_mask] = colors[i % 2]
         return {'input': input_grid, 'output': output_grid}
     
     def _generate_vertical_stripes(self) -> Dict:
-        """Vertical stripes"""
+        """Color columns based on input presence"""
         input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
         output_grid = np.zeros_like(input_grid)
         colors = [1, 3]
         for j in range(self.grid_size):
-            output_grid[:, j] = colors[j % 2]
+            # Only color where input has values
+            col_mask = input_grid[:, j] > 0
+            if np.any(col_mask):
+                output_grid[col_mask, j] = colors[j % 2]
         return {'input': input_grid, 'output': output_grid}
     
     def _generate_checkerboard(self) -> Dict:
-        """Checkerboard pattern"""
+        """Checkerboard pattern where input exists"""
         input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
         output_grid = np.zeros_like(input_grid)
         for i in range(self.grid_size):
             for j in range(self.grid_size):
-                output_grid[i, j] = 1 if (i + j) % 2 == 0 else 2
+                if input_grid[i, j] > 0:
+                    output_grid[i, j] = 1 if (i + j) % 2 == 0 else 2
         return {'input': input_grid, 'output': output_grid}
     
     def _generate_center_dot(self) -> Dict:
-        """Single center pixel"""
+        """Highlight center if input exists there"""
         input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
-        output_grid = np.zeros_like(input_grid)
+        output_grid = input_grid.copy()
         center = self.grid_size // 2
-        output_grid[center, center] = 2
+        if input_grid[center, center] > 0:
+            output_grid[center, center] = 3
         return {'input': input_grid, 'output': output_grid}
     
     def _generate_border(self) -> Dict:
-        """Border pattern"""
+        """Highlight border pixels from input"""
         input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
         output_grid = np.zeros_like(input_grid)
-        output_grid[0, :] = 1
-        output_grid[-1, :] = 1
-        output_grid[:, 0] = 1
-        output_grid[:, -1] = 1
+        # Copy border pixels from input
+        output_grid[0, :] = input_grid[0, :]
+        output_grid[-1, :] = input_grid[-1, :]
+        output_grid[:, 0] = input_grid[:, 0]
+        output_grid[:, -1] = input_grid[:, -1]
         return {'input': input_grid, 'output': output_grid}
     
     def _generate_corners(self) -> Dict:
-        """Corner dots"""
+        """Extract corner pixels from input"""
         input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
         output_grid = np.zeros_like(input_grid)
-        output_grid[0, 0] = 2
-        output_grid[0, -1] = 2
-        output_grid[-1, 0] = 2
-        output_grid[-1, -1] = 2
+        # Copy corner pixels
+        output_grid[0, 0] = input_grid[0, 0]
+        output_grid[0, -1] = input_grid[0, -1]
+        output_grid[-1, 0] = input_grid[-1, 0]
+        output_grid[-1, -1] = input_grid[-1, -1]
         return {'input': input_grid, 'output': output_grid}
     
     def _generate_color_swap(self) -> Dict:
@@ -201,34 +218,74 @@ class AdaptivePatternGenerator:
         return {'input': input_grid, 'output': output_grid}
     
     def _generate_counting(self) -> Dict:
-        """Count non-zero and fill"""
+        """Fill non-zero pixels with count-based color"""
         input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
         count = np.count_nonzero(input_grid)
-        color = min(3, count // 5)
-        output_grid = np.full_like(input_grid, color)
+        color = min(3, max(1, count // 5))  # Ensure color is at least 1
+        # Only fill where input is non-zero
+        output_grid = np.where(input_grid > 0, color, 0)
         return {'input': input_grid, 'output': output_grid}
     
     def _generate_diagonal(self) -> Dict:
-        """Diagonal line"""
+        """Extract diagonal from input"""
         input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
         output_grid = np.zeros_like(input_grid)
-        for i in range(min(self.grid_size, self.grid_size)):
-            output_grid[i, i] = 3
+        for i in range(self.grid_size):
+            output_grid[i, i] = input_grid[i, i]
         return {'input': input_grid, 'output': output_grid}
     
     def _generate_cross(self) -> Dict:
-        """Cross pattern"""
+        """Extract cross pattern from input"""
         input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
         output_grid = np.zeros_like(input_grid)
         center = self.grid_size // 2
-        output_grid[center, :] = 3
-        output_grid[:, center] = 3
+        # Copy center row and column
+        output_grid[center, :] = input_grid[center, :]
+        output_grid[:, center] = input_grid[:, center]
         return {'input': input_grid, 'output': output_grid}
     
     def _generate_invert(self) -> Dict:
         """Invert 0/1"""
         input_grid = np.random.randint(0, 2, (self.grid_size, self.grid_size))
         output_grid = 1 - input_grid
+        return {'input': input_grid, 'output': output_grid}
+    
+    def _generate_fill_background(self) -> Dict:
+        """Fill background (0) with a color"""
+        input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
+        output_grid = input_grid.copy()
+        fill_color = np.random.randint(1, 4)
+        output_grid[output_grid == 0] = fill_color
+        return {'input': input_grid, 'output': output_grid}
+    
+    def _generate_keep_largest(self) -> Dict:
+        """Keep only the most frequent non-zero color"""
+        input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
+        output_grid = np.zeros_like(input_grid)
+        unique, counts = np.unique(input_grid[input_grid > 0], return_counts=True)
+        if len(unique) > 0:
+            largest_color = unique[np.argmax(counts)]
+            output_grid[input_grid == largest_color] = largest_color
+        return {'input': input_grid, 'output': output_grid}
+    
+    def _generate_remove_color(self) -> Dict:
+        """Remove a specific color"""
+        input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
+        output_grid = input_grid.copy()
+        # Remove color 1
+        output_grid[output_grid == 1] = 0
+        return {'input': input_grid, 'output': output_grid}
+    
+    def _generate_flip_horizontal(self) -> Dict:
+        """Flip horizontally"""
+        input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
+        output_grid = np.fliplr(input_grid)
+        return {'input': input_grid, 'output': output_grid}
+    
+    def _generate_flip_vertical(self) -> Dict:
+        """Flip vertically"""
+        input_grid = np.random.randint(0, 4, (self.grid_size, self.grid_size))
+        output_grid = np.flipud(input_grid)
         return {'input': input_grid, 'output': output_grid}
 
 

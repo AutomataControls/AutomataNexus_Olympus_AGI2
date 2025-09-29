@@ -118,51 +118,72 @@ def custom_collate_fn(batch):
     outputs = []
     
     for item in batch:
-        # Get input and output tensors
-        inp = item['inputs']
-        out = item['outputs']
-        
-        # Handle case where tensors might already have batch dimension
-        if inp.dim() == 3:
-            inp = inp.squeeze(0)
-        if out.dim() == 3:
-            out = out.squeeze(0)
-        
-        # Ensure 2D tensors
-        if inp.dim() != 2 or out.dim() != 2:
-            print(f"Warning: Unexpected tensor dimensions - input: {inp.shape}, output: {out.shape}")
+        try:
+            # Get input and output tensors
+            inp = item['inputs']
+            out = item['outputs']
+            
+            # Convert to tensor if numpy array
+            if isinstance(inp, np.ndarray):
+                inp = torch.from_numpy(inp)
+            if isinstance(out, np.ndarray):
+                out = torch.from_numpy(out)
+            
+            # Handle case where tensors might already have batch dimension
+            while inp.dim() > 2:
+                inp = inp.squeeze(0)
+            while out.dim() > 2:
+                out = out.squeeze(0)
+            
+            # Ensure 2D tensors
+            if inp.dim() != 2 or out.dim() != 2:
+                print(f"Warning: Unexpected tensor dimensions - input: {inp.shape}, output: {out.shape}")
+                continue
+            
+            # Ensure tensors are not too large or small
+            if inp.shape[0] < 1 or inp.shape[1] < 1 or out.shape[0] < 1 or out.shape[1] < 1:
+                print(f"Warning: Invalid grid size - input: {inp.shape}, output: {out.shape}")
+                continue
+                
+            if inp.shape[0] > MAX_GRID_SIZE or inp.shape[1] > MAX_GRID_SIZE:
+                print(f"Warning: Grid too large - input: {inp.shape}, truncating to {MAX_GRID_SIZE}")
+                inp = inp[:MAX_GRID_SIZE, :MAX_GRID_SIZE]
+                
+            if out.shape[0] > MAX_GRID_SIZE or out.shape[1] > MAX_GRID_SIZE:
+                print(f"Warning: Grid too large - output: {out.shape}, truncating to {MAX_GRID_SIZE}")
+                out = out[:MAX_GRID_SIZE, :MAX_GRID_SIZE]
+            
+            inputs.append(inp)
+            outputs.append(out)
+            
+        except Exception as e:
+            print(f"Warning: Error processing batch item: {e}")
             continue
-        
-        inputs.append(inp)
-        outputs.append(out)
     
     if not inputs:
         # Return a dummy batch if all items were skipped
+        print("Warning: All batch items were invalid, returning dummy batch")
         return {
             'inputs': torch.zeros(1, MAX_GRID_SIZE, MAX_GRID_SIZE, dtype=torch.long),
             'outputs': torch.zeros(1, MAX_GRID_SIZE, MAX_GRID_SIZE, dtype=torch.long)
         }
     
     # Find max dimensions
-    max_h_in = max(inp.shape[0] for inp in inputs)
-    max_w_in = max(inp.shape[1] for inp in inputs)
-    max_h_out = max(out.shape[0] for out in outputs)
-    max_w_out = max(out.shape[1] for out in outputs)
-    max_h = max(max_h_in, max_h_out, MAX_GRID_SIZE)
-    max_w = max(max_w_in, max_w_out, MAX_GRID_SIZE)
+    max_h = MAX_GRID_SIZE  # Use fixed size for consistency
+    max_w = MAX_GRID_SIZE
     
     # Pad all grids to max size
     padded_inputs = []
     padded_outputs = []
     
     for inp, out in zip(inputs, outputs):
-        # Pad inputs
+        # Pad inputs to fixed size
         h_in, w_in = inp.shape
         pad_h = max_h - h_in
         pad_w = max_w - w_in
         padded_input = F.pad(inp, (0, pad_w, 0, pad_h), value=0)
         
-        # Pad outputs
+        # Pad outputs to same size
         h_out, w_out = out.shape
         pad_h = max_h - h_out
         pad_w = max_w - w_out
@@ -275,9 +296,13 @@ def train_minerva():
     
     # EXACT MATCH PRE-TRAINING for Stage 0
     if EXACT_BOOST_AVAILABLE and resume_stage == 0 and global_epoch == 0:
-        print(f"\n🎯 Running EXACT MATCH INJECTION for MINERVA")
-        model = inject_exact_match_training(model, device=device, num_epochs=50)
-        print("✅ Exact match injection complete!")
+        try:
+            print(f"\n🎯 Running EXACT MATCH INJECTION for MINERVA")
+            model = inject_exact_match_training(model, device=device, num_epochs=50)
+            print("✅ Exact match injection complete!")
+        except Exception as e:
+            print(f"⚠️ Exact match injection failed: {e}")
+            print("🔄 Continuing with normal training...")
     
     # CURRICULUM LOOP
     for stage in range(resume_stage, CURRICULUM_STAGES):
@@ -345,8 +370,13 @@ def train_minerva():
             
             # Create exact match dataset for Stage 0
             if stage == 0 and EXACT_BOOST_AVAILABLE:
-                exact_dataset = ExactMatchBoostDataset(1000, fixed_size=6)
-                aggressive_loss = AggressiveLoss()
+                try:
+                    exact_dataset = ExactMatchBoostDataset(1000, fixed_size=6)
+                    aggressive_loss = AggressiveLoss()
+                except Exception as e:
+                    print(f"⚠️ Could not create exact match dataset: {e}")
+                    exact_dataset = None
+                    aggressive_loss = None
             
             pbar = tqdm(train_loader, desc=f"Stage {stage}, Epoch {epoch+1}/{EPOCHS_PER_STAGE}")
             optimizer.zero_grad()
@@ -457,7 +487,7 @@ def train_minerva():
                         output_grids = F.one_hot(outputs, num_classes=NUM_COLORS).permute(0, 3, 1, 2).float()
                         
                         with autocast('cuda'):
-                            model_outputs = model(input_grids)
+                            model_outputs = model(input_grids, mode='inference')
                             pred_output = model_outputs['predicted_output']
                             losses = loss_fn(pred_output, output_grids, input_grids)
                         

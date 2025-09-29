@@ -13,7 +13,7 @@ import random
 class AdaptivePatternGenerator:
     """Generates patterns that adapt based on model's current weaknesses"""
     
-    def __init__(self, grid_size: int = 6):
+    def __init__(self, grid_size: int = 8):  # Increased from 6 to 8
         self.grid_size = grid_size
         self.performance_tracker = defaultdict(lambda: {'attempts': 0, 'successes': 0})
         

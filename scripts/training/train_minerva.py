@@ -134,7 +134,7 @@ RECONSTRUCTION_WEIGHT = 1.0
 EDGE_WEIGHT = 0.3
 COLOR_BALANCE_WEIGHT = 0.2
 STRUCTURE_WEIGHT = 0.3
-TRANSFORMATION_PENALTY = 1.0  # Reduced to allow identity learning
+TRANSFORMATION_PENALTY = 0.5  # Further reduced to help identity learning
 EXACT_MATCH_BONUS = 5.0
 
 # Curriculum settings
@@ -473,6 +473,16 @@ def train_minerva():
         
         print(f"Stage {stage} - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
         
+        # Create exact match dataset for Stage 0 (ONCE per stage, not per epoch!)
+        exact_dataset = None
+        aggressive_loss = None
+        if stage == 0 and EXACT_BOOST_AVAILABLE:
+            try:
+                exact_dataset = ExactMatchBoostDataset(1000, fixed_size=6)
+                aggressive_loss = AggressiveLoss()
+            except Exception as e:
+                print(f"⚠️ Could not create exact match dataset: {e}")
+        
         # Train for this stage
         start_epoch = resume_epoch if stage == resume_stage else 0
         for epoch in range(start_epoch, EPOCHS_PER_STAGE):
@@ -482,16 +492,6 @@ def train_minerva():
             # Training
             model.train()
             train_metrics = {'loss': 0, 'exact': 0, 'samples': 0}
-            
-            # Create exact match dataset for Stage 0
-            if stage == 0 and EXACT_BOOST_AVAILABLE:
-                try:
-                    exact_dataset = ExactMatchBoostDataset(1000, fixed_size=6)
-                    aggressive_loss = AggressiveLoss()
-                except Exception as e:
-                    print(f"⚠️ Could not create exact match dataset: {e}")
-                    exact_dataset = None
-                    aggressive_loss = None
             
             pbar = tqdm(train_loader, desc=f"Stage {stage}, Epoch {epoch+1}/{EPOCHS_PER_STAGE}")
             optimizer.zero_grad()
@@ -619,7 +619,8 @@ def train_minerva():
                     # Debug: Print LEAP batch info occasionally
                     if leap_batch_counter % 100 == 0:
                         unique_patterns = set(pattern_types)
-                        print(f"\nLEAP Batch {leap_batch_counter}: {len(unique_patterns)} unique patterns")
+                        pattern_counts = {p: pattern_types.count(p) for p in unique_patterns}
+                        print(f"\nLEAP Batch {leap_batch_counter}: {pattern_counts}")
                     
                     # Pad to MAX_GRID_SIZE
                     if leap_inputs.shape[1] < MAX_GRID_SIZE or leap_inputs.shape[2] < MAX_GRID_SIZE:
@@ -635,7 +636,8 @@ def train_minerva():
                     with autocast('cuda'):
                         leap_pred = model(leap_input_oh, leap_output_oh, mode='train')['predicted_output']
                         leap_losses = loss_fn(leap_pred, leap_output_oh, leap_input_oh)
-                        leap_loss = leap_losses['total'] / GRADIENT_ACCUMULATION_STEPS
+                        # Give LEAP patterns higher weight to ensure they're learned
+                        leap_loss = leap_losses['total'] * 2.0 / GRADIENT_ACCUMULATION_STEPS
                     
                     scaler.scale(leap_loss).backward()
                     
@@ -648,7 +650,9 @@ def train_minerva():
                         leap_pred_idx = leap_pred.argmax(dim=1)
                         leap_target_idx = leap_output_oh.argmax(dim=1)
                         leap_exact = (leap_pred_idx == leap_target_idx).all(dim=[1,2]).sum().item()
-                        print(f"LEAP exact: {leap_exact}/{len(pattern_types)} = {leap_exact/len(pattern_types)*100:.1f}%")
+                        # Also check pixel accuracy
+                        leap_pixel_correct = (leap_pred_idx == leap_target_idx).float().mean().item()
+                        print(f"LEAP exact: {leap_exact}/{len(pattern_types)} = {leap_exact/len(pattern_types)*100:.1f}%, pixel: {leap_pixel_correct*100:.1f}%")
                     
                     # Analyze failed patterns with LEAP-PRISM bridge
                     if leap_prism_bridge and leap_batch_counter % 10 == 0:

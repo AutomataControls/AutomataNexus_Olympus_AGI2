@@ -259,7 +259,7 @@ class ExactMatchBoostDataset(Dataset):
         
         # Shuffle samples
         random.shuffle(self.samples)
-        print(f"Generated {len(self.samples)} exact-match training samples")
+        # print(f"Generated {len(self.samples)} exact-match training samples")  # Commented out to reduce clutter
     
     def _augment_samples(self):
         """Add rotated and flipped versions of existing samples for more diversity"""
@@ -294,7 +294,7 @@ class ExactMatchBoostDataset(Dataset):
         
         self.samples.extend(augmented)
         random.shuffle(self.samples)
-        print(f"After augmentation: {len(self.samples)} total samples")
+        # print(f"After augmentation: {len(self.samples)} total samples")  # Commented out to reduce clutter
     
     def __len__(self):
         return len(self.samples)

@@ -354,39 +354,51 @@ def train_chronos():
         arc_augmenter = ARCDataAugmenter(device=device)
         
         # Apply MEPT augmentation if enabled
-        if USE_MEPT and replay_buffer.get_stats()['total_experiences'] > 100:
+        if USE_MEPT and replay_buffer.get_stats()['total_experiences'] > 100 and stage == 0:
+            # Only apply MEPT augmentation for Stage 0 to prevent Stage 1+ hanging
             print(f"🔄 Applying MEPT augmentation with replay buffer...")
             train_dataset = MEPTAugmentedDataset(
                 train_dataset,
                 replay_buffer,
                 replay_ratio=0.3 if stage == 0 else 0.2
             )
+        elif stage > 0 and USE_MEPT:
+            print(f"DEBUG: Skipping MEPT augmentation for Stage {stage} (preventing hanging issue)")
         
         # Create data loaders with adaptive configuration
+        # Use stage-adaptive configuration to prevent hanging
+        stage_workers = NUM_WORKERS if stage == 0 else 0
+        stage_batch_size = BATCH_SIZE if stage == 0 else BATCH_SIZE // 2
+        
         train_loader_kwargs = {
             'dataset': train_dataset,
-            'batch_size': BATCH_SIZE,
+            'batch_size': stage_batch_size,
             'shuffle': True,
-            'num_workers': NUM_WORKERS,
-            'pin_memory': PIN_MEMORY,
-            'persistent_workers': NUM_WORKERS > 0,
+            'num_workers': stage_workers,
+            'pin_memory': PIN_MEMORY if stage_workers > 0 else False,
+            'persistent_workers': stage_workers > 0,
             'collate_fn': custom_collate_fn
         }
         
         val_loader_kwargs = {
             'dataset': val_dataset,
-            'batch_size': BATCH_SIZE,
+            'batch_size': stage_batch_size,
             'shuffle': False,
-            'num_workers': NUM_WORKERS,
-            'pin_memory': PIN_MEMORY,
-            'persistent_workers': NUM_WORKERS > 0,
+            'num_workers': stage_workers,
+            'pin_memory': PIN_MEMORY if stage_workers > 0 else False,
+            'persistent_workers': stage_workers > 0,
             'collate_fn': custom_collate_fn
         }
         
         # Add prefetch_factor only if workers > 0
-        if NUM_WORKERS > 0 and PREFETCH_FACTOR is not None:
+        if stage_workers > 0 and PREFETCH_FACTOR is not None:
             train_loader_kwargs['prefetch_factor'] = PREFETCH_FACTOR
             val_loader_kwargs['prefetch_factor'] = PREFETCH_FACTOR
+        
+        # Force simple DataLoader for Stage 1+ to prevent hanging
+        if stage > 0:
+            train_loader_kwargs.pop('prefetch_factor', None)
+            val_loader_kwargs.pop('prefetch_factor', None)
         
         train_loader = DataLoader(**train_loader_kwargs)
         val_loader = DataLoader(**val_loader_kwargs)

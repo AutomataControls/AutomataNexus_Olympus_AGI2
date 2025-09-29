@@ -56,8 +56,12 @@ class MEPTAugmentedDataset(Dataset):
         return len(self.base_dataset)
     
     def __getitem__(self, idx):
+        # DEBUG: Track entry
+        print(f"DEBUG: MEPTAugmentedDataset.__getitem__ called with idx={idx}")
+        
         # With probability replay_ratio, return a replay sample
         if random.random() < self.replay_ratio and len(self.replay_buffer.buffer) > 0:
+            print(f"DEBUG: Attempting to sample from replay buffer (has {len(self.replay_buffer.buffer)} items)")
             experiences = self.replay_buffer.sample(1, exact_ratio=0.7)
             if experiences:
                 exp = experiences[0]
@@ -78,13 +82,21 @@ class MEPTAugmentedDataset(Dataset):
                 elif output_tensor.dim() == 3:
                     output_tensor = output_tensor.squeeze(0)
                 
+                print(f"DEBUG: Returning replay sample with shapes - input: {input_tensor.shape}, output: {output_tensor.shape}")
                 return {
                     'inputs': input_tensor,
                     'outputs': output_tensor
                 }
         
         # Otherwise return regular sample
-        return self.base_dataset[idx]
+        print(f"DEBUG: Fetching regular sample from base dataset at idx={idx}")
+        try:
+            sample = self.base_dataset[idx]
+            print(f"DEBUG: Retrieved sample keys: {sample.keys() if hasattr(sample, 'keys') else 'not a dict'}")
+            return sample
+        except Exception as e:
+            print(f"ERROR: Failed to get sample from base dataset: {e}")
+            raise
 
 # Import LEAP-PRISM bridge
 try:
@@ -156,10 +168,14 @@ print(f"  PRISM: {'Enabled' if USE_PRISM else 'Disabled'}")
 
 def custom_collate_fn(batch):
     """Custom collate function to handle different grid sizes and data formats"""
+    print(f"DEBUG: custom_collate_fn called with batch size: {len(batch)}")
     inputs = []
     outputs = []
     
-    for item in batch:
+    for i, item in enumerate(batch):
+        print(f"DEBUG: Processing batch item {i}, type: {type(item)}")
+        if hasattr(item, 'keys'):
+            print(f"DEBUG: Item keys: {list(item.keys())}")
         try:
             # Get input and output tensors
             inp = item['inputs']
@@ -367,13 +383,19 @@ def train_minerva():
         arc_augmenter = ARCDataAugmenter(device=device)
         
         # Apply MEPT augmentation if enabled
-        if USE_MEPT and replay_buffer.get_stats()['total_experiences'] > 100:
+        if USE_MEPT and replay_buffer.get_stats()['total_experiences'] > 100 and stage == 0:
+            # Only apply MEPT augmentation for Stage 0 to debug Stage 1 hanging
             print(f"🔄 Applying MEPT augmentation with replay buffer...")
+            print(f"DEBUG: Base dataset type: {type(train_dataset)}, length: {len(train_dataset)}")
+            print(f"DEBUG: Replay buffer stats: {replay_buffer.get_stats()}")
             train_dataset = MEPTAugmentedDataset(
                 train_dataset,
                 replay_buffer,
                 replay_ratio=0.3 if stage == 0 else 0.2
             )
+            print(f"DEBUG: Created MEPTAugmentedDataset with length: {len(train_dataset)}")
+        elif stage > 0:
+            print(f"DEBUG: Skipping MEPT augmentation for Stage {stage} (debugging hanging issue)")
         
         # Create data loaders with stage-adaptive configuration
         # Reduce workers for larger datasets to prevent Colab freezes
@@ -381,6 +403,12 @@ def train_minerva():
         
         # Reduce batch size for Stage 1+ to prevent memory issues
         stage_batch_size = BATCH_SIZE if stage == 0 else BATCH_SIZE // 2
+        
+        print(f"\nDEBUG: DataLoader configuration for Stage {stage}:")
+        print(f"  Workers: {stage_workers}")
+        print(f"  Batch size: {stage_batch_size}")
+        print(f"  Dataset length: {len(train_dataset)}")
+        print(f"  Dataset type: {type(train_dataset)}")
         
         train_loader_kwargs = {
             'dataset': train_dataset,
@@ -436,6 +464,17 @@ def train_minerva():
         actual_pin_memory = PIN_MEMORY if stage_workers > 0 else False
         print(f"DataLoader config: workers={stage_workers}, pin_memory={actual_pin_memory}")
         
+        # Test dataset access before creating DataLoader
+        print(f"\nDEBUG: Testing dataset access...")
+        try:
+            test_item = train_dataset[0]
+            print(f"DEBUG: Successfully accessed first item from dataset")
+            print(f"DEBUG: Item type: {type(test_item)}, keys: {test_item.keys() if hasattr(test_item, 'keys') else 'N/A'}")
+        except Exception as e:
+            print(f"ERROR: Failed to access dataset item: {e}")
+            import traceback
+            traceback.print_exc()
+        
         # Train for this stage
         start_epoch = resume_epoch if stage == resume_stage else 0
         for epoch in range(start_epoch, EPOCHS_PER_STAGE):
@@ -462,7 +501,13 @@ def train_minerva():
             # LEAP integration
             leap_batch_counter = 0
             
+            print(f"\nDEBUG: Starting training loop for Stage {stage}, Epoch {epoch+1}")
+            print(f"DEBUG: DataLoader has {len(train_loader)} batches")
+            print(f"DEBUG: About to iterate over DataLoader...")
+            
             for batch_idx, batch in enumerate(pbar):
+                print(f"\nDEBUG: Successfully retrieved batch {batch_idx}")
+                print(f"DEBUG: Batch type: {type(batch)}, keys: {batch.keys() if hasattr(batch, 'keys') else 'N/A'}")
                 # Process batch similar to V4 training...
                 inputs = batch['inputs'].to(device, non_blocking=True)
                 outputs = batch['outputs'].to(device, non_blocking=True)

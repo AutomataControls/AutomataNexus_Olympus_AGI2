@@ -333,28 +333,37 @@ def train_minerva():
                 replay_ratio=0.3 if stage == 0 else 0.2
             )
         
-        # Create data loaders
-        train_loader = DataLoader(
-            train_dataset, 
-            batch_size=BATCH_SIZE,
-            shuffle=True,
-            num_workers=NUM_WORKERS,
-            pin_memory=PIN_MEMORY,
-            prefetch_factor=PREFETCH_FACTOR,
-            persistent_workers=True,
-            collate_fn=custom_collate_fn
-        )
+        # Create data loaders with stage-adaptive configuration
+        # Reduce workers for larger datasets to prevent Colab freezes
+        stage_workers = NUM_WORKERS if stage == 0 else max(2, NUM_WORKERS // 2)
         
-        val_loader = DataLoader(
-            val_dataset,
-            batch_size=BATCH_SIZE,
-            shuffle=False,
-            num_workers=NUM_WORKERS,
-            pin_memory=PIN_MEMORY,
-            prefetch_factor=PREFETCH_FACTOR,
-            persistent_workers=True,
-            collate_fn=custom_collate_fn
-        )
+        train_loader_kwargs = {
+            'dataset': train_dataset,
+            'batch_size': BATCH_SIZE,
+            'shuffle': True,
+            'num_workers': stage_workers,
+            'pin_memory': PIN_MEMORY,
+            'persistent_workers': stage_workers > 0,
+            'collate_fn': custom_collate_fn
+        }
+        
+        val_loader_kwargs = {
+            'dataset': val_dataset,
+            'batch_size': BATCH_SIZE,
+            'shuffle': False,
+            'num_workers': stage_workers,
+            'pin_memory': PIN_MEMORY,
+            'persistent_workers': stage_workers > 0,
+            'collate_fn': custom_collate_fn
+        }
+        
+        # Add prefetch_factor only if workers > 0
+        if stage_workers > 0 and PREFETCH_FACTOR is not None:
+            train_loader_kwargs['prefetch_factor'] = PREFETCH_FACTOR
+            val_loader_kwargs['prefetch_factor'] = PREFETCH_FACTOR
+        
+        train_loader = DataLoader(**train_loader_kwargs)
+        val_loader = DataLoader(**val_loader_kwargs)
         
         print(f"Stage {stage} - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
         

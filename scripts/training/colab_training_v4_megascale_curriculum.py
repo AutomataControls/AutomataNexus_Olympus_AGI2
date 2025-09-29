@@ -2201,7 +2201,8 @@ def train_megascale_curriculum():
                             scaler.update()
                             optimizer.zero_grad()
                 
-                # Step scheduler after optimizer step (moved from here)
+                # Step scheduler after optimizer step
+                scheduler.step()
                 
                 # Validation every 5 epochs
                 if epoch % 5 == 0:
@@ -2349,14 +2350,11 @@ def train_megascale_curriculum():
                         if patience_counter >= max_patience and stage > 0:
                             print(f"⚠️ Early stopping triggered! Val loss not improving for {max_patience} validations")
                             break
-                
-                # Step scheduler at end of epoch (after optimizer.step())
-                scheduler.step()
                     
-                    # Save best model based on exact match
-                    if val_exact_pct > best_exact:
-                        best_exact = val_exact_pct
-                        torch.save({
+                        # Save best model based on exact match
+                        if val_exact_pct > best_exact:
+                            best_exact = val_exact_pct
+                            torch.save({
                             'epoch': global_epoch,
                             'global_epoch': global_epoch,
                             'stage': stage,
@@ -2371,16 +2369,16 @@ def train_megascale_curriculum():
                             'model_name': model_name,
                             'transformation_penalty': TRANSFORMATION_PENALTY,
                             'exact_match_bonus': EXACT_MATCH_BONUS
-                        }, f'/content/AutomataNexus_Olympus_AGI2/arc_models_v4/{model_name}_best.pt')
+                            }, f'/content/AutomataNexus_Olympus_AGI2/arc_models_v4/{model_name}_best.pt')
                         
-                        print(f"✅ New best model! Exact: {val_exact_pct:.2f}%")
+                            print(f"✅ New best model! Exact: {val_exact_pct:.2f}%")
                         
-                        # Log milestone achievements
-                        if val_exact_pct >= 10.0 and val_exact_pct == best_exact:
-                            print(f"🎉 Milestone: {val_exact_pct:.2f}% exact match!")
+                            # Log milestone achievements
+                            if val_exact_pct >= 10.0 and val_exact_pct == best_exact:
+                                print(f"🎉 Milestone: {val_exact_pct:.2f}% exact match!")
                     
-                    # Save periodic checkpoint for resume capability
-                    torch.save({
+                        # Save periodic checkpoint for resume capability
+                        torch.save({
                         'epoch': global_epoch,
                         'global_epoch': global_epoch,
                         'stage': stage,
@@ -2395,17 +2393,16 @@ def train_megascale_curriculum():
                         'model_name': model_name,
                         'transformation_penalty': TRANSFORMATION_PENALTY,
                         'exact_match_bonus': EXACT_MATCH_BONUS
-                    }, f'/content/AutomataNexus_Olympus_AGI2/arc_models_v4/{model_name}_checkpoint.pt')
+                        }, f'/content/AutomataNexus_Olympus_AGI2/arc_models_v4/{model_name}_checkpoint.pt')
                     
-                    # Warning for exploding validation loss
-                    if val_loss > 10.0:
-                        print(f"⚠️ Warning: Validation loss is very high ({val_loss:.2f}), possible overfitting!")
-                        # Reduce learning rate on explosion
-                        if stage > 0:
-                            for param_group in optimizer.param_groups:
-                                param_group['lr'] *= 0.5
-                            print(f"   Reduced learning rate to: {optimizer.param_groups[0]['lr']:.6f}")
-            
+                        # Warning for exploding validation loss
+                        if val_loss > 10.0:
+                            print(f"⚠️ Warning: Validation loss is very high ({val_loss:.2f}), possible overfitting!")
+                            # Reduce learning rate on explosion
+                            if stage > 0:
+                                for param_group in optimizer.param_groups:
+                                    param_group['lr'] *= 0.5
+                                print(f"   Reduced learning rate to: {optimizer.param_groups[0]['lr']:.6f}")
             # Check if early stopping was triggered
             if patience_counter >= max_patience and stage > 0:
                 print(f"📛 Stage {stage} terminated early due to overfitting")

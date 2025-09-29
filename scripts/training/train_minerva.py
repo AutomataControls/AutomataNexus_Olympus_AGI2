@@ -37,12 +37,54 @@ from src.data.arc_data_synthesis import ARCDataSynthesizer, ARCDataAugmenter
 
 # Import MEPT and LEAP components
 try:
-    from src.utils.mept_system import ExperienceReplayBuffer, PatternBank, MEPTLoss, MEPTAugmentedDataset, create_mept_system
+    from src.utils.mept_system import ExperienceReplayBuffer, PatternBank, MEPTLoss, create_mept_system
     from src.utils.leap_system import AdaptivePatternGenerator, LEAPTrainer, create_leap_system
     MEPT_LEAP_AVAILABLE = True
 except ImportError:
     MEPT_LEAP_AVAILABLE = False
     print("⚠️ MEPT/LEAP components not available")
+
+# Define MEPTAugmentedDataset here since it's not in mept_system.py
+class MEPTAugmentedDataset(Dataset):
+    """Dataset that combines regular data with replay buffer samples"""
+    def __init__(self, base_dataset, replay_buffer, replay_ratio=0.3):
+        self.base_dataset = base_dataset
+        self.replay_buffer = replay_buffer
+        self.replay_ratio = replay_ratio
+        
+    def __len__(self):
+        return len(self.base_dataset)
+    
+    def __getitem__(self, idx):
+        # With probability replay_ratio, return a replay sample
+        if random.random() < self.replay_ratio and len(self.replay_buffer.buffer) > 0:
+            experiences = self.replay_buffer.sample(1, exact_ratio=0.7)
+            if experiences:
+                exp = experiences[0]
+                # Convert from one-hot back to indices if needed
+                input_tensor = exp['input']
+                output_tensor = exp['output']
+                
+                # Check if one-hot encoded (4D tensor with channels)
+                if input_tensor.dim() == 4:
+                    # Convert from one-hot to indices: [C, H, W] -> [H, W]
+                    input_tensor = input_tensor.argmax(dim=0)
+                elif input_tensor.dim() == 3:
+                    # Already indices, just remove batch dim if present
+                    input_tensor = input_tensor.squeeze(0)
+                    
+                if output_tensor.dim() == 4:
+                    output_tensor = output_tensor.argmax(dim=0)
+                elif output_tensor.dim() == 3:
+                    output_tensor = output_tensor.squeeze(0)
+                
+                return {
+                    'inputs': input_tensor,
+                    'outputs': output_tensor
+                }
+        
+        # Otherwise return regular sample
+        return self.base_dataset[idx]
 
 # Import LEAP-PRISM bridge
 try:
@@ -369,9 +411,26 @@ def train_minerva():
         if stage > 0:
             train_loader_kwargs.pop('prefetch_factor', None)
             val_loader_kwargs.pop('prefetch_factor', None)
-        
-        train_loader = DataLoader(**train_loader_kwargs)
-        val_loader = DataLoader(**val_loader_kwargs)
+            # Force simple DataLoader for Stage 1+ to prevent hanging
+            train_loader = DataLoader(
+                train_dataset,
+                batch_size=stage_batch_size,
+                shuffle=True,
+                num_workers=0,
+                pin_memory=False,
+                collate_fn=custom_collate_fn
+            )
+            val_loader = DataLoader(
+                val_dataset,
+                batch_size=stage_batch_size,
+                shuffle=False,
+                num_workers=0,
+                pin_memory=False,
+                collate_fn=custom_collate_fn
+            )
+        else:
+            train_loader = DataLoader(**train_loader_kwargs)
+            val_loader = DataLoader(**val_loader_kwargs)
         
         print(f"Stage {stage} - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
         actual_pin_memory = PIN_MEMORY if stage_workers > 0 else False

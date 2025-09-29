@@ -83,7 +83,7 @@ class EnhancedAtlasNet(nn.Module):
         
         # Predict spatial transformation
         loc_features = self.localization(features)
-        theta = self.fc_loc(loc_features.view(B, -1))
+        theta = self.fc_loc(loc_features.reshape(B, -1))
         theta = theta.view(-1, 2, 3)
         
         # Create sampling grid

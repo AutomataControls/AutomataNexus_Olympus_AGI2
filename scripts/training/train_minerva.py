@@ -168,14 +168,18 @@ print(f"  PRISM: {'Enabled' if USE_PRISM else 'Disabled'}")
 
 def custom_collate_fn(batch):
     """Custom collate function to handle different grid sizes and data formats"""
-    print(f"DEBUG: custom_collate_fn called with batch size: {len(batch)}")
+    # Only debug print for first call to avoid spam
+    global _collate_debug_printed
+    if not hasattr(custom_collate_fn, '_debug_printed'):
+        custom_collate_fn._debug_printed = False
+    if not custom_collate_fn._debug_printed and len(batch) > 0:
+        print(f"DEBUG: custom_collate_fn first call - batch size: {len(batch)}")
+        custom_collate_fn._debug_printed = True
+    
     inputs = []
     outputs = []
     
     for i, item in enumerate(batch):
-        print(f"DEBUG: Processing batch item {i}, type: {type(item)}")
-        if hasattr(item, 'keys'):
-            print(f"DEBUG: Item keys: {list(item.keys())}")
         try:
             # Get input and output tensors
             inp = item['inputs']

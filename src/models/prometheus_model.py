@@ -80,7 +80,7 @@ class EnhancedPrometheusNet(nn.Module):
         """Encode input to latent distribution"""
         features = self.encoder(x)
         pattern_features = self.pattern_encoder(features)
-        pattern_flat = pattern_features.view(pattern_features.shape[0], -1)
+        pattern_flat = pattern_features.reshape(pattern_features.shape[0], -1)
         
         mu = self.fc_mu(pattern_flat)
         log_var = self.fc_var(pattern_flat)

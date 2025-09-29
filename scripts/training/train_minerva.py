@@ -505,9 +505,72 @@ def train_minerva():
             print(f"DEBUG: DataLoader has {len(train_loader)} batches")
             print(f"DEBUG: About to iterate over DataLoader...")
             
+            # Additional debugging for Stage 1
+            if stage == 1 and epoch == 0:
+                print(f"\nDEBUG Stage 1: Creating iterator...")
+                try:
+                    # Try to get the first batch manually with timeout
+                    print(f"DEBUG Stage 1: Getting first batch manually...")
+                    import time
+                    import threading
+                    import queue
+                    
+                    result_queue = queue.Queue()
+                    exception_queue = queue.Queue()
+                    
+                    def get_batch_with_timeout():
+                        try:
+                            start_time = time.time()
+                            data_iter = iter(train_loader)
+                            print(f"DEBUG Stage 1: Iterator created in {time.time() - start_time:.2f}s")
+                            
+                            print(f"DEBUG Stage 1: Calling next()...")
+                            start_time = time.time()
+                            first_batch = next(data_iter)
+                            print(f"DEBUG Stage 1: Got first batch in {time.time() - start_time:.2f}s")
+                            result_queue.put(first_batch)
+                        except Exception as e:
+                            exception_queue.put(e)
+                    
+                    # Run in thread with timeout
+                    thread = threading.Thread(target=get_batch_with_timeout)
+                    thread.daemon = True
+                    thread.start()
+                    thread.join(timeout=30)  # 30 second timeout
+                    
+                    if thread.is_alive():
+                        print(f"ERROR Stage 1: Timeout after 30 seconds trying to get first batch!")
+                        print(f"DEBUG Stage 1: This suggests the DataLoader is hanging in:")
+                        print(f"  - Dataset __getitem__ method")
+                        print(f"  - Custom collate function")
+                        print(f"  - Data loading/preprocessing")
+                        
+                        # Try to access dataset directly
+                        print(f"\nDEBUG Stage 1: Testing direct dataset access...")
+                        try:
+                            for i in range(min(3, len(train_dataset))):
+                                item = train_dataset[i]
+                                print(f"  Item {i}: input shape: {item['inputs'].shape}, output shape: {item['outputs'].shape}")
+                        except Exception as e:
+                            print(f"  Failed to access dataset: {e}")
+                    elif not exception_queue.empty():
+                        e = exception_queue.get()
+                        print(f"ERROR Stage 1: Failed to get first batch: {e}")
+                        import traceback
+                        traceback.print_exc()
+                    elif not result_queue.empty():
+                        first_batch = result_queue.get()
+                        print(f"DEBUG Stage 1: First batch shape - inputs: {first_batch['inputs'].shape}, outputs: {first_batch['outputs'].shape}")
+                except Exception as e:
+                    print(f"ERROR Stage 1: Unexpected error: {e}")
+                    import traceback
+                    traceback.print_exc()
+            
             for batch_idx, batch in enumerate(pbar):
-                print(f"\nDEBUG: Successfully retrieved batch {batch_idx}")
-                print(f"DEBUG: Batch type: {type(batch)}, keys: {batch.keys() if hasattr(batch, 'keys') else 'N/A'}")
+                # Only print debug for first few batches
+                if batch_idx < 3:
+                    print(f"\nDEBUG: Successfully retrieved batch {batch_idx}")
+                    print(f"DEBUG: Batch type: {type(batch)}, keys: {batch.keys() if hasattr(batch, 'keys') else 'N/A'}")
                 # Process batch similar to V4 training...
                 inputs = batch['inputs'].to(device, non_blocking=True)
                 outputs = batch['outputs'].to(device, non_blocking=True)

@@ -313,8 +313,9 @@ class LEAPTrainer:
         pattern_types = []
         
         for pattern in patterns:
-            inputs.append(torch.tensor(pattern['input'], dtype=torch.long))
-            outputs.append(torch.tensor(pattern['output'], dtype=torch.long))
+            # Use .copy() to ensure contiguous memory layout
+            inputs.append(torch.tensor(pattern['input'].copy(), dtype=torch.long))
+            outputs.append(torch.tensor(pattern['output'].copy(), dtype=torch.long))
             pattern_types.append(pattern['pattern_type'])
         
         return {

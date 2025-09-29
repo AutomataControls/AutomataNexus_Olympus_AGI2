@@ -859,7 +859,18 @@ class CurriculumMegaScaleDataset(Dataset):
                 grid_size = max(h, w, oh, ow)
                 size_diff = abs(h*w - oh*ow)
                 
-                # Create sample dictionary first
+                # Curriculum filtering
+                if self.curriculum_stage == 0:  # Easy
+                    # Stage 0: Only include very simple patterns
+                    # Priority: same size, few colors, small grids
+                    if grid_size > 12 or n_colors_in > 4 or n_colors_out > 4:  # Slightly relaxed
+                        continue
+                elif self.curriculum_stage == 1:  # Medium
+                    if grid_size > 20 or n_colors_in > 5 or n_colors_out > 5:
+                        continue
+                # Stage 2 accepts all
+                
+                # Create sample dictionary
                 sample = {
                     'input': input_grid,
                     'output': output_grid,
@@ -867,27 +878,17 @@ class CurriculumMegaScaleDataset(Dataset):
                     'example_idx': i
                 }
                 
-                # Curriculum filtering
-                if self.curriculum_stage == 0:  # Easy
-                    # Stage 0: Only include very simple patterns
-                    # Priority: same size, few colors, small grids
-                    if grid_size > 12 or n_colors_in > 4 or n_colors_out > 4:  # Slightly relaxed
-                        continue
+                # Stage 0 special handling for same-size and small grids
+                if self.curriculum_stage == 0:
                     # Give preference to same-size transformations
                     if size_diff == 0:
                         # Add extra copies for same-size patterns
                         for _ in range(5):  # More copies of perfect patterns
-                            self.samples.append(sample)
+                            self.samples.append(sample.copy())
                     # Also prioritize very small grids for exact learning
                     if grid_size <= 5:
                         for _ in range(3):
-                            self.samples.append(sample)
-                elif self.curriculum_stage == 1:  # Medium
-                    if grid_size > 20 or n_colors_in > 5 or n_colors_out > 5:
-                        continue
-                # Stage 2 accepts all
-                
-                sample = {'input': input_grid, 'output': output_grid}
+                            self.samples.append(sample.copy())
                 
                 # Add original
                 self.samples.append(sample)

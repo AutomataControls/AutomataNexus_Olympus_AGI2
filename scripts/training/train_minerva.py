@@ -365,11 +365,17 @@ def train_minerva():
             train_loader_kwargs['prefetch_factor'] = PREFETCH_FACTOR
             val_loader_kwargs['prefetch_factor'] = PREFETCH_FACTOR
         
+        # Additional safety for Stage 1+ - ensure no problematic settings
+        if stage > 0:
+            train_loader_kwargs.pop('prefetch_factor', None)
+            val_loader_kwargs.pop('prefetch_factor', None)
+        
         train_loader = DataLoader(**train_loader_kwargs)
         val_loader = DataLoader(**val_loader_kwargs)
         
         print(f"Stage {stage} - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
-        print(f"DataLoader config: workers={stage_workers}, pin_memory={PIN_MEMORY}")
+        actual_pin_memory = PIN_MEMORY if stage_workers > 0 else False
+        print(f"DataLoader config: workers={stage_workers}, pin_memory={actual_pin_memory}")
         
         # Train for this stage
         start_epoch = resume_epoch if stage == resume_stage else 0

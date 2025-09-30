@@ -134,8 +134,8 @@ RECONSTRUCTION_WEIGHT = 1.0
 EDGE_WEIGHT = 0.3
 COLOR_BALANCE_WEIGHT = 0.2
 STRUCTURE_WEIGHT = 0.3
-TRANSFORMATION_PENALTY = 0.3  # Reduced to prevent over-penalizing transformations
-EXACT_MATCH_BONUS = 10.0  # Increased to strongly reward exact matches
+TRANSFORMATION_PENALTY = 0.5  # Increased per NexusReference.md requirements  
+EXACT_MATCH_BONUS = 5.0  # Balanced bonus to avoid overwhelming other losses
 
 # Curriculum settings
 CURRICULUM_STAGES = 3
@@ -342,8 +342,9 @@ def train_minerva():
         nesterov=True
     )
     
+    # Use stage-specific learning rate scheduling instead of global decay
     total_epochs = EPOCHS_PER_STAGE * CURRICULUM_STAGES
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=total_epochs)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS_PER_STAGE)
     
     scaler = GradScaler('cuda')
     
@@ -362,19 +363,32 @@ def train_minerva():
     if os.path.exists(checkpoint_path):
         print(f"📂 Found checkpoint, loading...")
         checkpoint = torch.load(checkpoint_path, map_location=device)
-        model.load_state_dict(checkpoint['model_state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        global_epoch = checkpoint.get('global_epoch', 0)
-        resume_stage = checkpoint.get('stage', 0)
-        best_exact = checkpoint.get('best_exact', 0)
-        best_val_loss = checkpoint.get('best_val_loss', float('inf'))
-        print(f"✅ Resumed from epoch {global_epoch} (Stage {resume_stage})")
+        
+        # Check if we should reset due to poor performance
+        checkpoint_exact = checkpoint.get('best_exact', 0)
+        checkpoint_stage = checkpoint.get('stage', 0)
+        
+        if checkpoint_exact < 2.0 and checkpoint_stage > 0:
+            print(f"⚠️ Checkpoint shows poor performance ({checkpoint_exact:.2f}% at Stage {checkpoint_stage})")
+            print(f"🔄 Resetting to Stage 0 for better foundation training")
+            resume_stage = 0
+            global_epoch = 0
+            best_exact = 0
+            best_val_loss = float('inf')
+        else:
+            model.load_state_dict(checkpoint['model_state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            global_epoch = checkpoint.get('global_epoch', 0)
+            resume_stage = checkpoint.get('stage', 0)
+            best_exact = checkpoint.get('best_exact', 0)
+            best_val_loss = checkpoint.get('best_val_loss', float('inf'))
+            print(f"✅ Resumed from epoch {global_epoch} (Stage {resume_stage})")
     
-    # EXACT MATCH PRE-TRAINING for Stage 0
+    # EXACT MATCH PRE-TRAINING for Stage 0 with improved target
     if EXACT_BOOST_AVAILABLE and resume_stage == 0 and global_epoch == 0:
         try:
             print(f"\n🎯 Running EXACT MATCH INJECTION for MINERVA")
-            model = inject_exact_match_training(model, device=device, num_epochs=50, target_accuracy=99.0)
+            model = inject_exact_match_training(model, device=device, num_epochs=100, target_accuracy=95.0)
             print("✅ Exact match injection complete!")
         except Exception as e:
             print(f"⚠️ Exact match injection failed: {e}")
@@ -384,6 +398,14 @@ def train_minerva():
     for stage in range(resume_stage, CURRICULUM_STAGES):
         print(f"\n📚 Starting Curriculum Stage {stage}")
         print("="*40)
+        
+        # Reset learning rate for each new stage to prevent decay issues
+        if stage > resume_stage:
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = LEARNING_RATE
+            # Reset scheduler for this stage
+            scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS_PER_STAGE)
+            print(f"🔄 Reset learning rate to {LEARNING_RATE} for Stage {stage}")
         
         # Create dataset for this stage
         dataset = CurriculumMegaScaleDataset(
@@ -409,27 +431,18 @@ def train_minerva():
         # Initialize augmenter
         arc_augmenter = ARCDataAugmenter(device=device)
         
-        # Apply MEPT augmentation if enabled
-        if USE_MEPT and replay_buffer.get_stats()['total_experiences'] > 100 and stage == 0:
-            # Only apply MEPT augmentation for Stage 0 to debug Stage 1 hanging
-            print(f"🔄 Applying MEPT augmentation with replay buffer...")
-            print(f"DEBUG: Base dataset type: {type(train_dataset)}, length: {len(train_dataset)}")
-            print(f"DEBUG: Replay buffer stats: {replay_buffer.get_stats()}")
+        # Apply MEPT augmentation if enabled for ALL stages
+        if USE_MEPT and replay_buffer.get_stats()['total_experiences'] > 100:
+            print(f"🔄 Applying MEPT augmentation with replay buffer for Stage {stage}...")
             train_dataset = MEPTAugmentedDataset(
                 train_dataset,
                 replay_buffer,
                 replay_ratio=0.3 if stage == 0 else 0.2
             )
-            print(f"DEBUG: Created MEPTAugmentedDataset with length: {len(train_dataset)}")
-        elif stage > 0:
-            print(f"DEBUG: Skipping MEPT augmentation for Stage {stage} (debugging hanging issue)")
         
-        # Create data loaders with stage-adaptive configuration
-        # Reduce workers for larger datasets to prevent Colab freezes
-        stage_workers = NUM_WORKERS if stage == 0 else 0  # Zero workers for Stage 1+ to prevent hanging
-        
-        # Reduce batch size for Stage 1+ to prevent memory issues
-        stage_batch_size = BATCH_SIZE if stage == 0 else BATCH_SIZE // 2
+        # Maintain consistent configuration across all stages  
+        stage_workers = NUM_WORKERS
+        stage_batch_size = BATCH_SIZE
         
         
         train_loader_kwargs = {
@@ -457,33 +470,9 @@ def train_minerva():
             train_loader_kwargs['prefetch_factor'] = PREFETCH_FACTOR
             val_loader_kwargs['prefetch_factor'] = PREFETCH_FACTOR
         
-        # Additional safety for Stage 1+ - ensure no problematic settings
-        if stage > 0:
-            train_loader_kwargs.pop('prefetch_factor', None)
-            val_loader_kwargs.pop('prefetch_factor', None)
-            # Force simple DataLoader for Stage 1+ to prevent hanging
-            # Also set drop_last=True to avoid issues with partial batches
-            train_loader = DataLoader(
-                train_dataset,
-                batch_size=stage_batch_size,
-                shuffle=True,
-                num_workers=0,
-                pin_memory=False,
-                collate_fn=custom_collate_fn,
-                drop_last=True  # Drop incomplete batches
-            )
-            val_loader = DataLoader(
-                val_dataset,
-                batch_size=stage_batch_size,
-                shuffle=False,
-                num_workers=0,
-                pin_memory=False,
-                collate_fn=custom_collate_fn,
-                drop_last=False  # Keep all validation data
-            )
-        else:
-            train_loader = DataLoader(**train_loader_kwargs)
-            val_loader = DataLoader(**val_loader_kwargs)
+        # Apply prefetch factor consistently for all stages
+        train_loader = DataLoader(**train_loader_kwargs)
+        val_loader = DataLoader(**val_loader_kwargs)
         
         print(f"Stage {stage} - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
         
@@ -623,8 +612,8 @@ def train_minerva():
                     'trans': f"{losses.get('transformation', torch.tensor(0)).item():.2f}"
                 })
                 
-                # LEAP training for Stage 0
-                if USE_LEAP and stage == 0 and batch_idx % 3 == 0:
+                # LEAP training for all stages with increased frequency
+                if USE_LEAP and batch_idx % 2 == 0:
                     # Every 10th LEAP batch, focus on identity patterns
                     if leap_batch_counter % 10 == 0:
                         # Force 50% identity patterns to help model learn
@@ -757,6 +746,15 @@ def train_minerva():
                       f"Train Loss: {train_loss:.4f}, Train Exact: {train_exact_pct:.2f}%")
                 print(f"Val Loss: {val_loss:.4f}, Val Exact: {val_exact_pct:.2f}%, Pixel: {val_pixel_acc:.2f}%")
                 
+                # Adaptive learning rate based on performance
+                if val_exact_pct < 1.0 and epoch > 20:
+                    current_lr = optimizer.param_groups[0]['lr']
+                    if current_lr > 0.001:
+                        new_lr = current_lr * 1.2  # Increase LR if stuck
+                        for param_group in optimizer.param_groups:
+                            param_group['lr'] = min(new_lr, 0.01)
+                        print(f"🔄 Boosted learning rate to {param_group['lr']:.6f} (performance stuck)")
+                
                 # Add metrics to reporter
                 current_lr = scheduler.get_last_lr()[0] if hasattr(scheduler, 'get_last_lr') else LEARNING_RATE
                 reporter.add_metrics(
@@ -819,15 +817,15 @@ def train_minerva():
                     'best_val_loss': best_val_loss
                 }, checkpoint_path)
                 
-                # Early stopping check - prioritize exact match over loss
-                if val_exact_pct > best_exact * 0.95:  # Within 5% of best
-                    if val_loss < best_val_loss:
-                        best_val_loss = val_loss
+                # Early stopping check - only trigger after Stage 0 and with higher patience
+                if val_loss < best_val_loss:
+                    best_val_loss = val_loss
                     patience_counter = 0
                 else:
                     patience_counter += 1
-                    if patience_counter >= max_patience and stage > 0:
-                        print(f"⚠️ Early stopping triggered!")
+                    # Only early stop if we're past stage 0 and have poor convergence
+                    if patience_counter >= max_patience and stage > 0 and val_exact_pct < 1.0:
+                        print(f"⚠️ Early stopping triggered after {patience_counter} epochs without improvement!")
                         break
             
             # Step scheduler ONCE per epoch (not per batch!)

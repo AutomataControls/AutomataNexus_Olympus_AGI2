@@ -11,7 +11,7 @@ from typing import Dict, Optional, Tuple
 
 class EnhancedPrometheusNet(nn.Module):
     """Enhanced PROMETHEUS with better pattern generation"""
-    def __init__(self, max_grid_size: int = 30, latent_dim: int = 128):
+    def __init__(self, max_grid_size: int = 12, latent_dim: int = 128):
         super().__init__()
         self.latent_dim = latent_dim
         

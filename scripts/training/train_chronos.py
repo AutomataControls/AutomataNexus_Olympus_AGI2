@@ -134,8 +134,8 @@ RECONSTRUCTION_WEIGHT = 1.0
 EDGE_WEIGHT = 0.3
 COLOR_BALANCE_WEIGHT = 0.2
 STRUCTURE_WEIGHT = 0.3
-TRANSFORMATION_PENALTY = 0.3  # Reduced to prevent over-penalizing transformations
-EXACT_MATCH_BONUS = 10.0  # Increased to strongly reward exact matches
+TRANSFORMATION_PENALTY = 0.5  # Increased per NexusReference.md requirements  
+EXACT_MATCH_BONUS = 5.0  # Balanced bonus to avoid overwhelming other losses
 
 # Curriculum settings
 CURRICULUM_STAGES = 3
@@ -335,10 +335,10 @@ def train_chronos():
         best_val_loss = checkpoint.get('best_val_loss', float('inf'))
         print(f"✅ Resumed from epoch {global_epoch} (Stage {resume_stage})")
     
-    # EXACT MATCH PRE-TRAINING for Stage 0
+    # EXACT MATCH PRE-TRAINING for Stage 0 with improved target
     if EXACT_BOOST_AVAILABLE and resume_stage == 0 and global_epoch == 0:
         print(f"\n🎯 Running EXACT MATCH INJECTION for CHRONOS")
-        model = inject_exact_match_training(model, device=device, num_epochs=50, target_accuracy=99.0)
+        model = inject_exact_match_training(model, device=device, num_epochs=100, target_accuracy=95.0)
         print("✅ Exact match injection complete!")
     
     # CURRICULUM LOOP
@@ -367,22 +367,19 @@ def train_chronos():
         # Initialize augmenter
         arc_augmenter = ARCDataAugmenter(device=device)
         
-        # Apply MEPT augmentation if enabled
-        if USE_MEPT and replay_buffer.get_stats()['total_experiences'] > 100 and stage == 0:
-            # Only apply MEPT augmentation for Stage 0 to prevent Stage 1+ hanging
-            print(f"🔄 Applying MEPT augmentation with replay buffer...")
+        # Apply MEPT augmentation if enabled for ALL stages
+        if USE_MEPT and replay_buffer.get_stats()['total_experiences'] > 100:
+            print(f"🔄 Applying MEPT augmentation with replay buffer for Stage {stage}...")
             train_dataset = MEPTAugmentedDataset(
                 train_dataset,
                 replay_buffer,
                 replay_ratio=0.3 if stage == 0 else 0.2
             )
-        elif stage > 0 and USE_MEPT:
-            print(f"DEBUG: Skipping MEPT augmentation for Stage {stage} (preventing hanging issue)")
         
         # Create data loaders with adaptive configuration
-        # Use stage-adaptive configuration to prevent hanging
-        stage_workers = NUM_WORKERS if stage == 0 else 0
-        stage_batch_size = BATCH_SIZE if stage == 0 else BATCH_SIZE // 2
+        # Maintain consistent configuration across all stages  
+        stage_workers = NUM_WORKERS
+        stage_batch_size = BATCH_SIZE
         
         train_loader_kwargs = {
             'dataset': train_dataset,
@@ -392,7 +389,7 @@ def train_chronos():
             'pin_memory': PIN_MEMORY if stage_workers > 0 else False,
             'persistent_workers': stage_workers > 0,
             'collate_fn': custom_collate_fn,
-            'drop_last': True if stage > 0 else False  # Add drop_last for Stage 1+
+            'drop_last': False  # Keep consistent across stages
         }
         
         val_loader_kwargs = {
@@ -410,18 +407,14 @@ def train_chronos():
             train_loader_kwargs['prefetch_factor'] = PREFETCH_FACTOR
             val_loader_kwargs['prefetch_factor'] = PREFETCH_FACTOR
         
-        # Force simple DataLoader for Stage 1+ to prevent hanging
-        if stage > 0:
-            train_loader_kwargs.pop('prefetch_factor', None)
-            val_loader_kwargs.pop('prefetch_factor', None)
+        # Apply prefetch factor consistently for all stages
+        # No stage-specific removal needed
         
         train_loader = DataLoader(**train_loader_kwargs)
         val_loader = DataLoader(**val_loader_kwargs)
         
         print(f"Stage {stage} - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
-        print(f"  Workers: {stage_workers}, Batch size: {stage_batch_size}, Drop last: {stage > 0}")
-        if stage > 0:
-            print(f"  ⚡ Stage 1+ optimizations active to prevent hanging")
+        print(f"  Workers: {stage_workers}, Batch size: {stage_batch_size}")
         
         # Train for this stage
         start_epoch = resume_epoch if stage == resume_stage else 0
@@ -640,14 +633,15 @@ def train_chronos():
                     'best_val_loss': best_val_loss
                 }, checkpoint_path)
                 
-                # Early stopping check
+                # Early stopping check - only trigger after Stage 0 and with higher patience
                 if val_loss < best_val_loss:
                     best_val_loss = val_loss
                     patience_counter = 0
                 else:
                     patience_counter += 1
-                    if patience_counter >= max_patience and stage > 0:
-                        print(f"⚠️ Early stopping triggered!")
+                    # Only early stop if we're past stage 0 and have poor convergence
+                    if patience_counter >= max_patience and stage > 0 and val_exact_pct < 1.0:
+                        print(f"⚠️ Early stopping triggered after {patience_counter} epochs without improvement!")
                         break
             
             # Step scheduler ONCE per epoch (not per batch!)

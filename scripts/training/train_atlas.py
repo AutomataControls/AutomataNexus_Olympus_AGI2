@@ -106,54 +106,46 @@ from colab_training_v4_megascale_curriculum import (
     CurriculumMegaScaleDataset, TrainingReporter
 )
 
-# V4 MEGA-SCALE HYPERPARAMETERS
 BATCH_SIZE = 512
 GRADIENT_ACCUMULATION_STEPS = 4
-LEARNING_RATE = 0.005  # Reduced for stability
+LEARNING_RATE = 0.005
 NUM_EPOCHS = 300
-MAX_GRID_SIZE = 25  # Increased to accommodate grids up to 23x23 without truncation
+MAX_GRID_SIZE = 25
 NUM_COLORS = 10
-# Adaptive DataLoader configuration based on device and CPU cores
+
 import os
 import multiprocessing
 
-# Determine optimal number of workers
 cpu_count = multiprocessing.cpu_count()
 if torch.cuda.is_available():
     NUM_WORKERS = min(8, cpu_count)
     PIN_MEMORY = True
 else:
-    # For CPU training, use fewer workers to avoid overhead
     NUM_WORKERS = min(2, cpu_count)
     PIN_MEMORY = False
 
 PREFETCH_FACTOR = 2 if NUM_WORKERS > 0 else None
 
-# Enhanced loss weights - V4 FIXED!
 RECONSTRUCTION_WEIGHT = 1.0
 EDGE_WEIGHT = 0.3
 COLOR_BALANCE_WEIGHT = 0.2
 STRUCTURE_WEIGHT = 0.3
-TRANSFORMATION_PENALTY = 0.3  # Reduced to prevent over-penalizing transformations
-EXACT_MATCH_BONUS = 10.0  # Increased to strongly reward exact matches
+TRANSFORMATION_PENALTY = 0.5
+EXACT_MATCH_BONUS = 5.0
 
-# Curriculum settings
 CURRICULUM_STAGES = 3
 EPOCHS_PER_STAGE = 100
 
-# Enable/Disable MEPT, LEAP, and PRISM
 USE_MEPT = True
 USE_LEAP = True
 USE_PRISM = True and PRISM_AVAILABLE
 
-# Device setup
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f'Using device: {device}')
 if torch.cuda.is_available():
     print(f'GPU: {torch.cuda.get_device_name(0)}')
     print(f'Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB')
 
-# Data directory
 DATA_DIR = '/content/AutomataNexus_Olympus_AGI2/data'
 
 print(f"\n⚙️ ATLAS V4 Training Configuration:")
@@ -172,17 +164,14 @@ def custom_collate_fn(batch):
     outputs = []
     
     for item in batch:
-        # Get input and output tensors
         inp = item['inputs']
         out = item['outputs']
         
-        # Handle case where tensors might already have batch dimension
         if inp.dim() == 3:
             inp = inp.squeeze(0)
         if out.dim() == 3:
             out = out.squeeze(0)
         
-        # Ensure 2D tensors
         if inp.dim() != 2 or out.dim() != 2:
             print(f"Warning: Unexpected tensor dimensions - input: {inp.shape}, output: {out.shape}")
             continue
@@ -191,34 +180,28 @@ def custom_collate_fn(batch):
         outputs.append(out)
     
     if not inputs:
-        # Return a dummy batch if all items were skipped
         return {
             'inputs': torch.zeros(1, MAX_GRID_SIZE, MAX_GRID_SIZE, dtype=torch.long),
             'outputs': torch.zeros(1, MAX_GRID_SIZE, MAX_GRID_SIZE, dtype=torch.long)
         }
     
-    # Find max dimensions in this batch
     max_h = max(inp.shape[0] for inp in inputs)
     max_w = max(inp.shape[1] for inp in inputs)
     max_h = max(max_h, max(out.shape[0] for out in outputs))
     max_w = max(max_w, max(out.shape[1] for out in outputs))
     
-    # Cap at MAX_GRID_SIZE
     max_h = min(max_h, MAX_GRID_SIZE)
     max_w = min(max_w, MAX_GRID_SIZE)
     
-    # Pad all grids to max size
     padded_inputs = []
     padded_outputs = []
     
     for inp, out in zip(inputs, outputs):
-        # Pad inputs
         h_in, w_in = inp.shape
         pad_h = max_h - h_in
         pad_w = max_w - w_in
         padded_input = F.pad(inp, (0, pad_w, 0, pad_h), value=0)
         
-        # Pad outputs
         h_out, w_out = out.shape
         pad_h = max_h - h_out
         pad_w = max_w - w_out
@@ -307,8 +290,8 @@ def train_atlas():
         nesterov=True
     )
     
-    total_epochs = EPOCHS_PER_STAGE * CURRICULUM_STAGES
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=total_epochs)
+    # Stage-specific learning rate scheduling instead of global decay
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS_PER_STAGE)
     
     scaler = GradScaler('cuda')
     
@@ -346,6 +329,13 @@ def train_atlas():
         print(f"\n📚 Starting Curriculum Stage {stage}")
         print("="*40)
         
+        # Reset learning rate for each new stage to prevent decay issues
+        if stage > resume_stage:
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = LEARNING_RATE
+            # Reset scheduler for the new stage
+            scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS_PER_STAGE)
+        
         # Create dataset for this stage
         dataset = CurriculumMegaScaleDataset(
             DATA_DIR, 
@@ -377,7 +367,6 @@ def train_atlas():
                 replay_ratio=0.3 if stage == 0 else 0.2
             )
         elif stage > 0 and USE_MEPT:
-            print(f"DEBUG: Skipping MEPT augmentation for Stage {stage} (preventing hanging issue)")
         
         # Create data loaders with adaptive configuration
         # Use stage-adaptive configuration to prevent hanging

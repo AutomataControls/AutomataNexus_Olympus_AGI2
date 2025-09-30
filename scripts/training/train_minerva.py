@@ -56,13 +56,9 @@ class MEPTAugmentedDataset(Dataset):
         return len(self.base_dataset)
     
     def __getitem__(self, idx):
-        # DEBUG: Track entry
-        print(f"DEBUG: MEPTAugmentedDataset.__getitem__ called with idx={idx}")
-        
         # With probability replay_ratio, return a replay sample
         if random.random() < self.replay_ratio and len(self.replay_buffer.buffer) > 0:
-            print(f"DEBUG: Attempting to sample from replay buffer (has {len(self.replay_buffer.buffer)} items)")
-            experiences = self.replay_buffer.sample(1, exact_ratio=0.7)
+            experiences = self.replay_buffer.sample(1)
             if experiences:
                 exp = experiences[0]
                 # Convert from one-hot back to indices if needed
@@ -82,21 +78,13 @@ class MEPTAugmentedDataset(Dataset):
                 elif output_tensor.dim() == 3:
                     output_tensor = output_tensor.squeeze(0)
                 
-                print(f"DEBUG: Returning replay sample with shapes - input: {input_tensor.shape}, output: {output_tensor.shape}")
                 return {
                     'inputs': input_tensor,
                     'outputs': output_tensor
                 }
         
         # Otherwise return regular sample
-        print(f"DEBUG: Fetching regular sample from base dataset at idx={idx}")
-        try:
-            sample = self.base_dataset[idx]
-            print(f"DEBUG: Retrieved sample keys: {sample.keys() if hasattr(sample, 'keys') else 'not a dict'}")
-            return sample
-        except Exception as e:
-            print(f"ERROR: Failed to get sample from base dataset: {e}")
-            raise
+        return self.base_dataset[idx]
 
 # Import LEAP-PRISM bridge
 try:
@@ -129,31 +117,26 @@ NUM_WORKERS = 8
 PREFETCH_FACTOR = 4
 PIN_MEMORY = True
 
-# Enhanced loss weights - V4 FIXED!
 RECONSTRUCTION_WEIGHT = 1.0
 EDGE_WEIGHT = 0.3
 COLOR_BALANCE_WEIGHT = 0.2
 STRUCTURE_WEIGHT = 0.3
-TRANSFORMATION_PENALTY = 0.5  # Increased per NexusReference.md requirements  
-EXACT_MATCH_BONUS = 5.0  # Balanced bonus to avoid overwhelming other losses
+TRANSFORMATION_PENALTY = 0.5
+EXACT_MATCH_BONUS = 5.0
 
-# Curriculum settings
 CURRICULUM_STAGES = 3
 EPOCHS_PER_STAGE = 100
 
-# Enable/Disable MEPT, LEAP, and PRISM
 USE_MEPT = True
 USE_LEAP = True
 USE_PRISM = True and PRISM_AVAILABLE
 
-# Device setup
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f'Using device: {device}')
 if torch.cuda.is_available():
     print(f'GPU: {torch.cuda.get_device_name(0)}')
     print(f'Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB')
 
-# Data directory
 DATA_DIR = '/content/AutomataNexus_Olympus_AGI2/data'
 
 print(f"\n⚙️ MINERVA V4 Training Configuration:")
@@ -168,8 +151,6 @@ print(f"  PRISM: {'Enabled' if USE_PRISM else 'Disabled'}")
 
 def custom_collate_fn(batch):
     """Custom collate function to handle different grid sizes and data formats"""
-    # Only debug print for first call to avoid spam
-    global _collate_debug_printed
     if not hasattr(custom_collate_fn, '_debug_printed'):
         custom_collate_fn._debug_printed = False
     if not custom_collate_fn._debug_printed and len(batch) > 0:
@@ -181,28 +162,23 @@ def custom_collate_fn(batch):
     
     for i, item in enumerate(batch):
         try:
-            # Get input and output tensors
             inp = item['inputs']
             out = item['outputs']
             
-            # Convert to tensor if numpy array
             if isinstance(inp, np.ndarray):
                 inp = torch.from_numpy(inp)
             if isinstance(out, np.ndarray):
                 out = torch.from_numpy(out)
             
-            # Handle case where tensors might already have batch dimension
             while inp.dim() > 2:
                 inp = inp.squeeze(0)
             while out.dim() > 2:
                 out = out.squeeze(0)
             
-            # Ensure 2D tensors
             if inp.dim() != 2 or out.dim() != 2:
                 print(f"Warning: Unexpected tensor dimensions - input: {inp.shape}, output: {out.shape}")
                 continue
             
-            # Ensure tensors are not too large or small
             if inp.shape[0] < 1 or inp.shape[1] < 1 or out.shape[0] < 1 or out.shape[1] < 1:
                 print(f"Warning: Invalid grid size - input: {inp.shape}, output: {out.shape}")
                 continue
@@ -223,40 +199,32 @@ def custom_collate_fn(batch):
             continue
     
     if not inputs:
-        # Return a dummy batch if all items were skipped
         print("Warning: All batch items were invalid, returning dummy batch")
         return {
             'inputs': torch.zeros(1, MAX_GRID_SIZE, MAX_GRID_SIZE, dtype=torch.long),
             'outputs': torch.zeros(1, MAX_GRID_SIZE, MAX_GRID_SIZE, dtype=torch.long)
         }
     
-    # Find max dimensions in this batch
     max_h = max(inp.shape[0] for inp in inputs)
     max_w = max(inp.shape[1] for inp in inputs)
     max_h = max(max_h, max(out.shape[0] for out in outputs))
     max_w = max(max_w, max(out.shape[1] for out in outputs))
     
-    # Cap at MAX_GRID_SIZE
     max_h = min(max_h, MAX_GRID_SIZE)
     max_w = min(max_w, MAX_GRID_SIZE)
     
-    # Pad all grids to max size
     padded_inputs = []
     padded_outputs = []
     
     for inp, out in zip(inputs, outputs):
-        # Pad inputs to fixed size
         h_in, w_in = inp.shape
         pad_h = max_h - h_in
         pad_w = max_w - w_in
-        # Pad with 0 (background color) - this is standard for ARC
         padded_input = F.pad(inp, (0, pad_w, 0, pad_h), value=0)
         
-        # Pad outputs to same size
         h_out, w_out = out.shape
         pad_h = max_h - h_out
         pad_w = max_w - w_out
-        # Pad with 0 (background color) - this is standard for ARC
         padded_output = F.pad(out, (0, pad_w, 0, pad_h), value=0)
         
         padded_inputs.append(padded_input)
@@ -440,7 +408,7 @@ def train_minerva():
                 replay_ratio=0.3 if stage == 0 else 0.2
             )
         
-        # Maintain consistent configuration across all stages  
+        # Consistent configuration across all stages
         stage_workers = NUM_WORKERS
         stage_batch_size = BATCH_SIZE
         
@@ -503,71 +471,6 @@ def train_minerva():
             leap_batch_counter = 0
             
             
-            # Additional debugging for Stage 1
-            if stage >= 1 and epoch == 0:
-                print(f"\nDEBUG Stage {stage}: Testing DataLoader...")
-                try:
-                    # Try to get the first batch manually with timeout
-                    print(f"DEBUG Stage {stage}: Getting first batch manually...")
-                    import time
-                    import threading
-                    import queue
-                    
-                    result_queue = queue.Queue()
-                    exception_queue = queue.Queue()
-                    
-                    def get_batch_with_timeout():
-                        try:
-                            start_time = time.time()
-                            data_iter = iter(train_loader)
-                            print(f"DEBUG Stage {stage}: Iterator created in {time.time() - start_time:.2f}s")
-                            
-                            print(f"DEBUG Stage {stage}: Calling next()...")
-                            start_time = time.time()
-                            first_batch = next(data_iter)
-                            print(f"DEBUG Stage {stage}: Got first batch in {time.time() - start_time:.2f}s")
-                            result_queue.put(first_batch)
-                        except Exception as e:
-                            exception_queue.put(e)
-                    
-                    # Run in thread with timeout
-                    thread = threading.Thread(target=get_batch_with_timeout)
-                    thread.daemon = True
-                    thread.start()
-                    thread.join(timeout=30)  # 30 second timeout
-                    
-                    if thread.is_alive():
-                        print(f"ERROR Stage {stage}: Timeout after 30 seconds trying to get first batch!")
-                        print(f"DEBUG Stage {stage}: This suggests the DataLoader is hanging in:")
-                        print(f"  - Dataset __getitem__ method")
-                        print(f"  - Custom collate function")
-                        print(f"  - Data loading/preprocessing")
-                        
-                        # Try to access dataset directly
-                        print(f"\nDEBUG Stage {stage}: Testing direct dataset access...")
-                        try:
-                            for i in range(min(3, len(train_dataset))):
-                                start = time.time()
-                                item = train_dataset[i]
-                                elapsed = time.time() - start
-                                print(f"  Item {i}: input shape: {item['inputs'].shape}, output shape: {item['outputs'].shape} (took {elapsed:.3f}s)")
-                        except Exception as e:
-                            print(f"  Failed to access dataset: {e}")
-                            import traceback
-                            traceback.print_exc()
-                    elif not exception_queue.empty():
-                        e = exception_queue.get()
-                        print(f"ERROR Stage {stage}: Failed to get first batch: {e}")
-                        import traceback
-                        traceback.print_exc()
-                    elif not result_queue.empty():
-                        first_batch = result_queue.get()
-                        print(f"DEBUG Stage {stage}: First batch shape - inputs: {first_batch['inputs'].shape}, outputs: {first_batch['outputs'].shape}")
-                        print(f"SUCCESS: DataLoader is working for Stage {stage}!")
-                except Exception as e:
-                    print(f"ERROR Stage {stage}: Unexpected error: {e}")
-                    import traceback
-                    traceback.print_exc()
             
             for batch_idx, batch in enumerate(pbar):
                 # Process batch similar to V4 training...

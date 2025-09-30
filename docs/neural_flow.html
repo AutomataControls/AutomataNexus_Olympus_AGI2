@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Flow Architecture - AutomataNexus OLYMPUS AGI2</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/react-icons@4.11.0/lib/index.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        .nav {
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 20px 40px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #00d4aa;
+        }
+        
+        .nav-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .nav h1 {
+            font-size: 24px;
+            font-weight: 600;
+            background: linear-gradient(45deg, #00d4aa, #00cccc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 30px;
+        }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .nav-links a:hover {
+            color: #00d4aa;
+        }
+        
+        .hero {
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 212, 170, 0.1) 100%);
+            padding: 100px 0;
+            text-align: center;
+            border-bottom: 2px solid #00d4aa;
+        }
+        
+        .hero h1 {
+            font-size: 56px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            letter-spacing: -2px;
+            background: linear-gradient(45deg, #ffffff, #00d4aa, #00cccc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        
+        .hero .subtitle {
+            font-size: 24px;
+            opacity: 0.9;
+            max-width: 900px;
+            margin: 0 auto;
+            color: #cccccc;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 80px 40px;
+        }
+        
+        .section {
+            margin-bottom: 100px;
+        }
+        
+        h2 {
+            font-size: 42px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 4px solid #00d4aa;
+            background: linear-gradient(45deg, #ffffff, #00d4aa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        h3 {
+            font-size: 28px;
+            font-weight: 600;
+            color: #00cccc;
+            margin-bottom: 20px;
+        }
+        
+        .neural-network-container {
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid #00d4aa;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 30px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .neural-network-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 50% 50%, rgba(0, 212, 170, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }
+        
+        .model-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .model-card {
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 212, 170, 0.1) 100%);
+            border: 2px solid #00cccc;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        
+        .model-card:hover {
+            border-color: #00d4aa;
+        }
+        
+        .model-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            color: #00d4aa;
+        }
+        
+        .model-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+        
+        .model-params {
+            color: #00cccc;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        
+        .model-description {
+            color: #cccccc;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .flow-diagram {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            border: 1px solid #00cccc;
+        }
+        
+        .integration-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin: 40px 0;
+        }
+        
+        .integration-card {
+            background: linear-gradient(135deg, rgba(0, 204, 204, 0.1) 0%, rgba(0, 0, 0, 0.3) 100%);
+            border: 2px solid #00cccc;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .integration-card:hover {
+            border-color: #00d4aa;
+        }
+        
+        .integration-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #00d4aa;
+            margin-bottom: 10px;
+        }
+        
+        .integration-desc {
+            color: #cccccc;
+            font-size: 14px;
+        }
+        
+        .neural-viz {
+            width: 100%;
+            height: 400px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .stat-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid #00cccc;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #00d4aa;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #cccccc;
+            font-size: 14px;
+        }
+        
+        
+        .neural-connection {
+            stroke: #00d4aa;
+            stroke-width: 2;
+            fill: none;
+            opacity: 0.7;
+        }
+        
+        .node {
+            fill: #00cccc;
+            stroke: #00d4aa;
+            stroke-width: 2;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .node:hover {
+            fill: #00d4aa;
+        }
+        
+        .node-label {
+            fill: white;
+            font-size: 12px;
+            text-anchor: middle;
+            dominant-baseline: central;
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-content">
+            <h1>Neural Flow Architecture</h1>
+            <div class="nav-links">
+                <a href="system_architecture.html">System Architecture</a>
+                <a href="olympus_agi2.html">OLYMPUS AGI2</a>
+                <a href="technical_overview.html">Technical Overview</a>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <h1>Neural Flow Architecture</h1>
+        <p class="subtitle">Visualizing the Intelligence Pipeline of OLYMPUS AGI2's 5-Model Ensemble with MEPT, LEAP, PRISM & DSL Integration</p>
+    </header>
+
+    <div class="container">
+        <section class="section">
+            <h2>Neural Network Ensemble</h2>
+            <p style="color: #cccccc; font-size: 18px; margin-bottom: 40px;">
+                OLYMPUS AGI2 employs five specialized neural networks, each optimized for specific aspects of abstract reasoning. 
+                Combined total: <strong style="color: #00d4aa;">~8.4M parameters</strong> working in intelligent harmony.
+            </p>
+            
+            <div class="model-grid">
+                <div class="model-card">
+                    <div class="model-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="#00d4aa">
+                            <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
+                            <path d="M2 17L12 22L22 17"/>
+                            <path d="M2 12L12 17L22 12"/>
+                        </svg>
+                    </div>
+                    <div class="model-name">MINERVA</div>
+                    <div class="model-params">~2.1M Parameters</div>
+                    <div class="model-description">Strategic pattern analysis with grid reasoning and relational networks</div>
+                </div>
+                <div class="model-card">
+                    <div class="model-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="#00d4aa">
+                            <path d="M21 10C21 16.07 16.07 21 10 21C3.93 21 -1 16.07 -1 10C-1 3.93 3.93 -1 10 -1C16.07 -1 21 3.93 21 10Z" stroke="#00d4aa" stroke-width="2"/>
+                            <path d="M9 12L11 14L15 10"/>
+                        </svg>
+                    </div>
+                    <div class="model-name">ATLAS</div>
+                    <div class="model-params">~1.2M Parameters</div>
+                    <div class="model-description">Spatial transformations, rotations, reflections, and geometric reasoning</div>
+                </div>
+                <div class="model-card">
+                    <div class="model-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="#00d4aa">
+                            <circle cx="12" cy="12" r="10" stroke="#00d4aa" stroke-width="2"/>
+                            <circle cx="8" cy="10" r="2"/>
+                            <circle cx="16" cy="10" r="2"/>
+                            <path d="M8 16S10 20 12 20S16 16 16 16"/>
+                        </svg>
+                    </div>
+                    <div class="model-name">IRIS</div>
+                    <div class="model-params">~0.9M Parameters</div>
+                    <div class="model-description">Color pattern recognition, mapping, and chromatic transformations</div>
+                </div>
+                <div class="model-card">
+                    <div class="model-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="#00d4aa">
+                            <circle cx="12" cy="12" r="10" stroke="#00d4aa" stroke-width="2"/>
+                            <polyline points="12,6 12,12 16,14"/>
+                        </svg>
+                    </div>
+                    <div class="model-name">CHRONOS</div>
+                    <div class="model-params">~2.4M Parameters</div>
+                    <div class="model-description">Temporal sequences, movement patterns, and state transitions</div>
+                </div>
+                <div class="model-card">
+                    <div class="model-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="#00d4aa">
+                            <path d="M12 2L3.09 8.26L12 14L20.91 8.26L12 2Z"/>
+                            <path d="M12 22L3.09 15.74L12 9L20.91 15.74L12 22Z"/>
+                        </svg>
+                    </div>
+                    <div class="model-name">PROMETHEUS</div>
+                    <div class="model-params">~1.8M Parameters</div>
+                    <div class="model-description">Creative pattern generation through variational autoencoder architecture</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Integration Systems</h2>
+            <div class="integration-grid">
+                <div class="integration-card">
+                    <div class="integration-title">MEPT</div>
+                    <div class="integration-desc">Memory-Enhanced Progressive Training with 100K experience replay buffer and 20K pattern bank</div>
+                </div>
+                <div class="integration-card">
+                    <div class="integration-title">LEAP</div>
+                    <div class="integration-desc">Learning Enhancement through Adaptive Patterns with real-time performance tracking</div>
+                </div>
+                <div class="integration-card">
+                    <div class="integration-title">PRISM</div>
+                    <div class="integration-desc">Program Reasoning through Inductive Synthesis with meta-programming capabilities</div>
+                </div>
+                <div class="integration-card">
+                    <div class="integration-title">DSL</div>
+                    <div class="integration-desc">Domain Specific Language for deterministic pattern generation and rule-based synthesis</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Neural Flow Diagram</h2>
+            <div class="neural-network-container">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h3 style="color: #00cccc; margin-bottom: 20px;">3D OLYMPUS AGI2 Visualization</h3>
+                    <!-- Meshy AI 3D Animation will be embedded here -->
+                    <div id="meshy-3d-container" style="width: 100%; height: 400px; background: rgba(0,0,0,0.3); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 30px;">
+                        <p style="color: #cccccc;">3D Animation: Replace this with Meshy AI generated model embed code</p>
+                    </div>
+                </div>
+                <svg class="neural-viz" id="neuralFlow">
+                    <!-- Interactive neural network will be rendered here -->
+                </svg>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Training Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">15.72%</div>
+                    <div class="stat-label">Best Validation Accuracy</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">2,048</div>
+                    <div class="stat-label">Effective Batch Size</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">100K</div>
+                    <div class="stat-label">MEPT Buffer Capacity</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">95%</div>
+                    <div class="stat-label">Target Accuracy</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Training Flow</h2>
+            <div class="flow-diagram">
+                <div class="mermaid">
+                graph TD
+                    A[ARC Input Grid] --> B[Data Preprocessing]
+                    B --> C[Curriculum Stage Selection]
+                    C --> D{Stage 0?}
+                    D -->|Yes| E[Exact Match Injection<br/>95% Target Accuracy]
+                    D -->|No| F[Standard Training]
+                    E --> G[MEPT Experience Replay]
+                    F --> G
+                    G --> H[LEAP Pattern Generation]
+                    H --> I[5-Model Ensemble Training]
+                    I --> J[MINERVA: Strategic Analysis]
+                    I --> K[ATLAS: Spatial Transforms]
+                    I --> L[IRIS: Color Patterns]
+                    I --> M[CHRONOS: Temporal Sequences]
+                    I --> N[PROMETHEUS: Creative Generation]
+                    J --> O[Ensemble Voting]
+                    K --> O
+                    L --> O
+                    M --> O
+                    N --> O
+                    O --> P[PRISM Program Synthesis]
+                    P --> Q[Final Prediction]
+                    Q --> R{Validation}
+                    R -->|Poor Performance| S[Adaptive LR Boost]
+                    R -->|Good Performance| T[Continue Training]
+                    S --> I
+                    T --> U[Save Best Model]
+                    
+                    style A fill:#00d4aa,stroke:#fff,stroke-width:2px
+                    style Q fill:#00cccc,stroke:#fff,stroke-width:2px
+                    style I fill:#ff6b6b,stroke:#fff,stroke-width:2px
+                    style O fill:#4ecdc4,stroke:#fff,stroke-width:2px
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>LEAP-PRISM Bridge</h2>
+            <div class="flow-diagram">
+                <div class="mermaid">
+                graph LR
+                    A[LEAP Pattern Failure] --> B[Pattern Analysis]
+                    B --> C[PRISM Synthesis Engine]
+                    C --> D[Meta-Program Generation]
+                    D --> E[Synthesis Hints]
+                    E --> F[Enhanced LEAP Patterns]
+                    F --> G[Improved Training]
+                    
+                    style A fill:#ff6b6b,stroke:#fff,stroke-width:2px
+                    style C fill:#00d4aa,stroke:#fff,stroke-width:2px
+                    style F fill:#00cccc,stroke:#fff,stroke-width:2px
+                    style G fill:#4ecdc4,stroke:#fff,stroke-width:2px
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#00d4aa',
+                primaryTextColor: '#ffffff',
+                primaryBorderColor: '#00cccc',
+                lineColor: '#00d4aa',
+                secondaryColor: '#1a1a2e',
+                tertiaryColor: '#16213e'
+            }
+        });
+
+        // Create interactive neural network visualization
+        function createNeuralNetwork() {
+            const svg = d3.select("#neuralFlow");
+            const width = 1200;
+            const height = 400;
+            
+            svg.attr("viewBox", `0 0 ${width} ${height}`);
+            
+            // Define network layers
+            const layers = [
+                { name: "Input", nodes: 3, x: 50 },
+                { name: "MINERVA", nodes: 5, x: 200 },
+                { name: "ATLAS", nodes: 4, x: 300 },
+                { name: "IRIS", nodes: 3, x: 400 },
+                { name: "CHRONOS", nodes: 6, x: 500 },
+                { name: "PROMETHEUS", nodes: 4, x: 600 },
+                { name: "Ensemble", nodes: 3, x: 750 },
+                { name: "PRISM", nodes: 2, x: 900 },
+                { name: "Output", nodes: 1, x: 1050 }
+            ];
+            
+            // Calculate node positions
+            const nodes = [];
+            const links = [];
+            
+            layers.forEach((layer, layerIndex) => {
+                const yStart = (height - (layer.nodes - 1) * 60) / 2;
+                
+                for (let i = 0; i < layer.nodes; i++) {
+                    const node = {
+                        id: `${layer.name}_${i}`,
+                        layer: layer.name,
+                        x: layer.x,
+                        y: yStart + i * 60,
+                        radius: 15
+                    };
+                    nodes.push(node);
+                    
+                    // Create connections to next layer
+                    if (layerIndex < layers.length - 1) {
+                        const nextLayer = layers[layerIndex + 1];
+                        for (let j = 0; j < nextLayer.nodes; j++) {
+                            links.push({
+                                source: node.id,
+                                target: `${nextLayer.name}_${j}`
+                            });
+                        }
+                    }
+                }
+            });
+            
+            // Create node lookup
+            const nodeMap = {};
+            nodes.forEach(node => nodeMap[node.id] = node);
+            
+            // Draw connections
+            const connections = svg.selectAll(".connection")
+                .data(links)
+                .enter()
+                .append("line")
+                .attr("class", "neural-connection")
+                .attr("x1", d => nodeMap[d.source].x)
+                .attr("y1", d => nodeMap[d.source].y)
+                .attr("x2", d => nodeMap[d.target].x)
+                .attr("y2", d => nodeMap[d.target].y);
+            
+            // Draw nodes
+            const nodeGroups = svg.selectAll(".node-group")
+                .data(nodes)
+                .enter()
+                .append("g")
+                .attr("class", "node-group")
+                .attr("transform", d => `translate(${d.x}, ${d.y})`);
+            
+            nodeGroups.append("circle")
+                .attr("class", "node")
+                .attr("r", d => d.radius)
+                .on("mouseover", function(event, d) {
+                    // Highlight connections
+                    connections
+                        .style("opacity", link => 
+                            link.source === d.id || link.target === d.id ? 1 : 0.2
+                        );
+                })
+                .on("mouseout", function(event, d) {
+                    connections.style("opacity", 0.7);
+                });
+            
+            nodeGroups.append("text")
+                .attr("class", "node-label")
+                .text(d => d.layer.charAt(0))
+                .style("pointer-events", "none");
+            
+            // Add layer labels
+            layers.forEach(layer => {
+                svg.append("text")
+                    .attr("x", layer.x)
+                    .attr("y", height - 20)
+                    .attr("text-anchor", "middle")
+                    .attr("fill", "#00d4aa")
+                    .attr("font-size", "14px")
+                    .attr("font-weight", "600")
+                    .text(layer.name);
+            });
+            
+            // Add MEPT/LEAP indicators
+            svg.append("text")
+                .attr("x", 350)
+                .attr("y", 30)
+                .attr("text-anchor", "middle")
+                .attr("fill", "#00cccc")
+                .attr("font-size", "12px")
+                .text("MEPT Experience Replay");
+            
+            svg.append("text")
+                .attr("x", 350)
+                .attr("y", height - 40)
+                .attr("text-anchor", "middle")
+                .attr("fill", "#00cccc")
+                .attr("font-size", "12px")
+                .text("LEAP Adaptive Patterns");
+        }
+        
+        // Initialize the neural network when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            createNeuralNetwork();
+        });
+    </script>
+</body>
+</html>

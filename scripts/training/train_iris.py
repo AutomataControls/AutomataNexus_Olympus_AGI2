@@ -134,8 +134,8 @@ RECONSTRUCTION_WEIGHT = 1.0
 EDGE_WEIGHT = 0.3
 COLOR_BALANCE_WEIGHT = 0.2
 STRUCTURE_WEIGHT = 0.3
-TRANSFORMATION_PENALTY = 0.3  # Reduced to prevent over-penalizing transformations
-EXACT_MATCH_BONUS = 10.0  # Increased to strongly reward exact matches
+TRANSFORMATION_PENALTY = 0.5  # Increased per NexusReference.md requirements  
+EXACT_MATCH_BONUS = 5.0  # Balanced bonus to avoid overwhelming other losses
 
 # Curriculum settings
 CURRICULUM_STAGES = 3
@@ -307,8 +307,8 @@ def train_iris():
         nesterov=True
     )
     
-    total_epochs = EPOCHS_PER_STAGE * CURRICULUM_STAGES
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=total_epochs)
+    # Stage-specific learning rate scheduling instead of global decay
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS_PER_STAGE)
     
     scaler = GradScaler('cuda')
     
@@ -346,6 +346,13 @@ def train_iris():
         print(f"\n📚 Starting Curriculum Stage {stage}")
         print("="*40)
         
+        # Reset learning rate for each new stage to prevent decay issues
+        if stage > resume_stage:
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = LEARNING_RATE
+            # Reset scheduler for the new stage
+            scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS_PER_STAGE)
+        
         # Create dataset for this stage
         dataset = CurriculumMegaScaleDataset(
             DATA_DIR, 
@@ -377,7 +384,6 @@ def train_iris():
                 replay_ratio=0.3 if stage == 0 else 0.2
             )
         elif stage > 0 and USE_MEPT:
-            print(f"DEBUG: Skipping MEPT augmentation for Stage {stage} (preventing hanging issue)")
         
         # Create data loaders with adaptive configuration
         # Use stage-adaptive configuration to prevent hanging

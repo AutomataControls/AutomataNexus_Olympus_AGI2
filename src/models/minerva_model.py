@@ -8,6 +8,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import Dict, Optional, Tuple
 
+# Import transformation reasoning from core
+try:
+    from src.core.transformation_reasoning import TransformationReasoner, RuleBasedReasoner
+    TRANSFORM_REASONING_AVAILABLE = True
+except ImportError:
+    TRANSFORM_REASONING_AVAILABLE = False
+
 
 class GridAttention(nn.Module):
     """Grid-aware attention mechanism for ARC tasks"""
@@ -189,6 +196,14 @@ class EnhancedMinervaNet(nn.Module):
         self.max_grid_size = max_grid_size
         self.hidden_dim = hidden_dim
         
+        # Transformation reasoning
+        if TRANSFORM_REASONING_AVAILABLE:
+            self.transform_reasoner = TransformationReasoner(hidden_dim // 2)
+            self.rule_reasoner = RuleBasedReasoner()
+        else:
+            self.transform_reasoner = None
+            self.rule_reasoner = None
+        
         # Grid encoder with object awareness
         self.object_encoder = ObjectEncoder(10, hidden_dim)
         
@@ -251,6 +266,11 @@ class EnhancedMinervaNet(nn.Module):
         
         # Combine features
         combined_features = attended_features + relational_features
+        
+        # Use transformation reasoner if available
+        transform_info = None
+        if self.transform_reasoner is not None and output_grid is not None:
+            transform_info = self.transform_reasoner.detect_transformation(input_grid, output_grid)
         
         if mode == 'train' and output_grid is not None:
             # Learn transformation

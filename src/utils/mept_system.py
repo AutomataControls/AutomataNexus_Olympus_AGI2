@@ -171,10 +171,10 @@ class MEPTLoss(nn.Module):
         # Dynamic weights that adapt during training
         self.weights = {
             'reconstruction': 1.0,
-            'exact_match': exact_match_bonus,
+            'exact_match': exact_match_bonus,  # Use the passed parameter
             'consistency': 0.5,
-            'diversity': 0.3,
-            'memory_alignment': 0.4
+            'diversity': 0.0,  # DISABLED - we want EXACT matches for ARC!
+            'memory_alignment': 0.1  # Reduced - might interfere with learning
         }
         
         # Track performance for dynamic adjustment
@@ -197,9 +197,12 @@ class MEPTLoss(nn.Module):
             target_flat = target_indices.reshape(-1)
             ce_loss = self.ce_loss(pred_flat, target_flat)
             
-            # Focal loss modification for hard examples
+            # Focal loss modification for hard examples - but more stable
+            # Use alpha=0.25 and gamma=2.0 for stability
+            alpha = 0.25
+            gamma = 2.0
             pt = torch.exp(-ce_loss)
-            focal_loss = ((1 - pt) ** 2) * ce_loss
+            focal_loss = alpha * ((1 - pt) ** gamma) * ce_loss
             reconstruction_loss = focal_loss.reshape(B, H, W).mean(dim=[1,2])
             
             # 2. Exact match bonus with progressive scaling
@@ -330,14 +333,20 @@ class MEPTLoss(nn.Module):
         
         recent_performance = np.mean(list(self.performance_history)[-10:])
         
-        # If exact match rate is low, increase exact match weight (but cap at 7.0 to prevent instability)
+        # If exact match rate is low, increase exact match weight
+        # But respect the original configured value as the base
         if recent_performance < 0.1:
-            self.weights['exact_match'] = min(7.0, self.weights['exact_match'] * 1.05)  # Slower increase, lower cap
-            self.weights['diversity'] = max(0.1, self.weights['diversity'] * 0.95)
+            # Can go up to 1.5x the configured value
+            max_exact_weight = self.exact_match_bonus * 1.5
+            self.weights['exact_match'] = min(max_exact_weight, self.weights['exact_match'] * 1.05)
+            # Keep diversity at 0 for ARC - we need exact matches!
+            self.weights['diversity'] = 0.0
         
         # If exact match rate is improving, balance weights
         elif recent_performance > 0.3:
-            self.weights['exact_match'] = max(3.0, self.weights['exact_match'] * 0.95)
+            # Don't go below 0.8x the configured value
+            min_exact_weight = self.exact_match_bonus * 0.8
+            self.weights['exact_match'] = max(min_exact_weight, self.weights['exact_match'] * 0.95)
             self.weights['memory_alignment'] = min(1.0, self.weights['memory_alignment'] * 1.05)
 
 

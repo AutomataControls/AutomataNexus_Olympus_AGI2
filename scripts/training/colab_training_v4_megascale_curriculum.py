@@ -1198,7 +1198,20 @@ class TrainingReporter:
         try:
             fig.write_image(os.path.join(self.report_dir, 'training_curves.png'))
         except Exception as e:
-            print(f"Warning: Could not save PNG image: {e}")
+            # Use matplotlib as fallback if plotly fails
+            import matplotlib.pyplot as plt
+            plt.figure(figsize=(12, 8))
+            for metric_name in ['train_loss', 'val_loss']:
+                if metric_name in self.metrics and self.metrics[metric_name]:
+                    plt.plot(self.metrics['epoch'][:len(self.metrics[metric_name])], 
+                            self.metrics[metric_name], 
+                            label=metric_name)
+            plt.xlabel('Epoch')
+            plt.ylabel('Loss')
+            plt.title(f'{self.model_name.upper()} Training Progress')
+            plt.legend()
+            plt.savefig(os.path.join(self.report_dir, 'training_curves.png'))
+            plt.close()
     
     def _create_radar_chart(self):
         """Create radar chart showing model performance across metrics"""
@@ -1232,7 +1245,28 @@ class TrainingReporter:
         try:
             fig.write_image(os.path.join(self.report_dir, 'performance_radar.png'))
         except Exception as e:
-            print(f"Warning: Could not save PNG image: {e}")
+            # Use matplotlib as fallback for radar chart
+            import matplotlib.pyplot as plt
+            import numpy as np
+            
+            categories = list(latest_metrics.keys())
+            values = list(latest_metrics.values())
+            
+            angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False).tolist()
+            values += values[:1]
+            angles += angles[:1]
+            
+            fig, ax = plt.subplots(figsize=(8, 8), subplot_kw=dict(projection='polar'))
+            ax.plot(angles, values, 'o-', linewidth=2)
+            ax.fill(angles, values, alpha=0.25)
+            ax.set_theta_offset(np.pi / 2)
+            ax.set_theta_direction(-1)
+            ax.set_xticks(angles[:-1])
+            ax.set_xticklabels(categories)
+            ax.set_ylim(0, 100)
+            ax.set_title(f"{self.model_name.upper()} Performance Radar", size=20, y=1.1)
+            plt.savefig(os.path.join(self.report_dir, 'performance_radar.png'))
+            plt.close()
     
     def _create_3d_surface_plot(self):
         """Create 3D surface plot of loss landscape"""
@@ -1274,7 +1308,19 @@ class TrainingReporter:
         try:
             fig.write_image(os.path.join(self.report_dir, 'loss_landscape_3d.png'))
         except Exception as e:
-            print(f"Warning: Could not save PNG image: {e}")
+            # Use matplotlib 3D as fallback
+            import matplotlib.pyplot as plt
+            from mpl_toolkits.mplot3d import Axes3D
+            
+            fig = plt.figure(figsize=(10, 8))
+            ax = fig.add_subplot(111, projection='3d')
+            ax.scatter(epochs, stages, losses, c=losses, cmap='viridis', s=50)
+            ax.set_xlabel('Epoch')
+            ax.set_ylabel('Stage')
+            ax.set_zlabel('Validation Loss')
+            ax.set_title(f'{self.model_name.upper()} Loss Landscape')
+            plt.savefig(os.path.join(self.report_dir, 'loss_landscape_3d.png'))
+            plt.close()
     
     def _create_loss_decomposition_plot(self):
         """Create stacked area plot showing loss component breakdown"""
@@ -1327,15 +1373,15 @@ class TrainingReporter:
             <h2>Final Metrics</h2>
             <div class="metrics-grid">
                 <div class="metric-card">
-                    <div class="metric-value">{self.metrics['val_exact'][-1]:.2f}%</div>
+                    <div class="metric-value">{self.metrics['val_exact'][-1] if self.metrics['val_exact'] else 0:.2f}%</div>
                     <div class="metric-label">Validation Exact Match</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-value">{self.metrics['val_pixel_acc'][-1]:.2f}%</div>
+                    <div class="metric-value">{self.metrics['val_pixel_acc'][-1] if self.metrics['val_pixel_acc'] else 0:.2f}%</div>
                     <div class="metric-label">Validation Pixel Accuracy</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-value">{self.metrics['val_loss'][-1]:.4f}</div>
+                    <div class="metric-value">{self.metrics['val_loss'][-1] if self.metrics['val_loss'] else 0:.4f}</div>
                     <div class="metric-label">Final Validation Loss</div>
                 </div>
             </div>

@@ -123,7 +123,7 @@ BATCH_SIZE = 512
 GRADIENT_ACCUMULATION_STEPS = 4
 LEARNING_RATE = 0.005  # Reduced for stability
 NUM_EPOCHS = 300
-MAX_GRID_SIZE = 30
+MAX_GRID_SIZE = 12  # Most ARC tasks are smaller than this
 NUM_COLORS = 10
 NUM_WORKERS = 8
 PREFETCH_FACTOR = 4
@@ -134,8 +134,8 @@ RECONSTRUCTION_WEIGHT = 1.0
 EDGE_WEIGHT = 0.3
 COLOR_BALANCE_WEIGHT = 0.2
 STRUCTURE_WEIGHT = 0.3
-TRANSFORMATION_PENALTY = 0.5  # Further reduced to help identity learning
-EXACT_MATCH_BONUS = 10.0  # Doubled to incentivize exact matches
+TRANSFORMATION_PENALTY = 0.3  # Reduced to prevent over-penalizing transformations
+EXACT_MATCH_BONUS = 10.0  # Increased to strongly reward exact matches
 
 # Curriculum settings
 CURRICULUM_STAGES = 3
@@ -230,9 +230,15 @@ def custom_collate_fn(batch):
             'outputs': torch.zeros(1, MAX_GRID_SIZE, MAX_GRID_SIZE, dtype=torch.long)
         }
     
-    # Find max dimensions
-    max_h = MAX_GRID_SIZE  # Use fixed size for consistency
-    max_w = MAX_GRID_SIZE
+    # Find max dimensions in this batch
+    max_h = max(inp.shape[0] for inp in inputs)
+    max_w = max(inp.shape[1] for inp in inputs)
+    max_h = max(max_h, max(out.shape[0] for out in outputs))
+    max_w = max(max_w, max(out.shape[1] for out in outputs))
+    
+    # Cap at MAX_GRID_SIZE
+    max_h = min(max_h, MAX_GRID_SIZE)
+    max_w = min(max_w, MAX_GRID_SIZE)
     
     # Pad all grids to max size
     padded_inputs = []
@@ -243,12 +249,14 @@ def custom_collate_fn(batch):
         h_in, w_in = inp.shape
         pad_h = max_h - h_in
         pad_w = max_w - w_in
+        # Pad with 0 (background color) - this is standard for ARC
         padded_input = F.pad(inp, (0, pad_w, 0, pad_h), value=0)
         
         # Pad outputs to same size
         h_out, w_out = out.shape
         pad_h = max_h - h_out
         pad_w = max_w - w_out
+        # Pad with 0 (background color) - this is standard for ARC
         padded_output = F.pad(out, (0, pad_w, 0, pad_h), value=0)
         
         padded_inputs.append(padded_input)
@@ -266,22 +274,28 @@ def train_minerva():
     print("="*60)
     
     # Initialize model
-    model = EnhancedMinervaNet().to(device)
+    model = EnhancedMinervaNet(max_grid_size=MAX_GRID_SIZE).to(device)
     
     # Initialize MEPT components if enabled
     if USE_MEPT:
         print("\n🧠 Initializing MEPT (Memory-Enhanced Progressive Training)")
         replay_buffer = ExperienceReplayBuffer(capacity=100000)
         pattern_bank = PatternBank(max_patterns=20000)
-        loss_fn = MEPTLoss(replay_buffer, pattern_bank, use_mept=True)
+        loss_fn = MEPTLoss(replay_buffer, pattern_bank, use_mept=True,
+                          transformation_penalty=TRANSFORMATION_PENALTY,
+                          exact_match_bonus=EXACT_MATCH_BONUS)
         print(f"✅ MEPT initialized with:")
         print(f"   Replay buffer capacity: {replay_buffer.capacity}")
         print(f"   Pattern bank capacity: {pattern_bank.max_patterns}")
+        print(f"   Transformation penalty: {TRANSFORMATION_PENALTY}")
+        print(f"   Exact match bonus: {EXACT_MATCH_BONUS}")
     else:
         # Fallback to regular loss
         replay_buffer = ExperienceReplayBuffer(capacity=1)
         pattern_bank = PatternBank(max_patterns=1)
-        loss_fn = MEPTLoss(replay_buffer, pattern_bank, use_mept=False)
+        loss_fn = MEPTLoss(replay_buffer, pattern_bank, use_mept=False,
+                          transformation_penalty=TRANSFORMATION_PENALTY,
+                          exact_match_bonus=EXACT_MATCH_BONUS)
     
     # Initialize LEAP components if enabled
     if USE_LEAP:

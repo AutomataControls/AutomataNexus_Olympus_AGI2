@@ -1125,6 +1125,11 @@ class TrainingReporter:
     
     def generate_report(self, final_stats: dict = None):
         """Generate comprehensive training report with visualizations"""
+        # Guard against empty metrics
+        if not self.metrics['epoch']:
+            print(f"⚠️ No metrics recorded yet for {self.model_name}. Skipping report generation.")
+            return
+            
         # Create multiple visualizations
         self._create_line_plots()
         self._create_radar_chart()
@@ -1423,9 +1428,9 @@ class TrainingReporter:
                 <div class="metric-card">
                     <h3>Best Performance</h3>
                     <ul>
-                        <li>Best Exact Match: {max(self.metrics['val_exact'])}%</li>
-                        <li>Best Pixel Accuracy: {max(self.metrics['val_pixel_acc'])}%</li>
-                        <li>Achieved at Epoch: {self.metrics['epoch'][np.argmax(self.metrics['val_exact'])]}</li>
+                        <li>Best Exact Match: {max(self.metrics['val_exact']) if self.metrics['val_exact'] else 0.0}%</li>
+                        <li>Best Pixel Accuracy: {max(self.metrics['val_pixel_acc']) if self.metrics['val_pixel_acc'] else 0.0}%</li>
+                        <li>Achieved at Epoch: {self.metrics['epoch'][np.argmax(self.metrics['val_exact'])] if self.metrics['val_exact'] else 'N/A'}</li>
                     </ul>
                 </div>
             </div>

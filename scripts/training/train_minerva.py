@@ -123,7 +123,7 @@ BATCH_SIZE = 512
 GRADIENT_ACCUMULATION_STEPS = 4
 LEARNING_RATE = 0.005  # Reduced for stability
 NUM_EPOCHS = 300
-MAX_GRID_SIZE = 12  # Most ARC tasks are smaller than this
+MAX_GRID_SIZE = 25  # Increased to accommodate grids up to 23x23 without truncation
 NUM_COLORS = 10
 NUM_WORKERS = 8
 PREFETCH_FACTOR = 4
@@ -756,6 +756,20 @@ def train_minerva():
                 print(f"\nGlobal Epoch {global_epoch} (Stage {stage}): "
                       f"Train Loss: {train_loss:.4f}, Train Exact: {train_exact_pct:.2f}%")
                 print(f"Val Loss: {val_loss:.4f}, Val Exact: {val_exact_pct:.2f}%, Pixel: {val_pixel_acc:.2f}%")
+                
+                # Add metrics to reporter
+                current_lr = scheduler.get_last_lr()[0] if hasattr(scheduler, 'get_last_lr') else LEARNING_RATE
+                reporter.add_metrics(
+                    epoch=global_epoch,
+                    stage=stage,
+                    train_loss=train_loss,
+                    train_exact=train_exact_pct,
+                    val_loss=val_loss,
+                    val_exact=val_exact_pct,
+                    val_pixel_acc=val_pixel_acc,
+                    lr=current_lr,
+                    trans_penalty=TRANSFORMATION_PENALTY
+                )
                 
                 # Report MEPT status
                 if USE_MEPT:

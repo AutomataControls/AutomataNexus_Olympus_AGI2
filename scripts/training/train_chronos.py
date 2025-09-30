@@ -307,8 +307,9 @@ def train_chronos():
         nesterov=True
     )
     
+    # Use stage-specific learning rate scheduling instead of global decay
     total_epochs = EPOCHS_PER_STAGE * CURRICULUM_STAGES
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=total_epochs)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS_PER_STAGE)
     
     scaler = GradScaler('cuda')
     
@@ -327,13 +328,26 @@ def train_chronos():
     if os.path.exists(checkpoint_path):
         print(f"📂 Found checkpoint, loading...")
         checkpoint = torch.load(checkpoint_path, map_location=device)
-        model.load_state_dict(checkpoint['model_state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        global_epoch = checkpoint.get('global_epoch', 0)
-        resume_stage = checkpoint.get('stage', 0)
-        best_exact = checkpoint.get('best_exact', 0)
-        best_val_loss = checkpoint.get('best_val_loss', float('inf'))
-        print(f"✅ Resumed from epoch {global_epoch} (Stage {resume_stage})")
+        
+        # Check if we should reset due to poor performance
+        checkpoint_exact = checkpoint.get('best_exact', 0)
+        checkpoint_stage = checkpoint.get('stage', 0)
+        
+        if checkpoint_exact < 2.0 and checkpoint_stage > 0:
+            print(f"⚠️ Checkpoint shows poor performance ({checkpoint_exact:.2f}% at Stage {checkpoint_stage})")
+            print(f"🔄 Resetting to Stage 0 for better foundation training")
+            resume_stage = 0
+            global_epoch = 0
+            best_exact = 0
+            best_val_loss = float('inf')
+        else:
+            model.load_state_dict(checkpoint['model_state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            global_epoch = checkpoint.get('global_epoch', 0)
+            resume_stage = checkpoint.get('stage', 0)
+            best_exact = checkpoint.get('best_exact', 0)
+            best_val_loss = checkpoint.get('best_val_loss', float('inf'))
+            print(f"✅ Resumed from epoch {global_epoch} (Stage {resume_stage})")
     
     # EXACT MATCH PRE-TRAINING for Stage 0 with improved target
     if EXACT_BOOST_AVAILABLE and resume_stage == 0 and global_epoch == 0:
@@ -345,6 +359,14 @@ def train_chronos():
     for stage in range(resume_stage, CURRICULUM_STAGES):
         print(f"\n📚 Starting Curriculum Stage {stage}")
         print("="*40)
+        
+        # Reset learning rate for each new stage to prevent decay issues
+        if stage > resume_stage:
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = LEARNING_RATE
+            # Reset scheduler for this stage
+            scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS_PER_STAGE)
+            print(f"🔄 Reset learning rate to {LEARNING_RATE} for Stage {stage}")
         
         # Create dataset for this stage
         dataset = CurriculumMegaScaleDataset(
@@ -477,8 +499,8 @@ def train_chronos():
                     'trans': f"{losses.get('transformation', torch.tensor(0)).item():.2f}"
                 })
                 
-                # LEAP training for Stage 0
-                if USE_LEAP and stage == 0 and batch_idx % 3 == 0:
+                # LEAP training for all stages with increased frequency
+                if USE_LEAP and batch_idx % 2 == 0:
                     leap_batch = leap_trainer.generate_leap_batch(batch_size=64)
                     leap_inputs = leap_batch['inputs'].to(device)
                     leap_outputs = leap_batch['outputs'].to(device)
@@ -584,6 +606,15 @@ def train_chronos():
                 print(f"\nGlobal Epoch {global_epoch} (Stage {stage}): "
                       f"Train Loss: {train_loss:.4f}, Train Exact: {train_exact_pct:.2f}%")
                 print(f"Val Loss: {val_loss:.4f}, Val Exact: {val_exact_pct:.2f}%, Pixel: {val_pixel_acc:.2f}%")
+                
+                # Adaptive learning rate based on performance
+                if val_exact_pct < 1.0 and epoch > 20:
+                    current_lr = optimizer.param_groups[0]['lr']
+                    if current_lr > 0.001:
+                        new_lr = current_lr * 1.2  # Increase LR if stuck
+                        for param_group in optimizer.param_groups:
+                            param_group['lr'] = min(new_lr, 0.01)
+                        print(f"🔄 Boosted learning rate to {param_group['lr']:.6f} (performance stuck)")
                 
                 # Report MEPT status
                 if USE_MEPT:

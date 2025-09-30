@@ -37,7 +37,7 @@ class ObjectEncoder(nn.Module):
 
 class EnhancedChronosNet(nn.Module):
     """Enhanced CHRONOS with sequence pattern learning"""
-    def __init__(self, max_grid_size: int = 30, hidden_dim: int = 256):
+    def __init__(self, max_grid_size: int = 12, hidden_dim: int = 256):
         super().__init__()
         
         # Grid encoder

@@ -330,7 +330,7 @@ def train_iris():
     # EXACT MATCH PRE-TRAINING for Stage 0
     if EXACT_BOOST_AVAILABLE and resume_stage == 0 and global_epoch == 0:
         print(f"\n🎯 Running EXACT MATCH INJECTION for IRIS")
-        model = inject_exact_match_training(model, device=device, num_epochs=50)
+        model = inject_exact_match_training(model, device=device, num_epochs=50, target_accuracy=99.0)
         print("✅ Exact match injection complete!")
     
     # CURRICULUM LOOP

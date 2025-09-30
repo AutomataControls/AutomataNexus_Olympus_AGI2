@@ -134,8 +134,8 @@ RECONSTRUCTION_WEIGHT = 1.0
 EDGE_WEIGHT = 0.3
 COLOR_BALANCE_WEIGHT = 0.2
 STRUCTURE_WEIGHT = 0.3
-TRANSFORMATION_PENALTY = 1.0  # Reduced to allow identity learning
-EXACT_MATCH_BONUS = 5.0
+TRANSFORMATION_PENALTY = 0.5  # REDUCED: Was preventing identity learning
+EXACT_MATCH_BONUS = 10.0  # INCREASED: Stronger reward for exact matches
 
 # Curriculum settings
 CURRICULUM_STAGES = 3

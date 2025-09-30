@@ -543,16 +543,18 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100, target_acc
     initial_lr = 0.0001  # Even lower to prevent NaN
     optimizer = torch.optim.AdamW(model.parameters(), lr=initial_lr, weight_decay=1e-5, betas=(0.9, 0.999))  # More stable betas
     
-    # Linear warmup + CosineAnnealingWarmRestarts
+    # Linear warmup + ReduceLROnPlateau for stable training
     warmup_epochs = 10  # Longer warmup
     warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
         optimizer, start_factor=0.1, total_iters=warmup_epochs * len(dataloader)  # Not too low
     )
-    main_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+    # Use ReduceLROnPlateau instead of CosineAnnealingWarmRestarts for stability
+    main_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, 
-        T_0=10,  # Initial restart period
-        T_mult=2,  # Double the period after each restart
-        eta_min=1e-6  # Minimum learning rate
+        mode='max',  # Maximize exact match
+        factor=0.5,  # Reduce LR by half
+        patience=5,  # Wait 5 epochs before reducing
+        min_lr=1e-6  # Minimum learning rate
     )
     # Use AggressiveLoss for comprehensive exact match training
     loss_fn = AggressiveLoss()
@@ -665,8 +667,6 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100, target_acc
             # Scheduler step after optimizer update
             if epoch < warmup_epochs:
                 warmup_scheduler.step()
-            else:
-                main_scheduler.step()
             step_count += 1
             
             # Track exact matches
@@ -678,9 +678,13 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100, target_acc
         avg_loss = accumulated_loss / max(1, step_count)
         print(f"Epoch {epoch+1}/{num_epochs}: Exact Match: {exact_pct:.1f}% | Loss: {avg_loss:.4f} | LR: {optimizer.param_groups[0]['lr']:.5f} | Steps: {step_count}/{len(dataloader)}")
         
+        # Step ReduceLROnPlateau after warmup
+        if epoch >= warmup_epochs:
+            main_scheduler.step(exact_pct)  # Use exact match percentage as metric
+        
         # Print detailed stats every 5 epochs
         if (epoch + 1) % 5 == 0:
-            print(f"📊 Stats: Best exact match so far: {best_exact_match:.1f}% | Patience: {patience_counter}/30")
+            print(f"📊 Stats: Best exact match so far: {best_exact_match:.1f}% | Patience: {patience_counter}/50")
         
         # Track best performance
         if exact_pct > best_exact_match:

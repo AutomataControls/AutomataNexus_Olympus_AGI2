@@ -111,7 +111,7 @@ BATCH_SIZE = 512
 GRADIENT_ACCUMULATION_STEPS = 4
 LEARNING_RATE = 0.005  # Reduced for stability
 NUM_EPOCHS = 300
-MAX_GRID_SIZE = 30
+MAX_GRID_SIZE = 25  # Increased to accommodate grids up to 23x23 without truncation
 NUM_COLORS = 10
 # Adaptive DataLoader configuration based on device and CPU cores
 import os
@@ -134,8 +134,8 @@ RECONSTRUCTION_WEIGHT = 1.0
 EDGE_WEIGHT = 0.3
 COLOR_BALANCE_WEIGHT = 0.2
 STRUCTURE_WEIGHT = 0.3
-TRANSFORMATION_PENALTY = 1.0  # Reduced to allow identity learning
-EXACT_MATCH_BONUS = 5.0
+TRANSFORMATION_PENALTY = 0.3  # Reduced to prevent over-penalizing transformations
+EXACT_MATCH_BONUS = 10.0  # Increased to strongly reward exact matches
 
 # Curriculum settings
 CURRICULUM_STAGES = 3
@@ -197,13 +197,15 @@ def custom_collate_fn(batch):
             'outputs': torch.zeros(1, MAX_GRID_SIZE, MAX_GRID_SIZE, dtype=torch.long)
         }
     
-    # Find max dimensions
-    max_h_in = max(inp.shape[0] for inp in inputs)
-    max_w_in = max(inp.shape[1] for inp in inputs)
-    max_h_out = max(out.shape[0] for out in outputs)
-    max_w_out = max(out.shape[1] for out in outputs)
-    max_h = max(max_h_in, max_h_out, MAX_GRID_SIZE)
-    max_w = max(max_w_in, max_w_out, MAX_GRID_SIZE)
+    # Find max dimensions in this batch
+    max_h = max(inp.shape[0] for inp in inputs)
+    max_w = max(inp.shape[1] for inp in inputs)
+    max_h = max(max_h, max(out.shape[0] for out in outputs))
+    max_w = max(max_w, max(out.shape[1] for out in outputs))
+    
+    # Cap at MAX_GRID_SIZE
+    max_h = min(max_h, MAX_GRID_SIZE)
+    max_w = min(max_w, MAX_GRID_SIZE)
     
     # Pad all grids to max size
     padded_inputs = []
@@ -244,15 +246,21 @@ def train_prometheus():
         print("\n🧠 Initializing MEPT (Memory-Enhanced Progressive Training)")
         replay_buffer = ExperienceReplayBuffer(capacity=100000)
         pattern_bank = PatternBank(max_patterns=20000)
-        loss_fn = MEPTLoss(replay_buffer, pattern_bank, use_mept=True)
+        loss_fn = MEPTLoss(replay_buffer, pattern_bank, use_mept=True,
+                          transformation_penalty=TRANSFORMATION_PENALTY,
+                          exact_match_bonus=EXACT_MATCH_BONUS)
         print(f"✅ MEPT initialized with:")
         print(f"   Replay buffer capacity: {replay_buffer.capacity}")
         print(f"   Pattern bank capacity: {pattern_bank.max_patterns}")
+        print(f"   Transformation penalty: {TRANSFORMATION_PENALTY}")
+        print(f"   Exact match bonus: {EXACT_MATCH_BONUS}")
     else:
         # Fallback to regular loss
         replay_buffer = ExperienceReplayBuffer(capacity=1)
         pattern_bank = PatternBank(max_patterns=1)
-        loss_fn = MEPTLoss(replay_buffer, pattern_bank, use_mept=False)
+        loss_fn = MEPTLoss(replay_buffer, pattern_bank, use_mept=False,
+                          transformation_penalty=TRANSFORMATION_PENALTY,
+                          exact_match_bonus=EXACT_MATCH_BONUS)
     
     # Initialize LEAP components if enabled
     if USE_LEAP:
@@ -330,7 +338,7 @@ def train_prometheus():
     # EXACT MATCH PRE-TRAINING for Stage 0
     if EXACT_BOOST_AVAILABLE and resume_stage == 0 and global_epoch == 0:
         print(f"\n🎯 Running EXACT MATCH INJECTION for PROMETHEUS")
-        model = inject_exact_match_training(model, device=device, num_epochs=50)
+        model = inject_exact_match_training(model, device=device, num_epochs=50, target_accuracy=99.0)
         print("✅ Exact match injection complete!")
     
     # CURRICULUM LOOP

@@ -111,7 +111,7 @@ BATCH_SIZE = 512
 GRADIENT_ACCUMULATION_STEPS = 4
 LEARNING_RATE = 0.005  # Reduced for stability
 NUM_EPOCHS = 300
-MAX_GRID_SIZE = 12  # Most ARC tasks are smaller than this
+MAX_GRID_SIZE = 25  # Increased to accommodate grids up to 23x23 without truncation
 NUM_COLORS = 10
 # Adaptive DataLoader configuration based on device and CPU cores
 import os

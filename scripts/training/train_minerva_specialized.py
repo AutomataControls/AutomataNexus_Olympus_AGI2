@@ -73,17 +73,60 @@ except ImportError:
     LEAP_PRISM_BRIDGE_AVAILABLE = False
     print("⚠️ LEAP-PRISM bridge not available")
 
-# Exact Match Injection System
-try:
-    from stage0_exact_match_boost import ExactMatchBoostDataset, AggressiveLoss, inject_exact_match_training
-    EXACT_BOOST_AVAILABLE = True
-except ImportError:
-    EXACT_BOOST_AVAILABLE = False
-    print("⚠️ Exact match boost not available")
+# MINERVA-specific exact match injection
+def minerva_exact_match_injection(model, device, num_epochs=10, target_accuracy=50.0):
+    """MINERVA-specific exact match injection using MINERVA_CONFIG"""
+    print("🎯 MINERVA EXACT MATCH INJECTION")
+    print("=" * 50)
+    print(f"  Batch size: {MINERVA_CONFIG['batch_size']}")
+    print(f"  Learning rate: {MINERVA_CONFIG['learning_rate']}")
+    print(f"  Transform penalty: {MINERVA_CONFIG['transform_penalty']}")
+    print(f"  Exact match bonus: {MINERVA_CONFIG['exact_match_bonus']}")
+    
+    # Simple exact match training for MINERVA
+    model.train()
+    optimizer = optim.SGD(model.parameters(), lr=MINERVA_CONFIG['learning_rate'], momentum=0.9)
+    
+    # Create simple exact match patterns
+    patterns = []
+    for i in range(100):
+        size = 6
+        pattern = torch.randint(0, 10, (size, size))
+        patterns.append({'inputs': pattern, 'outputs': pattern})  # Identity mapping
+    
+    for epoch in range(num_epochs):
+        correct = 0
+        total = 0
+        for batch_start in range(0, len(patterns), MINERVA_CONFIG['batch_size']):
+            batch_patterns = patterns[batch_start:batch_start + MINERVA_CONFIG['batch_size']]
+            
+            inputs = torch.stack([p['inputs'] for p in batch_patterns]).to(device)
+            outputs = torch.stack([p['outputs'] for p in batch_patterns]).to(device)
+            
+            input_oh = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+            output_oh = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
+            
+            optimizer.zero_grad()
+            pred = model(input_oh, output_oh, mode='train')['predicted_output']
+            loss = F.cross_entropy(pred, outputs)
+            loss.backward()
+            optimizer.step()
+            
+            pred_idx = pred.argmax(dim=1)
+            correct += (pred_idx == outputs).all(dim=[1,2]).sum().item()
+            total += outputs.size(0)
+        
+        acc = correct / total * 100
+        print(f"Epoch {epoch+1}/{num_epochs}: {acc:.1f}% exact match")
+        if acc >= target_accuracy:
+            break
+    
+    return model
+
+EXACT_BOOST_AVAILABLE = True
 
 # Data systems
 from src.data.arc_data_synthesis import ARCDataSynthesizer, ARCDataAugmenter
-from colab_training_v4_megascale_curriculum import CurriculumMegaScaleDataset, TrainingReporter
 
 # MINERVA-Specific Configuration with 8-Stage Progressive Curriculum - OPTIMIZED V2
 MINERVA_CONFIG = {
@@ -610,15 +653,10 @@ def train_minerva_specialized():
         
         print(f"📚 Stage {stage} ({grid_size}x{grid_size}) - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
         
-        # Extended exact match injection for Stage 0 and 1
-        exact_dataset = None
-        if stage_config['exact_injection'] and USE_EXACT_BOOST:
-            try:
-                injection_size = 1500 if stage == 0 else 1000  # Reduce for Stage 1
-                exact_dataset = ExactMatchBoostDataset(injection_size, fixed_size=grid_size)
-                print(f"✅ Stage {stage} exact match injection dataset created ({grid_size}x{grid_size}, {injection_size} samples)")
-            except Exception as e:
-                print(f"⚠️ Could not create exact match dataset: {e}")
+        # MINERVA exact match injection for Stage 0 and 1
+        exact_dataset = stage_config['exact_injection'] and EXACT_BOOST_AVAILABLE
+        if exact_dataset:
+            print(f"✅ Stage {stage} MINERVA exact match injection enabled ({grid_size}x{grid_size})")
         
         # Stage-specific performance tracking
         stage_start_time = time.time()
@@ -633,21 +671,10 @@ def train_minerva_specialized():
             
             if exact_dataset and stage_config['exact_injection'] and epoch == 0:  # ONLY FIRST EPOCH
                 print(f"🔥 Running MINERVA exact injection: Stage {stage}, Epoch {epoch}, Target: {target_acc}%")
-                print("🎯 MINERVA EXACT MATCH INJECTION")
-                print("=" * 50)
-                print(f"  Batch size: {MINERVA_CONFIG['batch_size']}")
-                print(f"  Learning rate: {MINERVA_CONFIG['learning_rate']}")
-                print(f"  Transform penalty: {MINERVA_CONFIG['transform_penalty']}")
-                print(f"  Exact match bonus: {MINERVA_CONFIG['exact_match_bonus']}")
-                
-                # Use MINERVA-specific exact match training
-                from stage0_exact_match_boost import inject_exact_match_training
-                model = inject_exact_match_training(
+                model = minerva_exact_match_injection(
                     model, device=device,
                     num_epochs=10,
-                    target_accuracy=target_acc,
-                    batch_size=MINERVA_CONFIG['batch_size'],  # Use MINERVA batch size
-                    learning_rate=MINERVA_CONFIG['learning_rate']  # Use MINERVA LR
+                    target_accuracy=target_acc
                 )
                 print(f"💉 Exact injection completed - Stage {stage}, Epoch {global_epoch}")
                 # Memory cleanup after exact match injection

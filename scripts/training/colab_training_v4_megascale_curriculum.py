@@ -94,7 +94,7 @@ RECONSTRUCTION_WEIGHT = 1.0
 EDGE_WEIGHT = 0.3
 COLOR_BALANCE_WEIGHT = 0.2
 STRUCTURE_WEIGHT = 0.3
-TRANSFORMATION_PENALTY = 1.0  # REDUCED: Was preventing identity learning
+TRANSFORMATION_PENALTY = 1.0  # Fixed: Per training documentation requirements
 EXACT_MATCH_BONUS = 5.0  # Reduced from 10.0 to prevent instability
 
 # Curriculum settings
@@ -111,7 +111,7 @@ print(f"  Batch size: {BATCH_SIZE} (effective: {BATCH_SIZE * GRADIENT_ACCUMULATI
 print(f"  Learning rate: {LEARNING_RATE}")
 print(f"  Workers: {NUM_WORKERS}")
 print(f"  Curriculum stages: {CURRICULUM_STAGES}")
-print(f"  Transformation penalty: {TRANSFORMATION_PENALTY} (2x stronger!)")
+print(f"  Transformation penalty: {TRANSFORMATION_PENALTY}")
 print(f"  Exact match bonus: {EXACT_MATCH_BONUS} (2x bigger!)")
 print(f"  MEPT: {'Enabled' if USE_MEPT else 'Disabled'}")
 print(f"  LEAP: {'Enabled' if USE_LEAP else 'Disabled'}")

@@ -147,30 +147,48 @@ class IrisSpecializedDataset(Dataset):
     def __getitem__(self, idx):
         # MEPT replay integration - prioritize color transformation patterns
         if (self.replay_buffer and random.random() < self.replay_ratio and 
-            len(self.replay_buffer.buffer) > 0):
-            experiences = self.replay_buffer.sample(1, strategy='mixed')  # Use IRIS-specific mixed strategy
-            if experiences:
-                exp = experiences[0]
-                input_tensor = exp['input']
-                output_tensor = exp['output']
-                
-                # Handle tensor dimensions
-                if input_tensor.dim() == 4:
-                    input_tensor = input_tensor.argmax(dim=0)
-                elif input_tensor.dim() == 3:
-                    input_tensor = input_tensor.squeeze(0)
+            hasattr(self.replay_buffer, 'buffer') and len(self.replay_buffer.buffer) > 0):
+            try:
+                experiences = self.replay_buffer.sample(1, strategy='mixed')  # Use IRIS-specific mixed strategy
+                if experiences:
+                    exp = experiences[0]
+                    input_tensor = exp['input']
+                    output_tensor = exp['output']
                     
-                if output_tensor.dim() == 4:
-                    output_tensor = output_tensor.argmax(dim=0)
-                elif output_tensor.dim() == 3:
-                    output_tensor = output_tensor.squeeze(0)
-                
-                return {
-                    'inputs': input_tensor,
-                    'outputs': output_tensor
-                }
+                    # Handle tensor dimensions
+                    if input_tensor.dim() == 4:
+                        input_tensor = input_tensor.argmax(dim=0)
+                    elif input_tensor.dim() == 3:
+                        input_tensor = input_tensor.squeeze(0)
+                        
+                    if output_tensor.dim() == 4:
+                        output_tensor = output_tensor.argmax(dim=0)
+                    elif output_tensor.dim() == 3:
+                        output_tensor = output_tensor.squeeze(0)
+                    
+                    return {
+                        'inputs': input_tensor,
+                        'outputs': output_tensor
+                    }
+            except Exception as e:
+                # Fall through to base dataset if replay fails
+                pass
         
-        return self.base_dataset[idx]
+        # Get item from base dataset - handle both regular datasets and Subset objects
+        try:
+            item = self.base_dataset[idx]
+            # Ensure it returns the right format
+            if isinstance(item, dict) and 'inputs' in item and 'outputs' in item:
+                return item
+            else:
+                # Try to extract inputs/outputs from other formats
+                if hasattr(item, '__getitem__') and len(item) >= 2:
+                    return {'inputs': item[0], 'outputs': item[1]}
+                else:
+                    raise ValueError(f"Unknown dataset item format: {type(item)}")
+        except Exception as e:
+            print(f"Error getting item {idx} from base dataset: {e}")
+            raise
 
 
 class IrisSpecializedLoss(nn.Module):
@@ -356,6 +374,10 @@ class IrisSpecializedLoss(nn.Module):
 
 def custom_collate_fn(batch, stage=0):
     """IRIS-optimized collate function with stage-specific grid sizes"""
+    if len(batch) == 0:
+        print("⚠️ Empty batch in collate_fn!")
+        return {'inputs': torch.zeros(0, 6, 6), 'outputs': torch.zeros(0, 6, 6)}
+    
     inputs = []
     outputs = []
     target_size = STAGE_CONFIG[stage]['max_grid_size']
@@ -413,9 +435,10 @@ def custom_collate_fn(batch, stage=0):
             outputs.append(new_output)
             
         except Exception as e:
-            print(f"Error processing batch item {i}: {e}")
-            print(f"Input shape: {input_grid.shape if 'input_grid' in locals() else 'unknown'}")
-            print(f"Output shape: {output_grid.shape if 'output_grid' in locals() else 'unknown'}")
+            if i < 20:  # Only print first 20 errors to avoid spam
+                print(f"Error processing batch item {i}: {e}")
+                print(f"Input shape: {input_grid.shape if 'input_grid' in locals() else 'unknown'}")
+                print(f"Output shape: {output_grid.shape if 'output_grid' in locals() else 'unknown'}")
             # Create dummy tensors as fallback
             inputs.append(torch.zeros(target_size, target_size, dtype=torch.long))
             outputs.append(torch.zeros(target_size, target_size, dtype=torch.long))
@@ -1121,7 +1144,8 @@ def train_iris_specialized():
             shuffle=True,
             num_workers=0,  # Set to 0 to avoid multiprocessing issues
             pin_memory=False,  # Disable when using 0 workers
-            collate_fn=lambda batch: custom_collate_fn(batch, stage)
+            collate_fn=lambda batch: custom_collate_fn(batch, stage),
+            drop_last=True  # Drop incomplete batches to avoid hanging
         )
         
         val_loader = DataLoader(
@@ -1130,7 +1154,8 @@ def train_iris_specialized():
             shuffle=False,
             num_workers=0,  # Set to 0 to avoid multiprocessing issues
             pin_memory=False,  # Disable when using 0 workers
-            collate_fn=lambda batch: custom_collate_fn(batch, stage)
+            collate_fn=lambda batch: custom_collate_fn(batch, stage),
+            drop_last=False
         )
         
         print(f"📚 Stage {stage} ({grid_size}x{grid_size}) - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")

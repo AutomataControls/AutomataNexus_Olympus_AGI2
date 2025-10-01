@@ -545,8 +545,8 @@ def train_minerva_specialized():
         
         # Load basic ARC training data
         import json
-        train_file = os.path.join(DATA_DIR, 'training')
-        with open(f"{train_file}.json", 'r') as f:
+        train_file = os.path.join(DATA_DIR, 'arc-agi_training_challenges.json')
+        with open(train_file, 'r') as f:
             arc_data = json.load(f)
         
         # Create simple dataset from raw ARC data

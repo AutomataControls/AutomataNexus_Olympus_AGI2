@@ -1284,8 +1284,8 @@ def train_iris_specialized():
                         try:
                             # Create batch dict for DSL
                             batch_dict = {
-                                'input': inputs,
-                                'output': outputs
+                                'inputs': inputs,
+                                'outputs': outputs
                             }
                             
                             # Augment with IRIS-specific DSL samples
@@ -1295,8 +1295,8 @@ def train_iris_specialized():
                                 dsl_ratio=0.3  # 30% DSL samples
                             )
                             
-                            inputs = augmented_batch['input']
-                            outputs = augmented_batch['output']
+                            inputs = augmented_batch['inputs']
+                            outputs = augmented_batch['outputs']
                             
                             # Ensure values are still in range
                             inputs = torch.clamp(inputs, 0, 9)
@@ -1412,13 +1412,17 @@ def train_iris_specialized():
             
                 
                 # End of batch processing loop
+                print(f"✅ Completed all {batch_count} batches for epoch {epoch+1}")
                 
             except Exception as e:
                 print(f"❌ Error in training loop: {e}")
                 print("Attempting to continue...")
+                import traceback
+                traceback.print_exc()
             
             # Step scheduler after epoch completes
             scheduler.step()
+            print(f"📈 Learning rate updated to: {optimizer.param_groups[0]['lr']:.6f}")
             
             # Validation every 5 epochs
             if epoch % 5 == 0:
@@ -1553,6 +1557,13 @@ def train_iris_specialized():
                         'stage_config': STAGE_CONFIG
                     }, best_model_path)
                     print(f"   💾 NEW BEST: {val_exact_pct:.2f}% color exact match saved!")
+            
+            # End of epoch
+            print(f"\n✅ Epoch {epoch+1}/{IRIS_CONFIG['epochs_per_stage']} complete for stage {stage}")
+            print(f"   Moving to next epoch...\n")
+        
+        # End of stage
+        print(f"\n✅ Stage {stage} complete! Moving to next stage...\n")
     
     # Final training summary
     print(f"\n🎉 IRIS 8-Stage Color Training Complete!")

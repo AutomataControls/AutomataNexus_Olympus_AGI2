@@ -705,14 +705,18 @@ def custom_collate_fn(batch, stage=0):
         input_grid = item['inputs']
         output_grid = item['outputs']
         
-        # Convert numpy arrays to tensors
+        # Convert to tensors efficiently
         if isinstance(input_grid, np.ndarray):
             input_grid = torch.from_numpy(input_grid).long()
+        elif torch.is_tensor(input_grid):
+            input_grid = input_grid.long()
         else:
             input_grid = torch.tensor(input_grid, dtype=torch.long)
             
         if isinstance(output_grid, np.ndarray):
             output_grid = torch.from_numpy(output_grid).long()
+        elif torch.is_tensor(output_grid):
+            output_grid = output_grid.long()
         else:
             output_grid = torch.tensor(output_grid, dtype=torch.long)
         
@@ -1130,10 +1134,10 @@ def train_minerva_specialized():
                     train_iter = iter(train_loader)
                     print("   Iterator created, attempting to get first batch...")
                     first_batch = next(train_iter)
-                    print(f"   ✅ Successfully got first batch with {len(first_batch['inputs'])} samples")
+                    print(f"   ✅ Successfully got first batch with {len(first_batch['inputs'])} samples", flush=True)
                     # Put it back by recreating the loader iteration in the loop
                 except Exception as e:
-                    print(f"   ❌ Failed to get first batch: {e}")
+                    print(f"   ❌ Failed to get first batch: {e}", flush=True)
                     import traceback
                     traceback.print_exc()
                     raise  # Don't skip - fail properly
@@ -1142,7 +1146,9 @@ def train_minerva_specialized():
                 first_batch_start = time.time()
                 got_first_batch = False
                 
-                for batch_idx, batch in enumerate(pbar):
+                print("   Starting batch iteration...", flush=True)
+                # Use train_loader directly to avoid tqdm issues
+                for batch_idx, batch in enumerate(train_loader):
                     if not got_first_batch:
                         print(f"   Got first batch in main loop after {time.time() - first_batch_start:.1f}s")
                         got_first_batch = True

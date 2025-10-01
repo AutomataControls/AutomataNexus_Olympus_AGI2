@@ -854,7 +854,11 @@ class MINERVADSLTraining:
     ) -> Dict[str, torch.Tensor]:
         """Augment training batch with MINERVA-specific DSL examples"""
         
-        B = batch['input'].shape[0]
+        # Handle both 'input'/'output' and 'inputs'/'outputs' keys
+        input_key = 'inputs' if 'inputs' in batch else 'input'
+        output_key = 'outputs' if 'outputs' in batch else 'output'
+        
+        B = batch[input_key].shape[0]
         num_dsl = int(B * dsl_ratio)
         
         if num_dsl > 0:
@@ -867,8 +871,8 @@ class MINERVADSLTraining:
                 for idx, i in enumerate(indices):
                     if idx < len(dsl_samples):
                         sample_idx = idx % len(dsl_samples)
-                        batch['input'][i] = torch.tensor(dsl_samples[sample_idx]['input'])
-                        batch['output'][i] = torch.tensor(dsl_samples[sample_idx]['output'])
+                        batch[input_key][i] = torch.tensor(dsl_samples[sample_idx]['input'])
+                        batch[output_key][i] = torch.tensor(dsl_samples[sample_idx]['output'])
         
         return batch
     

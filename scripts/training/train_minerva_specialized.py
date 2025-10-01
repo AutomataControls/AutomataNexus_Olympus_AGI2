@@ -651,11 +651,15 @@ def train_minerva_specialized():
                         break
                 
                 last_batch_time = current_time
-                # MINERVA DSL augmentation
-                if batch_idx % 5 == 0 and dsl_samples:  # Every 5th batch
-                    batch = MINERVADSLTraining.augment_batch_with_minerva_dsl(
-                        batch, curriculum_stage=stage, dsl_ratio=0.3
-                    )
+                # MINERVA DSL augmentation - SAFE VERSION
+                if batch_idx % 10 == 0 and dsl_samples:  # Every 10th batch (reduced frequency)
+                    try:
+                        batch = MINERVADSLTraining.augment_batch_with_minerva_dsl(
+                            batch, curriculum_stage=stage, dsl_ratio=0.1  # Reduced ratio
+                        )
+                    except Exception as e:
+                        print(f"⚠️ DSL augmentation error: {e}")
+                        # Continue with original batch
                 
                 inputs = batch['inputs'].to(device, non_blocking=True)
                 outputs = batch['outputs'].to(device, non_blocking=True)

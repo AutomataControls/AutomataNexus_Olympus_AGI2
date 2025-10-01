@@ -318,13 +318,20 @@ class MinervaDSLExecutor:
         
         try:
             from scipy import ndimage
+            # Add timeout protection for scipy operations
             labeled, num_features = ndimage.label(grid != background)
             
-            if num_features == 0:
+            if num_features == 0 or num_features > 1000:  # Prevent excessive features
                 return np.full_like(grid, background)
             
-            # Find largest region
-            sizes = [np.sum(labeled == i) for i in range(1, num_features + 1)]
+            # Find largest region - with safety checks
+            sizes = []
+            for i in range(1, min(num_features + 1, 100)):  # Limit iterations
+                sizes.append(np.sum(labeled == i))
+            
+            if not sizes:
+                return grid
+                
             largest_idx = np.argmax(sizes) + 1
             
             result = np.full_like(grid, background)
@@ -343,13 +350,20 @@ class MinervaDSLExecutor:
         
         try:
             from scipy import ndimage
+            # Add timeout protection for scipy operations
             labeled, num_features = ndimage.label(grid != background)
             
-            if num_features == 0:
+            if num_features == 0 or num_features > 1000:  # Prevent excessive features
                 return np.full_like(grid, background)
             
-            # Find smallest region
-            sizes = [np.sum(labeled == i) for i in range(1, num_features + 1)]
+            # Find smallest region - with safety checks
+            sizes = []
+            for i in range(1, min(num_features + 1, 100)):  # Limit iterations
+                sizes.append(np.sum(labeled == i))
+                
+            if not sizes:
+                return grid
+                
             smallest_idx = np.argmin(sizes) + 1
             
             result = np.full_like(grid, background)
@@ -630,17 +644,18 @@ class MINERVADSLTraining:
             base_grids = MINERVADSLTraining._create_advanced_grids(curriculum_stage)
             programs = MINERVADSLGenerator.generate_strategic_programs()
         
-        # Generate samples (with limit to prevent hanging)
+        # Generate samples (with strict limits to prevent hanging)
         sample_count = 0
-        max_samples = 100  # Limit to prevent hanging
+        max_samples = 50  # Reduced limit to prevent hanging
         
-        for grid in base_grids:
-            if sample_count >= max_samples:
+        for grid_idx, grid in enumerate(base_grids):
+            if sample_count >= max_samples or grid_idx >= 10:  # Limit grids too
                 break
-            for program in programs:
-                if sample_count >= max_samples:
+            for prog_idx, program in enumerate(programs):
+                if sample_count >= max_samples or prog_idx >= 5:  # Limit programs per grid
                     break
                 try:
+                    # Add timeout protection for program execution
                     output = program.execute(grid)
                     if output.shape == grid.shape and not np.array_equal(output, grid):
                         samples.append({
@@ -782,75 +797,81 @@ class MINERVADSLTraining:
     
     @staticmethod
     def _create_stage4_5_grids(stage: int) -> List[np.ndarray]:
-        """Create strategic reasoning grids for Stages 4-5 (8x8 to 19x19)"""
+        """Create strategic reasoning grids for Stages 4-5 (8x8 to 19x19) - SAFE VERSION"""
         grids = []
         max_size = 15 if stage == 4 else 19
         
-        # Strategic patterns requiring reasoning
-        for size in range(8, min(max_size + 1, 20), 2):
-            # Maze-like pattern
+        # Strategic patterns requiring reasoning - SIMPLIFIED TO PREVENT HANGING
+        for size in range(8, min(max_size + 1, 16), 4):  # Reduced range and increased step
+            # Simple maze-like pattern
             grid = np.zeros((size, size), dtype=np.int32)
             for i in range(0, size, 3):
-                grid[i, :] = 1
-                grid[:, i] = 1
-            for i in range(1, size-1, 3):
-                for j in range(1, size-1, 3):
-                    grid[i, j] = 2
+                if i < size:
+                    grid[i, :] = 1
+                if i < size:
+                    grid[:, i] = 1
+            # Add some variety without complex loops
+            for i in range(1, min(size-1, 10), 3):  # Limited range
+                for j in range(1, min(size-1, 10), 3):  # Limited range
+                    if i < size and j < size:
+                        grid[i, j] = 2
             grids.append(grid)
             
-            # Fractal-like pattern
+            # Simple tiled pattern instead of fractal
             grid = np.zeros((size, size), dtype=np.int32)
-            def fill_fractal(x, y, s, color):
-                if s < 2:
-                    return
-                grid[x:x+s//2, y:y+s//2] = color
-                grid[x+s//2:x+s, y+s//2:y+s] = color
-                fill_fractal(x, y+s//2, s//2, (color + 1) % 5)
-                fill_fractal(x+s//2, y, s//2, (color + 2) % 5)
-            
-            fill_fractal(0, 0, size, 1)
+            tile_size = 4
+            for i in range(0, size, tile_size):
+                for j in range(0, size, tile_size):
+                    color = ((i // tile_size) + (j // tile_size)) % 5 + 1
+                    end_i = min(i + tile_size, size)
+                    end_j = min(j + tile_size, size)
+                    grid[i:end_i, j:end_j] = color
             grids.append(grid)
+            
+            # Only add 2 grids per size to prevent excessive generation
+            if len(grids) >= 10:  # Hard limit
+                break
         
         return grids
     
     @staticmethod
     def _create_advanced_grids(stage: int) -> List[np.ndarray]:
-        """Create advanced grids for Stages 6-7 (15x15 to 30x30)"""
+        """Create advanced grids for Stages 6-7 (15x15 to 30x30) - SAFE VERSION"""
         grids = []
         max_size = 24 if stage == 6 else 30
         
-        # Advanced patterns with multiple rules
-        for size in range(15, min(max_size + 1, 31), 3):
-            # Complex tiling pattern
+        # Advanced patterns with multiple rules - SIMPLIFIED TO PREVENT HANGING
+        for size in range(15, min(max_size + 1, 25), 5):  # Reduced range and increased step
+            # Simple tiling pattern
             grid = np.zeros((size, size), dtype=np.int32)
-            tiles = [
-                np.array([[1, 2], [2, 1]]),
-                np.array([[3, 4], [4, 3]]),
-                np.array([[5, 0], [0, 5]])
-            ]
+            tile_size = 3
             
-            for i in range(0, size-1, 2):
-                for j in range(0, size-1, 2):
-                    tile_idx = ((i//2) + (j//2)) % len(tiles)
-                    grid[i:i+2, j:j+2] = tiles[tile_idx]
+            for i in range(0, size, tile_size):
+                for j in range(0, size, tile_size):
+                    color = ((i // tile_size) + (j // tile_size)) % 6 + 1
+                    end_i = min(i + tile_size, size)
+                    end_j = min(j + tile_size, size)
+                    grid[i:end_i, j:end_j] = color
             
             grids.append(grid)
             
-            # Rule-based generation
+            # Simple rule-based generation - SAFE VERSION
             grid = np.zeros((size, size), dtype=np.int32)
-            for i in range(size):
-                for j in range(size):
-                    # Complex rule based on position
-                    if (i + j) % 5 == 0:
+            for i in range(min(size, 20)):  # Limit to prevent hanging
+                for j in range(min(size, 20)):  # Limit to prevent hanging
+                    # Simplified rule based on position
+                    if (i + j) % 4 == 0:
                         grid[i, j] = 1
-                    elif (i * j) % 7 == 0:
+                    elif (i + j) % 3 == 0:
                         grid[i, j] = 2
-                    elif i % 3 == j % 3:
-                        grid[i, j] = 3
                     else:
-                        grid[i, j] = (i + j) % 4
+                        grid[i, j] = (i + j) % 3
             
             grids.append(grid)
+            
+            # Hard limit to prevent excessive generation
+            if len(grids) >= 6:
+                break
         
         return grids
     

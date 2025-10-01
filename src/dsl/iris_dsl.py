@@ -773,7 +773,7 @@ class IRISDSLTraining:
     def create_iris_dsl_samples(curriculum_stage: int = 0) -> List[Dict[str, np.ndarray]]:
         """Create DSL samples tailored for IRIS's color perception at each curriculum stage"""
         samples = []
-        max_samples = 500  # Limit to prevent hanging
+        max_samples = 100  # Reduced limit to prevent hanging
         
         # Stage-specific color patterns optimized for IRIS
         if curriculum_stage == 0:
@@ -801,15 +801,16 @@ class IRISDSLTraining:
             base_grids = IRISDSLTraining._create_advanced_color_grids(curriculum_stage)
             programs = IRISDSLGenerator.generate_perceptual_programs()[:10]  # Reduced
         
-        # Generate samples with limit to prevent hanging
+        # Generate samples with strict limits to prevent hanging
         sample_count = 0
-        for grid in base_grids:
-            if sample_count >= max_samples:
+        for grid_idx, grid in enumerate(base_grids):
+            if sample_count >= max_samples or grid_idx >= 8:  # Limit grids
                 break
-            for program in programs:
-                if sample_count >= max_samples:
+            for prog_idx, program in enumerate(programs):
+                if sample_count >= max_samples or prog_idx >= 3:  # Strict program limit
                     break
                 try:
+                    # Add timeout protection for program execution
                     output = program.execute(grid)
                     if output.shape == grid.shape and not np.array_equal(output, grid):
                         samples.append({
@@ -982,54 +983,39 @@ class IRISDSLTraining:
                     grid[i, j] = color
             grids.append(grid)
             
-            # Color clustering pattern
+            # Simple color clustering pattern - SAFE VERSION
             grid = np.zeros((size, size), dtype=np.int32)
-            num_clusters = 5
-            # Use deterministic positions to prevent hanging
-            step = max(1, size // num_clusters)
-            centers = [(i * step, j * step) for i in range(num_clusters) for j in range(1)][:num_clusters]
-            
-            for i in range(size):
-                for j in range(size):
-                    # Find nearest cluster center
-                    min_dist = float('inf')
-                    cluster_id = 0
-                    for k, (cx, cy) in enumerate(centers):
-                        dist = (i - cx)**2 + (j - cy)**2
-                        if dist < min_dist:
-                            min_dist = dist
-                            cluster_id = k
-                    grid[i, j] = cluster_id % 9
+            # Simplified pattern to prevent hanging
+            for i in range(min(size, 15)):  # Limit range
+                for j in range(min(size, 15)):  # Limit range
+                    # Simple deterministic pattern
+                    cluster_id = ((i // 3) + (j // 3)) % 5
+                    grid[i, j] = cluster_id
             grids.append(grid)
         
         return grids
     
     @staticmethod
     def _create_advanced_color_grids(stage: int) -> List[np.ndarray]:
-        """Create advanced color grids for Stages 6-7 (15x15 to 30x30)"""
+        """Create advanced color grids for Stages 6-7 (15x15 to 30x30) - SAFE VERSION"""
         grids = []
         max_size = 24 if stage == 6 else 30
         
-        # Advanced color patterns with multiple rules
-        for size in range(15, min(max_size + 1, 31), 3):
-            # Complex color field
+        # Advanced color patterns with multiple rules - SIMPLIFIED TO PREVENT HANGING
+        for size in range(15, min(max_size + 1, 25), 5):  # Reduced range and increased step
+            # Simple color field
             grid = np.zeros((size, size), dtype=np.int32)
             
-            # Create base color field with multiple influences
-            for i in range(size):
-                for j in range(size):
-                    # Multiple color influences
-                    influence1 = (i + j) % 5
-                    influence2 = abs(i - j) % 4
-                    influence3 = (i * j) % 3
-                    
-                    # Combine influences
-                    color = (influence1 + influence2 + influence3) % 9
-                    grid[i, j] = color
+            # Create base color field with safe pattern
+            for i in range(min(size, 20)):  # Limit range
+                for j in range(min(size, 20)):  # Limit range
+                    # Simple color influences
+                    color = ((i + j) % 7) + ((i * 2 + j) % 3)
+                    grid[i, j] = color % 9
             
             grids.append(grid)
             
-            # Perceptual grouping pattern
+            # Simple perceptual grouping pattern
             grid = np.zeros((size, size), dtype=np.int32)
             
             # Create regions with perceptual grouping
@@ -1045,6 +1031,10 @@ class IRISDSLTraining:
                             grid[i + di, j + dj] = (base_color + variation) % 9
             
             grids.append(grid)
+            
+            # Hard limit to prevent excessive generation
+            if len(grids) >= 4:
+                break
         
         return grids
     

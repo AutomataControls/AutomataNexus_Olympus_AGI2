@@ -615,7 +615,6 @@ def train_minerva_specialized():
                     if pre_norm > 50.0:
                         print(f"⚠️ CRITICAL: Pre-norm {pre_norm:.2f} too high, skipping update")
                         optimizer.zero_grad()
-                        scaler.update()  # Update scaler state without step
                         continue
                     
                     scaler.unscale_(optimizer)

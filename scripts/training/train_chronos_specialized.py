@@ -700,12 +700,24 @@ def train_chronos_specialized():
                 train_metrics['exact'] += losses['exact_count'].item()
                 train_metrics['samples'] += input_grids.size(0)
                 
-                pbar.set_postfix({
+                # Handle different loss function outputs
+                postfix_dict = {
                     'loss': f"{losses['total'].item():.3f}",
-                    'exact': f"{losses['exact_count'].item():.0f}",
-                    'temporal': f"{losses['temporal']:.3f}",
-                    'movement': f"{losses['movement']:.3f}"
-                })
+                    'exact': f"{losses['exact_count'].item():.0f}"
+                }
+                
+                # Add optional keys if they exist
+                if 'temporal' in losses:
+                    postfix_dict['temporal'] = f"{losses['temporal'].item():.3f}"
+                elif 'focal' in losses:
+                    postfix_dict['focal'] = f"{losses['focal'].item():.3f}"
+                    
+                if 'movement' in losses:
+                    postfix_dict['movement'] = f"{losses['movement'].item():.3f}"
+                elif 'transform' in losses:
+                    postfix_dict['transform'] = f"{losses['transform'].item():.3f}"
+                
+                pbar.set_postfix(postfix_dict)
                 
                 # LEAP training integration with stage-specific complexity
                 if USE_LEAP and 'leap_trainer' in systems and batch_idx % 3 == 0:

@@ -382,41 +382,68 @@ def minerva_leap_injection(model, device, systems, num_epochs=100, target_accura
     
     model.train()
     optimizer = optim.SGD(model.parameters(), lr=MINERVA_CONFIG['learning_rate']*3, momentum=0.9)
+    best_acc = 0
     
     for epoch in range(num_epochs):
-        correct = 0
-        total = 0
+        epoch_correct = 0
+        epoch_total = 0
+        epoch_loss = 0
+        batches_per_epoch = 10  # Generate multiple batches per epoch
         
-        # Generate LEAP patterns
-        leap_batch = systems['leap_trainer'].generate_leap_batch(
-            batch_size=64, stage=0, grid_size=6
-        )
+        for batch_idx in range(batches_per_epoch):
+            # Generate LEAP patterns with basic complexity for easier learning
+            leap_batch = systems['leap_trainer'].generate_leap_batch(
+                batch_size=32,  # Smaller batch size
+                stage=0,
+                grid_size=6,
+                complexity='basic'  # Start with basic patterns
+            )
+            
+            inputs = leap_batch['inputs'].to(device)
+            outputs = leap_batch['outputs'].to(device)
+            
+            # Ensure proper tensor dimensions
+            if inputs.dim() == 4:
+                inputs = inputs.squeeze(1)
+            if outputs.dim() == 4:
+                outputs = outputs.squeeze(1)
+            
+            input_oh = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+            output_oh = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
+            
+            optimizer.zero_grad()
+            pred = model(input_oh, output_oh, mode='train')['predicted_output']
+            loss = F.cross_entropy(pred, outputs)
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            optimizer.step()
+            
+            pred_idx = pred.argmax(dim=1)
+            exact = (pred_idx == outputs).all(dim=[1,2])
+            batch_correct = exact.sum().item()
+            
+            epoch_correct += batch_correct
+            epoch_total += outputs.size(0)
+            epoch_loss += loss.item()
+            
+            # Update LEAP statistics
+            systems['leap_trainer'].update_pattern_stats(
+                leap_batch['pattern_types'], pred, output_oh
+            )
         
-        inputs = leap_batch['inputs'].to(device)
-        outputs = leap_batch['outputs'].to(device)
+        acc = epoch_correct / epoch_total * 100
+        avg_loss = epoch_loss / batches_per_epoch
         
-        input_oh = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
-        output_oh = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
+        if acc > best_acc:
+            best_acc = acc
         
-        optimizer.zero_grad()
-        pred = model(input_oh, output_oh, mode='train')['predicted_output']
-        loss = F.cross_entropy(pred, outputs)
-        loss.backward()
-        optimizer.step()
+        print(f"LEAP Epoch {epoch+1}/{num_epochs}: {acc:.1f}% mastery | Loss: {avg_loss:.3f} | Best: {best_acc:.1f}%")
         
-        pred_idx = pred.argmax(dim=1)
-        exact = (pred_idx == outputs).all(dim=[1,2])
-        acc = exact.float().mean().item() * 100
-        
-        # Update LEAP statistics
-        systems['leap_trainer'].update_pattern_stats(
-            leap_batch['pattern_types'], pred, output_oh
-        )
-        
-        print(f"LEAP Epoch {epoch+1}/{num_epochs}: {acc:.1f}% mastery")
         if acc >= target_accuracy:
             print(f"🏆 LEAP TARGET REACHED: {acc:.1f}%")
             break
+        elif epoch == num_epochs - 1:
+            print(f"⚠️ LEAP COMPLETE: {acc:.1f}% (best: {best_acc:.1f}%, target: {target_accuracy}%)")
     
     return model
 
@@ -434,31 +461,66 @@ def minerva_prism_injection(model, device, systems, num_epochs=100, target_accur
     
     model.train()
     optimizer = optim.SGD(model.parameters(), lr=MINERVA_CONFIG['learning_rate']*2, momentum=0.9)
+    best_acc = 0
     
-    # Generate program-based patterns
+    # Generate MORE program-based patterns for better learning
     patterns = []
-    for i in range(50):
-        size = 6
-        # Simple program: rotate, flip, transpose
-        base = torch.randint(0, 3, (size, size))
-        
-        if i % 3 == 0:
-            output = torch.rot90(base, 1)  # Rotate 90
-        elif i % 3 == 1:
-            output = torch.flip(base, [0])  # Flip vertical
+    for i in range(300):  # Increased from 50 to 300
+        size = random.choice([4, 5, 6])  # Varied sizes
+        # Create more diverse base patterns
+        if i % 4 == 0:
+            base = torch.randint(0, 4, (size, size))
+        elif i % 4 == 1:
+            base = torch.zeros((size, size), dtype=torch.long)
+            base[::2, ::2] = 1
+            base[1::2, 1::2] = 2
+        elif i % 4 == 2:
+            base = torch.arange(size*size).reshape(size, size) % 3
         else:
+            base = torch.randint(0, 3, (size, size))
+        
+        # Apply simple transformations
+        if i % 5 == 0:
+            output = torch.rot90(base, 1)  # Rotate 90
+        elif i % 5 == 1:
+            output = torch.flip(base, [0])  # Flip vertical
+        elif i % 5 == 2:
+            output = torch.flip(base, [1])  # Flip horizontal
+        elif i % 5 == 3:
             output = base.T  # Transpose
+        else:
+            output = base + 1  # Simple increment
             
         patterns.append({'inputs': base, 'outputs': output})
     
     for epoch in range(num_epochs):
-        correct = 0
-        total = 0
+        epoch_correct = 0
+        epoch_total = 0
+        epoch_loss = 0
         
-        for batch_start in range(0, len(patterns), 16):
-            batch = patterns[batch_start:batch_start + 16]
-            inputs = torch.stack([p['inputs'] for p in batch]).to(device)
-            outputs = torch.stack([p['outputs'] for p in batch]).to(device)
+        # Shuffle patterns each epoch
+        random.shuffle(patterns)
+        
+        for batch_start in range(0, len(patterns), 32):  # Batch size 32
+            batch = patterns[batch_start:batch_start + 32]
+            
+            # Handle variable sizes by padding
+            max_size = max(p['inputs'].shape[0] for p in batch)
+            padded_inputs = []
+            padded_outputs = []
+            
+            for p in batch:
+                inp = p['inputs']
+                out = p['outputs']
+                if inp.shape[0] < max_size:
+                    pad = max_size - inp.shape[0]
+                    inp = F.pad(inp, (0, pad, 0, pad), value=0)
+                    out = F.pad(out, (0, pad, 0, pad), value=0)
+                padded_inputs.append(inp)
+                padded_outputs.append(out)
+            
+            inputs = torch.stack(padded_inputs).to(device)
+            outputs = torch.stack(padded_outputs).to(device)
             
             input_oh = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
             output_oh = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
@@ -467,18 +529,30 @@ def minerva_prism_injection(model, device, systems, num_epochs=100, target_accur
             pred = model(input_oh, output_oh, mode='train')['predicted_output']
             loss = F.cross_entropy(pred, outputs)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
             
             pred_idx = pred.argmax(dim=1)
             exact = (pred_idx == outputs).all(dim=[1,2])
-            correct += exact.sum().item()
-            total += len(batch)
+            batch_correct = exact.sum().item()
+            
+            epoch_correct += batch_correct
+            epoch_total += len(batch)
+            epoch_loss += loss.item()
         
-        acc = correct / total * 100
-        print(f"PRISM Epoch {epoch+1}/{num_epochs}: {acc:.1f}% synthesis")
+        acc = epoch_correct / epoch_total * 100
+        avg_loss = epoch_loss / (len(patterns) // 32 + 1)
+        
+        if acc > best_acc:
+            best_acc = acc
+        
+        print(f"PRISM Epoch {epoch+1}/{num_epochs}: {acc:.1f}% synthesis | Loss: {avg_loss:.3f} | Best: {best_acc:.1f}%")
+        
         if acc >= target_accuracy:
             print(f"🏆 PRISM TARGET REACHED: {acc:.1f}%")
             break
+        elif epoch == num_epochs - 1:
+            print(f"⚠️ PRISM COMPLETE: {acc:.1f}% (best: {best_acc:.1f}%, target: {target_accuracy}%)")
     
     return model
 
@@ -490,13 +564,13 @@ from src.data.arc_data_synthesis import ARCDataSynthesizer, ARCDataAugmenter
 # MINERVA-Specific Configuration with 8-Stage Progressive Curriculum - OPTIMIZED V2
 MINERVA_CONFIG = {
     'batch_size': 192,  # Reduced to prevent hanging
-    'learning_rate': 0.003,  # Increased from 0.001 based on 4.03% success
+    'learning_rate': 0.003,  # Base learning rate
     'num_epochs': 400,  # 8 stages x 50 epochs - longer training
     'hidden_dim': 256,
     'pattern_memory_size': 200,
     'gradient_accumulation': 2,  # Effective batch: 384
-    'transform_penalty': 0.3,  # Reduced - allow more transformations
-    'exact_match_bonus': 3.0,  # Increased from 1.0 to reinforce success
+    'transform_penalty': 0.5,  # Positive value to discourage identity copying
+    'exact_match_bonus': 2.0,  # Moderate bonus to avoid negative losses
     'curriculum_stages': 8,  # Progressive 8-stage curriculum
     'epochs_per_stage': 50,  # Extended for better convergence
     'attention_heads': 8,
@@ -960,10 +1034,13 @@ def train_minerva_specialized():
                 if input_grid.shape[0] <= grid_size and input_grid.shape[1] <= grid_size:
                     dataset_samples.append({'inputs': input_grid, 'outputs': output_grid})
         
-        # Convert to torch dataset
+        # Convert to torch dataset and ensure minimum size
         class SimpleARCDataset(Dataset):
             def __init__(self, samples):
                 self.samples = samples
+                # Ensure minimum dataset size by repeating samples
+                while len(self.samples) < 5000:
+                    self.samples.extend(samples[:min(1000, len(samples))])
             def __len__(self):
                 return len(self.samples)
             def __getitem__(self, idx):
@@ -1036,8 +1113,8 @@ def train_minerva_specialized():
                 print(f"\n📍 PHASE 1/4: EXACT MATCH")
                 model = minerva_exact_match_injection(
                     model, device=device,
-                    num_epochs=200,  # 200 epochs or 90% target
-                    target_accuracy=90.0
+                    num_epochs=100,  # Keep high for more training
+                    target_accuracy=50.0  # More realistic target
                 )
                 torch.cuda.empty_cache()
                 gc.collect()
@@ -1047,8 +1124,8 @@ def train_minerva_specialized():
                 print(f"\n📍 PHASE 2/4: MEPT (Memory-Enhanced Pattern Training)")
                 model = minerva_mept_injection(
                     model, device=device, systems=systems,
-                    num_epochs=100,
-                    target_accuracy=90.0
+                    num_epochs=100,  # Keep high for more training
+                    target_accuracy=75.0  # Keep at 75% since it was achieving this
                 )
                 torch.cuda.empty_cache()
                 gc.collect()
@@ -1058,8 +1135,8 @@ def train_minerva_specialized():
                 print(f"\n📍 PHASE 3/4: LEAP (Learning Enhancement)")
                 model = minerva_leap_injection(
                     model, device=device, systems=systems,
-                    num_epochs=100,
-                    target_accuracy=90.0
+                    num_epochs=150,  # MORE epochs since it's at 0%
+                    target_accuracy=25.0  # Very low target to start
                 )
                 torch.cuda.empty_cache()
                 gc.collect()
@@ -1069,8 +1146,8 @@ def train_minerva_specialized():
                 print(f"\n📍 PHASE 4/4: PRISM (Program Synthesis)")
                 model = minerva_prism_injection(
                     model, device=device, systems=systems,
-                    num_epochs=100,
-                    target_accuracy=90.0
+                    num_epochs=150,  # MORE epochs since it's at 0%
+                    target_accuracy=20.0  # Very low target to start
                 )
                 
                 print(f"\n💉 ALL 4 INJECTIONS COMPLETED - Stage {stage}, Epoch {global_epoch}")

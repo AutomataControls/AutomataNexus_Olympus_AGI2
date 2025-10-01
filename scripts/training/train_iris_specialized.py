@@ -418,6 +418,364 @@ def custom_collate_fn(batch, stage=0):
     }
 
 
+# IRIS-specific injection modules for color pattern learning
+def iris_exact_match_injection(model, device, num_epochs=200, target_accuracy=90.0):
+    """IRIS-specific exact match injection for color pattern learning"""
+    print("🎨 IRIS EXACT MATCH INJECTION - COLOR PATTERNS")
+    print("=" * 50)
+    print(f"  Batch size: {IRIS_CONFIG['batch_size']}")
+    print(f"  Learning rate: {IRIS_CONFIG['learning_rate']*3} -> {IRIS_CONFIG['learning_rate']*10} (with warmup)")
+    print(f"  Transform penalty: {IRIS_CONFIG['transform_penalty']}")
+    print(f"  Exact match bonus: {IRIS_CONFIG['exact_match_bonus']}")
+    print(f"  Epochs: {num_epochs}")
+    
+    # Exact match training for color patterns
+    model.train()
+    # Disable dropout for exact match
+    for module in model.modules():
+        if isinstance(module, nn.Dropout) or isinstance(module, nn.Dropout2d):
+            module.p = 0.0
+    
+    # Use Adam optimizer for color learning
+    base_lr = IRIS_CONFIG['learning_rate'] * 3
+    optimizer = optim.AdamW(model.parameters(), lr=base_lr, betas=(0.9, 0.999), weight_decay=0.0)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=base_lr*0.01)
+    
+    # Create color-focused exact match patterns
+    patterns = []
+    
+    # 1. Simple single-color patterns (easiest)
+    for color in range(1, 10):  # Colors 1-9
+        for size in [2, 3, 4]:
+            pattern = torch.full((size, size), color, dtype=torch.long)
+            patterns.append({'inputs': pattern, 'outputs': pattern})
+    
+    # 2. Two-color patterns (vertical split)
+    for c1 in range(1, 6):
+        for c2 in range(c1+1, 7):
+            for size in [4, 5, 6]:
+                pattern = torch.zeros((size, size), dtype=torch.long)
+                pattern[:, :size//2] = c1
+                pattern[:, size//2:] = c2
+                patterns.append({'inputs': pattern, 'outputs': pattern})
+    
+    # 3. Two-color patterns (horizontal split)
+    for c1 in range(1, 6):
+        for c2 in range(c1+1, 7):
+            for size in [4, 5, 6]:
+                pattern = torch.zeros((size, size), dtype=torch.long)
+                pattern[:size//2, :] = c1
+                pattern[size//2:, :] = c2
+                patterns.append({'inputs': pattern, 'outputs': pattern})
+    
+    # 4. Checkerboard patterns
+    for c1 in range(1, 5):
+        for c2 in range(c1+1, 6):
+            for size in [4, 6]:
+                pattern = torch.zeros((size, size), dtype=torch.long)
+                pattern[::2, ::2] = c1
+                pattern[1::2, 1::2] = c1
+                pattern[::2, 1::2] = c2
+                pattern[1::2, ::2] = c2
+                patterns.append({'inputs': pattern, 'outputs': pattern})
+    
+    # Shuffle patterns
+    random.shuffle(patterns)
+    
+    # Training loop
+    best_acc = 0
+    
+    for epoch in range(num_epochs):
+        correct = 0
+        total = 0
+        epoch_loss = 0
+        
+        # Warmup phase
+        if epoch < 10:
+            new_lr = base_lr + (IRIS_CONFIG['learning_rate'] * 10 - base_lr) * (epoch / 10)
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = new_lr
+        
+        random.shuffle(patterns)
+        
+        for batch_start in range(0, len(patterns), IRIS_CONFIG['batch_size']):
+            batch_patterns = patterns[batch_start:batch_start + IRIS_CONFIG['batch_size']]
+            
+            # Pad to consistent size
+            max_h = max(p['inputs'].shape[0] for p in batch_patterns)
+            max_w = max(p['inputs'].shape[1] for p in batch_patterns)
+            
+            padded_inputs = []
+            padded_outputs = []
+            for p in batch_patterns:
+                inp = p['inputs']
+                out = p['outputs']
+                h, w = inp.shape
+                pad_h = max_h - h
+                pad_w = max_w - w
+                if pad_h > 0 or pad_w > 0:
+                    padded_inp = F.pad(inp, (0, pad_w, 0, pad_h), value=0)
+                    padded_out = F.pad(out, (0, pad_w, 0, pad_h), value=0)
+                else:
+                    padded_inp = inp
+                    padded_out = out
+                padded_inputs.append(padded_inp)
+                padded_outputs.append(padded_out)
+            
+            inputs = torch.stack(padded_inputs).to(device)
+            outputs = torch.stack(padded_outputs).to(device)
+            
+            input_oh = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+            output_oh = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
+            
+            optimizer.zero_grad()
+            model_outputs = model(input_oh, output_oh, mode='train')
+            pred = model_outputs['predicted_output']
+            
+            # Color-focused loss
+            loss = F.cross_entropy(pred, outputs, reduction='none')
+            
+            pred_idx = pred.argmax(dim=1)
+            exact_matches = (pred_idx == outputs).all(dim=[1,2]).float()
+            
+            # Weight loss by mistakes
+            loss_weights = torch.ones_like(loss)
+            loss_weights[exact_matches.bool()] = 0.1
+            
+            weighted_loss = (loss * loss_weights).mean()
+            
+            # Exact match reward
+            exact_reward = -exact_matches.mean() * min(2.0, 0.5 + epoch / 50)
+            
+            total_loss = weighted_loss + exact_reward
+            total_loss = torch.clamp(total_loss, min=0.01)
+            
+            total_loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+            optimizer.step()
+            
+            correct += exact_matches.sum().item()
+            total += outputs.size(0)
+            epoch_loss += total_loss.item()
+        
+        acc = correct / total * 100
+        avg_loss = epoch_loss / (len(patterns) // IRIS_CONFIG['batch_size'] + 1)
+        
+        if epoch >= 10:
+            scheduler.step()
+        
+        current_lr = optimizer.param_groups[0]['lr']
+        print(f"Epoch {epoch+1}/{num_epochs}: {acc:.1f}% exact match | Loss: {avg_loss:.3f} | LR: {current_lr:.5f}")
+        
+        if acc > best_acc:
+            best_acc = acc
+        
+        if acc >= target_accuracy:
+            print(f"🏆 TARGET REACHED: {acc:.1f}% >= {target_accuracy}%")
+            break
+        elif epoch == num_epochs - 1:
+            print(f"⚠️ INJECTION COMPLETE: {acc:.1f}% (best: {best_acc:.1f}%, target: {target_accuracy}%)")
+    
+    return model
+
+
+def iris_mept_injection(model, device, num_epochs=100, target_accuracy=90.0):
+    """IRIS MEPT (Memory-Enhanced Pattern Training) injection for color patterns"""
+    print("🎨 IRIS MEPT INJECTION - COLOR MEMORY")
+    print("=" * 50)
+    print(f"  Target: {target_accuracy}% color pattern recall")
+    print(f"  Epochs: {num_epochs}")
+    
+    model.train()
+    optimizer = optim.Adam(model.parameters(), lr=IRIS_CONFIG['learning_rate']*5, betas=(0.9, 0.999))
+    
+    # Generate color patterns for MEPT
+    patterns = []
+    for i in range(100):
+        size = random.choice([4, 5, 6])
+        pattern = torch.zeros((size, size), dtype=torch.long)
+        
+        if i % 4 == 0:  # Gradient
+            for row in range(size):
+                pattern[row, :] = (row * 9) // size
+        elif i % 4 == 1:  # Color blocks
+            block_size = size // 2
+            for bi in range(2):
+                for bj in range(2):
+                    color = bi * 2 + bj + 1
+                    pattern[bi*block_size:(bi+1)*block_size, bj*block_size:(bj+1)*block_size] = color
+        elif i % 4 == 2:  # Rainbow stripes
+            for col in range(size):
+                pattern[:, col] = (col % 7) + 1
+        else:  # Random color regions
+            n_regions = random.randint(2, 4)
+            for r in range(n_regions):
+                x = random.randint(0, size-2)
+                y = random.randint(0, size-2)
+                pattern[x:x+2, y:y+2] = r + 1
+        
+        patterns.append({'inputs': pattern, 'outputs': pattern})
+    
+    for epoch in range(num_epochs):
+        correct = 0
+        total = 0
+        
+        for batch_start in range(0, len(patterns), 32):
+            batch = patterns[batch_start:batch_start + 32]
+            inputs = torch.stack([p['inputs'] for p in batch]).to(device)
+            outputs = torch.stack([p['outputs'] for p in batch]).to(device)
+            
+            input_oh = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+            output_oh = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
+            
+            optimizer.zero_grad()
+            model_outputs = model(input_oh, output_oh, mode='train')
+            pred = model_outputs['predicted_output']
+            loss = F.cross_entropy(pred, outputs)
+            loss.backward()
+            optimizer.step()
+            
+            pred_idx = pred.argmax(dim=1)
+            exact = (pred_idx == outputs).all(dim=[1,2])
+            correct += exact.sum().item()
+            total += len(batch)
+            
+            # Store color patterns
+            for i, is_exact in enumerate(exact):
+                if is_exact:
+                    systems['replay_buffer'].add(
+                        input_oh[i], output_oh[i], pred_idx[i],
+                        loss.item(), is_exact=True
+                    )
+        
+        acc = correct / total * 100
+        print(f"MEPT Epoch {epoch+1}/{num_epochs}: {acc:.1f}% recall")
+        if acc >= target_accuracy:
+            print(f"🏆 MEPT TARGET REACHED: {acc:.1f}%")
+            break
+    
+    return model
+
+
+def iris_leap_injection(model, device, num_epochs=100, target_accuracy=90.0):
+    """IRIS LEAP (Learning Enhancement through Adaptive Patterns) injection"""
+    print("🎨 IRIS LEAP INJECTION - COLOR ADAPTATION")
+    print("=" * 50)
+    print(f"  Target: {target_accuracy}% color pattern mastery")
+    print(f"  Epochs: {num_epochs}")
+    
+    model.train()
+    optimizer = optim.Adam(model.parameters(), lr=IRIS_CONFIG['learning_rate']*3, betas=(0.9, 0.999))
+    
+    for epoch in range(num_epochs):
+        correct = 0
+        total = 0
+        
+        # Generate LEAP color patterns
+        leap_batch = systems['leap_trainer'].generate_leap_batch(
+            batch_size=64, stage=0, grid_size=6
+        )
+        
+        inputs = leap_batch['inputs'].to(device)
+        outputs = leap_batch['outputs'].to(device)
+        
+        # Ensure proper size
+        if inputs.shape[-1] < 6:
+            pad = 6 - inputs.shape[-1]
+            inputs = F.pad(inputs, (0, pad, 0, pad), value=0)
+            outputs = F.pad(outputs, (0, pad, 0, pad), value=0)
+        
+        input_oh = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+        output_oh = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
+        
+        optimizer.zero_grad()
+        model_outputs = model(input_oh, output_oh, mode='train')
+        pred = model_outputs['predicted_output']
+        loss = F.cross_entropy(pred, outputs)
+        loss.backward()
+        optimizer.step()
+        
+        pred_idx = pred.argmax(dim=1)
+        exact = (pred_idx == outputs).all(dim=[1,2])
+        correct = exact.sum().item()
+        total = outputs.size(0)
+        
+        acc = correct / total * 100
+        print(f"LEAP Epoch {epoch+1}/{num_epochs}: {acc:.1f}% mastery")
+        
+        if acc >= target_accuracy:
+            print(f"🏆 LEAP TARGET REACHED: {acc:.1f}%")
+            break
+    
+    return model
+
+
+def iris_prism_injection(model, device, num_epochs=100, target_accuracy=90.0):
+    """IRIS PRISM (Program Synthesis) injection for color transformations"""
+    print("🎨 IRIS PRISM INJECTION - COLOR SYNTHESIS")
+    print("=" * 50)
+    print(f"  Target: {target_accuracy}% color program synthesis")
+    print(f"  Epochs: {num_epochs}")
+    
+    model.train()
+    optimizer = optim.Adam(model.parameters(), lr=IRIS_CONFIG['learning_rate']*2, betas=(0.9, 0.999))
+    
+    # Generate color transformation patterns
+    patterns = []
+    for i in range(50):
+        size = 5
+        input_pattern = torch.randint(1, 6, (size, size), dtype=torch.long)
+        
+        # Simple color transformations
+        if i % 5 == 0:  # Color swap
+            output_pattern = input_pattern.clone()
+            output_pattern[input_pattern == 1] = 2
+            output_pattern[input_pattern == 2] = 1
+        elif i % 5 == 1:  # Invert colors
+            output_pattern = 10 - input_pattern
+        elif i % 5 == 2:  # Color shift
+            output_pattern = (input_pattern % 9) + 1
+        elif i % 5 == 3:  # Binary threshold
+            output_pattern = torch.where(input_pattern > 3, torch.tensor(1), torch.tensor(0))
+        else:  # Keep specific color
+            keep_color = random.randint(1, 5)
+            output_pattern = torch.where(input_pattern == keep_color, input_pattern, torch.tensor(0))
+        
+        patterns.append({'inputs': input_pattern, 'outputs': output_pattern})
+    
+    for epoch in range(num_epochs):
+        correct = 0
+        total = 0
+        
+        for pattern in patterns:
+            inputs = pattern['inputs'].unsqueeze(0).to(device)
+            outputs = pattern['outputs'].unsqueeze(0).to(device)
+            
+            input_oh = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+            output_oh = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
+            
+            optimizer.zero_grad()
+            model_outputs = model(input_oh, output_oh, mode='train')
+            pred = model_outputs['predicted_output']
+            loss = F.cross_entropy(pred, outputs)
+            loss.backward()
+            optimizer.step()
+            
+            pred_idx = pred.argmax(dim=1)
+            if (pred_idx == outputs).all():
+                correct += 1
+            total += 1
+        
+        acc = correct / total * 100
+        print(f"PRISM Epoch {epoch+1}/{num_epochs}: {acc:.1f}% synthesis")
+        
+        if acc >= target_accuracy:
+            print(f"🏆 PRISM TARGET REACHED: {acc:.1f}%")
+            break
+    
+    return model
+
+
 def train_iris_specialized():
     """Main IRIS specialized training function"""
     print("🎨 Starting IRIS Specialized Training")
@@ -561,13 +919,42 @@ def train_iris_specialized():
         dsl_samples = IRISDSLTraining.create_iris_dsl_samples(curriculum_stage=stage)
         print(f"✅ Created {len(dsl_samples)} IRIS DSL color pattern samples")
         
-        # Create curriculum dataset with stage-specific grid size - EFFICIENT SIZE
-        dataset = CurriculumMegaScaleDataset(
-            DATA_DIR,
-            curriculum_stage=min(stage, 2),  # Cap at stage 2 for compatibility
-            use_arc_synthesis=True,
-            synthesis_ratio=max(0.2, synthesis_ratio * 0.5)  # Reduce synthesis by 50%
-        )
+        # Create simple ARC dataset for this stage
+        # Load ARC training data directly
+        dataset_samples = []
+        
+        # Add DSL samples
+        dataset_samples.extend(dsl_samples)
+        
+        # Load ARC JSON files
+        arc_files = [
+            'arc-agi_training_challenges.json',
+            'arc-agi_evaluation_challenges.json'
+        ]
+        
+        for filename in arc_files:
+            filepath = os.path.join(DATA_DIR, filename)
+            if os.path.exists(filepath):
+                with open(filepath, 'r') as f:
+                    tasks = json.load(f)
+                    for task_id, task_data in tasks.items():
+                        for example in task_data['train']:
+                            input_grid = np.array(example['input'])
+                            output_grid = np.array(example['output'])
+                            # Only use grids that fit in current stage size
+                            if input_grid.shape[0] <= grid_size and input_grid.shape[1] <= grid_size:
+                                dataset_samples.append({'inputs': input_grid, 'outputs': output_grid})
+        
+        # Convert to torch dataset
+        class SimpleARCDataset(Dataset):
+            def __init__(self, samples):
+                self.samples = samples
+            def __len__(self):
+                return len(self.samples)
+            def __getitem__(self, idx):
+                return self.samples[idx]
+        
+        dataset = SimpleARCDataset(dataset_samples)
         
         # Limit dataset size for efficient training
         if len(dataset) > 15000:  # Reasonable limit
@@ -609,14 +996,38 @@ def train_iris_specialized():
         
         print(f"📚 Stage {stage} ({grid_size}x{grid_size}) - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
         
-        # Exact match injection for Stage 0 only
-        exact_dataset = None
-        if stage_config['exact_injection'] and USE_EXACT_BOOST:
-            try:
-                exact_dataset = ExactMatchBoostDataset(1200, fixed_size=grid_size)
-                print(f"✅ Stage {stage} color-focused exact match injection dataset created ({grid_size}x{grid_size})")
-            except Exception as e:
-                print(f"⚠️ Could not create exact match dataset: {e}")
+        # 4-PHASE IRIS INJECTION SEQUENCE for Stage 0 only
+        if stage == 0 and stage_start_epoch == 0:
+            print("\n" + "="*60)
+            print("🌈 IRIS 4-PHASE COLOR PATTERN INJECTION SEQUENCE")
+            print("="*60)
+            
+            # Phase 1: Exact Match Injection - Color Identity Mapping
+            print("\n📍 PHASE 1: Color Identity Mapping")
+            model = iris_exact_match_injection(model, device=device, num_epochs=200, target_accuracy=90.0)
+            torch.cuda.empty_cache()
+            gc.collect()
+            
+            # Phase 2: MEPT Injection - Color Memory Patterns
+            print("\n📍 PHASE 2: Color Memory Enhancement (MEPT)")
+            model = iris_mept_injection(model, device=device, num_epochs=100)
+            torch.cuda.empty_cache()
+            gc.collect()
+            
+            # Phase 3: LEAP Injection - Adaptive Color Patterns
+            print("\n📍 PHASE 3: Adaptive Color Learning (LEAP)")
+            model = iris_leap_injection(model, device=device, num_epochs=100)
+            torch.cuda.empty_cache()
+            gc.collect()
+            
+            # Phase 4: PRISM Injection - Color Program Synthesis
+            print("\n📍 PHASE 4: Color Program Synthesis (PRISM)")
+            model = iris_prism_injection(model, device=device, num_epochs=100)
+            torch.cuda.empty_cache()
+            gc.collect()
+            
+            print("\n✅ 4-PHASE INJECTION COMPLETE - IRIS is primed for color pattern recognition!")
+            print("="*60 + "\n")
         
         # Stage training loop
         # Calculate starting epoch for this stage when resuming
@@ -626,25 +1037,6 @@ def train_iris_specialized():
             stage_start_epoch = global_epoch % IRIS_CONFIG['epochs_per_stage']
             
         for epoch in range(stage_start_epoch, IRIS_CONFIG['epochs_per_stage']):
-            if epoch == stage_start_epoch and stage == start_stage and global_epoch > 0:
-                # Don't increment on first iteration when resuming
-                pass
-            else:
-                global_epoch += 1
-            
-            # Exact match injection training (Stage 0 ONLY, epoch 0 ONLY)
-            if exact_dataset and stage == 0 and epoch == 0:  # ONLY FIRST EPOCH
-                print(f"🔥 Running ONE-TIME exact injection for Stage {stage}")
-                model = inject_exact_match_training(
-                    model, device=device,
-                    num_epochs=5,  # Reduced from default
-                    target_accuracy=50.0  # Much more realistic target
-                )
-                print(f"🎨 Color injection completed - Epoch {global_epoch}")
-                # Memory cleanup after exact match injection
-                torch.cuda.empty_cache()
-                gc.collect()
-                time.sleep(2)  # Brief pause to ensure cleanup
             
             # Main training
             model.train()

@@ -814,8 +814,8 @@ class IRISDSLTraining:
                     output = program.execute(grid)
                     if output.shape == grid.shape and not np.array_equal(output, grid):
                         samples.append({
-                            'input': grid.copy(),
-                            'output': output,
+                            'inputs': grid.copy(),
+                            'outputs': output,
                             'program': program,
                             'stage': curriculum_stage,
                             'type': 'iris_dsl'

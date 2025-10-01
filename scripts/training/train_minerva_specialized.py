@@ -750,6 +750,10 @@ class MinervaSpecializedLoss(nn.Module):
 
 def custom_collate_fn(batch, stage=0):
     """MINERVA-optimized collate function with stage-specific grid sizes"""
+    if len(batch) == 0:
+        print("⚠️ Empty batch in collate_fn!")
+        return {'inputs': torch.zeros(0, 6, 6), 'outputs': torch.zeros(0, 6, 6)}
+    
     inputs = []
     outputs = []
     target_size = STAGE_CONFIG[stage]['max_grid_size']
@@ -1164,6 +1168,7 @@ def train_minerva_specialized():
             train_metrics = {'loss': 0, 'exact': 0, 'samples': 0}
             
             print(f"🔄 Starting training loop for Stage {stage}, Epoch {epoch+1}, DataLoader batches: {len(train_loader)}")
+            print(f"   Batch size: {MINERVA_CONFIG['batch_size']}, Total samples: {len(train_dataset)}")
             
             pbar = tqdm(train_loader, desc=f"MINERVA Stage {stage}, Epoch {epoch+1}", 
                        colour='cyan', bar_format='{l_bar}{bar:30}{r_bar}')
@@ -1175,15 +1180,16 @@ def train_minerva_specialized():
             batch_count = 0
             
             try:
+                print("   About to start iterating through batches...")
                 for batch_idx, batch in enumerate(pbar):
                     batch_count += 1
                     if batch_count % 5 == 1:
                         print(f"  Processing batch {batch_count}/{len(train_loader)}...")
                     current_time = time.time()
-                    if current_time - last_batch_time > 60:  # 60 seconds timeout
+                    if current_time - last_batch_time > 30:  # 30 seconds timeout (reduced)
                         stuck_counter += 1
-                        print(f"⚠️ Warning: Batch {batch_idx} taking too long (stuck counter: {stuck_counter})")
-                        if stuck_counter > 3:
+                        print(f"⚠️ Warning: Batch {batch_idx} taking too long ({current_time - last_batch_time:.1f}s, stuck counter: {stuck_counter})")
+                        if stuck_counter > 1:  # Reduced threshold
                             print("❌ Training appears stuck, breaking epoch")
                             break
                     
@@ -1192,11 +1198,15 @@ def train_minerva_specialized():
                     # MINERVA DSL augmentation - SAFE VERSION
                     if batch_idx % 10 == 0 and dsl_samples:  # Every 10th batch (reduced frequency)
                         try:
+                            print(f"   Attempting DSL augmentation for batch {batch_idx}...")
                             batch = MINERVADSLTraining.augment_batch_with_minerva_dsl(
                                 batch, curriculum_stage=stage, dsl_ratio=0.1  # Reduced ratio
                             )
+                            print(f"   DSL augmentation successful")
                         except Exception as e:
                             print(f"⚠️ DSL augmentation error: {e}")
+                            import traceback
+                            traceback.print_exc()
                             # Continue with original batch
                     
                     inputs = batch['inputs'].to(device, non_blocking=True)

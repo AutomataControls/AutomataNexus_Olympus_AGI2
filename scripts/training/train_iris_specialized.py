@@ -589,29 +589,30 @@ def iris_mept_injection(model, device, num_epochs=100, target_accuracy=90.0):
     model.train()
     optimizer = optim.Adam(model.parameters(), lr=IRIS_CONFIG['learning_rate']*5, betas=(0.9, 0.999))
     
-    # Generate color patterns for MEPT
+    # Generate color patterns for MEPT - all patterns will be same size to avoid stacking error
+    TARGET_SIZE = 6  # Fixed size for all patterns
     patterns = []
     for i in range(100):
-        size = random.choice([4, 5, 6])
-        pattern = torch.zeros((size, size), dtype=torch.long)
+        # Create pattern directly at target size
+        pattern = torch.zeros((TARGET_SIZE, TARGET_SIZE), dtype=torch.long)
         
         if i % 4 == 0:  # Gradient
-            for row in range(size):
-                pattern[row, :] = (row * 9) // size
+            for row in range(TARGET_SIZE):
+                pattern[row, :] = (row * 9) // TARGET_SIZE
         elif i % 4 == 1:  # Color blocks
-            block_size = size // 2
+            block_size = TARGET_SIZE // 2
             for bi in range(2):
                 for bj in range(2):
                     color = bi * 2 + bj + 1
                     pattern[bi*block_size:(bi+1)*block_size, bj*block_size:(bj+1)*block_size] = color
         elif i % 4 == 2:  # Rainbow stripes
-            for col in range(size):
+            for col in range(TARGET_SIZE):
                 pattern[:, col] = (col % 7) + 1
-        else:  # Random color regions
+        else:  # Random color regions  
             n_regions = random.randint(2, 4)
             for r in range(n_regions):
-                x = random.randint(0, size-2)
-                y = random.randint(0, size-2)
+                x = random.randint(0, TARGET_SIZE-2)
+                y = random.randint(0, TARGET_SIZE-2)
                 pattern[x:x+2, y:y+2] = r + 1
         
         patterns.append({'inputs': pattern, 'outputs': pattern})
@@ -622,6 +623,8 @@ def iris_mept_injection(model, device, num_epochs=100, target_accuracy=90.0):
         
         for batch_start in range(0, len(patterns), 32):
             batch = patterns[batch_start:batch_start + 32]
+            
+            # All patterns are already the same size, so just stack directly
             inputs = torch.stack([p['inputs'] for p in batch]).to(device)
             outputs = torch.stack([p['outputs'] for p in batch]).to(device)
             

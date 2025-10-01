@@ -526,24 +526,17 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100, target_acc
     batch_size = 512
     print(f"Using batch size: {batch_size} (optimized for 80GB GPU)")
     
-    # Adaptive DataLoader configuration
-    import multiprocessing
-    cpu_count = multiprocessing.cpu_count()
+    # Fixed DataLoader configuration to prevent hanging
+    # Set to 0 workers to avoid multiprocessing issues that cause hanging
+    num_workers = 0
+    pin_memory = False
     
-    if torch.cuda.is_available():
-        num_workers = min(8, cpu_count)
-        pin_memory = True
-    else:
-        # For CPU training, use fewer workers to avoid overhead
-        num_workers = min(2, cpu_count)
-        pin_memory = False
-    
-    print(f"DataLoader config: workers={num_workers}, pin_memory={pin_memory}")
+    print(f"DataLoader config: workers={num_workers}, pin_memory={pin_memory} (fixed to prevent hanging)")
     
     dataloader = torch.utils.data.DataLoader(
         combined_dataset, batch_size=batch_size, shuffle=True, collate_fn=exact_match_collate_fn,
         num_workers=num_workers, pin_memory=pin_memory, drop_last=True, 
-        persistent_workers=num_workers > 0
+        persistent_workers=False  # Can't use with 0 workers
     )
     
     # COMPREHENSIVE: Use AggressiveLoss with proper LR for injection training

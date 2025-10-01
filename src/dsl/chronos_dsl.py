@@ -314,6 +314,22 @@ class ChronosDSL:
         shifted = torch.roll(grid, shifts=delay, dims=-1)
         return torch.maximum(grid, shifted * decay)
     
+    def _cascade(self, grid: torch.Tensor, step: int = 0) -> torch.Tensor:
+        """Create cascading effect"""
+        result = grid.clone()
+        if step > 0:
+            # Shift each channel by step amount
+            for i in range(grid.shape[1]):
+                result[:, i] = torch.roll(result[:, i], shifts=step, dims=-1)
+        return result
+    
+    def _wave(self, grid: torch.Tensor, phase: float = 0) -> torch.Tensor:
+        """Create wave propagation effect"""
+        result = grid.clone()
+        # Apply sine wave modulation
+        wave_intensity = (torch.sin(torch.tensor(phase)) + 1) / 2
+        return result * wave_intensity
+    
     def _reverse_time(self, sequence: List[torch.Tensor]) -> List[torch.Tensor]:
         """Reverse temporal order"""
         return list(reversed(sequence))
@@ -542,7 +558,7 @@ class CHRONOSDSLGenerator:
             grid[:, 1, center, center] = 1
             sequence = []
             for i in range(6):
-                pulsed = self.dsl._pulse(grid, intensity=0.3 + i * 0.15)
+                pulsed = self.dsl._pulse(grid, phase=0.3 + i * 0.15)
                 sequence.append(pulsed.clone())
                 
         elif pattern_type == 'growth_sequence':

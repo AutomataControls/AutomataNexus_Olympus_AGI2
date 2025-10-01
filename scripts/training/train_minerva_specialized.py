@@ -570,22 +570,23 @@ def train_minerva_specialized():
             )
         
         # Data loaders with stage-specific grid sizes
+        # Use 0 workers to avoid hanging issues
         train_loader = DataLoader(
             train_dataset,
             batch_size=MINERVA_CONFIG['batch_size'],
             shuffle=True,
-            num_workers=4,
-            pin_memory=True,
+            num_workers=0,  # Set to 0 to avoid multiprocessing issues
+            pin_memory=False,  # Disable when using 0 workers
             collate_fn=lambda batch: custom_collate_fn(batch, stage),
-            persistent_workers=True
+            persistent_workers=False  # Can't use with 0 workers
         )
         
         val_loader = DataLoader(
             val_dataset,
             batch_size=MINERVA_CONFIG['batch_size'],
             shuffle=False,
-            num_workers=4,
-            pin_memory=True,
+            num_workers=0,  # Set to 0 to avoid multiprocessing issues
+            pin_memory=False,  # Disable when using 0 workers
             collate_fn=lambda batch: custom_collate_fn(batch, stage)
         )
         
@@ -632,7 +633,21 @@ def train_minerva_specialized():
                        colour='cyan', bar_format='{l_bar}{bar:30}{r_bar}')
             optimizer.zero_grad()
             
+            # Timeout detection to prevent hanging
+            import time
+            last_batch_time = time.time()
+            stuck_counter = 0
+            
             for batch_idx, batch in enumerate(pbar):
+                current_time = time.time()
+                if current_time - last_batch_time > 60:  # 60 seconds timeout
+                    stuck_counter += 1
+                    print(f"⚠️ Warning: Batch {batch_idx} taking too long (stuck counter: {stuck_counter})")
+                    if stuck_counter > 3:
+                        print("❌ Training appears stuck, breaking epoch")
+                        break
+                
+                last_batch_time = current_time
                 # MINERVA DSL augmentation
                 if batch_idx % 5 == 0 and dsl_samples:  # Every 5th batch
                     batch = MINERVADSLTraining.augment_batch_with_minerva_dsl(

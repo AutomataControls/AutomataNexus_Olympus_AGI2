@@ -610,13 +610,13 @@ def train_minerva_specialized():
             global_epoch += 1
             
             # Extended exact match injection training (Stage 0 and 1, FIRST EPOCH ONLY)
-            target_acc = 95.0 if stage == 0 else 92.0  # Slightly lower for Stage 1
+            target_acc = 50.0 if stage == 0 else 60.0  # Realistic targets for injection
             
             if exact_dataset and stage_config['exact_injection'] and epoch == 0:  # ONLY FIRST EPOCH
                 print(f"🔥 Running exact injection: Stage {stage}, Epoch {epoch}, Target: {target_acc}%")
                 model = inject_exact_match_training(
                     model, device=device,
-                    num_epochs=1,
+                    num_epochs=10,  # Reduced from default 100
                     target_accuracy=target_acc
                 )
                 print(f"💉 Exact injection completed - Stage {stage}, Epoch {global_epoch}")

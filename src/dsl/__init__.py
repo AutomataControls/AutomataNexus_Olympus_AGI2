@@ -16,6 +16,16 @@ from .dsl_training import (
     DSLTrainingIntegration
 )
 
+# Model-specific DSL imports
+try:
+    from .minerva_dsl import (
+        MINERVADSLGenerator,
+        MINERVADSLTraining
+    )
+    MINERVA_DSL_AVAILABLE = True
+except ImportError:
+    MINERVA_DSL_AVAILABLE = False
+
 __all__ = [
     'Operation',
     'DSLProgram',
@@ -25,3 +35,7 @@ __all__ = [
     'DSLAugmentedDataset',
     'DSLTrainingIntegration'
 ]
+
+# Add MINERVA DSL exports if available
+if MINERVA_DSL_AVAILABLE:
+    __all__.extend(['MINERVADSLGenerator', 'MINERVADSLTraining'])

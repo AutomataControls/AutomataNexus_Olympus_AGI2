@@ -30,24 +30,40 @@ from src.models.minerva_model import EnhancedMinervaNet
 
 # Import ALL AutomataNexus novel training components
 from src.dsl import DSLTrainingIntegration, DSLProgramGenerator
+from src.dsl.minerva_dsl import MINERVADSLTraining, MINERVADSLGenerator
 from src.program_synthesis.synthesis_integration import LightweightProgramSynthesizer, ProgramSynthesisDataGenerator
 
-# PRISM System
+# PRISM System - Use MINERVA-specific version
 try:
-    from src.program_synthesis.prism_system import PRISMSynthesizer, create_prism_system
-    PRISM_AVAILABLE = True
+    from src.training_systems.minerva_prism import create_minerva_prism_system
+    MINERVA_PRISM_AVAILABLE = True
 except ImportError:
-    PRISM_AVAILABLE = False
-    print("⚠️ PRISM not available")
+    MINERVA_PRISM_AVAILABLE = False
+    print("⚠️ MINERVA-specific PRISM not available")
+    # Fallback to generic version
+    try:
+        from src.program_synthesis.prism_system import PRISMSynthesizer, create_prism_system
+        PRISM_AVAILABLE = True
+    except ImportError:
+        PRISM_AVAILABLE = False
+        print("⚠️ Generic PRISM not available")
 
-# MEPT and LEAP Systems
+# MEPT and LEAP Systems - Use MINERVA-specific versions
 try:
-    from src.utils.mept_system import ExperienceReplayBuffer, PatternBank, MEPTLoss, create_mept_system
-    from src.utils.leap_system import AdaptivePatternGenerator, LEAPTrainer, create_leap_system
-    MEPT_LEAP_AVAILABLE = True
+    from src.training_systems.minerva_mept import create_minerva_mept_system, MinervaMEPTLoss
+    from src.training_systems.minerva_leap import create_minerva_leap_system, MinervaLEAPTrainer
+    MINERVA_MEPT_LEAP_AVAILABLE = True
 except ImportError:
-    MEPT_LEAP_AVAILABLE = False
-    print("⚠️ MEPT/LEAP not available")
+    MINERVA_MEPT_LEAP_AVAILABLE = False
+    print("⚠️ MINERVA-specific MEPT/LEAP not available")
+    # Fallback to generic versions
+    try:
+        from src.utils.mept_system import ExperienceReplayBuffer, PatternBank, MEPTLoss, create_mept_system
+        from src.utils.leap_system import AdaptivePatternGenerator, LEAPTrainer, create_leap_system
+        MEPT_LEAP_AVAILABLE = True
+    except ImportError:
+        MEPT_LEAP_AVAILABLE = False
+        print("⚠️ Generic MEPT/LEAP not available")
 
 # LEAP-PRISM Bridge
 try:
@@ -346,30 +362,54 @@ def train_minerva_specialized():
     # Initialize all AutomataNexus training systems
     systems = {}
     
-    # MEPT System
+    # MEPT System - Use MINERVA-specific if available
     if USE_MEPT:
-        mept_components = create_mept_system(
-            capacity=50000,  # Integer capacity for replay buffer
-            pattern_bank_size=10000,
-            transformation_penalty=MINERVA_CONFIG['transform_penalty'],
-            exact_match_bonus=MINERVA_CONFIG['exact_match_bonus']
-        )
-        systems['replay_buffer'] = mept_components['replay_buffer']
-        systems['pattern_bank'] = mept_components['pattern_bank']
-        print("✅ MEPT system initialized")
+        if MINERVA_MEPT_LEAP_AVAILABLE:
+            mept_components = create_minerva_mept_system(
+                capacity=50000,  # Integer capacity for replay buffer
+                pattern_bank_size=10000,
+                transformation_penalty=MINERVA_CONFIG['transform_penalty'],
+                exact_match_bonus=MINERVA_CONFIG['exact_match_bonus']
+            )
+            systems['replay_buffer'] = mept_components['replay_buffer']
+            systems['pattern_bank'] = mept_components['pattern_bank']
+            systems['loss_fn'] = mept_components['loss_fn']  # MINERVA-specific loss
+            print("✅ MINERVA-specific MEPT system initialized")
+        elif MEPT_LEAP_AVAILABLE:
+            mept_components = create_mept_system(
+                capacity=50000,  # Integer capacity for replay buffer
+                pattern_bank_size=10000,
+                transformation_penalty=MINERVA_CONFIG['transform_penalty'],
+                exact_match_bonus=MINERVA_CONFIG['exact_match_bonus']
+            )
+            systems['replay_buffer'] = mept_components['replay_buffer']
+            systems['pattern_bank'] = mept_components['pattern_bank']
+            print("✅ Generic MEPT system initialized")
     
-    # LEAP System  
+    # LEAP System - Use MINERVA-specific if available
     if USE_LEAP:
-        leap_components = create_leap_system(device)
-        systems['leap_trainer'] = leap_components['trainer']
-        systems['pattern_generator'] = leap_components['pattern_generator']
-        systems['weak_detector'] = leap_components['detector']
-        print("✅ LEAP system initialized")
+        if MINERVA_MEPT_LEAP_AVAILABLE:
+            leap_components = create_minerva_leap_system(device)
+            systems['leap_trainer'] = leap_components['trainer']
+            systems['pattern_generator'] = leap_components['pattern_generator']
+            print("✅ MINERVA-specific LEAP system initialized")
+        elif MEPT_LEAP_AVAILABLE:
+            leap_components = create_leap_system(device)
+            systems['leap_trainer'] = leap_components['trainer']
+            systems['pattern_generator'] = leap_components['pattern_generator']
+            systems['weak_detector'] = leap_components['detector']
+            print("✅ Generic LEAP system initialized")
     
-    # PRISM System
+    # PRISM System - Use MINERVA-specific if available
     if USE_PRISM:
-        systems['prism_synthesizer'] = create_prism_system()
-        print("✅ PRISM system initialized")
+        if MINERVA_PRISM_AVAILABLE:
+            prism_components = create_minerva_prism_system()
+            systems['prism_synthesizer'] = prism_components['synthesizer']
+            systems['prism_library'] = prism_components['library']
+            print("✅ MINERVA-specific PRISM system initialized")
+        elif PRISM_AVAILABLE:
+            systems['prism_synthesizer'] = create_prism_system()
+            print("✅ Generic PRISM system initialized")
     
     # LEAP-PRISM Bridge
     if USE_LEAP_PRISM_BRIDGE and USE_LEAP and USE_PRISM:
@@ -379,7 +419,13 @@ def train_minerva_specialized():
         print("✅ LEAP-PRISM bridge initialized")
     
     # Initialize specialized loss
-    loss_fn = MinervaSpecializedLoss().to(device)
+    if USE_MEPT and 'loss_fn' in systems:
+        # Use MINERVA-specific MEPT loss if available
+        loss_fn = systems['loss_fn'].to(device)
+        print("✅ Using MINERVA-specific MEPT loss function")
+    else:
+        loss_fn = MinervaSpecializedLoss().to(device)
+        print("✅ Using MinervaSpecializedLoss")
     
     # Optimizer - SGD with Nesterov for grid attention stability
     optimizer = optim.SGD(
@@ -492,6 +538,11 @@ def train_minerva_specialized():
         if warmup_needed:
             print(f"🔥 Complex grid warmup enabled for {grid_size}x{grid_size}")
         
+        # Add DSL-generated samples for MINERVA's grid reasoning
+        print(f"🔧 Adding MINERVA-specific DSL samples for stage {stage}...")
+        dsl_samples = MINERVADSLTraining.create_minerva_dsl_samples(curriculum_stage=stage)
+        print(f"✅ Added {len(dsl_samples)} MINERVA DSL samples for {grid_size}x{grid_size} grids")
+        
         # Create curriculum dataset with stage-specific grid size - EFFICIENT SIZE
         dataset = CurriculumMegaScaleDataset(
             DATA_DIR,
@@ -582,6 +633,12 @@ def train_minerva_specialized():
             optimizer.zero_grad()
             
             for batch_idx, batch in enumerate(pbar):
+                # MINERVA DSL augmentation
+                if batch_idx % 5 == 0 and dsl_samples:  # Every 5th batch
+                    batch = MINERVADSLTraining.augment_batch_with_minerva_dsl(
+                        batch, curriculum_stage=stage, dsl_ratio=0.3
+                    )
+                
                 inputs = batch['inputs'].to(device, non_blocking=True)
                 outputs = batch['outputs'].to(device, non_blocking=True)
                 
@@ -649,9 +706,18 @@ def train_minerva_specialized():
                     leap_complexity = stage_config['leap_complexity']
                     leap_grid_size = min(grid_size, 12)  # Cap LEAP at 12x12 for stability
                     
-                    leap_batch = systems['leap_trainer'].generate_leap_batch(
-                        batch_size=max(32, 64 - stage*8)  # Reduce batch size for larger grids
-                    )
+                    # Generate LEAP batch with stage-specific parameters for MINERVA
+                    if MINERVA_MEPT_LEAP_AVAILABLE and hasattr(systems['leap_trainer'], 'generate_leap_batch'):
+                        leap_batch = systems['leap_trainer'].generate_leap_batch(
+                            batch_size=max(32, 64 - stage*8),  # Reduce batch size for larger grids
+                            stage=stage,
+                            grid_size=leap_grid_size
+                        )
+                    else:
+                        # Fallback for generic LEAP
+                        leap_batch = systems['leap_trainer'].generate_leap_batch(
+                            batch_size=max(32, 64 - stage*8)  # Reduce batch size for larger grids
+                        )
                     leap_inputs = leap_batch['inputs'].to(device)
                     leap_outputs = leap_batch['outputs'].to(device)
                     

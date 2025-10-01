@@ -598,7 +598,7 @@ def train_minerva_specialized():
                         continue
                     
                     # Skip extremely high losses that cause gradient explosions
-                    if loss.abs() > 10.0:  # CRITICAL: Much lower threshold
+                    if loss.abs() > 50.0:  # Raised threshold - 10.0 was too aggressive
                         print(f"⚠️ EMERGENCY: Skipping explosive loss {loss.item():.2f} at batch {batch_idx}")
                         continue
                     
@@ -733,12 +733,12 @@ def train_minerva_specialized():
                         val_metrics['pixel_acc'] += pixel_acc * input_grids.size(0)
                         val_metrics['samples'] += input_grids.size(0)
                 
-                # Calculate metrics
-                train_loss = train_metrics['loss'] / train_metrics['samples']
-                train_exact_pct = train_metrics['exact'] / train_metrics['samples'] * 100
-                val_loss = val_metrics['loss'] / val_metrics['samples']
-                val_exact_pct = val_metrics['exact'] / val_metrics['samples'] * 100
-                val_pixel_acc = val_metrics['pixel_acc'] / val_metrics['samples'] * 100
+                # Calculate metrics with zero division protection
+                train_loss = train_metrics['loss'] / max(train_metrics['samples'], 1)
+                train_exact_pct = train_metrics['exact'] / max(train_metrics['samples'], 1) * 100
+                val_loss = val_metrics['loss'] / max(val_metrics['samples'], 1)
+                val_exact_pct = val_metrics['exact'] / max(val_metrics['samples'], 1) * 100
+                val_pixel_acc = val_metrics['pixel_acc'] / max(val_metrics['samples'], 1) * 100
                 
                 # Track learning progress
                 current_metrics = {

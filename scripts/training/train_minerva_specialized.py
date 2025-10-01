@@ -395,8 +395,7 @@ def minerva_leap_injection(model, device, systems, num_epochs=100, target_accura
             leap_batch = systems['leap_trainer'].generate_leap_batch(
                 batch_size=32,  # Smaller batch size
                 stage=0,
-                grid_size=6,
-                complexity='basic'  # Start with basic patterns
+                grid_size=6
             )
             
             inputs = leap_batch['inputs'].to(device)

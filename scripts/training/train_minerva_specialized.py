@@ -543,12 +543,13 @@ def train_minerva_specialized():
         dsl_samples = MINERVADSLTraining.create_minerva_dsl_samples(curriculum_stage=stage)
         print(f"✅ Added {len(dsl_samples)} MINERVA DSL samples for {grid_size}x{grid_size} grids")
         
-        # Create curriculum dataset with stage-specific grid size - EFFICIENT SIZE
-        dataset = CurriculumMegaScaleDataset(
-            DATA_DIR,
-            curriculum_stage=min(stage, 2),  # Cap at stage 2 for compatibility
-            use_arc_synthesis=True,
-            synthesis_ratio=max(0.2, synthesis_ratio * 0.5)  # Reduce synthesis by 50%
+        # Create simple ARC dataset for MINERVA
+        synthesizer = ARCDataSynthesizer()
+        dataset = synthesizer.create_training_dataset(
+            data_dir=DATA_DIR,
+            max_samples=15000,
+            grid_size_limit=grid_size,
+            synthesis_ratio=synthesis_ratio
         )
         
         # Limit dataset size for efficient training

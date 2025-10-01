@@ -445,11 +445,43 @@ def train_chronos_specialized():
     # Training metrics
     best_exact = 0.0
     global_epoch = 0
+    start_stage = 0
+    
+    # Check for existing checkpoint
+    models_dir = '/content/AutomataNexus_Olympus_AGI2/arc_models_v4'
+    checkpoint_path = f'{models_dir}/chronos_checkpoint.pt'
+    best_model_path = f'{models_dir}/chronos_best.pt'
+    
+    if os.path.exists(checkpoint_path):
+        print(f"🔄 Loading checkpoint from {checkpoint_path}")
+        try:
+            checkpoint = torch.load(checkpoint_path, map_location=device)
+            model.load_state_dict(checkpoint['model_state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            global_epoch = checkpoint['epoch']
+            start_stage = checkpoint.get('stage', 0)
+            best_exact = checkpoint.get('best_exact', 0.0)
+            print(f"✅ Resumed from epoch {global_epoch}, stage {start_stage}, best: {best_exact:.2f}%")
+        except Exception as e:
+            print(f"⚠️ Failed to load checkpoint: {e}")
+            print("🔄 Starting fresh training")
+    elif os.path.exists(best_model_path):
+        print(f"🔄 Loading best model from {best_model_path}")
+        try:
+            best_checkpoint = torch.load(best_model_path, map_location=device)
+            model.load_state_dict(best_checkpoint['model_state_dict'])
+            best_exact = best_checkpoint.get('best_exact', 0.0)
+            print(f"✅ Loaded best model with {best_exact:.2f}% exact match")
+        except Exception as e:
+            print(f"⚠️ Failed to load best model: {e}")
+            print("🔄 Starting fresh training")
+    else:
+        print("🆕 No existing models found - starting fresh training")
     
     # 8-Stage Progressive Curriculum Training Loop
     stage_metrics = []  # Track learning progression
     
-    for stage in range(CHRONOS_CONFIG['curriculum_stages']):
+    for stage in range(start_stage, CHRONOS_CONFIG['curriculum_stages']):
         stage_config = STAGE_CONFIG[stage]
         grid_size = stage_config['max_grid_size']
         synthesis_ratio = stage_config['synthesis_ratio']

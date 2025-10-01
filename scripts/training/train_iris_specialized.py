@@ -71,19 +71,19 @@ from colab_training_v4_megascale_curriculum import CurriculumMegaScaleDataset, T
 # IRIS-Specific Configuration with 8-Stage Progressive Curriculum
 IRIS_CONFIG = {
     'batch_size': 384,  # Larger for IRIS's efficient color processing
-    'learning_rate': 0.006,  # Moderate for color attention learning
+    'learning_rate': 0.004,  # Reduced for stability
     'num_epochs': 320,  # 8 stages x 40 epochs
     'color_embed_dim': 64,
     'color_attention_heads': 4,
     'gradient_accumulation': 2,  # Effective batch: 768
     'transform_penalty': 0.3,  # Lower - IRIS should do color transformations
-    'exact_match_bonus': 8.0,  # Higher for color precision
+    'exact_match_bonus': 3.0,  # Reduced to prevent negative losses
     'curriculum_stages': 8,  # Progressive 8-stage curriculum
     'epochs_per_stage': 40,  # Shorter stages for smoother progression
-    'color_mapping_weight': 0.5,  # IRIS-specific loss component
-    'color_consistency_weight': 0.4,  # IRIS-specific loss component
+    'color_mapping_weight': 0.2,  # Reduced for stability
+    'color_consistency_weight': 0.2,  # Reduced for stability
     'color_diversity_weight': 0.2,  # Encourage diverse color usage
-    'lstm_rule_weight': 0.3  # Pattern-based rule learning
+    'lstm_rule_weight': 0.1  # Reduced for stability
 }
 
 # 8-Stage Progressive Grid Size Curriculum for Color Learning
@@ -177,7 +177,9 @@ class IrisSpecializedLoss(nn.Module):
         target_indices = target_output.argmax(dim=1)
         exact_matches = (pred_indices == target_indices).all(dim=[1,2]).float()
         exact_count = exact_matches.sum()
+        # Fixed exact bonus to prevent negative losses
         exact_bonus = -exact_matches.mean() * self.weights['exact_match']
+        exact_bonus = exact_bonus.clamp(min=-1.0)  # Prevent excessive negative contribution
         
         # IRIS-specific: Color transformation penalty (should be low for color model)
         input_indices = input_grid.argmax(dim=1)
@@ -188,9 +190,9 @@ class IrisSpecializedLoss(nn.Module):
         color_mapping_loss = 0.0
         if model_outputs and 'color_map' in model_outputs:
             color_map = model_outputs['color_map']  # B, 10, 10
-            # Encourage decisive mappings (avoid uniform distributions)
+            # Stabilized decisive mappings (avoid uniform distributions)
             mapping_entropy = -torch.sum(color_map * torch.log(color_map + 1e-8), dim=-1)
-            color_mapping_loss = mapping_entropy.mean() * self.weights['color_mapping']
+            color_mapping_loss = mapping_entropy.mean().clamp(max=5.0) * self.weights['color_mapping']
         
         # IRIS-specific: Color consistency within spatial regions
         color_consistency_loss = self._color_consistency_loss(pred_output, target_output) * self.weights['color_consistency']
@@ -202,9 +204,10 @@ class IrisSpecializedLoss(nn.Module):
         lstm_rule_loss = 0.0
         if model_outputs and 'color_attention' in model_outputs:
             attention_weights = model_outputs['color_attention']  # B, H*W, H*W
-            # Encourage structured attention patterns for color rules
-            attention_variance = torch.var(attention_weights, dim=-1).mean()
+            # Stabilized structured attention patterns for color rules
+            attention_variance = torch.var(attention_weights, dim=-1).mean().clamp(max=2.0)
             lstm_rule_loss = -attention_variance * self.weights['lstm_rule']  # Negative to encourage variance
+            lstm_rule_loss = lstm_rule_loss.clamp(min=-0.5)  # Prevent excessive negative contribution
         
         # Enhanced color balance preservation (critical for IRIS)
         color_balance_loss = self._enhanced_color_balance_loss(pred_output, target_output) * self.weights['color_balance']
@@ -212,10 +215,39 @@ class IrisSpecializedLoss(nn.Module):
         # Minimal edge loss (colors more important than boundaries)
         edge_loss = self._minimal_edge_loss(pred_output, target_output) * self.weights['edge']
         
-        # Total loss
-        total_loss = (color_focal_loss + transform_penalty + color_mapping_loss + 
-                     color_consistency_loss + color_diversity_loss + lstm_rule_loss +
-                     color_balance_loss + edge_loss + exact_bonus)
+        # Stabilized total loss with component validation
+        loss_components = {
+            'color_focal': color_focal_loss,
+            'transform': transform_penalty,
+            'color_mapping': color_mapping_loss,
+            'color_consistency': color_consistency_loss,
+            'color_diversity': color_diversity_loss,
+            'lstm_rule': lstm_rule_loss,
+            'color_balance': color_balance_loss,
+            'edge': edge_loss,
+            'exact_bonus': exact_bonus
+        }
+        
+        # Validate each component
+        stable_components = []
+        for name, component in loss_components.items():
+            if torch.isnan(component) or torch.isinf(component):
+                print(f"⚠️ Invalid {name} loss: {component.item():.3f}, skipping")
+                stable_components.append(torch.tensor(0.0, device=color_focal_loss.device))
+            else:
+                stable_components.append(component)
+        
+        total_loss = sum(stable_components)
+        
+        # Ensure total loss is reasonable
+        if torch.isnan(total_loss) or torch.isinf(total_loss):
+            print(f"⚠️ Total loss invalid, using focal only")
+            total_loss = color_focal_loss
+        
+        # Prevent extremely negative losses that indicate instability
+        if total_loss < -2.0:
+            print(f"⚠️ Loss too negative ({total_loss.item():.3f}), clamping")
+            total_loss = total_loss.clamp(min=-2.0)
         
         return {
             'total': total_loss,
@@ -549,12 +581,25 @@ def train_iris_specialized():
                     # Specialized loss
                     losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
                     loss = losses['total'] / IRIS_CONFIG['gradient_accumulation']
+                    
+                    # IRIS-specific loss validation
+                    if torch.isnan(loss) or torch.isinf(loss):
+                        print(f"⚠️ Skipping invalid loss in IRIS at batch {batch_idx}")
+                        continue
+                    
+                    # Skip if loss is extremely negative (indicates instability)
+                    if loss < -5.0:
+                        print(f"⚠️ Skipping extremely negative loss in IRIS: {loss.item():.3f}")
+                        continue
                 
                 scaler.scale(loss).backward()
                 
                 if (batch_idx + 1) % IRIS_CONFIG['gradient_accumulation'] == 0:
                     scaler.unscale_(optimizer)
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                    # IRIS-specific gradient clipping (less aggressive than MINERVA)
+                    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+                    if grad_norm > 5.0:
+                        print(f"⚠️ Large gradient norm in IRIS: {grad_norm:.2f}, clipped to 0.5")
                     scaler.step(optimizer)
                     scaler.update()
                     optimizer.zero_grad()

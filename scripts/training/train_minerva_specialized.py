@@ -716,16 +716,16 @@ def custom_collate_fn(batch, stage=0):
         else:
             output_grid = torch.tensor(output_grid, dtype=torch.long)
         
-        # Ensure 2D
+        # Ensure 2D - handle all cases
+        while input_grid.dim() > 2:
+            input_grid = input_grid.squeeze(0)
         if input_grid.dim() == 1:
             input_grid = input_grid.view(-1, 1)
-        elif input_grid.dim() > 2:
-            input_grid = input_grid.squeeze()
             
+        while output_grid.dim() > 2:
+            output_grid = output_grid.squeeze(0)
         if output_grid.dim() == 1:
             output_grid = output_grid.view(-1, 1)
-        elif output_grid.dim() > 2:
-            output_grid = output_grid.squeeze()
         
         # Pad to target size
         h, w = input_grid.shape

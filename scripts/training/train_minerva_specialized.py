@@ -366,7 +366,7 @@ def train_minerva_specialized():
     scaler = GradScaler()
     
     # Data directory
-    DATA_DIR = '/content/AutomataNexus_Olympus_AGI2/data/training_v4'
+    DATA_DIR = '/content/AutomataNexus_Olympus_AGI2/data'
     
     # Training metrics
     best_exact = 0.0

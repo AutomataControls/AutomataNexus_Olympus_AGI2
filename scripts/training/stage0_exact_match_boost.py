@@ -322,17 +322,25 @@ class AggressiveLoss(nn.Module):
         target_indices = target.argmax(dim=1)
         input_indices = input_grid.argmax(dim=1)
         
-        # Simple approach for first several epochs to stabilize
-        if self.current_epoch < 10:
-            # Just use plain cross entropy
+        # Gradual transition from simple to complex loss
+        if self.current_epoch < 30:
+            # Start with simple CE loss, gradually add complexity
             ce_loss = F.cross_entropy(pred, target_indices, reduction='mean')
             exact_matches = (pred_indices == target_indices).all(dim=[1, 2]).float()
             
+            # Gradually introduce exact match bonus after epoch 20
+            exact_bonus = torch.tensor(0.0)
+            if self.current_epoch >= 20:
+                transition_factor = (self.current_epoch - 20) / 10.0  # 0 to 1 over 10 epochs
+                exact_bonus = -transition_factor * exact_matches.mean()
+            
+            total_loss = ce_loss + exact_bonus
+            
             return {
-                'total': ce_loss,
+                'total': total_loss,
                 'reconstruction': ce_loss,
                 'transformation': torch.tensor(0.0),
-                'exact_bonus': torch.tensor(0.0),
+                'exact_bonus': -exact_bonus,
                 'exact_count': exact_matches.sum(),
                 'copy_penalty': torch.tensor(0.0),
                 'transform_diff': torch.tensor(0.0),
@@ -544,9 +552,9 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100, target_acc
     optimizer = torch.optim.AdamW(model.parameters(), lr=initial_lr, weight_decay=1e-5, betas=(0.9, 0.999))  # More stable betas
     
     # Linear warmup + ReduceLROnPlateau for stable training
-    warmup_epochs = 10  # Longer warmup
+    warmup_epochs = 30  # Match the gradual loss transition period
     warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
-        optimizer, start_factor=0.1, total_iters=warmup_epochs * len(dataloader)  # Not too low
+        optimizer, start_factor=0.5, total_iters=warmup_epochs * len(dataloader)  # Even higher start factor
     )
     # Use ReduceLROnPlateau with more conservative settings
     main_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(

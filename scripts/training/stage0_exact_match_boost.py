@@ -346,18 +346,18 @@ class AggressiveLoss(nn.Module):
         
         # Focal loss style weighting for hard examples
         incorrect_mask = (pred_indices != target_indices).float().reshape(-1)
-        # Focus more on pixels that are almost correct
+        # Focus more on pixels that are almost correct - reduced focal weight
         pred_probs = torch.softmax(pred.permute(0, 2, 3, 1).reshape(-1, C), dim=-1)
         target_probs = pred_probs.gather(1, target_indices.reshape(-1, 1)).squeeze()  
-        focal_weight = (1 - target_probs) ** 2  # gamma=2 for more balanced focus
-        ce_loss = ce_loss * (1 + incorrect_mask * 1 + focal_weight * 0.5)  # Further reduced
+        focal_weight = (1 - target_probs) ** 1.5  # gamma=1.5 for stability (was 2)
+        ce_loss = ce_loss * (1 + incorrect_mask * 0.5 + focal_weight * 0.2)  # Much more conservative
         ce_loss = ce_loss.mean()
         
         # 2. Exact match bonus (negative loss) - PROGRESSIVE
         exact_matches = (pred_indices == target_indices).all(dim=[1, 2]).float()
-        # Progressive bonus that increases over time
-        epoch_progress = min(1.0, self.current_epoch / 50.0) if hasattr(self, 'current_epoch') else 0.5
-        bonus_weight = 1.0 + 2.0 * epoch_progress  # From 1.0 to 3.0 - more conservative
+        # Progressive bonus that increases over time - more conservative
+        epoch_progress = min(1.0, self.current_epoch / 30.0) if hasattr(self, 'current_epoch') else 0.5
+        bonus_weight = 1.0 + 1.0 * epoch_progress  # From 1.0 to 2.0 - even more conservative
         exact_bonus = -bonus_weight * exact_matches.mean()
         
         # 3. Heavy penalty for copying when shouldn't
@@ -548,13 +548,13 @@ def inject_exact_match_training(model, device='cuda', num_epochs=100, target_acc
     warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
         optimizer, start_factor=0.1, total_iters=warmup_epochs * len(dataloader)  # Not too low
     )
-    # Use ReduceLROnPlateau instead of CosineAnnealingWarmRestarts for stability
+    # Use ReduceLROnPlateau with more conservative settings
     main_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, 
         mode='max',  # Maximize exact match
-        factor=0.5,  # Reduce LR by half
-        patience=5,  # Wait 5 epochs before reducing
-        min_lr=1e-6  # Minimum learning rate
+        factor=0.8,  # Reduce LR by 20% (was 50%)
+        patience=10,  # Wait 10 epochs before reducing (was 5)
+        min_lr=1e-5  # Higher minimum learning rate
     )
     # Use AggressiveLoss for comprehensive exact match training
     loss_fn = AggressiveLoss()

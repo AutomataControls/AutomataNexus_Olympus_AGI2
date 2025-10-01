@@ -145,34 +145,9 @@ class IrisSpecializedDataset(Dataset):
         return len(self.base_dataset)
     
     def __getitem__(self, idx):
-        # MEPT replay integration - prioritize color transformation patterns
-        if (self.replay_buffer and random.random() < self.replay_ratio and 
-            hasattr(self.replay_buffer, 'buffer') and len(self.replay_buffer.buffer) > 0):
-            try:
-                experiences = self.replay_buffer.sample(1, strategy='mixed')  # Use IRIS-specific mixed strategy
-                if experiences:
-                    exp = experiences[0]
-                    input_tensor = exp['input']
-                    output_tensor = exp['output']
-                    
-                    # Handle tensor dimensions
-                    if input_tensor.dim() == 4:
-                        input_tensor = input_tensor.argmax(dim=0)
-                    elif input_tensor.dim() == 3:
-                        input_tensor = input_tensor.squeeze(0)
-                        
-                    if output_tensor.dim() == 4:
-                        output_tensor = output_tensor.argmax(dim=0)
-                    elif output_tensor.dim() == 3:
-                        output_tensor = output_tensor.squeeze(0)
-                    
-                    return {
-                        'inputs': input_tensor,
-                        'outputs': output_tensor
-                    }
-            except Exception as e:
-                # Fall through to base dataset if replay fails
-                pass
+        # DISABLE replay buffer sampling for now to avoid hanging
+        # The replay buffer sampling is causing DataLoader to hang
+        # TODO: Fix replay buffer sampling in future version
         
         # Get item from base dataset - handle both regular datasets and Subset objects
         try:
@@ -1255,39 +1230,15 @@ def train_iris_specialized():
                 stuck_counter = 0
                 last_batch_time = time.time()
                 
-                # Create iterator manually to debug hanging issue
-                train_iter = iter(train_loader)
+                # Manual iteration for debugging
+                print(f"   Total batches to process: {len(train_loader)}")
                 
-                for batch_idx in range(len(train_loader)):
-                    print(f"\n🔍 DEBUG: About to fetch batch {batch_idx+1}/{len(train_loader)}", flush=True)
-                    
-                    # Try to get the next batch with timeout
-                    import signal
-                    
-                    def timeout_handler(signum, frame):
-                        raise TimeoutError(f"DataLoader timeout on batch {batch_idx+1}")
-                    
-                    signal.signal(signal.SIGALRM, timeout_handler)
-                    signal.alarm(30)  # 30 second timeout
-                    
-                    try:
-                        batch = next(train_iter)
-                        signal.alarm(0)  # Cancel alarm
-                        print(f"✅ Successfully fetched batch {batch_idx+1}/{len(train_loader)}", flush=True)
-                    except (StopIteration, TimeoutError) as e:
-                        signal.alarm(0)  # Cancel alarm
-                        print(f"❌ Failed to fetch batch {batch_idx+1}: {e}")
-                        if batch_idx == 0:
-                            print("❌ Cannot even get first batch, breaking")
-                            break
-                        else:
-                            print(f"✅ Successfully processed {batch_idx} batches, moving to next epoch")
-                            break
-                    
+                for batch_idx, batch in enumerate(train_loader):
+                    print(f"\n🔍 DEBUG: Processing batch {batch_idx+1}/{len(train_loader)}", flush=True)
                     # Update progress manually
                     progress = (batch_idx + 1) / len(train_loader) * 100
                     print(f"\rIRIS Stage {stage}, Epoch {epoch+1}: {progress:.0f}% {batch_idx+1}/{len(train_loader)}", end='', flush=True)
-                    print(f"\n🔍 DEBUG: Starting batch processing {batch_idx+1}/{len(train_loader)}")
+                    print(f"\n🔍 DEBUG: Starting batch {batch_idx+1}/{len(train_loader)}")
                     current_time = time.time()
                     # Check if we're stuck (more than 60 seconds on a batch)
                     if current_time - last_batch_time > 60:

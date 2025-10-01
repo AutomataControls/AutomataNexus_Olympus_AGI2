@@ -329,7 +329,8 @@ def train_minerva_specialized():
     if USE_LEAP:
         leap_components = create_leap_system(device)
         systems['leap_trainer'] = leap_components['trainer']
-        systems['pattern_generator'] = leap_components['generator']
+        systems['pattern_generator'] = leap_components['pattern_generator']
+        systems['weak_detector'] = leap_components['detector']
         print("✅ LEAP system initialized")
     
     # PRISM System

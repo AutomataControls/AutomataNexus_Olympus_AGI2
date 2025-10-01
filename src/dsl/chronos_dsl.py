@@ -273,18 +273,36 @@ class ChronosDSL:
     
     def _grow(self, grid: torch.Tensor, factor: float = 1.5) -> torch.Tensor:
         """Grow pattern"""
-        # Simple dilation effect
-        kernel = torch.ones(1, 1, 3, 3) / 9
-        if grid.dim() == 4:
+        # Simple dilation effect - handle multi-channel input
+        if grid.dim() == 4 and grid.shape[1] > 1:
+            # Apply to each channel separately
+            result = torch.zeros_like(grid)
+            kernel = torch.ones(1, 1, 3, 3) / 9
+            for i in range(grid.shape[1]):
+                channel = grid[:, i:i+1]
+                grown = F.conv2d(channel.float(), kernel, padding=1)
+                result[:, i:i+1] = (grown > 0.3).float() * channel.max()
+            return result
+        elif grid.dim() == 4:
+            kernel = torch.ones(1, 1, 3, 3) / 9
             grown = F.conv2d(grid.float(), kernel, padding=1)
             return (grown > 0.3).float() * grid.max()
         return grid
     
     def _shrink(self, grid: torch.Tensor, factor: float = 0.7) -> torch.Tensor:
         """Shrink pattern"""
-        # Simple erosion effect
-        kernel = torch.ones(1, 1, 3, 3) / 9
-        if grid.dim() == 4:
+        # Simple erosion effect - handle multi-channel input
+        if grid.dim() == 4 and grid.shape[1] > 1:
+            # Apply to each channel separately
+            result = torch.zeros_like(grid)
+            kernel = torch.ones(1, 1, 3, 3) / 9
+            for i in range(grid.shape[1]):
+                channel = grid[:, i:i+1]
+                shrunk = F.conv2d(channel.float(), kernel, padding=1)
+                result[:, i:i+1] = (shrunk > 0.7).float() * channel.max()
+            return result
+        elif grid.dim() == 4:
+            kernel = torch.ones(1, 1, 3, 3) / 9
             shrunk = F.conv2d(grid.float(), kernel, padding=1)
             return (shrunk > 0.7).float() * grid.max()
         return grid

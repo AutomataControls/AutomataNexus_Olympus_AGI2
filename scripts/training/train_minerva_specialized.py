@@ -88,15 +88,15 @@ def minerva_exact_match_injection(model, device, num_epochs=100, target_accuracy
     model.train()
     # Start with lower LR for warmup
     base_lr = MINERVA_CONFIG['learning_rate'] * 5
-    optimizer = optim.SGD(model.parameters(), lr=base_lr, momentum=0.9)
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=base_lr*0.1)
+    optimizer = optim.Adam(model.parameters(), lr=base_lr, betas=(0.9, 0.999))  # Adam often works better for exact match
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=base_lr*0.01)
     
     # Create MORE DIVERSE exact match patterns
     patterns = []
     
     # 1. Pure identity patterns (easiest - more variations)
-    for i in range(100):  # Increased from 50
-        size = random.choice([4, 5, 6])  # Vary sizes
+    for i in range(200):  # Double the patterns
+        size = random.choice([3, 4, 5, 6])  # Include size 3 for easier learning
         # Simple solid colors - easiest to learn
         color = (i % 9) + 1
         pattern = torch.full((size, size), color, dtype=torch.long)
@@ -221,13 +221,19 @@ def minerva_exact_match_injection(model, device, num_epochs=100, target_accuracy
             
             # Progressive bonus that increases with epoch  
             # Start with no bonus, gradually increase to avoid destabilization
-            if epoch < 5:
-                bonus_scale = 0.0  # No bonus first 5 epochs
+            if epoch < 3:
+                bonus_scale = 0.0  # No bonus first 3 epochs
+            elif epoch < 10:
+                bonus_scale = 0.5  # Gentle bonus
+            elif acc < 50.0:
+                # If accuracy is low, be more aggressive
+                bonus_scale = min(2.0, 1.0 + (epoch - 10) / 20)  
             else:
-                bonus_scale = min(1.5, 0.5 + (epoch - 5) / 30)  # Gradually increase from 0.5 to 1.5
+                # Once we hit 50%, moderate the bonus
+                bonus_scale = min(1.5, 0.8 + (epoch - 10) / 40)
             
             # Only apply bonus when we have some exact matches to avoid negative spiral
-            if exact_matches.mean() > 0.1:
+            if exact_matches.mean() > 0.05:  # Lower threshold
                 exact_bonus = -exact_matches.mean() * bonus_scale
             else:
                 exact_bonus = 0.0
@@ -235,8 +241,8 @@ def minerva_exact_match_injection(model, device, num_epochs=100, target_accuracy
             total_loss = loss + exact_bonus
             
             # Ensure loss stays positive
-            if total_loss < 0.1:
-                total_loss = loss * 0.1  # Use 10% of original loss as minimum
+            if total_loss < 0.5:
+                total_loss = loss * 0.5  # Use 50% of original loss as minimum
             
             # Add L2 regularization for stability
             l2_reg = sum(p.pow(2.0).sum() for p in model.parameters())
@@ -528,7 +534,7 @@ class MinervaSpecializedDataset(Dataset):
         # MEPT replay integration
         if (self.replay_buffer and random.random() < self.replay_ratio and 
             len(self.replay_buffer.buffer) > 0):
-            experiences = self.replay_buffer.sample(1, exact_ratio=0.8)  # Favor exact matches
+            experiences = self.replay_buffer.sample(1, strategy='mixed')  # Use MINERVA's mixed strategy
             if experiences:
                 exp = experiences[0]
                 input_tensor = exp['input']
@@ -1019,7 +1025,7 @@ def train_minerva_specialized():
                 print(f"\n📍 PHASE 1/4: EXACT MATCH")
                 model = minerva_exact_match_injection(
                     model, device=device,
-                    num_epochs=100,  # 100 epochs or 90% target
+                    num_epochs=200,  # 200 epochs or 90% target
                     target_accuracy=90.0
                 )
                 torch.cuda.empty_cache()

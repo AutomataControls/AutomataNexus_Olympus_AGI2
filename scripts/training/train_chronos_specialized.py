@@ -529,7 +529,8 @@ def train_chronos_specialized():
             model.train()
             train_metrics = {'loss': 0, 'exact': 0, 'samples': 0}
             
-            pbar = tqdm(train_loader, desc=f"CHRONOS Stage {stage}, Epoch {epoch+1}")
+            pbar = tqdm(train_loader, desc=f"CHRONOS Stage {stage}, Epoch {epoch+1}", 
+                       colour='cyan', bar_format='{l_bar}{bar:30}{r_bar}')
             optimizer.zero_grad()
             
             for batch_idx, batch in enumerate(pbar):
@@ -632,7 +633,7 @@ def train_chronos_specialized():
                 val_metrics = {'loss': 0, 'exact': 0, 'pixel_acc': 0, 'samples': 0}
                 
                 with torch.no_grad():
-                    for batch in tqdm(val_loader, desc="Validation"):
+                    for batch in tqdm(val_loader, desc="Validation", colour='cyan'):
                         inputs = batch['inputs'].to(device, non_blocking=True)
                         outputs = batch['outputs'].to(device, non_blocking=True)
                         

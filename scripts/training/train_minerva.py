@@ -394,11 +394,11 @@ def train_minerva():
                 replay_ratio=0.3 if stage == 0 else 0.2
             )
         
-        # Stage 1 hanging fixes - reduced resources for Stage 1+
+        # Stage 1 hanging fixes - disable multiprocessing for Stage 1+
         if stage >= 1:
-            stage_workers = 4  # REDUCED for Stage 1+
-            stage_batch_size = 256  # REDUCED for Stage 1+
-            print(f"⚠️ Stage {stage} hanging fix: reduced workers to {stage_workers}, batch size to {stage_batch_size}")
+            stage_workers = 0  # DISABLE multiprocessing for Stage 1+
+            stage_batch_size = 128  # MUCH smaller batch for Stage 1+
+            print(f"⚠️ Stage {stage} hanging fix: DISABLED workers, batch size {stage_batch_size}")
         else:
             stage_workers = NUM_WORKERS
             stage_batch_size = BATCH_SIZE

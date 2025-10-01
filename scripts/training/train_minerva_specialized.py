@@ -266,7 +266,7 @@ class MinervaSpecializedLoss(nn.Module):
 
 
 def custom_collate_fn(batch):
-    """MINERVA-optimized collate function with proper tensor handling"""
+    """MINERVA-optimized collate function with guaranteed size consistency"""
     inputs = []
     outputs = []
     target_size = MINERVA_CONFIG['max_grid_size']
@@ -281,34 +281,26 @@ def custom_collate_fn(batch):
         if not isinstance(output_grid, torch.Tensor):
             output_grid = torch.tensor(output_grid, dtype=torch.long)
         
+        # ALWAYS create new tensors of exact target size to guarantee consistency
+        new_input = torch.zeros(target_size, target_size, dtype=torch.long)
+        new_output = torch.zeros(target_size, target_size, dtype=torch.long)
+        
         # Get current dimensions
-        H, W = input_grid.shape[-2:]
+        current_H, current_W = input_grid.shape[-2:]
         
-        # Truncate if too large
-        if H > target_size or W > target_size:
-            input_grid = input_grid[:target_size, :target_size]
-            output_grid = output_grid[:target_size, :target_size]
-            H, W = input_grid.shape[-2:]
+        # Copy data with proper bounds checking
+        copy_h = min(current_H, target_size)
+        copy_w = min(current_W, target_size)
         
-        # Pad to exact target size - ALWAYS
-        pad_h = target_size - H
-        pad_w = target_size - W
+        new_input[:copy_h, :copy_w] = input_grid[:copy_h, :copy_w]
+        new_output[:copy_h, :copy_w] = output_grid[:copy_h, :copy_w]
         
-        input_grid = F.pad(input_grid, (0, pad_w, 0, pad_h), value=0)
-        output_grid = F.pad(output_grid, (0, pad_w, 0, pad_h), value=0)
+        # Verify final size (should always be correct now)
+        assert new_input.shape == (target_size, target_size), f"Input grid {i} size mismatch: {new_input.shape}"
+        assert new_output.shape == (target_size, target_size), f"Output grid {i} size mismatch: {new_output.shape}"
         
-        # Verify final size
-        final_H, final_W = input_grid.shape[-2:]
-        if final_H != target_size or final_W != target_size:
-            print(f"ERROR: Grid {i} size {final_H}x{final_W} != {target_size}x{target_size}")
-            # Force to correct size
-            input_grid = F.interpolate(input_grid.float().unsqueeze(0).unsqueeze(0), 
-                                     size=(target_size, target_size), mode='nearest').squeeze().long()
-            output_grid = F.interpolate(output_grid.float().unsqueeze(0).unsqueeze(0), 
-                                      size=(target_size, target_size), mode='nearest').squeeze().long()
-        
-        inputs.append(input_grid)
-        outputs.append(output_grid)
+        inputs.append(new_input)
+        outputs.append(new_output)
     
     return {
         'inputs': torch.stack(inputs),

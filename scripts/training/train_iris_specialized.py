@@ -773,36 +773,109 @@ def iris_prism_injection(model, device, num_epochs=100, target_accuracy=90.0):
     model.train()
     optimizer = optim.Adam(model.parameters(), lr=IRIS_CONFIG['learning_rate']*2, betas=(0.9, 0.999))
     
+    # Try to use IRIS-specific synthesizer if available
+    use_iris_synth = False
+    try:
+        if IRIS_SYNTHESIS_AVAILABLE:
+            synthesizer = IRISProgramSynthesizer()
+            use_iris_synth = True
+            print("  Using IRIS-specific program synthesizer")
+    except:
+        use_iris_synth = False
+        print("  Using basic color transformations")
+    
     # Generate color transformation patterns
     patterns = []
-    for i in range(50):
-        size = 5
-        input_pattern = torch.randint(1, 6, (size, size), dtype=torch.long)
+    for i in range(100):  # More patterns
+        size = random.choice([4, 5, 6])
+        input_pattern = torch.randint(1, 7, (size, size), dtype=torch.long)
         
-        # Simple color transformations
-        if i % 5 == 0:  # Color swap
-            output_pattern = input_pattern.clone()
-            output_pattern[input_pattern == 1] = 2
-            output_pattern[input_pattern == 2] = 1
-        elif i % 5 == 1:  # Invert colors
-            output_pattern = 10 - input_pattern
-        elif i % 5 == 2:  # Color shift
-            output_pattern = (input_pattern % 9) + 1
-        elif i % 5 == 3:  # Binary threshold
-            output_pattern = torch.where(input_pattern > 3, torch.tensor(1), torch.tensor(0))
-        else:  # Keep specific color
-            keep_color = random.randint(1, 5)
-            output_pattern = torch.where(input_pattern == keep_color, input_pattern, torch.tensor(0))
+        # Use IRIS synthesizer or basic transformations
+        if use_iris_synth and i % 2 == 0:
+            # Create various color transformations using synthesizer
+            if i % 10 == 0:  # Color replacement
+                color_map = {j: (j + 1) % 7 + 1 for j in range(1, 7)}
+                program = synthesizer._replace_color(input_pattern, {'color_map': color_map})
+                output_pattern = program
+            elif i % 10 == 2:  # Stripes
+                params = {
+                    'direction': 'horizontal' if i % 20 < 10 else 'vertical',
+                    'colors': [1, 2, 3]
+                }
+                output_pattern = synthesizer._apply_color_pattern(input_pattern, {
+                    'pattern': 'stripes', 
+                    **params
+                })
+            elif i % 10 == 4:  # Gradient
+                params = {
+                    'direction': random.choice(['horizontal', 'vertical', 'diagonal']),
+                    'colors': list(range(1, 6))
+                }
+                output_pattern = synthesizer._color_gradient(input_pattern, params)
+            elif i % 10 == 6:  # Boundary coloring
+                params = {'boundary_color': 8}
+                output_pattern = synthesizer._color_boundary(input_pattern, params)
+            else:  # Color invert
+                params = {'max_color': 7}
+                output_pattern = synthesizer._color_invert(input_pattern, params)
+        else:
+            # Basic transformations
+            if i % 6 == 0:  # Color swap
+                output_pattern = input_pattern.clone()
+                output_pattern[input_pattern == 1] = 2
+                output_pattern[input_pattern == 2] = 1
+            elif i % 6 == 1:  # Color shift
+                output_pattern = ((input_pattern - 1) % 6) + 1
+            elif i % 6 == 2:  # Binary threshold
+                threshold = random.randint(2, 5)
+                output_pattern = torch.where(input_pattern > threshold, torch.tensor(1), torch.tensor(0))
+            elif i % 6 == 3:  # Keep specific colors
+                keep_colors = random.sample(range(1, 7), 2)
+                output_pattern = torch.where(
+                    (input_pattern == keep_colors[0]) | (input_pattern == keep_colors[1]),
+                    input_pattern, torch.tensor(0)
+                )
+            elif i % 6 == 4:  # Color mapping
+                output_pattern = torch.zeros_like(input_pattern)
+                for c in range(1, 7):
+                    output_pattern[input_pattern == c] = ((c + 2) % 6) + 1
+            else:  # Region fill
+                output_pattern = input_pattern.clone()
+                # Fill corners with different color
+                corner_size = size // 3
+                output_pattern[:corner_size, :corner_size] = 7
+                output_pattern[-corner_size:, -corner_size:] = 8
         
         patterns.append({'inputs': input_pattern, 'outputs': output_pattern})
     
+    best_acc = 0
     for epoch in range(num_epochs):
         correct = 0
         total = 0
         
-        for pattern in patterns:
-            inputs = pattern['inputs'].unsqueeze(0).to(device)
-            outputs = pattern['outputs'].unsqueeze(0).to(device)
+        random.shuffle(patterns)  # Shuffle for better learning
+        
+        for batch_start in range(0, len(patterns), 16):  # Batch processing
+            batch_patterns = patterns[batch_start:batch_start + 16]
+            
+            # Stack inputs and outputs
+            batch_inputs = []
+            batch_outputs = []
+            
+            for pattern in batch_patterns:
+                inp = pattern['inputs']
+                out = pattern['outputs']
+                # Pad to same size
+                max_size = 6
+                if inp.shape[0] < max_size:
+                    pad = max_size - inp.shape[0]
+                    inp = F.pad(inp, (0, pad, 0, pad), value=0)
+                    out = F.pad(out, (0, pad, 0, pad), value=0)
+                batch_inputs.append(inp)
+                batch_outputs.append(out)
+            
+            inputs = torch.stack(batch_inputs).to(device)
+            outputs = torch.stack(batch_outputs).to(device)
             
             input_oh = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
             output_oh = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
@@ -812,19 +885,25 @@ def iris_prism_injection(model, device, num_epochs=100, target_accuracy=90.0):
             pred = model_outputs['predicted_output']
             loss = F.cross_entropy(pred, outputs)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
             
             pred_idx = pred.argmax(dim=1)
-            if (pred_idx == outputs).all():
-                correct += 1
-            total += 1
+            exact_matches = (pred_idx == outputs).all(dim=[1,2])
+            correct += exact_matches.sum().item()
+            total += len(batch_patterns)
         
         acc = correct / total * 100
-        print(f"PRISM Epoch {epoch+1}/{num_epochs}: {acc:.1f}% synthesis")
+        if acc > best_acc:
+            best_acc = acc
+            
+        print(f"PRISM Epoch {epoch+1}/{num_epochs}: {acc:.1f}% synthesis (best: {best_acc:.1f}%)")
         
         if acc >= target_accuracy:
             print(f"🏆 PRISM TARGET REACHED: {acc:.1f}%")
             break
+        elif epoch == num_epochs - 1:
+            print(f"⚠️ PRISM COMPLETE: {acc:.1f}% (best: {best_acc:.1f}%, target: {target_accuracy}%)")
     
     return model
 
@@ -896,6 +975,13 @@ def train_iris_specialized():
             systems['leap_trainer'], systems['prism_synthesizer']
         )
         print("✅ LEAP-PRISM bridge initialized")
+    
+    # IRIS-specific Program Synthesis
+    if IRIS_SYNTHESIS_AVAILABLE:
+        synthesis_components = create_iris_synthesis_system()
+        systems['iris_synthesizer'] = synthesis_components['synthesizer']
+        systems['iris_program_library'] = synthesis_components['program_library']
+        print("✅ IRIS-specific program synthesis initialized")
     
     # Initialize specialized loss
     loss_fn = IrisSpecializedLoss().to(device)

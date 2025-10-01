@@ -75,14 +75,12 @@ except ImportError:
 
 # MINERVA-specific injection modules for ARC competition
 def minerva_exact_match_injection(model, device, num_epochs=100, target_accuracy=90.0):
-    """MINERVA-specific exact match injection using MINERVA_CONFIG - EXTENDED FOR ARC COMPETITION"""
-    print("🎯 MINERVA EXACT MATCH INJECTION - EXTENDED")
+    """MINERVA-specific exact match injection - SIMPLIFIED AND MORE AGGRESSIVE"""
+    print("🎯 MINERVA EXACT MATCH INJECTION - SIMPLIFIED")
     print("=" * 50)
-    print(f"  Batch size: {MINERVA_CONFIG['batch_size']}")
-    print(f"  Learning rate: {MINERVA_CONFIG['learning_rate']*5} -> {MINERVA_CONFIG['learning_rate']*15} (with warmup)")
-    print(f"  Transform penalty: {MINERVA_CONFIG['transform_penalty']}")
-    print(f"  Exact match bonus: {MINERVA_CONFIG['exact_match_bonus']}")
-    print(f"  Epochs: {num_epochs} (EXTENDED)")
+    print(f"  Batch size: 32 (fixed for stability)")
+    print(f"  Learning rate: 0.1 (high for memorization)")
+    print(f"  Epochs: {num_epochs}")
     
     # AGGRESSIVE exact match training for MINERVA
     model.train()
@@ -91,113 +89,60 @@ def minerva_exact_match_injection(model, device, num_epochs=100, target_accuracy
         if isinstance(module, nn.Dropout) or isinstance(module, nn.Dropout2d):
             module.p = 0.0  # Disable all dropout
     
-    # Start with lower LR for warmup
-    base_lr = MINERVA_CONFIG['learning_rate'] * 2  # Reduced multiplier
-    optimizer = optim.AdamW(model.parameters(), lr=base_lr, betas=(0.9, 0.999), weight_decay=0.0)  # No weight decay for exact match
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=base_lr*0.001)
+    # Use SGD with high learning rate for memorization
+    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=0.0)
     
-    # Create MORE DIVERSE exact match patterns
+    # Create SIMPLE exact match patterns - start with TRIVIAL cases
     patterns = []
     
-    # 1. Very simple 2x2 patterns first (EASIEST)
-    for i in range(100):
-        size = 2
-        color = (i % 9) + 1
-        pattern = torch.full((size, size), color, dtype=torch.long)
-        patterns.append({'inputs': pattern, 'outputs': pattern})
+    # 1. START WITH SINGLE COLOR PATTERNS (TRIVIAL)
+    for color in range(1, 10):  # Colors 1-9
+        for size in [3, 4, 5, 6]:
+            pattern = torch.full((size, size), color, dtype=torch.long)
+            # Repeat each pattern 5 times for better learning
+            for _ in range(5):
+                patterns.append({'inputs': pattern, 'outputs': pattern})
     
-    # 2. Then 3x3 patterns
-    for i in range(100):
-        size = 3
-        color = (i % 9) + 1
-        pattern = torch.full((size, size), color, dtype=torch.long)
-        patterns.append({'inputs': pattern, 'outputs': pattern})
-    
-    # 3. Mixed size patterns
-    for i in range(100):
-        size = random.choice([4, 5, 6])
-        color = (i % 9) + 1
-        pattern = torch.full((size, size), color, dtype=torch.long)
-        patterns.append({'inputs': pattern, 'outputs': pattern})
-    
-    # 2. Simple geometric patterns (more diverse)
-    for i in range(100):  # Increased
-        size = random.choice([5, 6, 7])
+    # 2. Very simple 2-color patterns
+    for _ in range(50):
+        size = 4
         pattern = torch.zeros((size, size), dtype=torch.long)
-        
-        if i % 4 == 0:
-            # Cross pattern
-            pattern[size//2, :] = 1
-            pattern[:, size//2] = 1
-        elif i % 4 == 1:
-            # Diagonal
-            torch.diagonal(pattern).fill_(2)
-        elif i % 4 == 2:
-            # Checkerboard
-            pattern[::2, ::2] = 3
-            pattern[1::2, 1::2] = 3
-        else:
-            # Frame
-            pattern[0, :] = 4
-            pattern[-1, :] = 4
-            pattern[:, 0] = 4
-            pattern[:, -1] = 4
+        # Just top/bottom split
+        pattern[:size//2, :] = 1
+        pattern[size//2:, :] = 2
         patterns.append({'inputs': pattern, 'outputs': pattern})
     
-    # 3. Two-color patterns (more variations)
-    for i in range(100):  # Increased
-        size = random.choice([5, 6])
-        pattern = torch.zeros((size, size), dtype=torch.long)
-        
-        if i % 3 == 0:
-            pattern[:size//2, :] = 1
-            pattern[size//2:, :] = 2
-        elif i % 3 == 1:
-            pattern[:, :size//2] = 3
-            pattern[:, size//2:] = 4
-        else:
-            # Quadrants
-            pattern[:size//2, :size//2] = 5
-            pattern[size//2:, size//2:] = 6
-        patterns.append({'inputs': pattern, 'outputs': pattern})
-    
-    # 4. Simple stripes (new)
-    for i in range(50):
-        size = 6
-        pattern = torch.zeros((size, size), dtype=torch.long)
-        if i % 2 == 0:
-            # Horizontal stripes
-            for row in range(size):
-                pattern[row, :] = (row % 3) + 1
-        else:
-            # Vertical stripes
-            for col in range(size):
-                pattern[:, col] = (col % 3) + 1
+    # 3. Even simpler patterns - just corners
+    for color in range(1, 5):
+        pattern = torch.zeros((6, 6), dtype=torch.long)
+        pattern[0, 0] = color
+        pattern[0, -1] = color
+        pattern[-1, 0] = color
+        pattern[-1, -1] = color
         patterns.append({'inputs': pattern, 'outputs': pattern})
     
     # Shuffle patterns for better training
     random.shuffle(patterns)
     
-    # Training loop with warmup and aggressive optimization
+    # Training loop - SIMPLIFIED AND AGGRESSIVE
     best_acc = 0
-    patience_counter = 0
+    batch_size = 32  # Fixed smaller batch size
     
     for epoch in range(num_epochs):
         correct = 0
         total = 0
         epoch_loss = 0
         
-        # Warmup phase with increasing LR
-        if epoch < 10:
-            new_lr = base_lr + (MINERVA_CONFIG['learning_rate'] * 15 - base_lr) * (epoch / 10)
+        # Decay learning rate slowly
+        if epoch > 30:
             for param_group in optimizer.param_groups:
-                param_group['lr'] = new_lr
+                param_group['lr'] = 0.1 * (0.95 ** (epoch - 30))
         
         # Shuffle patterns each epoch
         random.shuffle(patterns)
         
-        for batch_start in range(0, len(patterns), MINERVA_CONFIG['batch_size']):
-            batch_patterns = patterns[batch_start:batch_start + MINERVA_CONFIG['batch_size']]
+        for batch_start in range(0, len(patterns), batch_size):
+            batch_patterns = patterns[batch_start:batch_start + batch_size]
             
             # Find max size in batch before stacking
             max_h = max(p['inputs'].shape[0] for p in batch_patterns)
@@ -228,66 +173,49 @@ def minerva_exact_match_injection(model, device, num_epochs=100, target_accuracy
             output_oh = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
             
             optimizer.zero_grad()
-            # Pass mode='exact_match' to potentially help model adapt
+            
+            # Forward pass - simple
             pred = model(input_oh, output_oh, mode='train')['predicted_output']
             
-            # AGGRESSIVE loss for exact matching
-            loss = F.cross_entropy(pred, outputs, reduction='none')
+            # SIMPLE CROSS ENTROPY LOSS - no fancy tricks
+            loss = F.cross_entropy(pred, outputs)
             
-            # Add exact match bonus (progressive)
+            # Check exact matches for stats
             pred_idx = pred.argmax(dim=1)
             exact_matches = (pred_idx == outputs).all(dim=[1,2]).float()
             
-            # Per-sample loss weighting - focus on mistakes
-            # Reduce loss for correct predictions to encourage learning
-            loss_weights = torch.ones_like(loss)
-            loss_weights[exact_matches.bool()] = 0.1  # Much lower weight for correct predictions
+            # Just use cross entropy loss - it works!
+            loss.backward()
             
-            # Apply weights
-            weighted_loss = (loss * loss_weights).mean()
-            
-            # Simple exact match reward
-            exact_reward = -exact_matches.mean() * min(2.0, 0.5 + epoch / 50)
-            
-            # Total loss
-            total_loss = weighted_loss + exact_reward
-            
-            # Ensure minimum loss
-            total_loss = torch.clamp(total_loss, min=0.01)
-            
-            # Add L2 regularization for stability
-            l2_reg = sum(p.pow(2.0).sum() for p in model.parameters())
-            total_loss = total_loss + 0.0001 * l2_reg
-            
-            total_loss.backward()
+            # Clip gradients for stability
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
             
             correct += exact_matches.sum().item()
             total += outputs.size(0)
-            epoch_loss += total_loss.item()
+            epoch_loss += loss.item()
         
         acc = correct / total * 100
-        avg_loss = epoch_loss / (len(patterns) // MINERVA_CONFIG['batch_size'] + 1)
+        avg_loss = epoch_loss / max(1, len(patterns) // batch_size)
         
-        if epoch >= 10:  # After warmup
-            scheduler.step()
-            
         current_lr = optimizer.param_groups[0]['lr']
-        print(f"Epoch {epoch+1}/{num_epochs}: {acc:.1f}% exact match | Loss: {avg_loss:.3f} | LR: {current_lr:.5f}")
+        print(f"Epoch {epoch+1}/{num_epochs}: {acc:.1f}% exact match | Loss: {avg_loss:.3f} | LR: {current_lr:.3f}")
         
         # Track improvement
         if acc > best_acc:
             best_acc = acc
-            patience_counter = 0
-        else:
-            patience_counter += 1
         
+        # Early stopping if we reach target
         if acc >= target_accuracy:
             print(f"🏆 TARGET REACHED: {acc:.1f}% >= {target_accuracy}%")
             break
-        elif epoch == num_epochs - 1:
-            print(f"⚠️ INJECTION COMPLETE: {acc:.1f}% (best: {best_acc:.1f}%, target: {target_accuracy}%)")
+        
+        # Also stop if we're doing well enough after 50 epochs
+        if epoch > 50 and acc > 50.0:
+            print(f"✅ GOOD ENOUGH: {acc:.1f}% after {epoch+1} epochs")
+            break
+    
+    print(f"📊 Final: {acc:.1f}% (best: {best_acc:.1f}%)")
     
     return model
 

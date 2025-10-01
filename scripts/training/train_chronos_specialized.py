@@ -231,6 +231,10 @@ class ChronosSpecializedLoss(nn.Module):
         # Validate each temporal component
         stable_components = []
         for name, component in loss_components.items():
+            # Convert to tensor if it's a float/scalar
+            if not isinstance(component, torch.Tensor):
+                component = torch.tensor(component, device=temporal_focal_loss.device)
+            
             if torch.isnan(component) or torch.isinf(component):
                 print(f"⚠️ Invalid {name} loss in temporal model: {component.item():.3f}, skipping")
                 stable_components.append(torch.tensor(0.0, device=temporal_focal_loss.device))

@@ -569,10 +569,12 @@ def train_minerva_specialized():
                     
                     for i in range(input_grids.size(0)):
                         if exact_matches[i]:
-                            systems['replay_buffer'].add_experience(
-                                input_grids[i].cpu(),
-                                output_grids[i].cpu(),
-                                exact_match=True
+                            systems['replay_buffer'].add(
+                                input_grids[i],
+                                output_grids[i],
+                                pred_indices[i],
+                                losses['total'].item(),
+                                is_exact=True
                             )
             
             scheduler.step()

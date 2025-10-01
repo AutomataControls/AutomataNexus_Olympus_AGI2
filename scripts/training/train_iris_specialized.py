@@ -593,10 +593,12 @@ def train_iris_specialized():
                     
                     for i in range(input_grids.size(0)):
                         if exact_matches[i] or good_color_matches[i]:
-                            systems['replay_buffer'].add_experience(
-                                input_grids[i].cpu(),
-                                output_grids[i].cpu(),
-                                exact_match=exact_matches[i].item()
+                            systems['replay_buffer'].add(
+                                input_grids[i],
+                                output_grids[i],
+                                pred_indices[i],
+                                losses['total'].item(),
+                                is_exact=exact_matches[i].item()
                             )
             
             scheduler.step()

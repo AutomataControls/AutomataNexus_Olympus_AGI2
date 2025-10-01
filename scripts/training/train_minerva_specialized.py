@@ -610,14 +610,15 @@ def train_minerva_specialized():
                 scaler.scale(loss).backward()
                 
                 if (batch_idx + 1) % MINERVA_CONFIG['gradient_accumulation'] == 0:
-                    scaler.unscale_(optimizer)
-                    
-                    # EMERGENCY: Pre-check for explosive gradients and skip if necessary
+                    # EMERGENCY: Pre-check for explosive gradients before unscaling
                     pre_norm = sum(p.grad.data.norm(2)**2 for p in model.parameters() if p.grad is not None)**0.5
                     if pre_norm > 50.0:
                         print(f"⚠️ CRITICAL: Pre-norm {pre_norm:.2f} too high, skipping update")
                         optimizer.zero_grad()
+                        scaler.update()  # Update scaler state without step
                         continue
+                    
+                    scaler.unscale_(optimizer)
                     
                     # CRITICAL: Ultra-aggressive gradient clipping - 0.001 threshold
                     grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 0.001)

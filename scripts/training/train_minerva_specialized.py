@@ -617,30 +617,48 @@ class MinervaSpecializedDataset(Dataset):
     def __getitem__(self, idx):
         # MEPT replay integration
         if (self.replay_buffer and random.random() < self.replay_ratio and 
-            len(self.replay_buffer.buffer) > 0):
-            experiences = self.replay_buffer.sample(1, strategy='mixed')  # Use MINERVA's mixed strategy
-            if experiences:
-                exp = experiences[0]
-                input_tensor = exp['input']
-                output_tensor = exp['output']
-                
-                # Handle tensor dimensions
-                if input_tensor.dim() == 4:
-                    input_tensor = input_tensor.argmax(dim=0)
-                elif input_tensor.dim() == 3:
-                    input_tensor = input_tensor.squeeze(0)
+            hasattr(self.replay_buffer, 'buffer') and len(self.replay_buffer.buffer) > 0):
+            try:
+                experiences = self.replay_buffer.sample(1, strategy='mixed')  # Use MINERVA's mixed strategy
+                if experiences:
+                    exp = experiences[0]
+                    input_tensor = exp['input']
+                    output_tensor = exp['output']
                     
-                if output_tensor.dim() == 4:
-                    output_tensor = output_tensor.argmax(dim=0)
-                elif output_tensor.dim() == 3:
-                    output_tensor = output_tensor.squeeze(0)
-                
-                return {
-                    'inputs': input_tensor,
-                    'outputs': output_tensor
-                }
+                    # Handle tensor dimensions
+                    if input_tensor.dim() == 4:
+                        input_tensor = input_tensor.argmax(dim=0)
+                    elif input_tensor.dim() == 3:
+                        input_tensor = input_tensor.squeeze(0)
+                        
+                    if output_tensor.dim() == 4:
+                        output_tensor = output_tensor.argmax(dim=0)
+                    elif output_tensor.dim() == 3:
+                        output_tensor = output_tensor.squeeze(0)
+                    
+                    return {
+                        'inputs': input_tensor,
+                        'outputs': output_tensor
+                    }
+            except Exception as e:
+                # Fall through to base dataset if replay fails
+                pass
         
-        return self.base_dataset[idx]
+        # Get item from base dataset - handle both regular datasets and Subset objects
+        try:
+            item = self.base_dataset[idx]
+            # Ensure it returns the right format
+            if isinstance(item, dict) and 'inputs' in item and 'outputs' in item:
+                return item
+            else:
+                # Try to extract inputs/outputs from other formats
+                if hasattr(item, '__getitem__') and len(item) >= 2:
+                    return {'inputs': item[0], 'outputs': item[1]}
+                else:
+                    raise ValueError(f"Unknown dataset item format: {type(item)}")
+        except Exception as e:
+            print(f"Error getting item {idx} from base dataset: {e}")
+            raise
 
 
 class MinervaSpecializedLoss(nn.Module):
@@ -1071,23 +1089,38 @@ def train_minerva_specialized():
         
         # Data loaders with stage-specific grid sizes
         # Use 0 workers to avoid hanging issues
+        # CRITICAL: Reduce batch size if running on CPU
+        actual_batch_size = MINERVA_CONFIG['batch_size']
+        if device.type == 'cpu':
+            actual_batch_size = min(16, actual_batch_size)  # Much smaller batch for CPU
+            print(f"⚠️ Running on CPU - reducing batch size to {actual_batch_size}")
+        
+        # Test dataset access before creating loader
+        try:
+            test_sample = train_dataset[0]
+            print(f"✅ Dataset access test passed. Sample keys: {list(test_sample.keys())}")
+        except Exception as e:
+            print(f"❌ Dataset access test failed: {e}")
+        
         train_loader = DataLoader(
             train_dataset,
-            batch_size=MINERVA_CONFIG['batch_size'],
+            batch_size=actual_batch_size,
             shuffle=True,
             num_workers=0,  # Set to 0 to avoid multiprocessing issues
             pin_memory=False,  # Disable when using 0 workers
             collate_fn=lambda batch: custom_collate_fn(batch, stage),
-            persistent_workers=False  # Can't use with 0 workers
+            persistent_workers=False,  # Can't use with 0 workers
+            drop_last=True  # Drop incomplete batches to avoid issues
         )
         
         val_loader = DataLoader(
             val_dataset,
-            batch_size=MINERVA_CONFIG['batch_size'],
+            batch_size=actual_batch_size,
             shuffle=False,
             num_workers=0,  # Set to 0 to avoid multiprocessing issues
             pin_memory=False,  # Disable when using 0 workers
-            collate_fn=lambda batch: custom_collate_fn(batch, stage)
+            collate_fn=lambda batch: custom_collate_fn(batch, stage),
+            drop_last=False
         )
         
         print(f"📚 Stage {stage} ({grid_size}x{grid_size}) - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
@@ -1181,12 +1214,41 @@ def train_minerva_specialized():
             
             try:
                 print("   About to start iterating through batches...")
+                print(f"   Device: {device}, Actual batch size: {actual_batch_size}")
+                print(f"   Number of batches expected: {len(train_loader)}")
+                
+                # Try to manually get first batch to debug
+                try:
+                    print("   Creating iterator...")
+                    train_iter = iter(train_loader)
+                    print("   Iterator created, attempting to get first batch...")
+                    first_batch = next(train_iter)
+                    print(f"   ✅ Successfully got first batch with {len(first_batch['inputs'])} samples")
+                    # Put it back by recreating the loader iteration in the loop
+                except Exception as e:
+                    print(f"   ❌ Failed to get first batch: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    raise  # Don't skip - fail properly
+                
+                # Try to get first batch with timeout
+                first_batch_start = time.time()
+                got_first_batch = False
+                
                 for batch_idx, batch in enumerate(pbar):
+                    if not got_first_batch:
+                        print(f"   Got first batch in main loop after {time.time() - first_batch_start:.1f}s")
+                        got_first_batch = True
+                        
                     batch_count += 1
                     if batch_count % 5 == 1:
                         print(f"  Processing batch {batch_count}/{len(train_loader)}...")
                     current_time = time.time()
-                    if current_time - last_batch_time > 30:  # 30 seconds timeout (reduced)
+                    
+                    # Extra timeout for first batch
+                    timeout_threshold = 60 if batch_idx == 0 else 30
+                    
+                    if current_time - last_batch_time > timeout_threshold:
                         stuck_counter += 1
                         print(f"⚠️ Warning: Batch {batch_idx} taking too long ({current_time - last_batch_time:.1f}s, stuck counter: {stuck_counter})")
                         if stuck_counter > 1:  # Reduced threshold
@@ -1220,29 +1282,39 @@ def train_minerva_specialized():
                     input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
                     output_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
                     
-                    with autocast('cuda'):
-                        # MINERVA forward pass
+                    # Use autocast only on CUDA
+                    if device.type == 'cuda':
+                        with autocast('cuda'):
+                            # MINERVA forward pass
+                            model_outputs = model(input_grids, output_grids, mode='train')
+                            pred_output = model_outputs['predicted_output']
+                            
+                            # Specialized loss
+                            losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
+                            loss = losses['total'] / MINERVA_CONFIG['gradient_accumulation']
+                    else:
+                        # No autocast on CPU
                         model_outputs = model(input_grids, output_grids, mode='train')
                         pred_output = model_outputs['predicted_output']
                         
                         # Specialized loss
                         losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
                         loss = losses['total'] / MINERVA_CONFIG['gradient_accumulation']
-                        
-                        # EMERGENCY loss validation - skip problematic batches
-                        if torch.isnan(loss) or torch.isinf(loss):
-                            print(f"⚠️ Skipping NaN/Inf loss at batch {batch_idx}")
-                            continue
-                        
-                        # Skip extremely high losses that cause gradient explosions
-                        if loss.abs() > 50.0:  # Raised threshold - 10.0 was too aggressive
-                            print(f"⚠️ EMERGENCY: Skipping explosive loss {loss.item():.2f} at batch {batch_idx}")
-                            continue
-                        
-                        # Skip if pattern memory component is problematic
-                        if 'pattern_memory' in losses and losses['pattern_memory'] < -2.0:
-                            print(f"⚠️ Skipping batch {batch_idx} due to pattern memory instability")
-                            continue
+                    
+                    # EMERGENCY loss validation - skip problematic batches
+                    if torch.isnan(loss) or torch.isinf(loss):
+                        print(f"⚠️ NaN/Inf loss at batch {batch_idx} - STOPPING")
+                        raise ValueError("NaN/Inf loss detected")
+                    
+                    # Skip extremely high losses that cause gradient explosions
+                    if loss.abs() > 50.0:  # Raised threshold - 10.0 was too aggressive
+                        print(f"⚠️ EMERGENCY: High loss {loss.item():.2f} at batch {batch_idx} - STOPPING")
+                        raise ValueError(f"Loss too high: {loss.item()}")
+                    
+                    # Skip if pattern memory component is problematic
+                    if 'pattern_memory' in losses and losses['pattern_memory'] < -2.0:
+                        print(f"⚠️ Pattern memory instability at batch {batch_idx} - STOPPING")
+                        raise ValueError(f"Pattern memory instability: {losses['pattern_memory']}")
                     
                     scaler.scale(loss).backward()
                 

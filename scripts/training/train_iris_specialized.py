@@ -33,6 +33,14 @@ from src.dsl import DSLTrainingIntegration, DSLProgramGenerator
 from src.dsl.iris_dsl import IRISDSLTraining, IRISDSLGenerator
 from src.program_synthesis.synthesis_integration import LightweightProgramSynthesizer, ProgramSynthesisDataGenerator
 
+# IRIS-specific program synthesis
+try:
+    from src.program_synthesis.iris_synthesis import IRISProgramSynthesizer, create_iris_synthesis_system
+    IRIS_SYNTHESIS_AVAILABLE = True
+except ImportError:
+    IRIS_SYNTHESIS_AVAILABLE = False
+    print("⚠️ IRIS-specific synthesis not available")
+
 # PRISM System - Use IRIS-specific version
 try:
     from src.training_systems.iris_prism import create_iris_prism_system

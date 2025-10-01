@@ -516,8 +516,8 @@ def train_chronos_specialized():
         for epoch in range(CHRONOS_CONFIG['epochs_per_stage']):
             global_epoch += 1
             
-            # Exact match injection training (Stage 0 only)
-            if exact_dataset and epoch < 45:  # First 45 epochs for temporal learning
+            # Exact match injection training (Stage 0 only, first 5 epochs)
+            if exact_dataset and stage == 0 and epoch < 5:  # Only first 5 epochs of Stage 0
                 model = inject_exact_match_training(
                     model, device=device,
                     num_epochs=1,

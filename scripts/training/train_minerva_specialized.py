@@ -473,8 +473,8 @@ def train_minerva_specialized():
         for epoch in range(MINERVA_CONFIG['epochs_per_stage']):
             global_epoch += 1
             
-            # Exact match injection training (Stage 0 only)
-            if exact_dataset and epoch < 50:  # First 50 epochs
+            # Exact match injection training (Stage 0 only, first 5 epochs)
+            if exact_dataset and stage == 0 and epoch < 5:  # Only first 5 epochs of Stage 0
                 model = inject_exact_match_training(
                     model, device=device,
                     num_epochs=1,

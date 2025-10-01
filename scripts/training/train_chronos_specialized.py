@@ -578,22 +578,23 @@ def train_chronos_specialized():
             )
         
         # Data loaders with stage-specific grid sizes
+        # Use 0 workers to avoid hanging issues
         train_loader = DataLoader(
             train_dataset,
             batch_size=CHRONOS_CONFIG['batch_size'],
             shuffle=True,
-            num_workers=4,
-            pin_memory=True,
+            num_workers=0,  # Set to 0 to avoid multiprocessing issues
+            pin_memory=False,  # Disable when using 0 workers
             collate_fn=lambda batch: custom_collate_fn(batch, stage),
-            persistent_workers=True
+            persistent_workers=False  # Can't use with 0 workers
         )
         
         val_loader = DataLoader(
             val_dataset,
             batch_size=CHRONOS_CONFIG['batch_size'],
             shuffle=False,
-            num_workers=4,
-            pin_memory=True,
+            num_workers=0,  # Set to 0 to avoid multiprocessing issues
+            pin_memory=False,  # Disable when using 0 workers
             collate_fn=lambda batch: custom_collate_fn(batch, stage)
         )
         
@@ -713,11 +714,10 @@ def train_chronos_specialized():
                     leap_grid_size = min(grid_size, 12)  # Cap LEAP at 12x12 for stability
                     
                     # Generate LEAP batch with stage-specific parameters for CHRONOS
-                    if CHRONOS_MEPT_LEAP_AVAILABLE and hasattr(systems['leap_trainer'], 'generate_temporal_batch'):
-                        leap_batch = systems['leap_trainer'].generate_temporal_batch(
+                    if CHRONOS_MEPT_LEAP_AVAILABLE and hasattr(systems['leap_trainer'], 'generate_leap_batch'):
+                        leap_batch = systems['leap_trainer'].generate_leap_batch(
                             batch_size=max(32, 64 - stage*8),  # Reduce batch size for larger grids
-                            complexity=leap_complexity,
-                            grid_size=leap_grid_size
+                            stage=stage
                         )
                     else:
                         # Fallback for generic LEAP
@@ -763,15 +763,17 @@ def train_chronos_specialized():
                     
                     for i in range(input_grids.size(0)):
                         if exact_matches[i] or good_temporal_matches[i]:
-                            if hasattr(systems['replay_buffer'], 'store_experience'):
-                                # CHRONOS-specific memory system
-                                systems['replay_buffer'].store_experience(
-                                    input_state=input_grids[i],
-                                    output_state=output_grids[i],
-                                    predicted_state=pred_indices[i],
-                                    loss=losses['total'].item(),
-                                    exact_match=exact_matches[i].item(),
-                                    temporal_features={'accuracy': temporal_accuracy[i].item()}
+                            if hasattr(systems['replay_buffer'], 'store_sequence'):
+                                # CHRONOS-specific memory system - store as temporal sequence
+                                sequence = [input_grids[i], output_grids[i]]
+                                pattern_type = 'temporal_transformation'
+                                additional_features = {
+                                    'accuracy': temporal_accuracy[i].item(),
+                                    'exact_match': exact_matches[i].item(),
+                                    'loss': losses['total'].item()
+                                }
+                                systems['replay_buffer'].store_sequence(
+                                    sequence, pattern_type, additional_features
                                 )
                             else:
                                 # Generic replay buffer
@@ -860,9 +862,17 @@ def train_chronos_specialized():
                 
                 # Enhanced system status reports
                 if USE_MEPT and 'replay_buffer' in systems:
-                    buffer_stats = systems['replay_buffer'].get_stats()
-                    exact_rate = (buffer_stats['exact_matches'] / max(1, buffer_stats['total_experiences'])) * 100
-                    print(f"   📊 MEPT: {buffer_stats['total_experiences']:,} experiences | {buffer_stats['exact_matches']:,} exact ({exact_rate:.1f}% rate)")
+                    if hasattr(systems['replay_buffer'], 'get_memory_statistics'):
+                        # CHRONOS-specific memory system
+                        buffer_stats = systems['replay_buffer'].get_memory_statistics()
+                        total_sequences = buffer_stats['total_sequences']
+                        memory_util = buffer_stats['memory_utilization'] * 100
+                        print(f"   📊 MEPT: {total_sequences:,} temporal sequences | {memory_util:.1f}% memory utilization")
+                    else:
+                        # Generic replay buffer
+                        buffer_stats = systems['replay_buffer'].get_stats()
+                        exact_rate = (buffer_stats['exact_matches'] / max(1, buffer_stats['total_experiences'])) * 100
+                        print(f"   📊 MEPT: {buffer_stats['total_experiences']:,} experiences | {buffer_stats['exact_matches']:,} exact ({exact_rate:.1f}% rate)")
                 
                 if USE_LEAP and 'leap_trainer' in systems:
                     leap_report = systems['leap_trainer'].get_performance_report()

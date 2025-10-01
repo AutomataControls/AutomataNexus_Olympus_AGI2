@@ -40,7 +40,23 @@ if IRIS_SYSTEMS_AVAILABLE:
         'create_iris_prism_system', 'IrisProgramSynthesizer', 'IrisProgramLibrary'
     ])
 
+# CHRONOS training systems
+try:
+    from .chronos_leap import ChronosLEAP, TemporalPattern
+    from .chronos_mept import ChronosMEPT, TemporalMemory, SequenceTransition
+    from .chronos_prism import ChronosPRISM, TemporalProgram, TemporalPrimitive, ProgramExecutionResult
+    CHRONOS_SYSTEMS_AVAILABLE = True
+except ImportError as e:
+    CHRONOS_SYSTEMS_AVAILABLE = False
+    print(f"Warning: CHRONOS training systems not available: {e}")
+
+if CHRONOS_SYSTEMS_AVAILABLE:
+    __all__.extend([
+        'ChronosLEAP', 'TemporalPattern',
+        'ChronosMEPT', 'TemporalMemory', 'SequenceTransition',
+        'ChronosPRISM', 'TemporalProgram', 'TemporalPrimitive', 'ProgramExecutionResult'
+    ])
+
 # Future model-specific systems will be added here:
 # - ATLAS systems (spatial transformation focus)  
-# - CHRONOS systems (temporal sequence focus)
 # - PROMETHEUS systems (meta-learning focus)

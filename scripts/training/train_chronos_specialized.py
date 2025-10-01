@@ -29,24 +29,40 @@ from src.models.chronos_model import EnhancedChronosNet
 
 # Import ALL AutomataNexus novel training components
 from src.dsl import DSLTrainingIntegration, DSLProgramGenerator
+from src.dsl.chronos_dsl import CHRONOSDSLTraining, CHRONOSDSLGenerator
 from src.program_synthesis.synthesis_integration import LightweightProgramSynthesizer, ProgramSynthesisDataGenerator
 
-# PRISM System
+# PRISM System - Use CHRONOS-specific version
 try:
-    from src.program_synthesis.prism_system import PRISMSynthesizer, create_prism_system
-    PRISM_AVAILABLE = True
+    from src.training_systems.chronos_prism import create_chronos_prism_system
+    CHRONOS_PRISM_AVAILABLE = True
 except ImportError:
-    PRISM_AVAILABLE = False
-    print("⚠️ PRISM not available")
+    CHRONOS_PRISM_AVAILABLE = False
+    print("⚠️ CHRONOS-specific PRISM not available")
+    # Fallback to generic version
+    try:
+        from src.program_synthesis.prism_system import PRISMSynthesizer, create_prism_system
+        PRISM_AVAILABLE = True
+    except ImportError:
+        PRISM_AVAILABLE = False
+        print("⚠️ Generic PRISM not available")
 
-# MEPT and LEAP Systems
+# MEPT and LEAP Systems - Use CHRONOS-specific versions
 try:
-    from src.utils.mept_system import ExperienceReplayBuffer, PatternBank, MEPTLoss, create_mept_system
-    from src.utils.leap_system import AdaptivePatternGenerator, LEAPTrainer, create_leap_system
-    MEPT_LEAP_AVAILABLE = True
+    from src.training_systems.chronos_mept import create_chronos_mept_system, ChronosMEPTLoss
+    from src.training_systems.chronos_leap import create_chronos_leap_system, ChronosLEAPTrainer
+    CHRONOS_MEPT_LEAP_AVAILABLE = True
 except ImportError:
-    MEPT_LEAP_AVAILABLE = False
-    print("⚠️ MEPT/LEAP not available")
+    CHRONOS_MEPT_LEAP_AVAILABLE = False
+    print("⚠️ CHRONOS-specific MEPT/LEAP not available")
+    # Fallback to generic versions
+    try:
+        from src.utils.mept_system import ExperienceReplayBuffer, PatternBank, MEPTLoss, create_mept_system
+        from src.utils.leap_system import AdaptivePatternGenerator, LEAPTrainer, create_leap_system
+        MEPT_LEAP_AVAILABLE = True
+    except ImportError:
+        MEPT_LEAP_AVAILABLE = False
+        print("⚠️ Generic MEPT/LEAP not available")
 
 # LEAP-PRISM Bridge
 try:
@@ -99,9 +115,9 @@ STAGE_CONFIG = {
 }
 
 # Training components flags
-USE_MEPT = True and MEPT_LEAP_AVAILABLE
-USE_LEAP = True and MEPT_LEAP_AVAILABLE
-USE_PRISM = True and PRISM_AVAILABLE
+USE_MEPT = True and (CHRONOS_MEPT_LEAP_AVAILABLE or MEPT_LEAP_AVAILABLE)
+USE_LEAP = True and (CHRONOS_MEPT_LEAP_AVAILABLE or MEPT_LEAP_AVAILABLE)
+USE_PRISM = True and (CHRONOS_PRISM_AVAILABLE or PRISM_AVAILABLE)
 USE_EXACT_BOOST = True and EXACT_BOOST_AVAILABLE
 USE_LEAP_PRISM_BRIDGE = True and LEAP_PRISM_BRIDGE_AVAILABLE
 
@@ -124,7 +140,13 @@ class ChronosSpecializedDataset(Dataset):
         # MEPT replay integration - prioritize temporal patterns
         if (self.replay_buffer and random.random() < self.replay_ratio and 
             len(self.replay_buffer.buffer) > 0):
-            experiences = self.replay_buffer.sample(1, exact_ratio=0.7)  # Favor temporal matches
+            # Handle different replay buffer APIs
+            if hasattr(self.replay_buffer, 'sample_batch'):
+                # CHRONOS-specific memory system
+                experiences = self.replay_buffer.sample_batch(1, strategy='temporal_coherence')
+            else:
+                # Generic replay buffer
+                experiences = self.replay_buffer.sample(1, exact_ratio=0.7)  # Favor temporal matches
             if experiences:
                 exp = experiences[0]
                 input_tensor = exp['input']
@@ -388,30 +410,56 @@ def train_chronos_specialized():
     # Initialize all AutomataNexus training systems
     systems = {}
     
-    # MEPT System
+    # MEPT System - Use CHRONOS-specific if available
     if USE_MEPT:
-        mept_components = create_mept_system(
-            capacity=60000,  # Medium for temporal patterns
-            pattern_bank_size=12000,
-            transformation_penalty=CHRONOS_CONFIG['transform_penalty'],
-            exact_match_bonus=CHRONOS_CONFIG['exact_match_bonus']
-        )
-        systems['replay_buffer'] = mept_components['replay_buffer']
-        systems['pattern_bank'] = mept_components['pattern_bank']
-        print("✅ MEPT system initialized")
+        if CHRONOS_MEPT_LEAP_AVAILABLE:
+            mept_components = create_chronos_mept_system(
+                memory_capacity=60000,
+                transformation_penalty=CHRONOS_CONFIG['transform_penalty'],
+                exact_match_bonus=CHRONOS_CONFIG['exact_match_bonus']
+            )
+            systems['replay_buffer'] = mept_components['memory_system']
+            systems['loss_fn'] = mept_components['loss_fn']  # CHRONOS-specific loss
+            print("✅ CHRONOS-specific MEPT system initialized")
+        elif MEPT_LEAP_AVAILABLE:
+            mept_components = create_mept_system(
+                capacity=60000,  # Medium for temporal patterns
+                pattern_bank_size=12000,
+                transformation_penalty=CHRONOS_CONFIG['transform_penalty'],
+                exact_match_bonus=CHRONOS_CONFIG['exact_match_bonus']
+            )
+            systems['replay_buffer'] = mept_components['replay_buffer']
+            systems['pattern_bank'] = mept_components['pattern_bank']
+            print("✅ Generic MEPT system initialized")
     
-    # LEAP System  
+    # LEAP System - Use CHRONOS-specific if available 
     if USE_LEAP:
-        leap_components = create_leap_system(device)
-        systems['leap_trainer'] = leap_components['trainer']
-        systems['pattern_generator'] = leap_components['pattern_generator']
-        systems['weak_detector'] = leap_components['detector']
-        print("✅ LEAP system initialized")
+        if CHRONOS_MEPT_LEAP_AVAILABLE:
+            leap_components = create_chronos_leap_system(
+                grid_size=STAGE_CONFIG[7]['max_grid_size']
+            )
+            systems['leap_trainer'] = leap_components['trainer']
+            systems['pattern_generator'] = leap_components['generator']
+            print("✅ CHRONOS-specific LEAP system initialized")
+        elif MEPT_LEAP_AVAILABLE:
+            leap_components = create_leap_system(device)
+            systems['leap_trainer'] = leap_components['trainer']
+            systems['pattern_generator'] = leap_components['pattern_generator']
+            systems['weak_detector'] = leap_components['detector']
+            print("✅ Generic LEAP system initialized")
     
-    # PRISM System
+    # PRISM System - Use CHRONOS-specific if available
     if USE_PRISM:
-        systems['prism_synthesizer'] = create_prism_system()
-        print("✅ PRISM system initialized")
+        if CHRONOS_PRISM_AVAILABLE:
+            prism_components = create_chronos_prism_system(
+                hidden_dim=CHRONOS_CONFIG['hidden_dim']
+            )
+            systems['prism_synthesizer'] = prism_components['synthesizer']
+            systems['prism_evaluator'] = prism_components['evaluator']
+            print("✅ CHRONOS-specific PRISM system initialized")
+        elif PRISM_AVAILABLE:
+            systems['prism_synthesizer'] = create_prism_system()
+            print("✅ Generic PRISM system initialized")
     
     # LEAP-PRISM Bridge
     if USE_LEAP_PRISM_BRIDGE and USE_LEAP and USE_PRISM:
@@ -421,7 +469,13 @@ def train_chronos_specialized():
         print("✅ LEAP-PRISM bridge initialized")
     
     # Initialize specialized loss
-    loss_fn = ChronosSpecializedLoss().to(device)
+    if USE_MEPT and 'loss_fn' in systems:
+        # Use CHRONOS-specific MEPT loss if available
+        loss_fn = systems['loss_fn'].to(device)
+        print("✅ Using CHRONOS-specific MEPT loss function")
+    else:
+        loss_fn = ChronosSpecializedLoss().to(device)
+        print("✅ Using ChronosSpecializedLoss")
     
     # Optimizer - Adam for temporal sequence learning
     optimizer = optim.Adam(
@@ -489,6 +543,11 @@ def train_chronos_specialized():
         print(f"\n⏰ CHRONOS Stage {stage}: {grid_size}x{grid_size} Temporal Sequence Analysis")
         print(f"   📏 Grid Size: {grid_size}x{grid_size} | Synthesis: {synthesis_ratio*100:.0f}% | LEAP: {stage_config['leap_complexity']}")
         print("=" * 60)
+        
+        # Add DSL-generated samples for CHRONOS's temporal patterns
+        print(f"🔧 Adding CHRONOS-specific DSL samples for stage {stage}...")
+        dsl_samples = CHRONOSDSLTraining.create_chronos_dsl_samples(curriculum_stage=stage)
+        print(f"✅ Added {len(dsl_samples)} CHRONOS DSL samples for {grid_size}x{grid_size} temporal grids")
         
         # Create curriculum dataset with stage-specific grid size
         dataset = CurriculumMegaScaleDataset(
@@ -564,6 +623,12 @@ def train_chronos_specialized():
             optimizer.zero_grad()
             
             for batch_idx, batch in enumerate(pbar):
+                # CHRONOS DSL augmentation
+                if batch_idx % 5 == 0 and dsl_samples:  # Every 5th batch
+                    batch = CHRONOSDSLTraining.augment_batch_with_chronos_dsl(
+                        batch, curriculum_stage=stage, dsl_ratio=0.3
+                    )
+                
                 inputs = batch['inputs'].to(device, non_blocking=True)
                 outputs = batch['outputs'].to(device, non_blocking=True)
                 
@@ -626,9 +691,18 @@ def train_chronos_specialized():
                     leap_complexity = stage_config['leap_complexity']
                     leap_grid_size = min(grid_size, 12)  # Cap LEAP at 12x12 for stability
                     
-                    leap_batch = systems['leap_trainer'].generate_leap_batch(
-                        batch_size=max(32, 64 - stage*8)  # Reduce batch size for larger grids
-                    )
+                    # Generate LEAP batch with stage-specific parameters for CHRONOS
+                    if CHRONOS_MEPT_LEAP_AVAILABLE and hasattr(systems['leap_trainer'], 'generate_temporal_batch'):
+                        leap_batch = systems['leap_trainer'].generate_temporal_batch(
+                            batch_size=max(32, 64 - stage*8),  # Reduce batch size for larger grids
+                            complexity=leap_complexity,
+                            grid_size=leap_grid_size
+                        )
+                    else:
+                        # Fallback for generic LEAP
+                        leap_batch = systems['leap_trainer'].generate_leap_batch(
+                            batch_size=max(32, 64 - stage*8)  # Reduce batch size for larger grids
+                        )
                     leap_inputs = leap_batch['inputs'].to(device)
                     leap_outputs = leap_batch['outputs'].to(device)
                     
@@ -668,13 +742,25 @@ def train_chronos_specialized():
                     
                     for i in range(input_grids.size(0)):
                         if exact_matches[i] or good_temporal_matches[i]:
-                            systems['replay_buffer'].add(
-                                input_grids[i],
-                                output_grids[i],
-                                pred_indices[i],
-                                losses['total'].item(),
-                                is_exact=exact_matches[i].item()
-                            )
+                            if hasattr(systems['replay_buffer'], 'store_experience'):
+                                # CHRONOS-specific memory system
+                                systems['replay_buffer'].store_experience(
+                                    input_state=input_grids[i],
+                                    output_state=output_grids[i],
+                                    predicted_state=pred_indices[i],
+                                    loss=losses['total'].item(),
+                                    exact_match=exact_matches[i].item(),
+                                    temporal_features={'accuracy': temporal_accuracy[i].item()}
+                                )
+                            else:
+                                # Generic replay buffer
+                                systems['replay_buffer'].add(
+                                    input_grids[i],
+                                    output_grids[i],
+                                    pred_indices[i],
+                                    losses['total'].item(),
+                                    is_exact=exact_matches[i].item()
+                                )
             
             scheduler.step()
             

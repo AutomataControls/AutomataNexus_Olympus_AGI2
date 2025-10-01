@@ -353,9 +353,10 @@ def train_minerva_specialized():
     print("🧠 Starting MINERVA Specialized Training")
     print("=" * 60)
     
-    # Initialize model
+    # Initialize model with maximum grid size from final stage
+    max_grid_size = STAGE_CONFIG[7]['max_grid_size']  # Final stage size (30x30)
     model = EnhancedMinervaNet(
-        max_grid_size=MINERVA_CONFIG['max_grid_size'],
+        max_grid_size=max_grid_size,
         hidden_dim=MINERVA_CONFIG['hidden_dim']
     ).to(device)
     

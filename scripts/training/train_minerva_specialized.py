@@ -71,7 +71,7 @@ from colab_training_v4_megascale_curriculum import CurriculumMegaScaleDataset, T
 # MINERVA-Specific Configuration with 8-Stage Progressive Curriculum
 MINERVA_CONFIG = {
     'batch_size': 256,  # Smaller for MINERVA's complex attention
-    'learning_rate': 0.00001,  # EMERGENCY: 10x smaller learning rate
+    'learning_rate': 0.001,  # Normal learning rate with simplified loss
     'num_epochs': 320,  # 8 stages x 40 epochs
     'hidden_dim': 256,
     'pattern_memory_size': 200,
@@ -149,26 +149,21 @@ class MinervaSpecializedDataset(Dataset):
 
 
 class MinervaSpecializedLoss(nn.Module):
-    """MINERVA-specific loss incorporating all novel training methods"""
+    """MINERVA-specific loss - SIMPLIFIED FOR STABILITY"""
     def __init__(self):
         super().__init__()
         self.weights = {
             'reconstruction': 1.0,
             'transformation': MINERVA_CONFIG['transform_penalty'],
-            'exact_match': MINERVA_CONFIG['exact_match_bonus'],
-            'relational': MINERVA_CONFIG['relational_weight'],
-            'pattern_memory': 0.1,  # Reduced from 0.3 to prevent instability
-            'edge': 0.3,
-            'color_balance': 0.2,
-            'structure': 0.3
+            'exact_match': MINERVA_CONFIG['exact_match_bonus']
         }
         
     def forward(self, pred_output, target_output, input_grid, model_outputs=None):
-        """MINERVA-specialized loss function"""
+        """SIMPLIFIED MINERVA loss - based on working IRIS approach"""
         B, C, H, W = pred_output.shape
         
-        # Core reconstruction loss with focal weighting
-        focal_loss = self._focal_loss(pred_output, target_output, gamma=1.5)
+        # Simple focal loss like IRIS
+        focal_loss = self._focal_loss(pred_output, target_output, gamma=2.0)
         
         # Exact match detection and bonus
         pred_indices = pred_output.argmax(dim=1)
@@ -176,68 +171,25 @@ class MinervaSpecializedLoss(nn.Module):
         exact_matches = (pred_indices == target_indices).all(dim=[1,2]).float()
         exact_count = exact_matches.sum()
         exact_bonus = -exact_matches.mean() * self.weights['exact_match']
+        exact_bonus = exact_bonus.clamp(min=-2.0)  # Prevent excessive negative contribution
         
-        # MINERVA-specific: Transformation penalty
+        # Simple transformation penalty
         input_indices = input_grid.argmax(dim=1)
         copy_penalty = (pred_indices == input_indices).all(dim=[1,2]).float()
         transform_penalty = copy_penalty.mean() * self.weights['transformation']
         
-        # MINERVA-specific: Relational reasoning loss (ULTRA-MINIMAL)
-        relational_loss = torch.tensor(0.0, device=pred_output.device)
-        if model_outputs and 'features' in model_outputs and self.weights['relational'] > 0:
-            features = model_outputs['features']
-            # Ultra-minimal relational loss to prevent instability
-            try:
-                # Use simple L2 norm instead of gradients
-                feature_norm = features.norm(dim=[2, 3]).mean()
-                relational_loss = feature_norm.clamp(max=0.1) * self.weights['relational']
-            except:
-                relational_loss = torch.tensor(0.0, device=features.device)
+        # SIMPLE total loss - only 3 components like IRIS
+        total_loss = focal_loss + transform_penalty + exact_bonus
         
-        # MINERVA-specific: Pattern memory utilization (DISABLED FOR STABILITY)
-        pattern_memory_loss = torch.tensor(0.0, device=pred_output.device)
-        # Pattern memory component completely disabled due to severe instability
-        # if model_outputs and 'transform_params' in model_outputs:
-        #     # This component was causing gradient explosions, keeping disabled
+        # Simple stability check
+        if torch.isnan(total_loss) or torch.isinf(total_loss):
+            print(f"⚠️ NaN/Inf loss, using focal only")
+            total_loss = focal_loss.clamp(max=10.0)
         
-        # Edge-aware loss for precise object boundaries
-        edge_loss = self._edge_aware_loss(pred_output, target_output) * self.weights['edge']
-        
-        # Color balance preservation
-        color_loss = self._color_balance_loss(pred_output, target_output) * self.weights['color_balance']
-        
-        # Structure preservation
-        structure_loss = self._structure_loss(pred_output, target_output) * self.weights['structure']
-        
-        # Ultra-stabilized total loss with comprehensive checks
-        loss_components = {
-            'focal': focal_loss,
-            'transform': transform_penalty,
-            'edge': edge_loss,
-            'color': color_loss,
-            'structure': structure_loss,
-            'relational': relational_loss,
-            'pattern': pattern_memory_loss,
-            'exact': exact_bonus
-        }
-        
-        # Check each component for stability
-        stable_components = []
-        for name, component in loss_components.items():
-            if torch.isnan(component) or torch.isinf(component) or component.abs() > 100.0:
-                print(f"⚠️ Unstable {name} loss: {component.item():.3f}, skipping")
-                stable_components.append(torch.tensor(0.0, device=focal_loss.device))
-            else:
-                stable_components.append(component)
-        
-        total_loss = sum(stable_components)
-        
-        # Final NaN/Inf protection
-        if torch.isnan(total_loss) or torch.isinf(total_loss) or total_loss.abs() > 1000.0:
-            print(f"⚠️ Total loss unstable: {total_loss.item():.3f}, using focal only")
-            total_loss = focal_loss.clamp(max=10.0)  # Cap focal loss too
-            pattern_memory_loss = torch.tensor(0.0, device=total_loss.device)
-            relational_loss = torch.tensor(0.0, device=total_loss.device)
+        # Prevent extremely negative losses that indicate instability
+        if total_loss < -5.0:
+            print(f"⚠️ Loss too negative ({total_loss.item():.3f}), clamping")
+            total_loss = total_loss.clamp(min=-5.0)
         
         return {
             'total': total_loss,
@@ -245,11 +197,8 @@ class MinervaSpecializedLoss(nn.Module):
             'transform': transform_penalty,
             'exact_bonus': exact_bonus,
             'exact_count': exact_count,
-            'relational': relational_loss,
-            'pattern_memory': pattern_memory_loss,
-            'edge': edge_loss,
-            'color': color_loss,
-            'structure': structure_loss
+            'relational': torch.tensor(0.001, device=total_loss.device),  # Dummy for display
+            'pattern_memory': torch.tensor(0.0, device=total_loss.device)  # Dummy for display
         }
     
     def _focal_loss(self, pred, target, gamma=1.5):
@@ -610,25 +559,12 @@ def train_minerva_specialized():
                 scaler.scale(loss).backward()
                 
                 if (batch_idx + 1) % MINERVA_CONFIG['gradient_accumulation'] == 0:
-                    # EMERGENCY: Pre-check for explosive gradients before unscaling
-                    pre_norm = sum(p.grad.data.norm(2)**2 for p in model.parameters() if p.grad is not None)**0.5
-                    if pre_norm > 10.0:  # Much lower threshold
-                        print(f"⚠️ CRITICAL: Pre-norm {pre_norm:.2f} too high, skipping update")
-                        optimizer.zero_grad()
-                        continue
-                    
                     scaler.unscale_(optimizer)
                     
-                    # CRITICAL: Ultra-aggressive gradient clipping - 0.0001 threshold
-                    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 0.0001)
-                    if grad_norm > 0.001:
-                        print(f"⚠️ Large gradient norm: {grad_norm:.2f}, clipped to 0.0001")
-                    
-                    # Emergency gradient zeroing if still too large
-                    for p in model.parameters():
-                        if p.grad is not None and p.grad.data.norm() > 0.001:
-                            print(f"⚠️ EMERGENCY: Zeroing gradient with norm {p.grad.data.norm():.3f}")
-                            p.grad.data.zero_()
+                    # Normal gradient clipping like IRIS
+                    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                    if grad_norm > 5.0:
+                        print(f"⚠️ Large gradient norm: {grad_norm:.2f}, clipped to 1.0")
                     
                     scaler.step(optimizer)
                     scaler.update()

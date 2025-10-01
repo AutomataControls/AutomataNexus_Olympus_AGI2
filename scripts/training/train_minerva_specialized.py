@@ -157,7 +157,7 @@ class MinervaSpecializedLoss(nn.Module):
             'transformation': MINERVA_CONFIG['transform_penalty'],
             'exact_match': MINERVA_CONFIG['exact_match_bonus'],
             'relational': MINERVA_CONFIG['relational_weight'],
-            'pattern_memory': MINERVA_CONFIG['pattern_memory_weight'],
+            'pattern_memory': 0.1,  # Reduced from 0.3 to prevent instability
             'edge': 0.3,
             'color_balance': 0.2,
             'structure': 0.3
@@ -194,8 +194,9 @@ class MinervaSpecializedLoss(nn.Module):
         pattern_memory_loss = 0.0
         if model_outputs and 'transform_params' in model_outputs:
             transform_params = model_outputs['transform_params']
-            # Encourage diverse pattern usage
-            param_diversity = -torch.var(transform_params, dim=0).mean()
+            # Stabilized pattern diversity loss
+            param_var = torch.var(transform_params, dim=0).clamp(min=1e-8)
+            param_diversity = torch.log(param_var.mean() + 1e-8)  # Stabilized log variance
             pattern_memory_loss = param_diversity * self.weights['pattern_memory']
         
         # Edge-aware loss for precise object boundaries
@@ -207,9 +208,15 @@ class MinervaSpecializedLoss(nn.Module):
         # Structure preservation
         structure_loss = self._structure_loss(pred_output, target_output) * self.weights['structure']
         
-        # Total loss
+        # Total loss with stability checks
         total_loss = (focal_loss + transform_penalty + edge_loss + color_loss + 
                      structure_loss + relational_loss + pattern_memory_loss + exact_bonus)
+        
+        # NaN/Inf protection
+        if torch.isnan(total_loss) or torch.isinf(total_loss):
+            total_loss = focal_loss  # Fallback to basic reconstruction loss
+            pattern_memory_loss = torch.tensor(0.0, device=total_loss.device)
+            relational_loss = torch.tensor(0.0, device=total_loss.device)
         
         return {
             'total': total_loss,
@@ -533,12 +540,20 @@ def train_minerva_specialized():
                     # Specialized loss
                     losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
                     loss = losses['total'] / MINERVA_CONFIG['gradient_accumulation']
+                    
+                    # Skip NaN/Inf losses
+                    if torch.isnan(loss) or torch.isinf(loss):
+                        print(f"⚠️ Skipping NaN/Inf loss at batch {batch_idx}")
+                        continue
                 
                 scaler.scale(loss).backward()
                 
                 if (batch_idx + 1) % MINERVA_CONFIG['gradient_accumulation'] == 0:
                     scaler.unscale_(optimizer)
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                    # Aggressive gradient clipping for stability
+                    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+                    if grad_norm > 10.0:
+                        print(f"⚠️ Large gradient norm: {grad_norm:.2f}, clipped to 0.5")
                     scaler.step(optimizer)
                     scaler.update()
                     optimizer.zero_grad()

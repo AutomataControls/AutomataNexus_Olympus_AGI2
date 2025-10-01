@@ -71,19 +71,19 @@ from colab_training_v4_megascale_curriculum import CurriculumMegaScaleDataset, T
 # CHRONOS-Specific Configuration with 8-Stage Progressive Curriculum
 CHRONOS_CONFIG = {
     'batch_size': 256,  # Smaller for temporal complexity
-    'learning_rate': 0.004,  # Lower for sequence stability
+    'learning_rate': 0.002,  # Further reduced for temporal stability
     'num_epochs': 320,  # 8 stages x 40 epochs
     'sequence_length': 3,  # Max sequence for temporal analysis
     'hidden_dim': 256,
     'gradient_accumulation': 2,  # Effective batch: 512
     'transform_penalty': 0.3,  # Lower - CHRONOS should do temporal transformations
-    'exact_match_bonus': 6.0,  # High for temporal precision
+    'exact_match_bonus': 2.5,  # Reduced to prevent negative losses
     'curriculum_stages': 8,  # Progressive 8-stage curriculum
     'epochs_per_stage': 40,  # Shorter stages for smoother progression
-    'temporal_weight': 0.5,  # CHRONOS-specific loss component
-    'movement_weight': 0.4,  # CHRONOS-specific loss component
-    'object_tracking_weight': 0.3,  # Object consistency over time
-    'sequence_consistency_weight': 0.4  # Temporal consistency
+    'temporal_weight': 0.2,  # Reduced for stability
+    'movement_weight': 0.15,  # Reduced for stability
+    'object_tracking_weight': 0.1,  # Reduced for stability
+    'sequence_consistency_weight': 0.15  # Reduced for stability
 }
 
 # 8-Stage Progressive Grid Size Curriculum for Temporal Learning
@@ -177,7 +177,9 @@ class ChronosSpecializedLoss(nn.Module):
         target_indices = target_output.argmax(dim=1)
         exact_matches = (pred_indices == target_indices).all(dim=[1,2]).float()
         exact_count = exact_matches.sum()
+        # Fixed exact bonus to prevent negative losses in temporal model
         exact_bonus = -exact_matches.mean() * self.weights['exact_match']
+        exact_bonus = exact_bonus.clamp(min=-1.5)  # Prevent excessive negative contribution
         
         # CHRONOS-specific: Temporal transformation penalty (should be low for temporal model)
         input_indices = input_grid.argmax(dim=1)
@@ -188,17 +190,18 @@ class ChronosSpecializedLoss(nn.Module):
         movement_loss = 0.0
         if model_outputs and 'movement_params' in model_outputs:
             movement_params = model_outputs['movement_params']  # B, 128
-            # Encourage structured movement parameters
-            movement_variance = torch.var(movement_params, dim=1).mean()
+            # Stabilized movement parameters for temporal sequences
+            movement_variance = torch.var(movement_params, dim=1).mean().clamp(max=3.0)
             movement_loss = -movement_variance * self.weights['movement']  # Negative to encourage variance
+            movement_loss = movement_loss.clamp(min=-0.5)  # Prevent excessive negative contribution
         
         # CHRONOS-specific: Temporal attention consistency
         temporal_loss = 0.0
         if model_outputs and 'attention_weights' in model_outputs:
             attention_weights = model_outputs['attention_weights']  # B, seq_len, seq_len
-            # Encourage focused attention patterns
+            # Stabilized temporal attention patterns
             attention_entropy = -torch.sum(attention_weights * torch.log(attention_weights + 1e-8), dim=-1)
-            temporal_loss = attention_entropy.mean() * self.weights['temporal']
+            temporal_loss = attention_entropy.mean().clamp(max=4.0) * self.weights['temporal']
         
         # CHRONOS-specific: Object tracking consistency
         object_tracking_loss = self._object_tracking_loss(pred_output, target_output) * self.weights['object_tracking']
@@ -212,10 +215,39 @@ class ChronosSpecializedLoss(nn.Module):
         # Minimal edge loss (temporal patterns more important than boundaries)
         edge_loss = self._minimal_edge_loss(pred_output, target_output) * self.weights['edge']
         
-        # Total loss
-        total_loss = (temporal_focal_loss + transform_penalty + movement_loss + 
-                     temporal_loss + object_tracking_loss + sequence_consistency_loss +
-                     color_balance_loss + edge_loss + exact_bonus)
+        # Stabilized total loss with temporal-specific validation
+        loss_components = {
+            'temporal_focal': temporal_focal_loss,
+            'transform': transform_penalty,
+            'movement': movement_loss,
+            'temporal': temporal_loss,
+            'object_tracking': object_tracking_loss,
+            'sequence_consistency': sequence_consistency_loss,
+            'color_balance': color_balance_loss,
+            'edge': edge_loss,
+            'exact_bonus': exact_bonus
+        }
+        
+        # Validate each temporal component
+        stable_components = []
+        for name, component in loss_components.items():
+            if torch.isnan(component) or torch.isinf(component):
+                print(f"⚠️ Invalid {name} loss in temporal model: {component.item():.3f}, skipping")
+                stable_components.append(torch.tensor(0.0, device=temporal_focal_loss.device))
+            else:
+                stable_components.append(component)
+        
+        total_loss = sum(stable_components)
+        
+        # Temporal-specific stability checks
+        if torch.isnan(total_loss) or torch.isinf(total_loss):
+            print(f"⚠️ Total temporal loss invalid, using focal only")
+            total_loss = temporal_focal_loss
+        
+        # Prevent extremely negative losses in temporal sequences
+        if total_loss < -3.0:
+            print(f"⚠️ Temporal loss too negative ({total_loss.item():.3f}), clamping")
+            total_loss = total_loss.clamp(min=-3.0)
         
         return {
             'total': total_loss,
@@ -572,12 +604,25 @@ def train_chronos_specialized():
                     # Specialized loss
                     losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
                     loss = losses['total'] / CHRONOS_CONFIG['gradient_accumulation']
+                    
+                    # CHRONOS-specific temporal loss validation
+                    if torch.isnan(loss) or torch.isinf(loss):
+                        print(f"⚠️ Skipping invalid temporal loss at batch {batch_idx}")
+                        continue
+                    
+                    # Skip if loss is extremely negative (temporal instability)
+                    if loss < -4.0:
+                        print(f"⚠️ Skipping extremely negative temporal loss: {loss.item():.3f}")
+                        continue
                 
                 scaler.scale(loss).backward()
                 
                 if (batch_idx + 1) % CHRONOS_CONFIG['gradient_accumulation'] == 0:
                     scaler.unscale_(optimizer)
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                    # CHRONOS-specific temporal gradient clipping
+                    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 0.3)
+                    if grad_norm > 3.0:
+                        print(f"⚠️ Large gradient norm in CHRONOS: {grad_norm:.2f}, clipped to 0.3")
                     scaler.step(optimizer)
                     scaler.update()
                     optimizer.zero_grad()

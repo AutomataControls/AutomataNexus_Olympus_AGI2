@@ -634,7 +634,6 @@ def train_minerva_specialized():
             optimizer.zero_grad()
             
             # Timeout detection to prevent hanging
-            import time
             last_batch_time = time.time()
             stuck_counter = 0
             

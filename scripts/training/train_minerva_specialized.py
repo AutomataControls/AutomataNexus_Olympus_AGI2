@@ -696,96 +696,52 @@ class MinervaSpecializedLoss(nn.Module):
 
 def custom_collate_fn(batch, stage=0):
     """MINERVA-optimized collate function with stage-specific grid sizes"""
-    if len(batch) == 0:
-        print("⚠️ Empty batch in collate_fn!")
-        return {'inputs': torch.zeros(0, 6, 6), 'outputs': torch.zeros(0, 6, 6)}
+    target_size = STAGE_CONFIG[stage]['max_grid_size']
     
     inputs = []
     outputs = []
-    target_size = STAGE_CONFIG[stage]['max_grid_size']
     
-    for i, item in enumerate(batch):
-        try:
-            # Debug print for first item
-            if i == 0:
-                print(f"Debug: First batch item type: {type(item)}")
-                if isinstance(item, dict):
-                    print(f"Debug: Item keys: {item.keys()}")
-                    print(f"Debug: Input type: {type(item.get('inputs', None))}")
+    for item in batch:
+        input_grid = item['inputs']
+        output_grid = item['outputs']
+        
+        # Convert numpy arrays to tensors
+        if isinstance(input_grid, np.ndarray):
+            input_grid = torch.from_numpy(input_grid).long()
+        else:
+            input_grid = torch.tensor(input_grid, dtype=torch.long)
             
-            input_grid = item['inputs']
-            output_grid = item['outputs']
+        if isinstance(output_grid, np.ndarray):
+            output_grid = torch.from_numpy(output_grid).long()
+        else:
+            output_grid = torch.tensor(output_grid, dtype=torch.long)
+        
+        # Ensure 2D
+        if input_grid.dim() == 1:
+            input_grid = input_grid.view(-1, 1)
+        elif input_grid.dim() > 2:
+            input_grid = input_grid.squeeze()
             
-            # Convert to tensor if needed - handle numpy arrays
-            if isinstance(input_grid, np.ndarray):
-                input_grid = torch.from_numpy(input_grid).long()
-            elif not isinstance(input_grid, torch.Tensor):
-                input_grid = torch.tensor(input_grid, dtype=torch.long)
-                
-            if isinstance(output_grid, np.ndarray):
-                output_grid = torch.from_numpy(output_grid).long()
-            elif not isinstance(output_grid, torch.Tensor):
-                output_grid = torch.tensor(output_grid, dtype=torch.long)
+        if output_grid.dim() == 1:
+            output_grid = output_grid.view(-1, 1)
+        elif output_grid.dim() > 2:
+            output_grid = output_grid.squeeze()
+        
+        # Pad to target size
+        h, w = input_grid.shape
+        if h < target_size or w < target_size:
+            padded_input = torch.zeros(target_size, target_size, dtype=torch.long)
+            padded_input[:h, :w] = input_grid[:target_size, :target_size]
+            input_grid = padded_input
             
-            # Ensure we have valid tensors before checking dimensions
-            if not hasattr(input_grid, 'dim'):
-                print(f"Error: input_grid is not a tensor, it's {type(input_grid)}")
-                raise ValueError(f"Invalid input_grid type: {type(input_grid)}")
-                
-            # Force to 2D with safety check
-            max_squeezes = 5  # Prevent infinite loop
-            squeeze_count = 0
-            while input_grid.dim() > 2 and squeeze_count < max_squeezes:
-                input_grid = input_grid.squeeze(0)
-                squeeze_count += 1
-                
-            squeeze_count = 0
-            while output_grid.dim() > 2 and squeeze_count < max_squeezes:
-                output_grid = output_grid.squeeze(0)
-                squeeze_count += 1
-            
-            # Handle 1D tensors by reshaping
-            if input_grid.dim() == 1:
-                size = int(input_grid.numel() ** 0.5)
-                if size * size == input_grid.numel():
-                    input_grid = input_grid.view(size, size)
-                else:
-                    input_grid = input_grid.view(1, -1)
-            
-            if output_grid.dim() == 1:
-                size = int(output_grid.numel() ** 0.5)
-                if size * size == output_grid.numel():
-                    output_grid = output_grid.view(size, size)
-                else:
-                    output_grid = output_grid.view(1, -1)
-            
-            # ALWAYS create new tensors of exact target size
-            new_input = torch.zeros(target_size, target_size, dtype=torch.long)
-            new_output = torch.zeros(target_size, target_size, dtype=torch.long)
-            
-            # Get actual dimensions
-            input_h, input_w = input_grid.shape
-            output_h, output_w = output_grid.shape
-            
-            # Copy what fits
-            copy_h_in = min(input_h, target_size)
-            copy_w_in = min(input_w, target_size)
-            copy_h_out = min(output_h, target_size)  
-            copy_w_out = min(output_w, target_size)
-            
-            new_input[:copy_h_in, :copy_w_in] = input_grid[:copy_h_in, :copy_w_in]
-            new_output[:copy_h_out, :copy_w_out] = output_grid[:copy_h_out, :copy_w_out]
-            
-            inputs.append(new_input)
-            outputs.append(new_output)
-            
-        except Exception as e:
-            print(f"Error processing batch item {i}: {e}")
-            print(f"Input shape: {input_grid.shape if 'input_grid' in locals() else 'unknown'}")
-            print(f"Output shape: {output_grid.shape if 'output_grid' in locals() else 'unknown'}")
-            # Create dummy tensors as fallback
-            inputs.append(torch.zeros(target_size, target_size, dtype=torch.long))
-            outputs.append(torch.zeros(target_size, target_size, dtype=torch.long))
+        h, w = output_grid.shape
+        if h < target_size or w < target_size:
+            padded_output = torch.zeros(target_size, target_size, dtype=torch.long)
+            padded_output[:h, :w] = output_grid[:target_size, :target_size]
+            output_grid = padded_output
+        
+        inputs.append(input_grid[:target_size, :target_size])
+        outputs.append(output_grid[:target_size, :target_size])
     
     return {
         'inputs': torch.stack(inputs),

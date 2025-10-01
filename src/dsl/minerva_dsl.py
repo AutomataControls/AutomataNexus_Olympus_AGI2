@@ -659,8 +659,8 @@ class MINERVADSLTraining:
                     output = program.execute(grid)
                     if output.shape == grid.shape and not np.array_equal(output, grid):
                         samples.append({
-                            'input': grid.copy(),
-                            'output': output,
+                            'inputs': grid.copy(),
+                            'outputs': output,
                             'program': program,
                             'stage': curriculum_stage,
                             'type': 'minerva_dsl'
@@ -903,9 +903,13 @@ class MINERVADSLTraining:
                     if idx < len(dsl_samples):
                         sample_idx = idx % len(dsl_samples)
                         
-                        # Get DSL sample grids
-                        dsl_input = dsl_samples[sample_idx]['input']
-                        dsl_output = dsl_samples[sample_idx]['output']
+                        # Get DSL sample grids - handle both key formats
+                        if 'inputs' in dsl_samples[sample_idx]:
+                            dsl_input = dsl_samples[sample_idx]['inputs']
+                            dsl_output = dsl_samples[sample_idx]['outputs']
+                        else:
+                            dsl_input = dsl_samples[sample_idx]['input']
+                            dsl_output = dsl_samples[sample_idx]['output']
                         
                         # Create tensors of target size
                         input_tensor = torch.zeros(target_size, target_size, dtype=torch.long)

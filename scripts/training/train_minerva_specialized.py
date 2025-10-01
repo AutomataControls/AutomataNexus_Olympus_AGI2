@@ -73,59 +73,138 @@ except ImportError:
     LEAP_PRISM_BRIDGE_AVAILABLE = False
     print("⚠️ LEAP-PRISM bridge not available")
 
-# MINERVA-specific exact match injection
-def minerva_exact_match_injection(model, device, num_epochs=50, target_accuracy=85.0):
+# MINERVA-specific injection modules for ARC competition
+def minerva_exact_match_injection(model, device, num_epochs=100, target_accuracy=90.0):
     """MINERVA-specific exact match injection using MINERVA_CONFIG - EXTENDED FOR ARC COMPETITION"""
     print("🎯 MINERVA EXACT MATCH INJECTION - EXTENDED")
     print("=" * 50)
     print(f"  Batch size: {MINERVA_CONFIG['batch_size']}")
-    print(f"  Learning rate: {MINERVA_CONFIG['learning_rate']*10}")  # Higher LR for injection
+    print(f"  Learning rate: {MINERVA_CONFIG['learning_rate']*5} (warmup -> {MINERVA_CONFIG['learning_rate']*15})")
     print(f"  Transform penalty: {MINERVA_CONFIG['transform_penalty']}")
     print(f"  Exact match bonus: {MINERVA_CONFIG['exact_match_bonus']}")
     print(f"  Epochs: {num_epochs} (EXTENDED)")
     
     # AGGRESSIVE exact match training for MINERVA
     model.train()
-    optimizer = optim.SGD(model.parameters(), lr=MINERVA_CONFIG['learning_rate']*10, momentum=0.9)
+    # Start with lower LR for warmup
+    base_lr = MINERVA_CONFIG['learning_rate'] * 5
+    optimizer = optim.SGD(model.parameters(), lr=base_lr, momentum=0.9)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=base_lr*0.1)
     
-    # Create EFFECTIVE exact match patterns
+    # Create MORE DIVERSE exact match patterns
     patterns = []
     
-    # 1. Pure identity patterns (easier)
-    for i in range(50):
-        size = 6
+    # 1. Pure identity patterns (easiest - more variations)
+    for i in range(100):  # Increased from 50
+        size = random.choice([4, 5, 6])  # Vary sizes
         # Simple solid colors - easiest to learn
-        color = i % 9 + 1
+        color = (i % 9) + 1
         pattern = torch.full((size, size), color, dtype=torch.long)
         patterns.append({'inputs': pattern, 'outputs': pattern})
     
-    # 2. Simple geometric patterns
-    for i in range(50):
-        size = 6
+    # 2. Simple geometric patterns (more diverse)
+    for i in range(100):  # Increased
+        size = random.choice([5, 6, 7])
         pattern = torch.zeros((size, size), dtype=torch.long)
-        # Cross pattern
-        pattern[size//2, :] = 1
-        pattern[:, size//2] = 1
+        
+        if i % 4 == 0:
+            # Cross pattern
+            pattern[size//2, :] = 1
+            pattern[:, size//2] = 1
+        elif i % 4 == 1:
+            # Diagonal
+            torch.diagonal(pattern).fill_(2)
+        elif i % 4 == 2:
+            # Checkerboard
+            pattern[::2, ::2] = 3
+            pattern[1::2, 1::2] = 3
+        else:
+            # Frame
+            pattern[0, :] = 4
+            pattern[-1, :] = 4
+            pattern[:, 0] = 4
+            pattern[:, -1] = 4
         patterns.append({'inputs': pattern, 'outputs': pattern})
     
-    # 3. Two-color patterns
+    # 3. Two-color patterns (more variations)
+    for i in range(100):  # Increased
+        size = random.choice([5, 6])
+        pattern = torch.zeros((size, size), dtype=torch.long)
+        
+        if i % 3 == 0:
+            pattern[:size//2, :] = 1
+            pattern[size//2:, :] = 2
+        elif i % 3 == 1:
+            pattern[:, :size//2] = 3
+            pattern[:, size//2:] = 4
+        else:
+            # Quadrants
+            pattern[:size//2, :size//2] = 5
+            pattern[size//2:, size//2:] = 6
+        patterns.append({'inputs': pattern, 'outputs': pattern})
+    
+    # 4. Simple stripes (new)
     for i in range(50):
         size = 6
         pattern = torch.zeros((size, size), dtype=torch.long)
-        pattern[:size//2, :] = 1
-        pattern[size//2:, :] = 2
+        if i % 2 == 0:
+            # Horizontal stripes
+            for row in range(size):
+                pattern[row, :] = (row % 3) + 1
+        else:
+            # Vertical stripes
+            for col in range(size):
+                pattern[:, col] = (col % 3) + 1
         patterns.append({'inputs': pattern, 'outputs': pattern})
+    
+    # Shuffle patterns for better training
+    random.shuffle(patterns)
+    
+    # Training loop with warmup and aggressive optimization
+    best_acc = 0
+    patience_counter = 0
     
     for epoch in range(num_epochs):
         correct = 0
         total = 0
         epoch_loss = 0
         
+        # Warmup phase with increasing LR
+        if epoch < 10:
+            new_lr = base_lr + (MINERVA_CONFIG['learning_rate'] * 15 - base_lr) * (epoch / 10)
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = new_lr
+        
+        # Shuffle patterns each epoch
+        random.shuffle(patterns)
+        
         for batch_start in range(0, len(patterns), MINERVA_CONFIG['batch_size']):
             batch_patterns = patterns[batch_start:batch_start + MINERVA_CONFIG['batch_size']]
             
-            inputs = torch.stack([p['inputs'] for p in batch_patterns]).to(device)
-            outputs = torch.stack([p['outputs'] for p in batch_patterns]).to(device)
+            # Find max size in batch before stacking
+            max_h = max(p['inputs'].shape[0] for p in batch_patterns)
+            max_w = max(p['inputs'].shape[1] for p in batch_patterns)
+            
+            # Pad all patterns to max size
+            padded_inputs = []
+            padded_outputs = []
+            for p in batch_patterns:
+                inp = p['inputs']
+                out = p['outputs']
+                h, w = inp.shape
+                pad_h = max_h - h
+                pad_w = max_w - w
+                if pad_h > 0 or pad_w > 0:
+                    padded_inp = F.pad(inp, (0, pad_w, 0, pad_h), value=0)
+                    padded_out = F.pad(out, (0, pad_w, 0, pad_h), value=0)
+                else:
+                    padded_inp = inp
+                    padded_out = out
+                padded_inputs.append(padded_inp)
+                padded_outputs.append(padded_out)
+            
+            inputs = torch.stack(padded_inputs).to(device)
+            outputs = torch.stack(padded_outputs).to(device)
             
             input_oh = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
             output_oh = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
@@ -136,14 +215,24 @@ def minerva_exact_match_injection(model, device, num_epochs=50, target_accuracy=
             # AGGRESSIVE loss for exact matching
             loss = F.cross_entropy(pred, outputs)
             
-            # Add exact match bonus
+            # Add exact match bonus (progressive)
             pred_idx = pred.argmax(dim=1)
             exact_matches = (pred_idx == outputs).all(dim=[1,2]).float()
-            exact_bonus = -exact_matches.mean() * 10.0  # Strong bonus
+            
+            # Progressive bonus that increases with epoch
+            bonus_scale = min(3.0, 1.0 + epoch / 20)  # Gradually increase bonus
+            exact_bonus = -exact_matches.mean() * bonus_scale
             total_loss = loss + exact_bonus
             
+            # Prevent overly negative losses
+            total_loss = total_loss.clamp(min=0.001)
+            
+            # Add L2 regularization for stability
+            l2_reg = sum(p.pow(2.0).sum() for p in model.parameters())
+            total_loss = total_loss + 0.0001 * l2_reg
+            
             total_loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 2.0)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
             
             correct += exact_matches.sum().item()
@@ -152,13 +241,216 @@ def minerva_exact_match_injection(model, device, num_epochs=50, target_accuracy=
         
         acc = correct / total * 100
         avg_loss = epoch_loss / (len(patterns) // MINERVA_CONFIG['batch_size'] + 1)
-        print(f"Epoch {epoch+1}/{num_epochs}: {acc:.1f}% exact match | Loss: {avg_loss:.3f}")
+        
+        if epoch >= 10:  # After warmup
+            scheduler.step()
+            
+        current_lr = optimizer.param_groups[0]['lr']
+        print(f"Epoch {epoch+1}/{num_epochs}: {acc:.1f}% exact match | Loss: {avg_loss:.3f} | LR: {current_lr:.5f}")
+        
+        # Track improvement
+        if acc > best_acc:
+            best_acc = acc
+            patience_counter = 0
+        else:
+            patience_counter += 1
         
         if acc >= target_accuracy:
             print(f"🏆 TARGET REACHED: {acc:.1f}% >= {target_accuracy}%")
             break
         elif epoch == num_epochs - 1:
-            print(f"⚠️ INJECTION COMPLETE: {acc:.1f}% (target: {target_accuracy}%)")
+            print(f"⚠️ INJECTION COMPLETE: {acc:.1f}% (best: {best_acc:.1f}%, target: {target_accuracy}%)")
+    
+    return model
+
+
+def minerva_mept_injection(model, device, systems, num_epochs=100, target_accuracy=90.0):
+    """MINERVA MEPT (Memory-Enhanced Pattern Training) injection"""
+    print("🧠 MINERVA MEPT INJECTION")
+    print("=" * 50)
+    print(f"  Target: {target_accuracy}% pattern recall")
+    print(f"  Epochs: {num_epochs}")
+    
+    if 'replay_buffer' not in systems or 'pattern_bank' not in systems:
+        print("⚠️ MEPT systems not available, skipping")
+        return model
+    
+    model.train()
+    optimizer = optim.SGD(model.parameters(), lr=MINERVA_CONFIG['learning_rate']*5, momentum=0.9)
+    
+    # Generate grid reasoning patterns for MEPT
+    patterns = []
+    for i in range(100):
+        size = 6
+        # Grid patterns that MINERVA excels at
+        pattern = torch.zeros((size, size), dtype=torch.long)
+        
+        if i % 4 == 0:  # Checkerboard
+            pattern[::2, ::2] = 1
+            pattern[1::2, 1::2] = 1
+        elif i % 4 == 1:  # Stripes
+            pattern[::2, :] = 2
+        elif i % 4 == 2:  # Quadrants
+            pattern[:size//2, :size//2] = 3
+            pattern[size//2:, size//2:] = 3
+        else:  # Frame
+            pattern[0, :] = 4
+            pattern[-1, :] = 4
+            pattern[:, 0] = 4
+            pattern[:, -1] = 4
+            
+        patterns.append({'inputs': pattern, 'outputs': pattern})
+    
+    for epoch in range(num_epochs):
+        correct = 0
+        total = 0
+        
+        for batch_start in range(0, len(patterns), 32):
+            batch = patterns[batch_start:batch_start + 32]
+            inputs = torch.stack([p['inputs'] for p in batch]).to(device)
+            outputs = torch.stack([p['outputs'] for p in batch]).to(device)
+            
+            input_oh = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+            output_oh = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
+            
+            optimizer.zero_grad()
+            pred = model(input_oh, output_oh, mode='train')['predicted_output']
+            loss = F.cross_entropy(pred, outputs)
+            loss.backward()
+            optimizer.step()
+            
+            pred_idx = pred.argmax(dim=1)
+            exact = (pred_idx == outputs).all(dim=[1,2])
+            correct += exact.sum().item()
+            total += len(batch)
+            
+            # Store successful patterns
+            for i, is_exact in enumerate(exact):
+                if is_exact:
+                    systems['replay_buffer'].add(
+                        input_oh[i], output_oh[i], pred_idx[i],
+                        loss.item(), is_exact=True
+                    )
+        
+        acc = correct / total * 100
+        print(f"MEPT Epoch {epoch+1}/{num_epochs}: {acc:.1f}% recall")
+        if acc >= target_accuracy:
+            print(f"🏆 MEPT TARGET REACHED: {acc:.1f}%")
+            break
+    
+    return model
+
+
+def minerva_leap_injection(model, device, systems, num_epochs=100, target_accuracy=90.0):
+    """MINERVA LEAP (Learning Enhancement through Adaptive Patterns) injection"""
+    print("🎯 MINERVA LEAP INJECTION")
+    print("=" * 50)
+    print(f"  Target: {target_accuracy}% pattern mastery")
+    print(f"  Epochs: {num_epochs}")
+    
+    if 'leap_trainer' not in systems:
+        print("⚠️ LEAP system not available, skipping")
+        return model
+    
+    model.train()
+    optimizer = optim.SGD(model.parameters(), lr=MINERVA_CONFIG['learning_rate']*3, momentum=0.9)
+    
+    for epoch in range(num_epochs):
+        correct = 0
+        total = 0
+        
+        # Generate LEAP patterns
+        leap_batch = systems['leap_trainer'].generate_leap_batch(
+            batch_size=64, stage=0, grid_size=6
+        )
+        
+        inputs = leap_batch['inputs'].to(device)
+        outputs = leap_batch['outputs'].to(device)
+        
+        input_oh = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+        output_oh = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
+        
+        optimizer.zero_grad()
+        pred = model(input_oh, output_oh, mode='train')['predicted_output']
+        loss = F.cross_entropy(pred, outputs)
+        loss.backward()
+        optimizer.step()
+        
+        pred_idx = pred.argmax(dim=1)
+        exact = (pred_idx == outputs).all(dim=[1,2])
+        acc = exact.float().mean().item() * 100
+        
+        # Update LEAP statistics
+        systems['leap_trainer'].update_pattern_stats(
+            leap_batch['pattern_types'], pred, output_oh
+        )
+        
+        print(f"LEAP Epoch {epoch+1}/{num_epochs}: {acc:.1f}% mastery")
+        if acc >= target_accuracy:
+            print(f"🏆 LEAP TARGET REACHED: {acc:.1f}%")
+            break
+    
+    return model
+
+
+def minerva_prism_injection(model, device, systems, num_epochs=100, target_accuracy=90.0):
+    """MINERVA PRISM (Program Reasoning through Inductive Synthesis) injection"""
+    print("🔍 MINERVA PRISM INJECTION")
+    print("=" * 50)
+    print(f"  Target: {target_accuracy}% program synthesis")
+    print(f"  Epochs: {num_epochs}")
+    
+    if 'prism_synthesizer' not in systems:
+        print("⚠️ PRISM system not available, skipping")
+        return model
+    
+    model.train()
+    optimizer = optim.SGD(model.parameters(), lr=MINERVA_CONFIG['learning_rate']*2, momentum=0.9)
+    
+    # Generate program-based patterns
+    patterns = []
+    for i in range(50):
+        size = 6
+        # Simple program: rotate, flip, transpose
+        base = torch.randint(0, 3, (size, size))
+        
+        if i % 3 == 0:
+            output = torch.rot90(base, 1)  # Rotate 90
+        elif i % 3 == 1:
+            output = torch.flip(base, [0])  # Flip vertical
+        else:
+            output = base.T  # Transpose
+            
+        patterns.append({'inputs': base, 'outputs': output})
+    
+    for epoch in range(num_epochs):
+        correct = 0
+        total = 0
+        
+        for batch_start in range(0, len(patterns), 16):
+            batch = patterns[batch_start:batch_start + 16]
+            inputs = torch.stack([p['inputs'] for p in batch]).to(device)
+            outputs = torch.stack([p['outputs'] for p in batch]).to(device)
+            
+            input_oh = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+            output_oh = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
+            
+            optimizer.zero_grad()
+            pred = model(input_oh, output_oh, mode='train')['predicted_output']
+            loss = F.cross_entropy(pred, outputs)
+            loss.backward()
+            optimizer.step()
+            
+            pred_idx = pred.argmax(dim=1)
+            exact = (pred_idx == outputs).all(dim=[1,2])
+            correct += exact.sum().item()
+            total += len(batch)
+        
+        acc = correct / total * 100
+        print(f"PRISM Epoch {epoch+1}/{num_epochs}: {acc:.1f}% synthesis")
+        if acc >= target_accuracy:
+            print(f"🏆 PRISM TARGET REACHED: {acc:.1f}%")
+            break
     
     return model
 
@@ -709,17 +1001,56 @@ def train_minerva_specialized():
             target_acc = 50.0 if stage == 0 else 60.0  # Realistic targets for injection
             
             if exact_dataset and stage_config['exact_injection'] and epoch == 0:  # ONLY FIRST EPOCH
-                print(f"🔥 Running MINERVA exact injection: Stage {stage}, Epoch {epoch}, Target: 85.0%")
+                print(f"🔥 Running MINERVA 4-PHASE INJECTION SEQUENCE for Stage {stage}")
+                print("=" * 60)
+                
+                # Phase 1: Exact Match Injection
+                print(f"\n📍 PHASE 1/4: EXACT MATCH")
                 model = minerva_exact_match_injection(
                     model, device=device,
-                    num_epochs=50,  # Much longer for 85% target
-                    target_accuracy=85.0  # AGGRESSIVE 85% target for ARC
+                    num_epochs=100,  # 100 epochs or 90% target
+                    target_accuracy=90.0
                 )
-                print(f"💉 Exact injection completed - Stage {stage}, Epoch {global_epoch}")
-                # Memory cleanup after exact match injection
                 torch.cuda.empty_cache()
                 gc.collect()
-                time.sleep(2)  # Brief pause to ensure cleanup
+                time.sleep(2)
+                
+                # Phase 2: MEPT Injection
+                print(f"\n📍 PHASE 2/4: MEPT (Memory-Enhanced Pattern Training)")
+                model = minerva_mept_injection(
+                    model, device=device, systems=systems,
+                    num_epochs=100,
+                    target_accuracy=90.0
+                )
+                torch.cuda.empty_cache()
+                gc.collect()
+                time.sleep(2)
+                
+                # Phase 3: LEAP Injection
+                print(f"\n📍 PHASE 3/4: LEAP (Learning Enhancement)")
+                model = minerva_leap_injection(
+                    model, device=device, systems=systems,
+                    num_epochs=100,
+                    target_accuracy=90.0
+                )
+                torch.cuda.empty_cache()
+                gc.collect()
+                time.sleep(2)
+                
+                # Phase 4: PRISM Injection
+                print(f"\n📍 PHASE 4/4: PRISM (Program Synthesis)")
+                model = minerva_prism_injection(
+                    model, device=device, systems=systems,
+                    num_epochs=100,
+                    target_accuracy=90.0
+                )
+                
+                print(f"\n💉 ALL 4 INJECTIONS COMPLETED - Stage {stage}, Epoch {global_epoch}")
+                print("=" * 60)
+                # Final cleanup
+                torch.cuda.empty_cache()
+                gc.collect()
+                time.sleep(2)
             else:
                 if stage < 2:  # Only log for relevant stages
                     print(f"⏭️ Skipping exact injection: Stage {stage}, Epoch {epoch}")

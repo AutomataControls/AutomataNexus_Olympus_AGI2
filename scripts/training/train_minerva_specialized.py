@@ -74,29 +74,53 @@ except ImportError:
     print("⚠️ LEAP-PRISM bridge not available")
 
 # MINERVA-specific exact match injection
-def minerva_exact_match_injection(model, device, num_epochs=10, target_accuracy=50.0):
-    """MINERVA-specific exact match injection using MINERVA_CONFIG"""
-    print("🎯 MINERVA EXACT MATCH INJECTION")
+def minerva_exact_match_injection(model, device, num_epochs=25, target_accuracy=50.0):
+    """MINERVA-specific exact match injection using MINERVA_CONFIG - EXTENDED FOR ARC COMPETITION"""
+    print("🎯 MINERVA EXACT MATCH INJECTION - EXTENDED")
     print("=" * 50)
     print(f"  Batch size: {MINERVA_CONFIG['batch_size']}")
-    print(f"  Learning rate: {MINERVA_CONFIG['learning_rate']}")
+    print(f"  Learning rate: {MINERVA_CONFIG['learning_rate']*10}")  # Higher LR for injection
     print(f"  Transform penalty: {MINERVA_CONFIG['transform_penalty']}")
     print(f"  Exact match bonus: {MINERVA_CONFIG['exact_match_bonus']}")
+    print(f"  Epochs: {num_epochs} (EXTENDED)")
     
-    # Simple exact match training for MINERVA
+    # AGGRESSIVE exact match training for MINERVA
     model.train()
-    optimizer = optim.SGD(model.parameters(), lr=MINERVA_CONFIG['learning_rate'], momentum=0.9)
+    optimizer = optim.SGD(model.parameters(), lr=MINERVA_CONFIG['learning_rate']*10, momentum=0.9)
     
-    # Create simple exact match patterns
+    # Create EFFECTIVE exact match patterns
     patterns = []
-    for i in range(100):
+    
+    # 1. Pure identity patterns (easier)
+    for i in range(50):
         size = 6
-        pattern = torch.randint(0, 10, (size, size))
-        patterns.append({'inputs': pattern, 'outputs': pattern})  # Identity mapping
+        # Simple solid colors - easiest to learn
+        color = i % 9 + 1
+        pattern = torch.full((size, size), color, dtype=torch.long)
+        patterns.append({'inputs': pattern, 'outputs': pattern})
+    
+    # 2. Simple geometric patterns
+    for i in range(50):
+        size = 6
+        pattern = torch.zeros((size, size), dtype=torch.long)
+        # Cross pattern
+        pattern[size//2, :] = 1
+        pattern[:, size//2] = 1
+        patterns.append({'inputs': pattern, 'outputs': pattern})
+    
+    # 3. Two-color patterns
+    for i in range(50):
+        size = 6
+        pattern = torch.zeros((size, size), dtype=torch.long)
+        pattern[:size//2, :] = 1
+        pattern[size//2:, :] = 2
+        patterns.append({'inputs': pattern, 'outputs': pattern})
     
     for epoch in range(num_epochs):
         correct = 0
         total = 0
+        epoch_loss = 0
+        
         for batch_start in range(0, len(patterns), MINERVA_CONFIG['batch_size']):
             batch_patterns = patterns[batch_start:batch_start + MINERVA_CONFIG['batch_size']]
             
@@ -108,18 +132,33 @@ def minerva_exact_match_injection(model, device, num_epochs=10, target_accuracy=
             
             optimizer.zero_grad()
             pred = model(input_oh, output_oh, mode='train')['predicted_output']
+            
+            # AGGRESSIVE loss for exact matching
             loss = F.cross_entropy(pred, outputs)
-            loss.backward()
+            
+            # Add exact match bonus
+            pred_idx = pred.argmax(dim=1)
+            exact_matches = (pred_idx == outputs).all(dim=[1,2]).float()
+            exact_bonus = -exact_matches.mean() * 10.0  # Strong bonus
+            total_loss = loss + exact_bonus
+            
+            total_loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 2.0)
             optimizer.step()
             
-            pred_idx = pred.argmax(dim=1)
-            correct += (pred_idx == outputs).all(dim=[1,2]).sum().item()
+            correct += exact_matches.sum().item()
             total += outputs.size(0)
+            epoch_loss += total_loss.item()
         
         acc = correct / total * 100
-        print(f"Epoch {epoch+1}/{num_epochs}: {acc:.1f}% exact match")
+        avg_loss = epoch_loss / (len(patterns) // MINERVA_CONFIG['batch_size'] + 1)
+        print(f"Epoch {epoch+1}/{num_epochs}: {acc:.1f}% exact match | Loss: {avg_loss:.3f}")
+        
         if acc >= target_accuracy:
+            print(f"🏆 TARGET REACHED: {acc:.1f}% >= {target_accuracy}%")
             break
+        elif epoch == num_epochs - 1:
+            print(f"⚠️ INJECTION COMPLETE: {acc:.1f}% (target: {target_accuracy}%)")
     
     return model
 

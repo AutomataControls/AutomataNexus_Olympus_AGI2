@@ -543,14 +543,31 @@ def train_minerva_specialized():
         dsl_samples = MINERVADSLTraining.create_minerva_dsl_samples(curriculum_stage=stage)
         print(f"✅ Added {len(dsl_samples)} MINERVA DSL samples for {grid_size}x{grid_size} grids")
         
-        # Create simple ARC dataset for MINERVA
-        synthesizer = ARCDataSynthesizer()
-        dataset = synthesizer.create_training_dataset(
-            data_dir=DATA_DIR,
-            max_samples=15000,
-            grid_size_limit=grid_size,
-            synthesis_ratio=synthesis_ratio
-        )
+        # Load basic ARC training data
+        import json
+        train_file = os.path.join(DATA_DIR, 'training')
+        with open(f"{train_file}.json", 'r') as f:
+            arc_data = json.load(f)
+        
+        # Create simple dataset from raw ARC data
+        dataset_samples = []
+        for task_id, task_data in list(arc_data.items())[:1000]:  # Limit samples
+            for example in task_data['train']:
+                input_grid = np.array(example['input'])
+                output_grid = np.array(example['output'])
+                if input_grid.shape[0] <= grid_size and input_grid.shape[1] <= grid_size:
+                    dataset_samples.append({'inputs': input_grid, 'outputs': output_grid})
+        
+        # Convert to torch dataset
+        class SimpleARCDataset(Dataset):
+            def __init__(self, samples):
+                self.samples = samples
+            def __len__(self):
+                return len(self.samples)
+            def __getitem__(self, idx):
+                return self.samples[idx]
+        
+        dataset = SimpleARCDataset(dataset_samples)
         
         # Limit dataset size for efficient training
         if len(dataset) > 15000:  # Reasonable limit

@@ -140,7 +140,7 @@ class IrisSpecializedDataset(Dataset):
         # MEPT replay integration - prioritize color transformation patterns
         if (self.replay_buffer and random.random() < self.replay_ratio and 
             len(self.replay_buffer.buffer) > 0):
-            experiences = self.replay_buffer.sample(1, exact_ratio=0.7)  # Favor color matches
+            experiences = self.replay_buffer.sample(1, strategy='mixed')  # Use IRIS-specific mixed strategy
             if experiences:
                 exp = experiences[0]
                 input_tensor = exp['input']
@@ -556,6 +556,11 @@ def train_iris_specialized():
         print(f"   📏 Grid Size: {grid_size}x{grid_size} | Synthesis: {synthesis_ratio*100:.0f}% | LEAP: {stage_config['leap_complexity']}")
         print("=" * 60)
         
+        # Generate IRIS-specific DSL samples for this stage
+        print(f"🔧 Generating IRIS-specific DSL color patterns for stage {stage}...")
+        dsl_samples = IRISDSLTraining.create_iris_dsl_samples(curriculum_stage=stage)
+        print(f"✅ Created {len(dsl_samples)} IRIS DSL color pattern samples")
+        
         # Create curriculum dataset with stage-specific grid size - EFFICIENT SIZE
         dataset = CurriculumMegaScaleDataset(
             DATA_DIR,
@@ -641,6 +646,34 @@ def train_iris_specialized():
                 # Clamp values
                 inputs = torch.clamp(inputs, 0, 9)
                 outputs = torch.clamp(outputs, 0, 9)
+                
+                # IRIS DSL Integration - Augment batch with color-specific patterns
+                if batch_idx % 5 == 0:  # Every 5th batch
+                    try:
+                        # Create batch dict for DSL
+                        batch_dict = {
+                            'input': inputs,
+                            'output': outputs
+                        }
+                        
+                        # Augment with IRIS-specific DSL samples
+                        augmented_batch = IRISDSLTraining.augment_batch_with_iris_dsl(
+                            batch_dict,
+                            curriculum_stage=stage,
+                            dsl_ratio=0.3  # 30% DSL samples
+                        )
+                        
+                        inputs = augmented_batch['input']
+                        outputs = augmented_batch['output']
+                        
+                        # Ensure values are still in range
+                        inputs = torch.clamp(inputs, 0, 9)
+                        outputs = torch.clamp(outputs, 0, 9)
+                        
+                    except Exception as e:
+                        # If DSL fails, continue with original batch
+                        print(f"⚠️ IRIS DSL augmentation failed: {e}")
+                        pass
                 
                 # Convert to one-hot
                 input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()

@@ -813,11 +813,22 @@ class ChronosMEPTLoss(nn.Module):
         return None
 
 
-def create_chronos_mept_system():
+def create_chronos_mept_system(memory_capacity: int = 10000, 
+                              transformation_penalty: float = 0.3,
+                              exact_match_bonus: float = 2.5):
     """Factory function to create CHRONOS MEPT system"""
+    # Create MEPT with specified capacity
+    mept = ChronosMEPT(memory_capacity=memory_capacity)
+    
+    # Create loss with temporal parameters
+    loss_fn = ChronosMEPTLoss()
+    # Store params for later use if needed
+    loss_fn.transformation_penalty = transformation_penalty
+    loss_fn.exact_match_bonus = exact_match_bonus
+    
     return {
-        'replay_buffer': ChronosMEPT(),
+        'memory_system': mept,  # Note: training script expects 'memory_system' not 'replay_buffer'
         'pattern_bank': None,  # CHRONOS uses integrated pattern memory
-        'loss_fn': ChronosMEPTLoss(),
+        'loss_fn': loss_fn,
         'description': 'CHRONOS Temporal Memory System'
     }

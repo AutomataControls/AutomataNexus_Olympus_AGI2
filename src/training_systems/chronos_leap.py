@@ -964,10 +964,15 @@ class ChronosLEAPTrainer:
         return "Temporal LEAP: 0.0%"
 
 
-def create_chronos_leap_system():
+def create_chronos_leap_system(grid_size: int = 30):
     """Factory function to create CHRONOS LEAP system"""
+    trainer = ChronosLEAPTrainer()
+    # Set initial grid size
+    trainer.leap.grid_size = grid_size
+    
     return {
-        'leap_trainer': ChronosLEAPTrainer(),
+        'trainer': trainer,  # Note: training script expects 'trainer'
+        'generator': trainer,  # Same object handles generation
         'detector': None,  # CHRONOS doesn't use weak point detection
         'description': 'CHRONOS Temporal Sequence LEAP System'
     }

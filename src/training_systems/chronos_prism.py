@@ -810,10 +810,14 @@ class ChronosPRISM:
         )
 
 
-def create_chronos_prism_system():
+def create_chronos_prism_system(hidden_dim: int = 256):
     """Factory function to create CHRONOS PRISM system"""
+    synthesizer = ChronosPRISM()
+    # hidden_dim parameter can be used for future enhancements
+    
     return {
-        'synthesizer': ChronosPRISM(),
+        'synthesizer': synthesizer,
+        'evaluator': synthesizer,  # Same object handles evaluation
         'library': None,  # CHRONOS uses integrated program library
         'description': 'CHRONOS Temporal Program Synthesis System'
     }

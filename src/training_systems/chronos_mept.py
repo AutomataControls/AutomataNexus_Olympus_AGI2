@@ -4,6 +4,7 @@ Memory-Enhanced Pattern Training - Sequence Memory and Replay
 """
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from typing import Dict, List, Tuple, Any, Optional, Deque
 from collections import deque, defaultdict
@@ -727,3 +728,96 @@ class ChronosMEPT:
             stats['avg_importance'] = np.mean(importances)
             
         return stats
+
+
+class ChronosMEPTLoss(nn.Module):
+    """CHRONOS-specific MEPT loss function"""
+    
+    def __init__(self):
+        super().__init__()
+        import torch.nn as nn
+        self.ce_loss = nn.CrossEntropyLoss(reduction='none')
+        
+    def forward(self, pred: torch.Tensor, target: torch.Tensor, 
+                input_grid: torch.Tensor, temporal_features: Optional[Dict] = None) -> Dict[str, torch.Tensor]:
+        """Calculate CHRONOS-specific MEPT loss with temporal components"""
+        B, C, H, W = pred.shape
+        
+        # Get predictions
+        pred_indices = pred.argmax(dim=1)
+        target_indices = target.argmax(dim=1)
+        
+        # Base cross-entropy loss
+        ce_loss = F.cross_entropy(pred, target_indices, reduction='mean')
+        
+        # Temporal consistency loss
+        if temporal_features and 'prev_prediction' in temporal_features:
+            prev_pred = temporal_features['prev_prediction']
+            temporal_consistency = F.mse_loss(pred, prev_pred) * 0.1
+        else:
+            temporal_consistency = torch.tensor(0.0).to(pred.device)
+        
+        # Movement preservation loss
+        movement_loss = self._calculate_movement_loss(pred_indices, target_indices, input_grid.argmax(dim=1))
+        
+        # Exact match bonus
+        exact_matches = (pred_indices == target_indices).all(dim=[1, 2]).float()
+        exact_bonus = -exact_matches.mean() * 3.0  # Negative for bonus
+        
+        # Total loss
+        total_loss = ce_loss + temporal_consistency + movement_loss * 0.2 + exact_bonus
+        
+        return {
+            'total': total_loss,
+            'reconstruction': ce_loss,
+            'temporal_consistency': temporal_consistency,
+            'movement': movement_loss,
+            'exact_bonus': -exact_bonus,
+            'exact_count': exact_matches.sum()
+        }
+    
+    def _calculate_movement_loss(self, pred: torch.Tensor, target: torch.Tensor, input_grid: torch.Tensor) -> torch.Tensor:
+        """Calculate loss for movement preservation"""
+        # Detect movement direction from input to target
+        input_com = self._center_of_mass(input_grid)
+        target_com = self._center_of_mass(target)
+        pred_com = self._center_of_mass(pred)
+        
+        if input_com is not None and target_com is not None and pred_com is not None:
+            # Expected movement
+            expected_movement = target_com - input_com
+            # Actual movement
+            actual_movement = pred_com - input_com
+            # Movement error
+            movement_error = F.mse_loss(actual_movement, expected_movement)
+            return movement_error
+        
+        return torch.tensor(0.0).to(pred.device)
+    
+    def _center_of_mass(self, grid: torch.Tensor) -> Optional[torch.Tensor]:
+        """Calculate center of mass for batch of grids"""
+        B = grid.shape[0]
+        centers = []
+        
+        for b in range(B):
+            nonzero = (grid[b] > 0).nonzero(as_tuple=False)
+            if len(nonzero) > 0:
+                center = nonzero.float().mean(dim=0)
+                centers.append(center)
+            else:
+                centers.append(None)
+        
+        # Stack if all grids have objects
+        if all(c is not None for c in centers):
+            return torch.stack(centers)
+        return None
+
+
+def create_chronos_mept_system():
+    """Factory function to create CHRONOS MEPT system"""
+    return {
+        'replay_buffer': ChronosMEPT(),
+        'pattern_bank': None,  # CHRONOS uses integrated pattern memory
+        'loss_fn': ChronosMEPTLoss(),
+        'description': 'CHRONOS Temporal Memory System'
+    }

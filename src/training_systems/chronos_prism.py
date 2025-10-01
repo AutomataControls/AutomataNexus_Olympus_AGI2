@@ -808,3 +808,12 @@ class ChronosPRISM:
             pattern_type='crossover',
             expected_length=(program1.expected_length + program2.expected_length) // 2
         )
+
+
+def create_chronos_prism_system():
+    """Factory function to create CHRONOS PRISM system"""
+    return {
+        'synthesizer': ChronosPRISM(),
+        'library': None,  # CHRONOS uses integrated program library
+        'description': 'CHRONOS Temporal Program Synthesis System'
+    }

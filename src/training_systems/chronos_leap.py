@@ -877,3 +877,97 @@ class ChronosLEAP:
             rates.append(change)
             
         return rates
+
+
+class ChronosLEAPTrainer:
+    """LEAP trainer wrapper for CHRONOS training integration"""
+    
+    def __init__(self, device='cuda'):
+        self.device = device
+        self.leap = ChronosLEAP()
+        self.pattern_stats = {}
+        
+    def generate_leap_batch(self, batch_size: int = 32, stage: int = 0) -> Dict[str, torch.Tensor]:
+        """Generate batch compatible with training script"""
+        # Map stage to difficulty level
+        difficulty_map = {0: 1, 1: 2, 2: 3, 3: 4, 4: 4, 5: 4, 6: 4, 7: 4}
+        difficulty = difficulty_map.get(stage, 1)
+        
+        # Map stage to grid size
+        grid_sizes = {0: 6, 1: 9, 2: 12, 3: 15, 4: 18, 5: 21, 6: 24, 7: 30}
+        grid_size = grid_sizes.get(stage, 12)
+        
+        # Update LEAP grid size
+        self.leap.grid_size = grid_size
+        
+        # Generate patterns
+        patterns = self.leap.generate_curriculum_batch(difficulty)
+        
+        # Convert to training format
+        inputs = []
+        outputs = []
+        pattern_types = []
+        
+        for pattern in patterns[:batch_size]:
+            if len(pattern.sequence) >= 2:
+                # Use first and last frames
+                input_frame = pattern.sequence[0].argmax(dim=0)  # Convert from one-hot
+                output_frame = pattern.sequence[-1].argmax(dim=0)
+                
+                inputs.append(input_frame)
+                outputs.append(output_frame)
+                pattern_types.append(pattern.name)
+                
+        if not inputs:
+            # Fallback empty batch
+            inputs = [torch.zeros(grid_size, grid_size, dtype=torch.long) for _ in range(batch_size)]
+            outputs = [torch.zeros(grid_size, grid_size, dtype=torch.long) for _ in range(batch_size)]
+            pattern_types = ['empty'] * batch_size
+            
+        return {
+            'inputs': torch.stack(inputs).to(self.device),
+            'outputs': torch.stack(outputs).to(self.device),
+            'pattern_types': pattern_types
+        }
+    
+    def update_pattern_stats(self, pattern_types: List[str], predictions: torch.Tensor, 
+                           targets: torch.Tensor):
+        """Update statistics for pattern learning"""
+        pred_indices = predictions.argmax(dim=1)
+        target_indices = targets.argmax(dim=1)
+        
+        for i, pattern_type in enumerate(pattern_types):
+            if pattern_type not in self.pattern_stats:
+                self.pattern_stats[pattern_type] = {'total': 0, 'correct': 0}
+                
+            self.pattern_stats[pattern_type]['total'] += 1
+            
+            # Check if prediction captures temporal transformation
+            is_correct = (pred_indices[i] == target_indices[i]).all()
+            if is_correct:
+                self.pattern_stats[pattern_type]['correct'] += 1
+    
+    def get_performance_report(self) -> str:
+        """Generate performance report"""
+        if not self.pattern_stats:
+            return "No temporal patterns trained yet"
+        
+        reports = []
+        for pattern, stats in sorted(self.pattern_stats.items()):
+            if stats['total'] > 0:
+                accuracy = stats['correct'] / stats['total'] * 100
+                if accuracy > 0:
+                    reports.append(f"{pattern}: {accuracy:.1f}%")
+        
+        if reports:
+            return "Temporal LEAP: " + ", ".join(reports[:3])  # Top 3
+        return "Temporal LEAP: 0.0%"
+
+
+def create_chronos_leap_system():
+    """Factory function to create CHRONOS LEAP system"""
+    return {
+        'leap_trainer': ChronosLEAPTrainer(),
+        'detector': None,  # CHRONOS doesn't use weak point detection
+        'description': 'CHRONOS Temporal Sequence LEAP System'
+    }

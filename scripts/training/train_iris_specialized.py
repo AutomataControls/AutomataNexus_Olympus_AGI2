@@ -639,14 +639,6 @@ def iris_mept_injection(model, device, num_epochs=100, target_accuracy=90.0):
             exact = (pred_idx == outputs).all(dim=[1,2])
             correct += exact.sum().item()
             total += len(batch)
-            
-            # Store color patterns
-            for i, is_exact in enumerate(exact):
-                if is_exact:
-                    systems['replay_buffer'].add(
-                        input_oh[i], output_oh[i], pred_idx[i],
-                        loss.item(), is_exact=True
-                    )
         
         acc = correct / total * 100
         print(f"MEPT Epoch {epoch+1}/{num_epochs}: {acc:.1f}% recall")
@@ -667,23 +659,67 @@ def iris_leap_injection(model, device, num_epochs=100, target_accuracy=90.0):
     model.train()
     optimizer = optim.Adam(model.parameters(), lr=IRIS_CONFIG['learning_rate']*3, betas=(0.9, 0.999))
     
+    # Generate adaptive color patterns
+    def generate_adaptive_patterns(size=6, batch_size=64):
+        patterns = []
+        for i in range(batch_size):
+            pattern_type = i % 8
+            if pattern_type == 0:  # Vertical color bands
+                pattern = torch.zeros(size, size, dtype=torch.long)
+                band_width = size // 3
+                for b in range(3):
+                    pattern[:, b*band_width:(b+1)*band_width] = b + 1
+            elif pattern_type == 1:  # Horizontal bands
+                pattern = torch.zeros(size, size, dtype=torch.long)
+                band_width = size // 3
+                for b in range(3):
+                    pattern[b*band_width:(b+1)*band_width, :] = b + 4
+            elif pattern_type == 2:  # Diagonal
+                pattern = torch.zeros(size, size, dtype=torch.long)
+                for i in range(size):
+                    for j in range(size):
+                        if i == j:
+                            pattern[i, j] = 7
+                        elif i + j == size - 1:
+                            pattern[i, j] = 8
+            elif pattern_type == 3:  # Corner colors
+                pattern = torch.ones(size, size, dtype=torch.long) * 1
+                pattern[:size//2, :size//2] = 2
+                pattern[-size//2:, -size//2:] = 3
+                pattern[:size//2, -size//2:] = 4
+                pattern[-size//2:, :size//2] = 5
+            elif pattern_type == 4:  # Center focus
+                pattern = torch.ones(size, size, dtype=torch.long) * 1
+                center = size // 2
+                pattern[center-1:center+1, center-1:center+1] = 6
+            elif pattern_type == 5:  # Border
+                pattern = torch.zeros(size, size, dtype=torch.long)
+                pattern[0, :] = 7
+                pattern[-1, :] = 7
+                pattern[:, 0] = 7
+                pattern[:, -1] = 7
+            elif pattern_type == 6:  # Alternating rows
+                pattern = torch.zeros(size, size, dtype=torch.long)
+                for r in range(size):
+                    pattern[r, :] = (r % 3) + 1
+            else:  # Random patches
+                pattern = torch.zeros(size, size, dtype=torch.long)
+                for _ in range(3):
+                    x = random.randint(0, size-2)
+                    y = random.randint(0, size-2)
+                    c = random.randint(1, 8)
+                    pattern[x:x+2, y:y+2] = c
+            patterns.append(pattern)
+        return torch.stack(patterns)
+    
+    best_acc = 0
     for epoch in range(num_epochs):
         correct = 0
         total = 0
         
-        # Generate LEAP color patterns
-        leap_batch = systems['leap_trainer'].generate_leap_batch(
-            batch_size=64, stage=0, grid_size=6
-        )
-        
-        inputs = leap_batch['inputs'].to(device)
-        outputs = leap_batch['outputs'].to(device)
-        
-        # Ensure proper size
-        if inputs.shape[-1] < 6:
-            pad = 6 - inputs.shape[-1]
-            inputs = F.pad(inputs, (0, pad, 0, pad), value=0)
-            outputs = F.pad(outputs, (0, pad, 0, pad), value=0)
+        # Generate adaptive color patterns
+        inputs = generate_adaptive_patterns().to(device)
+        outputs = inputs.clone()  # Identity mapping for adaptive patterns
         
         input_oh = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
         output_oh = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
@@ -693,6 +729,7 @@ def iris_leap_injection(model, device, num_epochs=100, target_accuracy=90.0):
         pred = model_outputs['predicted_output']
         loss = F.cross_entropy(pred, outputs)
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
         optimizer.step()
         
         pred_idx = pred.argmax(dim=1)
@@ -701,11 +738,16 @@ def iris_leap_injection(model, device, num_epochs=100, target_accuracy=90.0):
         total = outputs.size(0)
         
         acc = correct / total * 100
-        print(f"LEAP Epoch {epoch+1}/{num_epochs}: {acc:.1f}% mastery")
+        if acc > best_acc:
+            best_acc = acc
+            
+        print(f"LEAP Epoch {epoch+1}/{num_epochs}: {acc:.1f}% mastery (best: {best_acc:.1f}%)")
         
         if acc >= target_accuracy:
             print(f"🏆 LEAP TARGET REACHED: {acc:.1f}%")
             break
+        elif epoch == num_epochs - 1:
+            print(f"⚠️ LEAP COMPLETE: {acc:.1f}% (best: {best_acc:.1f}%, target: {target_accuracy}%)")
     
     return model
 
@@ -996,8 +1038,14 @@ def train_iris_specialized():
         
         print(f"📚 Stage {stage} ({grid_size}x{grid_size}) - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
         
+        # Calculate starting epoch for this stage when resuming
+        stage_start_epoch = 0
+        if stage == start_stage and global_epoch > 0:
+            # We're resuming in the middle of a stage
+            stage_start_epoch = global_epoch % IRIS_CONFIG['epochs_per_stage']
+        
         # 4-PHASE IRIS INJECTION SEQUENCE for Stage 0 only
-        if stage == 0 and stage_start_epoch == 0:
+        if stage == 0 and stage_start_epoch == 0 and global_epoch == 0:
             print("\n" + "="*60)
             print("🌈 IRIS 4-PHASE COLOR PATTERN INJECTION SEQUENCE")
             print("="*60)
@@ -1030,13 +1078,9 @@ def train_iris_specialized():
             print("="*60 + "\n")
         
         # Stage training loop
-        # Calculate starting epoch for this stage when resuming
-        stage_start_epoch = 0
-        if stage == start_stage and global_epoch > 0:
-            # We're resuming in the middle of a stage
-            stage_start_epoch = global_epoch % IRIS_CONFIG['epochs_per_stage']
             
         for epoch in range(stage_start_epoch, IRIS_CONFIG['epochs_per_stage']):
+            global_epoch += 1
             
             # Main training
             model.train()
@@ -1070,90 +1114,91 @@ def train_iris_specialized():
                     batch_count += 1
                     if batch_count % 10 == 0:
                         print(f"Processing batch {batch_count}...")
-                inputs = batch['inputs'].to(device, non_blocking=True)
-                outputs = batch['outputs'].to(device, non_blocking=True)
-                
-                # Clamp values
-                inputs = torch.clamp(inputs, 0, 9)
-                outputs = torch.clamp(outputs, 0, 9)
-                
-                # IRIS DSL Integration - Augment batch with color-specific patterns
-                if batch_idx % 5 == 0:  # Every 5th batch
-                    try:
-                        # Create batch dict for DSL
-                        batch_dict = {
-                            'input': inputs,
-                            'output': outputs
-                        }
-                        
-                        # Augment with IRIS-specific DSL samples
-                        augmented_batch = IRISDSLTraining.augment_batch_with_iris_dsl(
-                            batch_dict,
-                            curriculum_stage=stage,
-                            dsl_ratio=0.3  # 30% DSL samples
-                        )
-                        
-                        inputs = augmented_batch['input']
-                        outputs = augmented_batch['output']
-                        
-                        # Ensure values are still in range
-                        inputs = torch.clamp(inputs, 0, 9)
-                        outputs = torch.clamp(outputs, 0, 9)
-                        
-                    except Exception as e:
-                        # If DSL fails, continue with original batch
-                        print(f"⚠️ IRIS DSL augmentation failed: {e}")
-                        pass
-                
-                # Convert to one-hot
-                input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
-                output_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
-                
-                with autocast('cuda'):
-                    # IRIS forward pass
-                    model_outputs = model(input_grids, output_grids, mode='train')
-                    pred_output = model_outputs['predicted_output']
                     
-                    # Specialized loss
-                    losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
-                    loss = losses['total'] / IRIS_CONFIG['gradient_accumulation']
+                    inputs = batch['inputs'].to(device, non_blocking=True)
+                    outputs = batch['outputs'].to(device, non_blocking=True)
                     
-                    # IRIS-specific loss validation
-                    if torch.isnan(loss) or torch.isinf(loss):
-                        print(f"⚠️ Skipping invalid loss in IRIS at batch {batch_idx}")
-                        continue
+                    # Clamp values
+                    inputs = torch.clamp(inputs, 0, 9)
+                    outputs = torch.clamp(outputs, 0, 9)
                     
-                    # Skip if loss is extremely negative (indicates instability)
-                    if loss < -5.0:
-                        print(f"⚠️ Skipping extremely negative loss in IRIS: {loss.item():.3f}")
-                        continue
-                
-                scaler.scale(loss).backward()
-                
-                if (batch_idx + 1) % IRIS_CONFIG['gradient_accumulation'] == 0:
-                    scaler.unscale_(optimizer)
-                    # IRIS-specific gradient clipping (less aggressive than MINERVA)
-                    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
-                    if grad_norm > 5.0:
-                        print(f"⚠️ Large gradient norm in IRIS: {grad_norm:.2f}, clipped to 0.5")
-                    scaler.step(optimizer)
-                    scaler.update()
-                    optimizer.zero_grad()
-                
-                # Update metrics
-                train_metrics['loss'] += losses['total'].item() * input_grids.size(0)
-                train_metrics['exact'] += losses['exact_count'].item()
-                train_metrics['samples'] += input_grids.size(0)
-                
-                pbar.set_postfix({
-                    'loss': f"{losses['total'].item():.3f}",
-                    'exact': f"{losses['exact_count'].item():.0f}",
-                    'color_map': f"{losses['color_mapping'].item():.3f}",
-                    'color_bal': f"{losses['color_balance'].item():.3f}"
-                })
-                
-                # LEAP training integration with reduced frequency for speed
-                if USE_LEAP and 'leap_trainer' in systems and batch_idx % 10 == 0:  # Every 10 batches instead of 2
+                    # IRIS DSL Integration - Augment batch with color-specific patterns
+                    if batch_idx % 5 == 0:  # Every 5th batch
+                        try:
+                            # Create batch dict for DSL
+                            batch_dict = {
+                                'input': inputs,
+                                'output': outputs
+                            }
+                            
+                            # Augment with IRIS-specific DSL samples
+                            augmented_batch = IRISDSLTraining.augment_batch_with_iris_dsl(
+                                batch_dict,
+                                curriculum_stage=stage,
+                                dsl_ratio=0.3  # 30% DSL samples
+                            )
+                            
+                            inputs = augmented_batch['input']
+                            outputs = augmented_batch['output']
+                            
+                            # Ensure values are still in range
+                            inputs = torch.clamp(inputs, 0, 9)
+                            outputs = torch.clamp(outputs, 0, 9)
+                            
+                        except Exception as e:
+                            # If DSL fails, continue with original batch
+                            print(f"⚠️ IRIS DSL augmentation failed: {e}")
+                            pass
+                    
+                    # Convert to one-hot
+                    input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+                    output_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
+                    
+                    with autocast('cuda'):
+                        # IRIS forward pass
+                        model_outputs = model(input_grids, output_grids, mode='train')
+                        pred_output = model_outputs['predicted_output']
+                        
+                        # Specialized loss
+                        losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
+                        loss = losses['total'] / IRIS_CONFIG['gradient_accumulation']
+                        
+                        # IRIS-specific loss validation
+                        if torch.isnan(loss) or torch.isinf(loss):
+                            print(f"⚠️ Skipping invalid loss in IRIS at batch {batch_idx}")
+                            continue
+                        
+                        # Skip if loss is extremely negative (indicates instability)
+                        if loss < -5.0:
+                            print(f"⚠️ Skipping extremely negative loss in IRIS: {loss.item():.3f}")
+                            continue
+                    
+                    scaler.scale(loss).backward()
+                    
+                    if (batch_idx + 1) % IRIS_CONFIG['gradient_accumulation'] == 0:
+                        scaler.unscale_(optimizer)
+                        # IRIS-specific gradient clipping (less aggressive than MINERVA)
+                        grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+                        if grad_norm > 5.0:
+                            print(f"⚠️ Large gradient norm in IRIS: {grad_norm:.2f}, clipped to 0.5")
+                        scaler.step(optimizer)
+                        scaler.update()
+                        optimizer.zero_grad()
+                    
+                    # Update metrics
+                    train_metrics['loss'] += losses['total'].item() * input_grids.size(0)
+                    train_metrics['exact'] += losses['exact_count'].item()
+                    train_metrics['samples'] += input_grids.size(0)
+                    
+                    pbar.set_postfix({
+                        'loss': f"{losses['total'].item():.3f}",
+                        'exact': f"{losses['exact_count'].item():.0f}",
+                        'color_map': f"{losses['color_mapping'].item():.3f}",
+                        'color_bal': f"{losses['color_balance'].item():.3f}"
+                        })
+                    
+                    # LEAP training integration with reduced frequency for speed
+                    if USE_LEAP and 'leap_trainer' in systems and batch_idx % 10 == 0:  # Every 10 batches instead of 2
                     # Adjust LEAP complexity based on current stage
                     leap_complexity = stage_config['leap_complexity']
                     leap_grid_size = min(grid_size, 12)  # Cap LEAP at 12x12 for stability

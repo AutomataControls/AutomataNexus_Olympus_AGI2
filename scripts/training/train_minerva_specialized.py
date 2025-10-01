@@ -563,7 +563,7 @@ from src.data.arc_data_synthesis import ARCDataSynthesizer, ARCDataAugmenter
 
 # MINERVA-Specific Configuration with 8-Stage Progressive Curriculum - OPTIMIZED V2
 MINERVA_CONFIG = {
-    'batch_size': 192,  # Reduced to prevent hanging
+    'batch_size': 64,  # Further reduced to prevent hanging
     'learning_rate': 0.003,  # Base learning rate
     'num_epochs': 400,  # 8 stages x 50 epochs - longer training
     'hidden_dim': 256,
@@ -1164,6 +1164,8 @@ def train_minerva_specialized():
             model.train()
             train_metrics = {'loss': 0, 'exact': 0, 'samples': 0}
             
+            print(f"🔄 Starting training loop for Stage {stage}, Epoch {epoch+1}, DataLoader batches: {len(train_loader)}")
+            
             pbar = tqdm(train_loader, desc=f"MINERVA Stage {stage}, Epoch {epoch+1}", 
                        colour='cyan', bar_format='{l_bar}{bar:30}{r_bar}')
             optimizer.zero_grad()
@@ -1171,102 +1173,108 @@ def train_minerva_specialized():
             # Timeout detection to prevent hanging
             last_batch_time = time.time()
             stuck_counter = 0
+            batch_count = 0
             
-            for batch_idx, batch in enumerate(pbar):
-                current_time = time.time()
-                if current_time - last_batch_time > 60:  # 60 seconds timeout
-                    stuck_counter += 1
-                    print(f"⚠️ Warning: Batch {batch_idx} taking too long (stuck counter: {stuck_counter})")
-                    if stuck_counter > 3:
-                        print("❌ Training appears stuck, breaking epoch")
-                        break
-                
-                last_batch_time = current_time
-                # MINERVA DSL augmentation - SAFE VERSION
-                if batch_idx % 10 == 0 and dsl_samples:  # Every 10th batch (reduced frequency)
-                    try:
-                        batch = MINERVADSLTraining.augment_batch_with_minerva_dsl(
-                            batch, curriculum_stage=stage, dsl_ratio=0.1  # Reduced ratio
-                        )
-                    except Exception as e:
-                        print(f"⚠️ DSL augmentation error: {e}")
-                        # Continue with original batch
-                
-                inputs = batch['inputs'].to(device, non_blocking=True)
-                outputs = batch['outputs'].to(device, non_blocking=True)
-                
-                # Clamp values
-                inputs = torch.clamp(inputs, 0, 9)
-                outputs = torch.clamp(outputs, 0, 9)
-                
-                # Convert to one-hot
-                input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
-                output_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
-                
-                with autocast('cuda'):
-                    # MINERVA forward pass
-                    model_outputs = model(input_grids, output_grids, mode='train')
-                    pred_output = model_outputs['predicted_output']
+            try:
+                for batch_idx, batch in enumerate(pbar):
+                    batch_count += 1
+                    if batch_count % 5 == 1:
+                        print(f"  Processing batch {batch_count}/{len(train_loader)}...")
+                    current_time = time.time()
+                    if current_time - last_batch_time > 60:  # 60 seconds timeout
+                        stuck_counter += 1
+                        print(f"⚠️ Warning: Batch {batch_idx} taking too long (stuck counter: {stuck_counter})")
+                        if stuck_counter > 3:
+                            print("❌ Training appears stuck, breaking epoch")
+                            break
                     
-                    # Specialized loss
-                    losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
-                    loss = losses['total'] / MINERVA_CONFIG['gradient_accumulation']
+                    last_batch_time = current_time
                     
-                    # EMERGENCY loss validation - skip problematic batches
-                    if torch.isnan(loss) or torch.isinf(loss):
-                        print(f"⚠️ Skipping NaN/Inf loss at batch {batch_idx}")
-                        continue
+                    # MINERVA DSL augmentation - SAFE VERSION
+                    if batch_idx % 10 == 0 and dsl_samples:  # Every 10th batch (reduced frequency)
+                        try:
+                            batch = MINERVADSLTraining.augment_batch_with_minerva_dsl(
+                                batch, curriculum_stage=stage, dsl_ratio=0.1  # Reduced ratio
+                            )
+                        except Exception as e:
+                            print(f"⚠️ DSL augmentation error: {e}")
+                            # Continue with original batch
                     
-                    # Skip extremely high losses that cause gradient explosions
-                    if loss.abs() > 50.0:  # Raised threshold - 10.0 was too aggressive
-                        print(f"⚠️ EMERGENCY: Skipping explosive loss {loss.item():.2f} at batch {batch_idx}")
-                        continue
+                    inputs = batch['inputs'].to(device, non_blocking=True)
+                    outputs = batch['outputs'].to(device, non_blocking=True)
                     
-                    # Skip if pattern memory component is problematic
-                    if 'pattern_memory' in losses and losses['pattern_memory'] < -2.0:
-                        print(f"⚠️ Skipping batch {batch_idx} due to pattern memory instability")
-                        continue
+                    # Clamp values
+                    inputs = torch.clamp(inputs, 0, 9)
+                    outputs = torch.clamp(outputs, 0, 9)
                 
-                scaler.scale(loss).backward()
-                
-                if (batch_idx + 1) % MINERVA_CONFIG['gradient_accumulation'] == 0:
-                    scaler.unscale_(optimizer)
+                    # Convert to one-hot
+                    input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+                    output_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
                     
-                    # Normal gradient clipping like IRIS
-                    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-                    if grad_norm > 5.0:
-                        print(f"⚠️ Large gradient norm: {grad_norm:.2f}, clipped to 1.0")
+                    with autocast('cuda'):
+                        # MINERVA forward pass
+                        model_outputs = model(input_grids, output_grids, mode='train')
+                        pred_output = model_outputs['predicted_output']
+                        
+                        # Specialized loss
+                        losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
+                        loss = losses['total'] / MINERVA_CONFIG['gradient_accumulation']
+                        
+                        # EMERGENCY loss validation - skip problematic batches
+                        if torch.isnan(loss) or torch.isinf(loss):
+                            print(f"⚠️ Skipping NaN/Inf loss at batch {batch_idx}")
+                            continue
+                        
+                        # Skip extremely high losses that cause gradient explosions
+                        if loss.abs() > 50.0:  # Raised threshold - 10.0 was too aggressive
+                            print(f"⚠️ EMERGENCY: Skipping explosive loss {loss.item():.2f} at batch {batch_idx}")
+                            continue
+                        
+                        # Skip if pattern memory component is problematic
+                        if 'pattern_memory' in losses and losses['pattern_memory'] < -2.0:
+                            print(f"⚠️ Skipping batch {batch_idx} due to pattern memory instability")
+                            continue
                     
-                    scaler.step(optimizer)
-                    scaler.update()
-                    optimizer.zero_grad()
+                    scaler.scale(loss).backward()
                 
-                # Update metrics
-                train_metrics['loss'] += losses['total'].item() * input_grids.size(0)
-                train_metrics['exact'] += losses['exact_count'].item()
-                train_metrics['samples'] += input_grids.size(0)
-                
-                # Handle different loss function outputs
-                postfix_dict = {
-                    'loss': f"{losses['total'].item():.3f}",
-                    'exact': f"{losses['exact_count'].item():.0f}"
-                }
-                
-                # Add optional keys if they exist
-                if 'relational' in losses:
-                    postfix_dict['relational'] = f"{losses['relational'].item():.3f}"
-                elif 'spatial' in losses:
-                    postfix_dict['spatial'] = f"{losses['spatial'].item():.3f}"
+                    if (batch_idx + 1) % MINERVA_CONFIG['gradient_accumulation'] == 0:
+                        scaler.unscale_(optimizer)
+                        
+                        # Normal gradient clipping like IRIS
+                        grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                        if grad_norm > 5.0:
+                            print(f"⚠️ Large gradient norm: {grad_norm:.2f}, clipped to 1.0")
+                        
+                        scaler.step(optimizer)
+                        scaler.update()
+                        optimizer.zero_grad()
                     
-                if 'pattern_memory' in losses:
-                    postfix_dict['pattern'] = f"{losses['pattern_memory'].item():.3f}"
-                elif 'object' in losses:
-                    postfix_dict['object'] = f"{losses['object'].item():.3f}"
+                    # Update metrics
+                    train_metrics['loss'] += losses['total'].item() * input_grids.size(0)
+                    train_metrics['exact'] += losses['exact_count'].item()
+                    train_metrics['samples'] += input_grids.size(0)
                 
-                pbar.set_postfix(postfix_dict)
-                
-                # LEAP training integration with stage-specific complexity
-                if USE_LEAP and 'leap_trainer' in systems and batch_idx % 3 == 0:
+                    # Handle different loss function outputs
+                    postfix_dict = {
+                        'loss': f"{losses['total'].item():.3f}",
+                        'exact': f"{losses['exact_count'].item():.0f}"
+                    }
+                    
+                    # Add optional keys if they exist
+                    if 'relational' in losses:
+                        postfix_dict['relational'] = f"{losses['relational'].item():.3f}"
+                    elif 'spatial' in losses:
+                        postfix_dict['spatial'] = f"{losses['spatial'].item():.3f}"
+                        
+                    if 'pattern_memory' in losses:
+                        postfix_dict['pattern'] = f"{losses['pattern_memory'].item():.3f}"
+                    elif 'object' in losses:
+                        postfix_dict['object'] = f"{losses['object'].item():.3f}"
+                    
+                    pbar.set_postfix(postfix_dict)
+                    
+                    # LEAP training integration with stage-specific complexity
+                    if USE_LEAP and 'leap_trainer' in systems and batch_idx % 3 == 0:
                     # Adjust LEAP complexity based on current stage
                     leap_complexity = stage_config['leap_complexity']
                     leap_grid_size = min(grid_size, 12)  # Cap LEAP at 12x12 for stability
@@ -1325,7 +1333,13 @@ def train_minerva_specialized():
                                 losses['total'].item(),
                                 is_exact=True
                             )
-            
+                
+                # End of training loop
+            except Exception as e:
+                print(f"❌ Error in training loop: {e}")
+                print("Attempting to continue to next epoch...")
+                continue
+                
             scheduler.step()
             
             # Validation every 5 epochs

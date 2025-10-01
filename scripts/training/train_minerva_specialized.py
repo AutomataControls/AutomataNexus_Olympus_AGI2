@@ -86,18 +86,36 @@ def minerva_exact_match_injection(model, device, num_epochs=100, target_accuracy
     
     # AGGRESSIVE exact match training for MINERVA
     model.train()
+    # DISABLE DROPOUT for exact match training
+    for module in model.modules():
+        if isinstance(module, nn.Dropout) or isinstance(module, nn.Dropout2d):
+            module.p = 0.0  # Disable all dropout
+    
     # Start with lower LR for warmup
-    base_lr = MINERVA_CONFIG['learning_rate'] * 5
-    optimizer = optim.Adam(model.parameters(), lr=base_lr, betas=(0.9, 0.999))  # Adam often works better for exact match
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=base_lr*0.01)
+    base_lr = MINERVA_CONFIG['learning_rate'] * 2  # Reduced multiplier
+    optimizer = optim.AdamW(model.parameters(), lr=base_lr, betas=(0.9, 0.999), weight_decay=0.0)  # No weight decay for exact match
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=base_lr*0.001)
     
     # Create MORE DIVERSE exact match patterns
     patterns = []
     
-    # 1. Pure identity patterns (easiest - more variations)
-    for i in range(200):  # Double the patterns
-        size = random.choice([3, 4, 5, 6])  # Include size 3 for easier learning
-        # Simple solid colors - easiest to learn
+    # 1. Very simple 2x2 patterns first (EASIEST)
+    for i in range(100):
+        size = 2
+        color = (i % 9) + 1
+        pattern = torch.full((size, size), color, dtype=torch.long)
+        patterns.append({'inputs': pattern, 'outputs': pattern})
+    
+    # 2. Then 3x3 patterns
+    for i in range(100):
+        size = 3
+        color = (i % 9) + 1
+        pattern = torch.full((size, size), color, dtype=torch.long)
+        patterns.append({'inputs': pattern, 'outputs': pattern})
+    
+    # 3. Mixed size patterns
+    for i in range(100):
+        size = random.choice([4, 5, 6])
         color = (i % 9) + 1
         pattern = torch.full((size, size), color, dtype=torch.long)
         patterns.append({'inputs': pattern, 'outputs': pattern})
@@ -210,39 +228,32 @@ def minerva_exact_match_injection(model, device, num_epochs=100, target_accuracy
             output_oh = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
             
             optimizer.zero_grad()
+            # Pass mode='exact_match' to potentially help model adapt
             pred = model(input_oh, output_oh, mode='train')['predicted_output']
             
             # AGGRESSIVE loss for exact matching
-            loss = F.cross_entropy(pred, outputs)
+            loss = F.cross_entropy(pred, outputs, reduction='none')
             
             # Add exact match bonus (progressive)
             pred_idx = pred.argmax(dim=1)
             exact_matches = (pred_idx == outputs).all(dim=[1,2]).float()
             
-            # Progressive bonus that increases with epoch  
-            # Start with no bonus, gradually increase to avoid destabilization
-            if epoch < 3:
-                bonus_scale = 0.0  # No bonus first 3 epochs
-            elif epoch < 10:
-                bonus_scale = 0.5  # Gentle bonus
-            elif acc < 50.0:
-                # If accuracy is low, be more aggressive
-                bonus_scale = min(2.0, 1.0 + (epoch - 10) / 20)  
-            else:
-                # Once we hit 50%, moderate the bonus
-                bonus_scale = min(1.5, 0.8 + (epoch - 10) / 40)
+            # Per-sample loss weighting - focus on mistakes
+            # Reduce loss for correct predictions to encourage learning
+            loss_weights = torch.ones_like(loss)
+            loss_weights[exact_matches.bool()] = 0.1  # Much lower weight for correct predictions
             
-            # Only apply bonus when we have some exact matches to avoid negative spiral
-            if exact_matches.mean() > 0.05:  # Lower threshold
-                exact_bonus = -exact_matches.mean() * bonus_scale
-            else:
-                exact_bonus = 0.0
-                
-            total_loss = loss + exact_bonus
+            # Apply weights
+            weighted_loss = (loss * loss_weights).mean()
             
-            # Ensure loss stays positive
-            if total_loss < 0.5:
-                total_loss = loss * 0.5  # Use 50% of original loss as minimum
+            # Simple exact match reward
+            exact_reward = -exact_matches.mean() * min(2.0, 0.5 + epoch / 50)
+            
+            # Total loss
+            total_loss = weighted_loss + exact_reward
+            
+            # Ensure minimum loss
+            total_loss = torch.clamp(total_loss, min=0.01)
             
             # Add L2 regularization for stability
             l2_reg = sum(p.pow(2.0).sum() for p in model.parameters())

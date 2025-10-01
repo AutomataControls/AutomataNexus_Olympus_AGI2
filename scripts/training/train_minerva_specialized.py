@@ -553,8 +553,9 @@ class MinervaSpecializedDataset(Dataset):
                 experiences = self.replay_buffer.sample(1, strategy='mixed')  # Use MINERVA's mixed strategy
                 if experiences:
                     exp = experiences[0]
-                    input_tensor = exp['input']
-                    output_tensor = exp['output']
+                    # Handle both singular and plural key formats
+                    input_tensor = exp.get('input', exp.get('inputs'))
+                    output_tensor = exp.get('output', exp.get('outputs'))
                     
                     # Handle tensor dimensions
                     if input_tensor.dim() == 4:
@@ -579,14 +580,20 @@ class MinervaSpecializedDataset(Dataset):
         try:
             item = self.base_dataset[idx]
             # Ensure it returns the right format
-            if isinstance(item, dict) and 'inputs' in item and 'outputs' in item:
-                return item
-            else:
-                # Try to extract inputs/outputs from other formats
-                if hasattr(item, '__getitem__') and len(item) >= 2:
-                    return {'inputs': item[0], 'outputs': item[1]}
+            if isinstance(item, dict):
+                # Handle both 'inputs'/'outputs' and 'input'/'output' formats
+                if 'inputs' in item and 'outputs' in item:
+                    return item
+                elif 'input' in item and 'output' in item:
+                    # Convert singular to plural format
+                    return {'inputs': item['input'], 'outputs': item['output']}
                 else:
-                    raise ValueError(f"Unknown dataset item format: {type(item)}")
+                    raise ValueError(f"Dict missing required keys: {list(item.keys())}")
+            elif hasattr(item, '__getitem__') and len(item) >= 2:
+                # Handle list/tuple format from random_split
+                return {'inputs': item[0], 'outputs': item[1]}
+            else:
+                raise ValueError(f"Unknown dataset item format: {type(item)}")
         except Exception as e:
             print(f"Error getting item {idx} from base dataset: {e}")
             raise

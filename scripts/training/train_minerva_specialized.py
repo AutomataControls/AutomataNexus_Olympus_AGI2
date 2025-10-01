@@ -1005,13 +1005,14 @@ def train_minerva_specialized():
         val_size = len(dataset) - train_size
         train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
         
-        # Apply MINERVA-specialized dataset wrapper
-        if USE_MEPT and 'replay_buffer' in systems:
-            train_dataset = MinervaSpecializedDataset(
-                train_dataset, 
-                systems['replay_buffer'],
-                replay_ratio=0.3 if stage == 0 else 0.2
-            )
+        # DISABLE the specialized dataset wrapper - it's causing DataLoader hanging
+        # The MinervaSpecializedDataset replay buffer sampling is the source of the hang
+        # if USE_MEPT and 'replay_buffer' in systems:
+        #     train_dataset = MinervaSpecializedDataset(
+        #         train_dataset, 
+        #         systems['replay_buffer'],
+        #         replay_ratio=0.3 if stage == 0 else 0.2
+        #     )
         
         # Data loaders with stage-specific grid sizes
         # Use 0 workers to avoid hanging issues
@@ -1143,51 +1144,26 @@ def train_minerva_specialized():
                 print(f"   Device: {device}, Actual batch size: {actual_batch_size}")
                 print(f"   Number of batches expected: {len(train_loader)}")
                 
-                # Try to manually get first batch to debug
+                # Test DataLoader after disabling MinervaSpecializedDataset wrapper
                 try:
                     print("   Creating iterator...")
                     train_iter = iter(train_loader)
                     print("   Iterator created, attempting to get first batch...")
-                    print(f"   DataLoader info: batch_size={train_loader.batch_size}, num_workers={train_loader.num_workers}")
-                    print(f"   Dataset length: {len(train_loader.dataset)}")
-                    
-                    # Try to get a single sample first
-                    print("   Testing single sample access...")
-                    sample = train_loader.dataset[0]
-                    print(f"   Single sample OK: {list(sample.keys()) if isinstance(sample, dict) else type(sample)}")
-                    
                     first_batch = next(train_iter)
                     print(f"   ✅ Successfully got first batch with {len(first_batch['inputs'])} samples", flush=True)
-                    # Put it back by recreating the loader iteration in the loop
                 except Exception as e:
                     print(f"   ❌ Failed to get first batch: {e}", flush=True)
                     import traceback
                     traceback.print_exc()
-                    raise  # Don't skip - fail properly
+                    raise
                 
                 # Try to get first batch with timeout
                 first_batch_start = time.time()
                 got_first_batch = False
                 
                 print("   Starting batch iteration...", flush=True)
-                # Create manual iterator to have more control
-                train_iter = iter(train_loader)
-                batch_idx = 0
                 
-                while batch_idx < len(train_loader):
-                    try:
-                        # Try to get batch with a manual timeout check
-                        if batch_idx % 10 == 0:  # Only print every 10th batch
-                            print(f"   Processing batch {batch_idx}/{len(train_loader)}...", flush=True)
-                        batch = next(train_iter)
-                    except StopIteration:
-                        print(f"   Iterator exhausted at batch {batch_idx}")
-                        break
-                    except Exception as e:
-                        print(f"   Error getting batch {batch_idx}: {e}")
-                        import traceback
-                        traceback.print_exc()
-                        break
+                for batch_idx, batch in enumerate(train_loader):
                     
                     if not got_first_batch:
                         print(f"   Got first batch in main loop after {time.time() - first_batch_start:.1f}s")
@@ -1304,11 +1280,6 @@ def train_minerva_specialized():
                         postfix_dict['pattern'] = f"{losses['pattern_memory'].item():.3f}"
                     elif 'object' in losses:
                         postfix_dict['object'] = f"{losses['object'].item():.3f}"
-                    
-                    # pbar.set_postfix(postfix_dict)  # No pbar anymore
-                    
-                    # Increment batch index for while loop
-                    batch_idx += 1
                     
                     # LEAP training integration with stage-specific complexity
                     if USE_LEAP and 'leap_trainer' in systems and batch_idx % 3 == 0:

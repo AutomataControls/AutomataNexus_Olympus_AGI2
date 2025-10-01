@@ -706,20 +706,43 @@ def custom_collate_fn(batch, stage=0):
     
     for i, item in enumerate(batch):
         try:
+            # Debug print for first item
+            if i == 0:
+                print(f"Debug: First batch item type: {type(item)}")
+                if isinstance(item, dict):
+                    print(f"Debug: Item keys: {item.keys()}")
+                    print(f"Debug: Input type: {type(item.get('inputs', None))}")
+            
             input_grid = item['inputs']
             output_grid = item['outputs']
             
-            # Convert to tensor if needed
-            if not isinstance(input_grid, torch.Tensor):
+            # Convert to tensor if needed - handle numpy arrays
+            if isinstance(input_grid, np.ndarray):
+                input_grid = torch.from_numpy(input_grid).long()
+            elif not isinstance(input_grid, torch.Tensor):
                 input_grid = torch.tensor(input_grid, dtype=torch.long)
-            if not isinstance(output_grid, torch.Tensor):
+                
+            if isinstance(output_grid, np.ndarray):
+                output_grid = torch.from_numpy(output_grid).long()
+            elif not isinstance(output_grid, torch.Tensor):
                 output_grid = torch.tensor(output_grid, dtype=torch.long)
             
-            # Force to 2D by squeezing all extra dimensions
-            while input_grid.dim() > 2:
+            # Ensure we have valid tensors before checking dimensions
+            if not hasattr(input_grid, 'dim'):
+                print(f"Error: input_grid is not a tensor, it's {type(input_grid)}")
+                raise ValueError(f"Invalid input_grid type: {type(input_grid)}")
+                
+            # Force to 2D with safety check
+            max_squeezes = 5  # Prevent infinite loop
+            squeeze_count = 0
+            while input_grid.dim() > 2 and squeeze_count < max_squeezes:
                 input_grid = input_grid.squeeze(0)
-            while output_grid.dim() > 2:
+                squeeze_count += 1
+                
+            squeeze_count = 0
+            while output_grid.dim() > 2 and squeeze_count < max_squeezes:
                 output_grid = output_grid.squeeze(0)
+                squeeze_count += 1
             
             # Handle 1D tensors by reshaping
             if input_grid.dim() == 1:

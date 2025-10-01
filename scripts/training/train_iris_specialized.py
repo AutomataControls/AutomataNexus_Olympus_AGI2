@@ -178,8 +178,15 @@ class IrisSpecializedDataset(Dataset):
         try:
             item = self.base_dataset[idx]
             # Ensure it returns the right format
-            if isinstance(item, dict) and 'inputs' in item and 'outputs' in item:
-                return item
+            if isinstance(item, dict):
+                # Handle both 'inputs'/'outputs' and 'input'/'output' formats
+                if 'inputs' in item and 'outputs' in item:
+                    return item
+                elif 'input' in item and 'output' in item:
+                    # DSL format - convert to standard format
+                    return {'inputs': item['input'], 'outputs': item['output']}
+                else:
+                    raise ValueError(f"Dict missing required keys: {list(item.keys())}")
             elif isinstance(item, (list, tuple)) and len(item) >= 2:
                 # Handle list/tuple format from random_split
                 return {'inputs': item[0], 'outputs': item[1]}
@@ -193,9 +200,10 @@ class IrisSpecializedDataset(Dataset):
                     'outputs': torch.zeros(6, 6, dtype=torch.long)
                 }
             else:
-                raise ValueError(f"Unknown dataset item format: {type(item)}, value: {item}")
+                raise ValueError(f"Unknown dataset item format: {type(item)}")
         except Exception as e:
-            print(f"Error getting item {idx} from base dataset: {e}")
+            if idx % 100 == 0:  # Only print every 100th error to avoid spam
+                print(f"Error getting item {idx} from base dataset: {e}")
             # Return dummy data to keep training going
             return {
                 'inputs': torch.zeros(6, 6, dtype=torch.long),

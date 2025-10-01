@@ -285,13 +285,20 @@ def custom_collate_fn(batch):
         new_input = torch.zeros(target_size, target_size, dtype=torch.long)
         new_output = torch.zeros(target_size, target_size, dtype=torch.long)
         
-        # Get current dimensions
+        # Ensure input_grid and output_grid are 2D
+        if input_grid.dim() > 2:
+            input_grid = input_grid.squeeze()
+        if output_grid.dim() > 2:
+            output_grid = output_grid.squeeze()
+        
+        # Get current dimensions after ensuring 2D
         current_H, current_W = input_grid.shape[-2:]
         
         # Copy data with proper bounds checking
         copy_h = min(current_H, target_size)
         copy_w = min(current_W, target_size)
         
+        # Safe copy with explicit slicing
         new_input[:copy_h, :copy_w] = input_grid[:copy_h, :copy_w]
         new_output[:copy_h, :copy_w] = output_grid[:copy_h, :copy_w]
         

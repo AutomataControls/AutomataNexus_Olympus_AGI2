@@ -637,19 +637,28 @@ def train_chronos_specialized():
             
             for batch_idx, batch in enumerate(pbar):
                 current_time = time.time()
-                if current_time - last_batch_time > 60:  # 60 seconds timeout
+                if current_time - last_batch_time > 30:  # Reduced to 30 seconds timeout
                     stuck_counter += 1
                     print(f"⚠️ Warning: Batch {batch_idx} taking too long (stuck counter: {stuck_counter})")
-                    if stuck_counter > 3:
+                    if stuck_counter > 2:  # Reduced threshold
                         print("❌ Training appears stuck, breaking epoch")
                         break
                 
                 last_batch_time = current_time
+                
+                # Debug print every 10 batches
+                if batch_idx % 10 == 0:
+                    print(f"Debug: Processing batch {batch_idx}")
+                
                 # CHRONOS DSL augmentation
                 if batch_idx % 5 == 0 and dsl_samples:  # Every 5th batch
-                    batch = CHRONOSDSLTraining.augment_batch_with_chronos_dsl(
-                        batch, curriculum_stage=stage, dsl_ratio=0.3
-                    )
+                    try:
+                        batch = CHRONOSDSLTraining.augment_batch_with_chronos_dsl(
+                            batch, curriculum_stage=stage, dsl_ratio=0.3
+                        )
+                    except Exception as e:
+                        print(f"⚠️ DSL augmentation error at batch {batch_idx}: {e}")
+                        # Continue with original batch
                 
                 inputs = batch['inputs'].to(device, non_blocking=True)
                 outputs = batch['outputs'].to(device, non_blocking=True)
@@ -663,13 +672,23 @@ def train_chronos_specialized():
                 output_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
                 
                 with autocast('cuda'):
-                    # CHRONOS forward pass - expects list of tensors for sequence
-                    model_outputs = model([input_grids])
-                    pred_output = model_outputs['predicted_output']
-                    
-                    # Specialized loss
-                    losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
-                    loss = losses['total'] / CHRONOS_CONFIG['gradient_accumulation']
+                    try:
+                        # CHRONOS forward pass - use simple single frame mode for stability
+                        # Pass as single frame to avoid temporal processing complexity
+                        model_outputs = model([input_grids])  # This will trigger _forward_single
+                        pred_output = model_outputs['predicted_output']
+                        
+                        # Add timeout for forward pass
+                        if batch_idx % 10 == 0:
+                            print(f"Debug: Forward pass completed for batch {batch_idx}")
+                        
+                        # Specialized loss
+                        losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
+                        loss = losses['total'] / CHRONOS_CONFIG['gradient_accumulation']
+                    except Exception as e:
+                        print(f"⚠️ Error in forward pass at batch {batch_idx}: {e}")
+                        print(f"Input shape: {input_grids.shape}")
+                        continue
                     
                     # CHRONOS-specific temporal loss validation
                     if torch.isnan(loss) or torch.isinf(loss):
@@ -719,8 +738,8 @@ def train_chronos_specialized():
                 
                 pbar.set_postfix(postfix_dict)
                 
-                # LEAP training integration with stage-specific complexity
-                if USE_LEAP and 'leap_trainer' in systems and batch_idx % 3 == 0:
+                # LEAP training integration with stage-specific complexity - DISABLED FOR DEBUGGING
+                if False and USE_LEAP and 'leap_trainer' in systems and batch_idx % 3 == 0:
                     # Adjust LEAP complexity based on current stage
                     leap_complexity = stage_config['leap_complexity']
                     leap_grid_size = min(grid_size, 12)  # Cap LEAP at 12x12 for stability

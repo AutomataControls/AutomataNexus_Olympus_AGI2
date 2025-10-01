@@ -366,7 +366,6 @@ def train_iris():
                 replay_buffer,
                 replay_ratio=0.3 if stage == 0 else 0.2
             )
-        elif stage > 0 and USE_MEPT:
         
         # Create data loaders with adaptive configuration
         # Use stage-adaptive configuration to prevent hanging

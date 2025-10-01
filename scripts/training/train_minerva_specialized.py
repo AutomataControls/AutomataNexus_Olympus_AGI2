@@ -315,7 +315,12 @@ def train_minerva_specialized():
     
     # MEPT System
     if USE_MEPT:
-        mept_components = create_mept_system(device)
+        mept_components = create_mept_system(
+            capacity=50000,  # Integer capacity for replay buffer
+            pattern_bank_size=10000,
+            transformation_penalty=MINERVA_CONFIG['transform_penalty'],
+            exact_match_bonus=MINERVA_CONFIG['exact_match_bonus']
+        )
         systems['replay_buffer'] = mept_components['replay_buffer']
         systems['pattern_bank'] = mept_components['pattern_bank']
         print("✅ MEPT system initialized")

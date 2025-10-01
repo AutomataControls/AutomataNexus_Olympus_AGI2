@@ -71,7 +71,7 @@ from colab_training_v4_megascale_curriculum import CurriculumMegaScaleDataset, T
 # MINERVA-Specific Configuration with 8-Stage Progressive Curriculum
 MINERVA_CONFIG = {
     'batch_size': 256,  # Smaller for MINERVA's complex attention
-    'learning_rate': 0.0001,  # CRITICAL: Ultra-minimal learning rate
+    'learning_rate': 0.00001,  # EMERGENCY: 10x smaller learning rate
     'num_epochs': 320,  # 8 stages x 40 epochs
     'hidden_dim': 256,
     'pattern_memory_size': 200,
@@ -612,21 +612,21 @@ def train_minerva_specialized():
                 if (batch_idx + 1) % MINERVA_CONFIG['gradient_accumulation'] == 0:
                     # EMERGENCY: Pre-check for explosive gradients before unscaling
                     pre_norm = sum(p.grad.data.norm(2)**2 for p in model.parameters() if p.grad is not None)**0.5
-                    if pre_norm > 50.0:
+                    if pre_norm > 10.0:  # Much lower threshold
                         print(f"⚠️ CRITICAL: Pre-norm {pre_norm:.2f} too high, skipping update")
                         optimizer.zero_grad()
                         continue
                     
                     scaler.unscale_(optimizer)
                     
-                    # CRITICAL: Ultra-aggressive gradient clipping - 0.001 threshold
-                    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 0.001)
-                    if grad_norm > 0.01:
-                        print(f"⚠️ Large gradient norm: {grad_norm:.2f}, clipped to 0.001")
+                    # CRITICAL: Ultra-aggressive gradient clipping - 0.0001 threshold
+                    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 0.0001)
+                    if grad_norm > 0.001:
+                        print(f"⚠️ Large gradient norm: {grad_norm:.2f}, clipped to 0.0001")
                     
                     # Emergency gradient zeroing if still too large
                     for p in model.parameters():
-                        if p.grad is not None and p.grad.data.norm() > 0.01:
+                        if p.grad is not None and p.grad.data.norm() > 0.001:
                             print(f"⚠️ EMERGENCY: Zeroing gradient with norm {p.grad.data.norm():.3f}")
                             p.grad.data.zero_()
                     

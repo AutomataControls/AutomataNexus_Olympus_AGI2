@@ -280,17 +280,21 @@ def custom_collate_fn(batch):
         if not isinstance(output_grid, torch.Tensor):
             output_grid = torch.tensor(output_grid, dtype=torch.long)
         
-        # Ensure proper size and type
-        if input_grid.shape[-1] > MINERVA_CONFIG['max_grid_size']:
-            input_grid = input_grid[:MINERVA_CONFIG['max_grid_size'], :MINERVA_CONFIG['max_grid_size']]
-        if output_grid.shape[-1] > MINERVA_CONFIG['max_grid_size']:
-            output_grid = output_grid[:MINERVA_CONFIG['max_grid_size'], :MINERVA_CONFIG['max_grid_size']]
-        
-        # Pad to consistent size for grid attention
+        # Get current dimensions
         H, W = input_grid.shape[-2:]
-        if H < MINERVA_CONFIG['max_grid_size'] or W < MINERVA_CONFIG['max_grid_size']:
-            pad_h = MINERVA_CONFIG['max_grid_size'] - H
-            pad_w = MINERVA_CONFIG['max_grid_size'] - W
+        target_size = MINERVA_CONFIG['max_grid_size']
+        
+        # Truncate if too large
+        if H > target_size or W > target_size:
+            input_grid = input_grid[:target_size, :target_size]
+            output_grid = output_grid[:target_size, :target_size]
+            H, W = input_grid.shape[-2:]
+        
+        # Pad to target size
+        pad_h = target_size - H
+        pad_w = target_size - W
+        
+        if pad_h > 0 or pad_w > 0:
             input_grid = F.pad(input_grid, (0, pad_w, 0, pad_h), value=0)
             output_grid = F.pad(output_grid, (0, pad_w, 0, pad_h), value=0)
         

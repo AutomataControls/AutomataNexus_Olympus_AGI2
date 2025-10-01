@@ -630,7 +630,6 @@ def train_chronos_specialized():
                     if pre_norm > 20.0:  # Temporal-specific threshold
                         print(f"⚠️ CHRONOS: Pre-norm {pre_norm:.2f} too high, skipping update")
                         optimizer.zero_grad()
-                        scaler.update()
                         continue
                     
                     scaler.unscale_(optimizer)

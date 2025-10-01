@@ -500,3 +500,173 @@ class ChronosDSL:
             analysis['temporal_features'].append(feature)
             
         return analysis
+
+
+class CHRONOSDSLGenerator:
+    """Generates temporal sequence patterns for CHRONOS training"""
+    
+    def __init__(self):
+        self.dsl = ChronosDSL()
+        
+    def generate_temporal_pattern(self, grid_size: int = 12) -> Tuple[List[torch.Tensor], str]:
+        """Generate a temporal sequence pattern"""
+        pattern_types = [
+            'shift_sequence', 'rotation_sequence', 'pulse_sequence',
+            'growth_sequence', 'cascade_sequence', 'wave_sequence'
+        ]
+        pattern_type = random.choice(pattern_types)
+        
+        # Create initial grid with pattern
+        grid = torch.zeros(1, 10, grid_size, grid_size)
+        
+        if pattern_type == 'shift_sequence':
+            # Moving object
+            grid[:, 1:4, 2:5, 2:5] = 1
+            sequence = [grid.clone()]
+            for i in range(5):
+                grid = self.dsl._shift_right(grid, amount=1)
+                sequence.append(grid.clone())
+                
+        elif pattern_type == 'rotation_sequence':
+            # Rotating shape
+            grid[:, 1:3, 3:6, 5:7] = 1
+            grid[:, 3:5, 5:8, 3:6] = 1
+            sequence = [grid.clone()]
+            for i in range(4):
+                grid = self.dsl._rotate_clockwise(grid, angle=90)
+                sequence.append(grid.clone())
+                
+        elif pattern_type == 'pulse_sequence':
+            # Pulsing pattern
+            center = grid_size // 2
+            grid[:, 1, center, center] = 1
+            sequence = []
+            for i in range(6):
+                pulsed = self.dsl._pulse(grid, intensity=0.3 + i * 0.15)
+                sequence.append(pulsed.clone())
+                
+        elif pattern_type == 'growth_sequence':
+            # Growing pattern
+            grid[:, 2, 5:7, 5:7] = 1
+            sequence = [grid.clone()]
+            for i in range(4):
+                grid = self.dsl._grow(grid, amount=1)
+                sequence.append(grid.clone())
+                
+        elif pattern_type == 'cascade_sequence':
+            # Cascading effect
+            grid[:, 1:4, 0:3, 0:3] = 1
+            sequence = []
+            for i in range(5):
+                cascaded = self.dsl._cascade(grid, step=i)
+                sequence.append(cascaded.clone())
+                
+        else:  # wave_sequence
+            # Wave pattern
+            grid[:, 1:3, :, :] = 1
+            sequence = []
+            for i in range(6):
+                waved = self.dsl._wave(grid, phase=i * 0.8)
+                sequence.append(waved.clone())
+                
+        return sequence, pattern_type
+    
+    def generate_batch(self, batch_size: int = 32, grid_size: int = 12) -> Dict[str, torch.Tensor]:
+        """Generate batch of temporal sequences"""
+        sequences = []
+        pattern_types = []
+        
+        for _ in range(batch_size):
+            seq, pattern_type = self.generate_temporal_pattern(grid_size)
+            # Use first and last frames as input/output
+            if len(seq) >= 2:
+                sequences.append((seq[0], seq[-1]))
+                pattern_types.append(pattern_type)
+        
+        if not sequences:
+            # Fallback
+            sequences = [(torch.zeros(1, 10, grid_size, grid_size), 
+                         torch.zeros(1, 10, grid_size, grid_size))]
+            pattern_types = ['empty']
+            
+        inputs = torch.cat([s[0] for s in sequences], dim=0)
+        outputs = torch.cat([s[1] for s in sequences], dim=0)
+        
+        return {
+            'inputs': inputs.argmax(dim=1),  # Convert to class indices
+            'outputs': outputs.argmax(dim=1),
+            'pattern_types': pattern_types
+        }
+
+
+class CHRONOSDSLTraining:
+    """DSL-based training integration for CHRONOS"""
+    
+    @staticmethod
+    def create_chronos_dsl_samples(curriculum_stage: int = 0) -> List[Dict]:
+        """Create CHRONOS-specific DSL samples for curriculum stage"""
+        generator = CHRONOSDSLGenerator()
+        samples = []
+        
+        # Stage-specific grid sizes
+        grid_sizes = {0: 6, 1: 9, 2: 12, 3: 15, 4: 18, 5: 21, 6: 24, 7: 30}
+        grid_size = grid_sizes.get(curriculum_stage, 12)
+        
+        # Generate temporal sequence samples
+        num_samples = 500 + curriculum_stage * 100
+        
+        for _ in range(num_samples // 32):
+            batch = generator.generate_batch(batch_size=32, grid_size=grid_size)
+            for i in range(len(batch['inputs'])):
+                samples.append({
+                    'input': batch['inputs'][i].cpu().numpy(),
+                    'output': batch['outputs'][i].cpu().numpy(),
+                    'pattern_type': batch['pattern_types'][i],
+                    'source': 'chronos_dsl'
+                })
+                
+        return samples
+    
+    @staticmethod
+    def augment_batch_with_chronos_dsl(batch: Dict[str, torch.Tensor], 
+                                       curriculum_stage: int = 0,
+                                       dsl_ratio: float = 0.2) -> Dict[str, torch.Tensor]:
+        """Augment training batch with CHRONOS DSL samples"""
+        batch_size = batch['inputs'].shape[0]
+        num_dsl = int(batch_size * dsl_ratio)
+        
+        if num_dsl == 0:
+            return batch
+            
+        generator = CHRONOSDSLGenerator()
+        grid_sizes = {0: 6, 1: 9, 2: 12, 3: 15, 4: 18, 5: 21, 6: 24, 7: 30}
+        grid_size = grid_sizes.get(curriculum_stage, 12)
+        
+        dsl_batch = generator.generate_batch(batch_size=num_dsl, grid_size=grid_size)
+        
+        # Handle different key names
+        input_key = 'inputs' if 'inputs' in batch else 'input'
+        output_key = 'outputs' if 'outputs' in batch else 'output'
+        
+        # Ensure DSL samples match the batch dimensions
+        h, w = batch[input_key].shape[-2:]
+        dsl_inputs = dsl_batch['inputs']
+        dsl_outputs = dsl_batch['outputs']
+        
+        if dsl_inputs.shape[-2:] != (h, w):
+            # Pad or crop to match
+            if dsl_inputs.shape[-2] < h or dsl_inputs.shape[-1] < w:
+                pad_h = max(0, h - dsl_inputs.shape[-2])
+                pad_w = max(0, w - dsl_inputs.shape[-1])
+                dsl_inputs = F.pad(dsl_inputs, (0, pad_w, 0, pad_h))
+                dsl_outputs = F.pad(dsl_outputs, (0, pad_w, 0, pad_h))
+            else:
+                dsl_inputs = dsl_inputs[..., :h, :w]
+                dsl_outputs = dsl_outputs[..., :h, :w]
+        
+        # Replace last num_dsl samples with DSL samples
+        augmented_batch = batch.copy()
+        augmented_batch[input_key][-num_dsl:] = dsl_inputs.to(batch[input_key].device)
+        augmented_batch[output_key][-num_dsl:] = dsl_outputs.to(batch[output_key].device)
+        
+        return augmented_batch

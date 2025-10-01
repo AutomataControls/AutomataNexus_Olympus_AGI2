@@ -1247,15 +1247,20 @@ def train_iris_specialized():
             
             # Create data loader iterator with timeout protection
             try:
-                pbar = tqdm(train_loader, desc=f"IRIS Stage {stage}, Epoch {epoch+1}", 
-                           colour='cyan', bar_format='{l_bar}{bar:30}{r_bar}')
+                # Manual iteration for debugging
+                print(f"   Total batches to process: {len(train_loader)}")
                 optimizer.zero_grad()
                 
                 batch_count = 0
                 stuck_counter = 0
                 last_batch_time = time.time()
                 
-                for batch_idx, batch in enumerate(pbar):
+                # Use manual progress tracking instead of tqdm
+                for batch_idx, batch in enumerate(train_loader):
+                    # Update progress manually
+                    progress = (batch_idx + 1) / len(train_loader) * 100
+                    print(f"\rIRIS Stage {stage}, Epoch {epoch+1}: {progress:.0f}% {batch_idx+1}/{len(train_loader)}", end='', flush=True)
+                    print(f"\n🔍 DEBUG: Starting batch {batch_idx+1}/{len(train_loader)}")
                     current_time = time.time()
                     # Check if we're stuck (more than 60 seconds on a batch)
                     if current_time - last_batch_time > 60:
@@ -1269,8 +1274,7 @@ def train_iris_specialized():
                     last_batch_time = current_time
                     
                     batch_count += 1
-                    if batch_count % 10 == 0:
-                        print(f"Processing batch {batch_count}...")
+                    print(f"   Batch count: {batch_count}, batch_idx: {batch_idx}")
                     
                     inputs = batch['inputs'].to(device, non_blocking=True)
                     outputs = batch['outputs'].to(device, non_blocking=True)
@@ -1347,12 +1351,8 @@ def train_iris_specialized():
                     train_metrics['exact'] += losses['exact_count'].item()
                     train_metrics['samples'] += input_grids.size(0)
                     
-                    pbar.set_postfix({
-                        'loss': f"{losses['total'].item():.3f}",
-                        'exact': f"{losses['exact_count'].item():.0f}",
-                        'color_map': f"{losses['color_mapping'].item():.3f}",
-                        'color_bal': f"{losses['color_balance'].item():.3f}"
-                        })
+                    # Print metrics instead of using pbar
+                    print(f"   Batch metrics - loss: {losses['total'].item():.3f}, exact: {losses['exact_count'].item():.0f}, color_map: {losses['color_mapping'].item():.3f}, color_bal: {losses['color_balance'].item():.3f}")
                     
                     # LEAP training integration with reduced frequency for speed
                     if USE_LEAP and 'leap_trainer' in systems and batch_idx % 10 == 0:  # Every 10 batches instead of 2
@@ -1412,7 +1412,9 @@ def train_iris_specialized():
             
                 
                 # End of batch processing loop
-                print(f"✅ Completed all {batch_count} batches for epoch {epoch+1}")
+                print(f"\n✅ Completed all {batch_count} batches for epoch {epoch+1}")
+                print(f"   Expected batches: {len(train_loader)}")
+                print(f"   Actual batches processed: {batch_count}")
                 
             except Exception as e:
                 print(f"❌ Error in training loop: {e}")

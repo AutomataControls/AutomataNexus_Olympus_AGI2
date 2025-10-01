@@ -701,7 +701,9 @@ def custom_collate_fn(batch, stage=0):
     inputs = []
     outputs = []
     
-    for item in batch:
+    print(f"   [collate_fn] Processing batch of {len(batch)} items, target_size={target_size}", flush=True)
+    
+    for i, item in enumerate(batch):
         input_grid = item['inputs']
         output_grid = item['outputs']
         
@@ -747,10 +749,13 @@ def custom_collate_fn(batch, stage=0):
         inputs.append(input_grid[:target_size, :target_size])
         outputs.append(output_grid[:target_size, :target_size])
     
-    return {
+    print(f"   [collate_fn] Stacking {len(inputs)} tensors", flush=True)
+    result = {
         'inputs': torch.stack(inputs),
         'outputs': torch.stack(outputs)
     }
+    print(f"   [collate_fn] Done, returning batch", flush=True)
+    return result
 
 
 def train_minerva_specialized():
@@ -1133,6 +1138,14 @@ def train_minerva_specialized():
                     print("   Creating iterator...")
                     train_iter = iter(train_loader)
                     print("   Iterator created, attempting to get first batch...")
+                    print(f"   DataLoader info: batch_size={train_loader.batch_size}, num_workers={train_loader.num_workers}")
+                    print(f"   Dataset length: {len(train_loader.dataset)}")
+                    
+                    # Try to get a single sample first
+                    print("   Testing single sample access...")
+                    sample = train_loader.dataset[0]
+                    print(f"   Single sample OK: {list(sample.keys()) if isinstance(sample, dict) else type(sample)}")
+                    
                     first_batch = next(train_iter)
                     print(f"   ✅ Successfully got first batch with {len(first_batch['inputs'])} samples", flush=True)
                     # Put it back by recreating the loader iteration in the loop
@@ -1147,8 +1160,25 @@ def train_minerva_specialized():
                 got_first_batch = False
                 
                 print("   Starting batch iteration...", flush=True)
-                # Use train_loader directly to avoid tqdm issues
-                for batch_idx, batch in enumerate(train_loader):
+                # Create manual iterator to have more control
+                train_iter = iter(train_loader)
+                batch_idx = 0
+                
+                while batch_idx < len(train_loader):
+                    try:
+                        # Try to get batch with a manual timeout check
+                        print(f"   Attempting to get batch {batch_idx}...", flush=True)
+                        batch = next(train_iter)
+                        print(f"   Got batch {batch_idx} successfully", flush=True)
+                    except StopIteration:
+                        print(f"   Iterator exhausted at batch {batch_idx}")
+                        break
+                    except Exception as e:
+                        print(f"   Error getting batch {batch_idx}: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        break
+                    
                     if not got_first_batch:
                         print(f"   Got first batch in main loop after {time.time() - first_batch_start:.1f}s")
                         got_first_batch = True
@@ -1265,7 +1295,10 @@ def train_minerva_specialized():
                     elif 'object' in losses:
                         postfix_dict['object'] = f"{losses['object'].item():.3f}"
                     
-                    pbar.set_postfix(postfix_dict)
+                    # pbar.set_postfix(postfix_dict)  # No pbar anymore
+                    
+                    # Increment batch index for while loop
+                    batch_idx += 1
                     
                     # LEAP training integration with stage-specific complexity
                     if USE_LEAP and 'leap_trainer' in systems and batch_idx % 3 == 0:

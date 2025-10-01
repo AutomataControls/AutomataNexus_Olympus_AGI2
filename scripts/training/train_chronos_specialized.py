@@ -618,6 +618,14 @@ def train_chronos_specialized():
                 scaler.scale(loss).backward()
                 
                 if (batch_idx + 1) % CHRONOS_CONFIG['gradient_accumulation'] == 0:
+                    # Pre-check for explosive gradients before unscaling
+                    pre_norm = sum(p.grad.data.norm(2)**2 for p in model.parameters() if p.grad is not None)**0.5
+                    if pre_norm > 20.0:  # Temporal-specific threshold
+                        print(f"⚠️ CHRONOS: Pre-norm {pre_norm:.2f} too high, skipping update")
+                        optimizer.zero_grad()
+                        scaler.update()
+                        continue
+                    
                     scaler.unscale_(optimizer)
                     # CHRONOS-specific temporal gradient clipping
                     grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 0.3)

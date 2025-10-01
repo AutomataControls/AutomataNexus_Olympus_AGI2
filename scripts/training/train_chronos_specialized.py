@@ -637,10 +637,10 @@ def train_chronos_specialized():
             
             for batch_idx, batch in enumerate(pbar):
                 current_time = time.time()
-                if current_time - last_batch_time > 30:  # Reduced to 30 seconds timeout
+                if current_time - last_batch_time > 15:  # Reduced to 15 seconds timeout
                     stuck_counter += 1
                     print(f"⚠️ Warning: Batch {batch_idx} taking too long (stuck counter: {stuck_counter})")
-                    if stuck_counter > 2:  # Reduced threshold
+                    if stuck_counter > 1:  # Reduced threshold
                         print("❌ Training appears stuck, breaking epoch")
                         break
                 
@@ -650,8 +650,8 @@ def train_chronos_specialized():
                 if batch_idx % 10 == 0:
                     print(f"Debug: Processing batch {batch_idx}")
                 
-                # CHRONOS DSL augmentation
-                if batch_idx % 5 == 0 and dsl_samples:  # Every 5th batch
+                # CHRONOS DSL augmentation - DISABLED FOR DEBUGGING
+                if False and batch_idx % 5 == 0 and dsl_samples:  # Every 5th batch
                     try:
                         batch = CHRONOSDSLTraining.augment_batch_with_chronos_dsl(
                             batch, curriculum_stage=stage, dsl_ratio=0.3

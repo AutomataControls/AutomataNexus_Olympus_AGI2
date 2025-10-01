@@ -173,17 +173,13 @@ def custom_collate_fn(batch):
             out = out.squeeze(0)
         
         if inp.dim() != 2 or out.dim() != 2:
-            print(f"Warning: Unexpected tensor dimensions - input: {inp.shape}, output: {out.shape}")
             continue
         
         inputs.append(inp)
         outputs.append(out)
     
     if not inputs:
-        return {
-            'inputs': torch.zeros(1, MAX_GRID_SIZE, MAX_GRID_SIZE, dtype=torch.long),
-            'outputs': torch.zeros(1, MAX_GRID_SIZE, MAX_GRID_SIZE, dtype=torch.long)
-        }
+        raise ValueError("All batch items were invalid - check data pipeline")
     
     max_h = max(inp.shape[0] for inp in inputs)
     max_w = max(inp.shape[1] for inp in inputs)
@@ -366,12 +362,15 @@ def train_atlas():
                 replay_buffer,
                 replay_ratio=0.3 if stage == 0 else 0.2
             )
-        elif stage > 0 and USE_MEPT:
         
-        # Create data loaders with adaptive configuration
-        # Use stage-adaptive configuration to prevent hanging
-        stage_workers = NUM_WORKERS if stage == 0 else 0
-        stage_batch_size = BATCH_SIZE if stage == 0 else BATCH_SIZE // 2
+        # Stage 1 hanging fixes - reduced resources for Stage 1+
+        if stage >= 1:
+            stage_workers = 4  # REDUCED for Stage 1+
+            stage_batch_size = 256  # REDUCED for Stage 1+
+            print(f"⚠️ Stage {stage} hanging fix: reduced workers to {stage_workers}, batch size to {stage_batch_size}")
+        else:
+            stage_workers = NUM_WORKERS
+            stage_batch_size = BATCH_SIZE
         
         train_loader_kwargs = {
             'dataset': train_dataset,

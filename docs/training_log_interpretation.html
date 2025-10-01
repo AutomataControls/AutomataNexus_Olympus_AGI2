@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OLYMPUS Training Log Interpretation Guide</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #2980b9;
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #34495e;
+            margin-top: 25px;
+        }
+        .log-example {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .good {
+            background: #d5f4e6;
+            border-left: 4px solid #27ae60;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .warning {
+            background: #fef9e7;
+            border-left: 4px solid #f39c12;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .danger {
+            background: #fadbd8;
+            border-left: 4px solid #e74c3c;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .metric-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .metric-table th, .metric-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        .metric-table th {
+            background: #3498db;
+            color: white;
+        }
+        .metric-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        .phase-indicator {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            margin: 5px;
+        }
+        .phase-inject { background: #9b59b6; }
+        .phase-stage0 { background: #2ecc71; }
+        .phase-stage1 { background: #f39c12; }
+        .phase-stage2 { background: #e74c3c; }
+        .code {
+            background: #ecf0f1;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            color: #2c3e50;
+        }
+        .decision-tree {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .action-box {
+            background: #e8f5e8;
+            border: 2px solid #28a745;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .action-box h4 {
+            margin-top: 0;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 OLYMPUS Training Log Interpretation Guide</h1>
+        
+        <h2>📊 Training Phases Overview</h2>
+        <p>OLYMPUS training consists of several distinct phases, each with different expectations:</p>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <span class="phase-indicator phase-inject">Exact Match Injection</span>
+            <span class="phase-indicator phase-stage0">Stage 0: Foundation</span>
+            <span class="phase-indicator phase-stage1">Stage 1: Intermediate</span>
+            <span class="phase-indicator phase-stage2">Stage 2: Advanced</span>
+        </div>
+
+        <h2>🎯 Phase 1: Exact Match Injection</h2>
+        <p><strong>Purpose:</strong> Pre-train model to achieve exact matches on simple patterns</p>
+        <p><strong>Target:</strong> 95% exact match accuracy</p>
+        <p><strong>Duration:</strong> 30-100 epochs</p>
+
+        <h3>What to Look For:</h3>
+        <div class="log-example">🎯 EXACT MATCH INJECTION TRAINING
+==================================================
+Epoch 1/100: Exact Match: 16.0% | Loss: 1.2370 | LR: 0.00005
+Epoch 10/100: Exact Match: 35.1% | Loss: 0.4551 | LR: 0.00007
+Epoch 20/100: Exact Match: 35.8% | Loss: 0.4450 | LR: 0.00008
+Epoch 30/100: Exact Match: 35.6% | Loss: 0.1209 | LR: 0.00010
+Epoch 31/100: Exact Match: 33.6% | Loss: 0.5821 | LR: 0.00010</div>
+
+        <h3>Normal Patterns:</h3>
+        <div class="good">
+            <strong>✅ Healthy Progression:</strong>
+            <ul>
+                <li><strong>Epochs 1-20:</strong> Steady climb from ~15% to ~35%</li>
+                <li><strong>Epochs 21-30:</strong> Loss drops rapidly as exact match bonus activates</li>
+                <li><strong>Epoch 31+:</strong> Temporary drop (33-35%) as full loss function kicks in</li>
+                <li><strong>Learning Rate:</strong> Gradual increase during warmup</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ Warning Signs:</strong>
+            <ul>
+                <li><strong>Plateau below 30%:</strong> Model struggling with basic patterns</li>
+                <li><strong>Sudden drops >5%:</strong> Learning rate too aggressive</li>
+                <li><strong>NaN losses:</strong> Gradient explosion - restart with lower LR</li>
+            </ul>
+        </div>
+
+        <div class="danger">
+            <strong>🚨 Stop and Adjust If:</strong>
+            <ul>
+                <li>Exact match stuck below 25% for >20 epochs</li>
+                <li>Loss becomes NaN or infinite</li>
+                <li>No improvement after 60 epochs</li>
+            </ul>
+        </div>
+
+        <h2>📚 Stage 0: Foundation Learning</h2>
+        <p><strong>Purpose:</strong> Learn basic ARC patterns and transformations</p>
+        <p><strong>Target:</strong> 5-15% exact match on real ARC data</p>
+        <p><strong>Duration:</strong> 100 epochs</p>
+
+        <h3>Example Log:</h3>
+        <div class="log-example">📚 Starting Curriculum Stage 0
+Stage 0 - Train: 45,000, Val: 5,000
+
+Global Epoch 1 (Stage 0): Train Loss: 2.1234, Train Exact: 2.3%
+Val Loss: 2.0987, Val Exact: 2.1%, Pixel: 67.8%
+
+📊 MEPT Status:
+   Experience Buffer: 1,234 samples (45 exact matches)
+   Pattern Bank: 892 unique patterns</div>
+
+        <h3>Key Metrics to Monitor:</h3>
+        <table class="metric-table">
+            <tr>
+                <th>Metric</th>
+                <th>Good Range</th>
+                <th>Warning Range</th>
+                <th>Action Needed</th>
+            </tr>
+            <tr>
+                <td>Train Exact Match</td>
+                <td>2-15%</td>
+                <td>0-2% or >20%</td>
+                <td>Adjust LR or loss weights</td>
+            </tr>
+            <tr>
+                <td>Val Exact Match</td>
+                <td>1-10%</td>
+                <td><1% or >15%</td>
+                <td>Check overfitting</td>
+            </tr>
+            <tr>
+                <td>Pixel Accuracy</td>
+                <td>60-85%</td>
+                <td><60% or >90%</td>
+                <td>Model too simple/complex</td>
+            </tr>
+            <tr>
+                <td>Loss Trend</td>
+                <td>Decreasing</td>
+                <td>Flat >10 epochs</td>
+                <td>LR scheduling issue</td>
+            </tr>
+        </table>
+
+        <h2>⚡ Stage 1: Intermediate Complexity</h2>
+        <p><strong>Purpose:</strong> Handle more complex patterns and larger grids</p>
+        <p><strong>Target:</strong> 3-8% exact match improvement</p>
+        <p><strong>Duration:</strong> 100 epochs</p>
+
+        <h3>Important: Stage 1 Hanging Fixes</h3>
+        <div class="warning">
+            <strong>Look for these indicators:</strong>
+            <div class="log-example">⚠️ Stage 1 hanging fix: reduced workers to 4, batch size to 256
+Stage 1 dataset has 31,677 samples, limiting to 10,000
+Stage 1 - Train: 9,000, Val: 1,000</div>
+        </div>
+
+        <div class="good">
+            <strong>✅ Stage 1 Progress Indicators:</strong>
+            <ul>
+                <li>Reduced batch size (256 vs 512) and workers (4 vs 8)</li>
+                <li>Dataset limitation to 10K samples</li>
+                <li>MEPT replay buffer engaged</li>
+                <li>Progress bar showing movement: <code>Stage 1, Epoch 1/100: 15% 5/36</code></li>
+            </ul>
+        </div>
+
+        <h2>🚀 Stage 2: Advanced Patterns</h2>
+        <p><strong>Purpose:</strong> Master complex multi-step transformations</p>
+        <p><strong>Target:</strong> 5-20% exact match on evaluation set</p>
+        <p><strong>Duration:</strong> 100 epochs</p>
+
+        <h2>🔧 Decision Tree: When to Intervene</h2>
+        
+        <div class="decision-tree">
+            <h3>Training Stuck? Follow This Decision Path:</h3>
+            
+            <div class="action-box">
+                <h4>1. Check Current Phase</h4>
+                <p><strong>If Exact Match Injection:</strong></p>
+                <ul>
+                    <li>Target: >90% by epoch 60</li>
+                    <li>If stuck <30%: Reduce initial learning rate to 0.00005</li>
+                    <li>If loss explodes: Restart with lower LR</li>
+                </ul>
+            </div>
+
+            <div class="action-box">
+                <h4>2. Check for Common Issues</h4>
+                <p><strong>Progress Bar Stuck at 0%:</strong></p>
+                <ul>
+                    <li>Stage 1+ hanging - fixes should activate automatically</li>
+                    <li>If still stuck >10 min: Stop and restart</li>
+                </ul>
+                
+                <p><strong>Exact Match Not Improving:</strong></p>
+                <ul>
+                    <li>Check MEPT buffer size (should grow each epoch)</li>
+                    <li>Look for LEAP pattern reports</li>
+                    <li>Verify transformation penalty is positive</li>
+                </ul>
+            </div>
+
+            <div class="action-box">
+                <h4>3. Performance Thresholds</h4>
+                <p><strong>Stop Training If:</strong></p>
+                <ul>
+                    <li>Exact match <1% for >20 epochs in Stage 0</li>
+                    <li>Loss increasing for >15 epochs</li>
+                    <li>GPU memory errors or NaN losses</li>
+                    <li>No validation improvement for >30 epochs</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>📈 Performance Indicators</h2>
+
+        <h3>MEPT (Memory) System Health:</h3>
+        <div class="log-example">📊 MEPT Status:
+   Experience Buffer: 12,456 samples (234 exact matches)
+   Pattern Bank: 3,421 unique patterns
+   Loss weights: {'reconstruction': 1.0, 'exact_match': 7.2}</div>
+
+        <div class="good">
+            <strong>✅ Healthy MEPT:</strong>
+            <ul>
+                <li>Buffer growing each epoch</li>
+                <li>Exact matches >100 by epoch 20</li>
+                <li>Pattern bank >1000 patterns</li>
+                <li>Exact match weight adapting (5-10 range)</li>
+            </ul>
+        </div>
+
+        <h3>LEAP (Pattern Learning) Reports:</h3>
+        <div class="log-example">🎯 LEAP Pattern Performance:
+  identity: 89.2% accuracy (2341 samples)
+  rotation: 67.4% accuracy (1823 samples)
+  translation: 45.1% accuracy (1456 samples)
+  color_change: 23.8% accuracy (982 samples)</div>
+
+        <div class="warning">
+            <strong>⚠️ LEAP Warning Signs:</strong>
+            <ul>
+                <li>Identity pattern <80% (basic copying failing)</li>
+                <li>All patterns <20% (model not learning)</li>
+                <li>No pattern reports for >10 epochs</li>
+            </ul>
+        </div>
+
+        <h2>🎛️ Quick Adjustment Guide</h2>
+
+        <table class="metric-table">
+            <tr>
+                <th>Problem</th>
+                <th>Symptom</th>
+                <th>Quick Fix</th>
+                <th>File to Edit</th>
+            </tr>
+            <tr>
+                <td>Training too slow</td>
+                <td>Exact match <5% after 20 epochs</td>
+                <td>Increase LR to 0.008</td>
+                <td><code>train_[model].py</code></td>
+            </tr>
+            <tr>
+                <td>Loss exploding</td>
+                <td>NaN losses, gradient norm >100</td>
+                <td>Reduce LR to 0.002</td>
+                <td><code>train_[model].py</code></td>
+            </tr>
+            <tr>
+                <td>Stage 1 hanging</td>
+                <td>Progress stuck at 0% >10min</td>
+                <td>Restart (fixes auto-apply)</td>
+                <td>Automatic</td>
+            </tr>
+            <tr>
+                <td>Overfitting</td>
+                <td>Train exact >>Val exact</td>
+                <td>Increase weight_decay to 0.001</td>
+                <td><code>train_[model].py</code></td>
+            </tr>
+            <tr>
+                <td>Underfitting</td>
+                <td>Both train/val exact <2%</td>
+                <td>Reduce regularization</td>
+                <td><code>train_[model].py</code></td>
+            </tr>
+        </table>
+
+        <h2>📝 Log Examples: Good vs Bad</h2>
+
+        <h3>✅ Healthy Training Log:</h3>
+        <div class="log-example">Epoch 15/100: Exact Match: 8.2% | Loss: 1.8734 | LR: 0.00456
+📊 MEPT Status: Experience Buffer: 3,234 samples (89 exact matches)
+🎯 LEAP exact: 12/64 = 18.8%, pixel: 73.2%
+
+Epoch 20/100: Exact Match: 12.1% | Loss: 1.6234 | LR: 0.00423
+✅ New best model! Exact: 12.1%</div>
+
+        <h3>❌ Problematic Training Log:</h3>
+        <div class="log-example">Epoch 15/100: Exact Match: 0.8% | Loss: 2.8943 | LR: 0.00123
+📊 MEPT Status: Experience Buffer: 234 samples (2 exact matches)
+WARNING: NaN in total loss, using fallback
+
+Epoch 20/100: Exact Match: 0.6% | Loss: 3.1234 | LR: 0.00089
+⚠️ Early stopping triggered after 20 epochs without improvement!</div>
+
+        <h2>🏁 Success Criteria</h2>
+
+        <div class="good">
+            <h3>Consider Training Successful When:</h3>
+            <ul>
+                <li><strong>Exact Match Injection:</strong> >90% exact match achieved</li>
+                <li><strong>Stage 0:</strong> 8-15% exact match on validation</li>
+                <li><strong>Stage 1:</strong> 10-20% exact match on validation</li>
+                <li><strong>Stage 2:</strong> 15-25% exact match on validation</li>
+                <li><strong>MEPT Buffer:</strong> >10,000 experiences with >500 exact matches</li>
+                <li><strong>Pattern Bank:</strong> >5,000 unique patterns learned</li>
+                <li><strong>Model Size:</strong> 20-40MB final checkpoint</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <h3>Training Complete But Suboptimal When:</h3>
+            <ul>
+                <li>Final exact match 5-10% (usable but not great)</li>
+                <li>Strong pixel accuracy (>80%) but low exact match</li>
+                <li>Good Stage 0 performance but poor Stage 1+</li>
+            </ul>
+        </div>
+
+        <h2>📞 Emergency Troubleshooting</h2>
+
+        <div class="danger">
+            <h3>🚨 Stop Training Immediately If:</h3>
+            <ul>
+                <li><strong>GPU Memory Error:</strong> "CUDA out of memory"</li>
+                <li><strong>NaN Cascade:</strong> Multiple consecutive NaN losses</li>
+                <li><strong>Infinite Loss:</strong> Loss values >100 or infinite</li>
+                <li><strong>System Unresponsive:</strong> No progress for >30 minutes</li>
+                <li><strong>Disk Full:</strong> Cannot save checkpoints</li>
+            </ul>
+        </div>
+
+        <div class="action-box">
+            <h4>🔄 Quick Recovery Steps:</h4>
+            <ol>
+                <li><strong>Clear GPU memory:</strong> Restart runtime</li>
+                <li><strong>Reduce batch size:</strong> 512 → 256 → 128</li>
+                <li><strong>Lower learning rate:</strong> 0.005 → 0.002 → 0.001</li>
+                <li><strong>Check last checkpoint:</strong> Resume from last good state</li>
+                <li><strong>Verify data integrity:</strong> Re-run data loading tests</li>
+            </ol>
+        </div>
+
+        <hr style="margin: 40px 0;">
+        <p style="text-align: center; color: #7f8c8d; font-style: italic;">
+            AutomataNexus OLYMPUS AGI2 - Training Log Interpretation Guide v1.0<br>
+            <em>Monitor, Understand, Optimize</em>
+        </p>
+    </div>
+</body>
+</html>

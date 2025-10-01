@@ -258,7 +258,7 @@ class IrisSpecializedLoss(nn.Module):
         for b in range(pred.shape[0]):
             unique_colors = torch.unique(pred_idx[b])
             diversity_score = len(unique_colors) / 10.0  # Normalize by max colors
-            diversity_scores.append(diversity_score)
+            diversity_scores.append(torch.tensor(diversity_score, device=pred.device))
         
         # Encourage higher diversity (negative loss)
         return -torch.stack(diversity_scores).mean()

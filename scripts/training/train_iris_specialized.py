@@ -425,9 +425,8 @@ def train_iris_specialized():
     # Mixed precision
     scaler = GradScaler()
     
-    # Data directory and models directory
+    # Data directory
     DATA_DIR = '/content/AutomataNexus_Olympus_AGI2/data'
-    os.makedirs('/content/AutomataNexus_Olympus_AGI2/models', exist_ok=True)
     
     # Training metrics
     best_exact = 0.0
@@ -661,7 +660,7 @@ def train_iris_specialized():
                 # Save best model
                 if val_exact_pct > best_exact:
                     best_exact = val_exact_pct
-                    model_path = f'/content/AutomataNexus_Olympus_AGI2/models/iris_specialized_best.pth'
+                    model_path = f'/content/AutomataNexus_Olympus_AGI2/src/models/iris_specialized_best.pth'
                     torch.save({
                         'epoch': global_epoch,
                         'stage': stage,

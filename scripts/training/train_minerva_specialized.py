@@ -71,7 +71,7 @@ from colab_training_v4_megascale_curriculum import CurriculumMegaScaleDataset, T
 # MINERVA-Specific Configuration with 8-Stage Progressive Curriculum
 MINERVA_CONFIG = {
     'batch_size': 256,  # Smaller for MINERVA's complex attention
-    'learning_rate': 0.003,  # Reduced for stability
+    'learning_rate': 0.0005,  # Emergency ultra-low learning rate
     'num_epochs': 320,  # 8 stages x 40 epochs
     'hidden_dim': 256,
     'pattern_memory_size': 200,
@@ -81,8 +81,8 @@ MINERVA_CONFIG = {
     'curriculum_stages': 8,  # Progressive 8-stage curriculum
     'epochs_per_stage': 40,  # Shorter stages for smoother progression
     'attention_heads': 8,
-    'relational_weight': 0.1,  # Heavily reduced for stability
-    'pattern_memory_weight': 0.05  # Further reduced for extreme stability
+    'relational_weight': 0.01,  # Ultra-minimal for emergency stability
+    'pattern_memory_weight': 0.0  # DISABLED - causing severe instability
 }
 
 # 8-Stage Progressive Grid Size Curriculum
@@ -182,29 +182,23 @@ class MinervaSpecializedLoss(nn.Module):
         copy_penalty = (pred_indices == input_indices).all(dim=[1,2]).float()
         transform_penalty = copy_penalty.mean() * self.weights['transformation']
         
-        # MINERVA-specific: Relational reasoning loss (stabilized)
-        relational_loss = 0.0
-        if model_outputs and 'features' in model_outputs:
+        # MINERVA-specific: Relational reasoning loss (ULTRA-MINIMAL)
+        relational_loss = torch.tensor(0.0, device=pred_output.device)
+        if model_outputs and 'features' in model_outputs and self.weights['relational'] > 0:
             features = model_outputs['features']
-            # Ultra-stable relational loss using clamped gradients
+            # Ultra-minimal relational loss to prevent instability
             try:
-                spatial_grad = torch.gradient(features, dim=[2, 3])
-                grad_magnitude = sum(g.abs().mean().clamp(max=1.0) for g in spatial_grad)
-                relational_loss = grad_magnitude * self.weights['relational']
+                # Use simple L2 norm instead of gradients
+                feature_norm = features.norm(dim=[2, 3]).mean()
+                relational_loss = feature_norm.clamp(max=0.1) * self.weights['relational']
             except:
-                # Fallback if gradient computation fails
                 relational_loss = torch.tensor(0.0, device=features.device)
         
-        # MINERVA-specific: Pattern memory utilization (ultra-stabilized)
-        pattern_memory_loss = 0.0
-        if model_outputs and 'transform_params' in model_outputs:
-            transform_params = model_outputs['transform_params']
-            # Ultra-stabilized using positive MSE instead of log variance
-            param_mean = transform_params.mean(dim=0)
-            param_std = torch.std(transform_params, dim=0).clamp(min=1e-6)
-            # Use normalized standard deviation (always positive)
-            param_diversity = param_std.mean().clamp(max=5.0)  # Cap at 5.0
-            pattern_memory_loss = param_diversity * self.weights['pattern_memory']
+        # MINERVA-specific: Pattern memory utilization (DISABLED FOR STABILITY)
+        pattern_memory_loss = torch.tensor(0.0, device=pred_output.device)
+        # Pattern memory component completely disabled due to severe instability
+        # if model_outputs and 'transform_params' in model_outputs:
+        #     # This component was causing gradient explosions, keeping disabled
         
         # Edge-aware loss for precise object boundaries
         edge_loss = self._edge_aware_loss(pred_output, target_output) * self.weights['edge']
@@ -598,27 +592,37 @@ def train_minerva_specialized():
                     losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
                     loss = losses['total'] / MINERVA_CONFIG['gradient_accumulation']
                     
-                    # Skip NaN/Inf losses
+                    # EMERGENCY loss validation - skip problematic batches
                     if torch.isnan(loss) or torch.isinf(loss):
                         print(f"⚠️ Skipping NaN/Inf loss at batch {batch_idx}")
+                        continue
+                    
+                    # Skip extremely high losses that cause gradient explosions
+                    if loss.abs() > 100.0:
+                        print(f"⚠️ EMERGENCY: Skipping explosive loss {loss.item():.2f} at batch {batch_idx}")
+                        continue
+                    
+                    # Skip if pattern memory component is problematic
+                    if 'pattern_memory' in losses and losses['pattern_memory'] < -2.0:
+                        print(f"⚠️ Skipping batch {batch_idx} due to pattern memory instability")
                         continue
                 
                 scaler.scale(loss).backward()
                 
                 if (batch_idx + 1) % MINERVA_CONFIG['gradient_accumulation'] == 0:
                     scaler.unscale_(optimizer)
-                    # Ultra-aggressive gradient clipping for extreme stability
-                    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 0.1)
-                    if grad_norm > 1.0:
-                        print(f"⚠️ Large gradient norm: {grad_norm:.2f}, clipped to 0.1")
+                    # EMERGENCY ultra-aggressive gradient clipping
+                    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 0.01)
+                    if grad_norm > 0.1:
+                        print(f"⚠️ Large gradient norm: {grad_norm:.2f}, clipped to 0.01")
                     
-                    # Additional parameter norm check
+                    # Emergency parameter norm check and scaling
                     total_norm = sum(p.grad.data.norm(2) for p in model.parameters() if p.grad is not None)
-                    if total_norm > 10.0:
-                        print(f"⚠️ Total gradient norm too large: {total_norm:.2f}, scaling down")
+                    if total_norm > 1.0:
+                        print(f"⚠️ EMERGENCY: Total gradient norm {total_norm:.2f}, heavy scaling")
                         for p in model.parameters():
                             if p.grad is not None:
-                                p.grad.data.mul_(0.1)
+                                p.grad.data.mul_(0.01)
                     scaler.step(optimizer)
                     scaler.update()
                     optimizer.zero_grad()

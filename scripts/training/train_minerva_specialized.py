@@ -266,13 +266,19 @@ class MinervaSpecializedLoss(nn.Module):
 
 
 def custom_collate_fn(batch):
-    """MINERVA-optimized collate function"""
+    """MINERVA-optimized collate function with proper tensor handling"""
     inputs = []
     outputs = []
     
     for item in batch:
         input_grid = item['inputs']
         output_grid = item['outputs']
+        
+        # Convert to tensor if needed
+        if not isinstance(input_grid, torch.Tensor):
+            input_grid = torch.tensor(input_grid, dtype=torch.long)
+        if not isinstance(output_grid, torch.Tensor):
+            output_grid = torch.tensor(output_grid, dtype=torch.long)
         
         # Ensure proper size and type
         if input_grid.shape[-1] > MINERVA_CONFIG['max_grid_size']:
@@ -281,7 +287,7 @@ def custom_collate_fn(batch):
             output_grid = output_grid[:MINERVA_CONFIG['max_grid_size'], :MINERVA_CONFIG['max_grid_size']]
         
         # Pad to consistent size for grid attention
-        H, W = input_grid.shape
+        H, W = input_grid.shape[-2:]
         if H < MINERVA_CONFIG['max_grid_size'] or W < MINERVA_CONFIG['max_grid_size']:
             pad_h = MINERVA_CONFIG['max_grid_size'] - H
             pad_w = MINERVA_CONFIG['max_grid_size'] - W

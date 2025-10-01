@@ -642,6 +642,10 @@ def train_iris_specialized():
                     target_accuracy=50.0  # Much more realistic target
                 )
                 print(f"🎨 Color injection completed - Epoch {global_epoch}")
+                # Memory cleanup after exact match injection
+                torch.cuda.empty_cache()
+                gc.collect()
+                time.sleep(2)  # Brief pause to ensure cleanup
             
             # Main training
             model.train()

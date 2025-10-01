@@ -71,13 +71,13 @@ from colab_training_v4_megascale_curriculum import CurriculumMegaScaleDataset, T
 # MINERVA-Specific Configuration with 8-Stage Progressive Curriculum
 MINERVA_CONFIG = {
     'batch_size': 256,  # Smaller for MINERVA's complex attention
-    'learning_rate': 0.0005,  # Emergency ultra-low learning rate
+    'learning_rate': 0.0001,  # CRITICAL: Ultra-minimal learning rate
     'num_epochs': 320,  # 8 stages x 40 epochs
     'hidden_dim': 256,
     'pattern_memory_size': 200,
     'gradient_accumulation': 2,  # Effective batch: 512
     'transform_penalty': 0.5,
-    'exact_match_bonus': 7.0,  # Higher for MINERVA's precision
+    'exact_match_bonus': 1.0,  # CRITICAL: Minimal to prevent instability
     'curriculum_stages': 8,  # Progressive 8-stage curriculum
     'epochs_per_stage': 40,  # Shorter stages for smoother progression
     'attention_heads': 8,
@@ -598,7 +598,7 @@ def train_minerva_specialized():
                         continue
                     
                     # Skip extremely high losses that cause gradient explosions
-                    if loss.abs() > 100.0:
+                    if loss.abs() > 10.0:  # CRITICAL: Much lower threshold
                         print(f"⚠️ EMERGENCY: Skipping explosive loss {loss.item():.2f} at batch {batch_idx}")
                         continue
                     
@@ -611,18 +611,25 @@ def train_minerva_specialized():
                 
                 if (batch_idx + 1) % MINERVA_CONFIG['gradient_accumulation'] == 0:
                     scaler.unscale_(optimizer)
-                    # EMERGENCY ultra-aggressive gradient clipping
-                    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 0.01)
-                    if grad_norm > 0.1:
-                        print(f"⚠️ Large gradient norm: {grad_norm:.2f}, clipped to 0.01")
                     
-                    # Emergency parameter norm check and scaling
-                    total_norm = sum(p.grad.data.norm(2) for p in model.parameters() if p.grad is not None)
-                    if total_norm > 1.0:
-                        print(f"⚠️ EMERGENCY: Total gradient norm {total_norm:.2f}, heavy scaling")
-                        for p in model.parameters():
-                            if p.grad is not None:
-                                p.grad.data.mul_(0.01)
+                    # EMERGENCY: Pre-check for explosive gradients and skip if necessary
+                    pre_norm = sum(p.grad.data.norm(2)**2 for p in model.parameters() if p.grad is not None)**0.5
+                    if pre_norm > 50.0:
+                        print(f"⚠️ CRITICAL: Pre-norm {pre_norm:.2f} too high, skipping update")
+                        optimizer.zero_grad()
+                        continue
+                    
+                    # CRITICAL: Ultra-aggressive gradient clipping - 0.001 threshold
+                    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 0.001)
+                    if grad_norm > 0.01:
+                        print(f"⚠️ Large gradient norm: {grad_norm:.2f}, clipped to 0.001")
+                    
+                    # Emergency gradient zeroing if still too large
+                    for p in model.parameters():
+                        if p.grad is not None and p.grad.data.norm() > 0.01:
+                            print(f"⚠️ EMERGENCY: Zeroing gradient with norm {p.grad.data.norm():.3f}")
+                            p.grad.data.zero_()
+                    
                     scaler.step(optimizer)
                     scaler.update()
                     optimizer.zero_grad()

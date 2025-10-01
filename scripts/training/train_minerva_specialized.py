@@ -1275,64 +1275,64 @@ def train_minerva_specialized():
                     
                     # LEAP training integration with stage-specific complexity
                     if USE_LEAP and 'leap_trainer' in systems and batch_idx % 3 == 0:
-                    # Adjust LEAP complexity based on current stage
-                    leap_complexity = stage_config['leap_complexity']
-                    leap_grid_size = min(grid_size, 12)  # Cap LEAP at 12x12 for stability
-                    
-                    # Generate LEAP batch with stage-specific parameters for MINERVA
-                    if MINERVA_MEPT_LEAP_AVAILABLE and hasattr(systems['leap_trainer'], 'generate_leap_batch'):
-                        leap_batch = systems['leap_trainer'].generate_leap_batch(
-                            batch_size=max(32, 64 - stage*8),  # Reduce batch size for larger grids
-                            stage=stage,
-                            grid_size=leap_grid_size
-                        )
-                    else:
-                        # Fallback for generic LEAP
-                        leap_batch = systems['leap_trainer'].generate_leap_batch(
-                            batch_size=max(32, 64 - stage*8)  # Reduce batch size for larger grids
-                        )
-                    leap_inputs = leap_batch['inputs'].to(device)
-                    leap_outputs = leap_batch['outputs'].to(device)
-                    
-                    # Ensure proper grid size for current stage
-                    H, W = leap_inputs.shape[-2:]
-                    if H < grid_size or W < grid_size:
-                        pad_h = grid_size - H
-                        pad_w = grid_size - W
-                        leap_inputs = F.pad(leap_inputs, (0, pad_w, 0, pad_h), value=0)
-                        leap_outputs = F.pad(leap_outputs, (0, pad_w, 0, pad_h), value=0)
-                    
-                    leap_input_oh = F.one_hot(leap_inputs, num_classes=10).permute(0, 3, 1, 2).float()
-                    leap_output_oh = F.one_hot(leap_outputs, num_classes=10).permute(0, 3, 1, 2).float()
-                    
-                    with autocast('cuda'):
-                        leap_model_outputs = model(leap_input_oh, leap_output_oh, mode='train')
-                        leap_pred = leap_model_outputs['predicted_output']
-                        leap_losses = loss_fn(leap_pred, leap_output_oh, leap_input_oh, leap_model_outputs)
-                        leap_loss = leap_losses['total'] / MINERVA_CONFIG['gradient_accumulation']
-                    
-                    scaler.scale(leap_loss).backward()
-                    
-                    # Update LEAP pattern statistics
-                    systems['leap_trainer'].update_pattern_stats(
-                        leap_batch['pattern_types'], leap_pred, leap_output_oh
-                    )
-                
-                # MEPT experience collection
-                if USE_MEPT and 'replay_buffer' in systems:
-                    pred_indices = pred_output.argmax(dim=1)
-                    target_indices = output_grids.argmax(dim=1)
-                    exact_matches = (pred_indices == target_indices).all(dim=[1,2])
-                    
-                    for i in range(input_grids.size(0)):
-                        if exact_matches[i]:
-                            systems['replay_buffer'].add(
-                                input_grids[i],
-                                output_grids[i],
-                                pred_indices[i],
-                                losses['total'].item(),
-                                is_exact=True
+                        # Adjust LEAP complexity based on current stage
+                        leap_complexity = stage_config['leap_complexity']
+                        leap_grid_size = min(grid_size, 12)  # Cap LEAP at 12x12 for stability
+                        
+                        # Generate LEAP batch with stage-specific parameters for MINERVA
+                        if MINERVA_MEPT_LEAP_AVAILABLE and hasattr(systems['leap_trainer'], 'generate_leap_batch'):
+                            leap_batch = systems['leap_trainer'].generate_leap_batch(
+                                batch_size=max(32, 64 - stage*8),  # Reduce batch size for larger grids
+                                stage=stage,
+                                grid_size=leap_grid_size
                             )
+                        else:
+                            # Fallback for generic LEAP
+                            leap_batch = systems['leap_trainer'].generate_leap_batch(
+                                batch_size=max(32, 64 - stage*8)  # Reduce batch size for larger grids
+                            )
+                        leap_inputs = leap_batch['inputs'].to(device)
+                        leap_outputs = leap_batch['outputs'].to(device)
+                        
+                        # Ensure proper grid size for current stage
+                        H, W = leap_inputs.shape[-2:]
+                        if H < grid_size or W < grid_size:
+                            pad_h = grid_size - H
+                            pad_w = grid_size - W
+                            leap_inputs = F.pad(leap_inputs, (0, pad_w, 0, pad_h), value=0)
+                            leap_outputs = F.pad(leap_outputs, (0, pad_w, 0, pad_h), value=0)
+                        
+                        leap_input_oh = F.one_hot(leap_inputs, num_classes=10).permute(0, 3, 1, 2).float()
+                        leap_output_oh = F.one_hot(leap_outputs, num_classes=10).permute(0, 3, 1, 2).float()
+                        
+                        with autocast('cuda'):
+                            leap_model_outputs = model(leap_input_oh, leap_output_oh, mode='train')
+                            leap_pred = leap_model_outputs['predicted_output']
+                            leap_losses = loss_fn(leap_pred, leap_output_oh, leap_input_oh, leap_model_outputs)
+                            leap_loss = leap_losses['total'] / MINERVA_CONFIG['gradient_accumulation']
+                        
+                        scaler.scale(leap_loss).backward()
+                        
+                        # Update LEAP pattern statistics
+                        systems['leap_trainer'].update_pattern_stats(
+                            leap_batch['pattern_types'], leap_pred, leap_output_oh
+                        )
+                
+                    # MEPT experience collection
+                    if USE_MEPT and 'replay_buffer' in systems:
+                        pred_indices = pred_output.argmax(dim=1)
+                        target_indices = output_grids.argmax(dim=1)
+                        exact_matches = (pred_indices == target_indices).all(dim=[1,2])
+                        
+                        for i in range(input_grids.size(0)):
+                            if exact_matches[i]:
+                                systems['replay_buffer'].add(
+                                    input_grids[i],
+                                    output_grids[i],
+                                    pred_indices[i],
+                                    losses['total'].item(),
+                                    is_exact=True
+                                )
                 
                 # End of training loop
             except Exception as e:

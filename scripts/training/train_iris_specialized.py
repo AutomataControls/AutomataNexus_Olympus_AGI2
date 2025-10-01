@@ -1199,65 +1199,69 @@ def train_iris_specialized():
                     
                     # LEAP training integration with reduced frequency for speed
                     if USE_LEAP and 'leap_trainer' in systems and batch_idx % 10 == 0:  # Every 10 batches instead of 2
-                    # Adjust LEAP complexity based on current stage
-                    leap_complexity = stage_config['leap_complexity']
-                    leap_grid_size = min(grid_size, 12)  # Cap LEAP at 12x12 for stability
-                    
-                    leap_batch = systems['leap_trainer'].generate_leap_batch(
-                        batch_size=max(32, 64 - stage*8)  # Reduce batch size for larger grids
-                    )
-                    leap_inputs = leap_batch['inputs'].to(device)
-                    leap_outputs = leap_batch['outputs'].to(device)
-                    
-                    # Ensure proper grid size for current stage
-                    H, W = leap_inputs.shape[-2:]
-                    if H < grid_size or W < grid_size:
-                        pad_h = grid_size - H
-                        pad_w = grid_size - W
-                        leap_inputs = F.pad(leap_inputs, (0, pad_w, 0, pad_h), value=0)
-                        leap_outputs = F.pad(leap_outputs, (0, pad_w, 0, pad_h), value=0)
-                    
-                    leap_input_oh = F.one_hot(leap_inputs, num_classes=10).permute(0, 3, 1, 2).float()
-                    leap_output_oh = F.one_hot(leap_outputs, num_classes=10).permute(0, 3, 1, 2).float()
-                    
-                    with autocast('cuda'):
-                        leap_model_outputs = model(leap_input_oh, leap_output_oh, mode='train')
-                        leap_pred = leap_model_outputs['predicted_output']
-                        leap_losses = loss_fn(leap_pred, leap_output_oh, leap_input_oh, leap_model_outputs)
-                        leap_loss = leap_losses['total'] / IRIS_CONFIG['gradient_accumulation']
-                    
-                    scaler.scale(leap_loss).backward()
-                    
-                    # Update LEAP pattern statistics
-                    systems['leap_trainer'].update_pattern_stats(
-                        leap_batch['pattern_types'], leap_pred, leap_output_oh
-                    )
-                
-                # MEPT experience collection (color transformations)
-                if USE_MEPT and 'replay_buffer' in systems:
-                    pred_indices = pred_output.argmax(dim=1)
-                    target_indices = output_grids.argmax(dim=1)
-                    exact_matches = (pred_indices == target_indices).all(dim=[1,2])
-                    
-                    # Also collect near-misses for color learning
-                    color_accuracy = (pred_indices == target_indices).float().mean(dim=[1,2])
-                    good_color_matches = color_accuracy > 0.8
-                    
-                    for i in range(input_grids.size(0)):
-                        if exact_matches[i] or good_color_matches[i]:
-                            systems['replay_buffer'].add(
-                                input_grids[i],
-                                output_grids[i],
-                                pred_indices[i],
-                                losses['total'].item(),
-                                is_exact=exact_matches[i].item()
+                        # Adjust LEAP complexity based on current stage
+                        leap_complexity = stage_config['leap_complexity']
+                        leap_grid_size = min(grid_size, 12)  # Cap LEAP at 12x12 for stability
+                        
+                        leap_batch = systems['leap_trainer'].generate_leap_batch(
+                            batch_size=max(32, 64 - stage*8)  # Reduce batch size for larger grids
+                        )
+                        leap_inputs = leap_batch['inputs'].to(device)
+                        leap_outputs = leap_batch['outputs'].to(device)
+                        
+                        # Ensure proper grid size for current stage
+                        H, W = leap_inputs.shape[-2:]
+                        if H < grid_size or W < grid_size:
+                            pad_h = grid_size - H
+                            pad_w = grid_size - W
+                            leap_inputs = F.pad(leap_inputs, (0, pad_w, 0, pad_h), value=0)
+                            leap_outputs = F.pad(leap_outputs, (0, pad_w, 0, pad_h), value=0)
+                        
+                        leap_input_oh = F.one_hot(leap_inputs, num_classes=10).permute(0, 3, 1, 2).float()
+                        leap_output_oh = F.one_hot(leap_outputs, num_classes=10).permute(0, 3, 1, 2).float()
+                        
+                        with autocast('cuda'):
+                            leap_model_outputs = model(leap_input_oh, leap_output_oh, mode='train')
+                            leap_pred = leap_model_outputs['predicted_output']
+                            leap_losses = loss_fn(leap_pred, leap_output_oh, leap_input_oh, leap_model_outputs)
+                            leap_loss = leap_losses['total'] / IRIS_CONFIG['gradient_accumulation']
+                        
+                        scaler.scale(leap_loss).backward()
+                        
+                        # Update LEAP pattern statistics
+                        systems['leap_trainer'].update_pattern_stats(
+                            leap_batch['pattern_types'], leap_pred, leap_output_oh
                             )
+                    
+                    # MEPT experience collection (color transformations)
+                    if USE_MEPT and 'replay_buffer' in systems:
+                        pred_indices = pred_output.argmax(dim=1)
+                        target_indices = output_grids.argmax(dim=1)
+                        exact_matches = (pred_indices == target_indices).all(dim=[1,2])
+                        
+                        # Also collect near-misses for color learning
+                        color_accuracy = (pred_indices == target_indices).float().mean(dim=[1,2])
+                        good_color_matches = color_accuracy > 0.8
+                        
+                        for i in range(input_grids.size(0)):
+                            if exact_matches[i] or good_color_matches[i]:
+                                systems['replay_buffer'].add(
+                                    input_grids[i],
+                                    output_grids[i],
+                                    pred_indices[i],
+                                    losses['total'].item(),
+                                    is_exact=exact_matches[i].item()
+                                )
             
-                scheduler.step()
+                
+                # End of batch processing loop
                 
             except Exception as e:
                 print(f"❌ Error in training loop: {e}")
                 print("Attempting to continue...")
+            
+            # Step scheduler after epoch completes
+            scheduler.step()
             
             # Validation every 5 epochs
             if epoch % 5 == 0:

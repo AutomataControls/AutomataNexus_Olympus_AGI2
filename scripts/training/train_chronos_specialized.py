@@ -683,8 +683,10 @@ def train_chronos_specialized():
                             print(f"Debug: Forward pass completed for batch {batch_idx}")
                         
                         # Specialized loss
+                        print(f"Debug: Computing loss for batch {batch_idx}")
                         losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
                         loss = losses['total'] / CHRONOS_CONFIG['gradient_accumulation']
+                        print(f"Debug: Loss computed for batch {batch_idx}: {loss.item():.3f}")
                     except Exception as e:
                         print(f"⚠️ Error in forward pass at batch {batch_idx}: {e}")
                         print(f"Input shape: {input_grids.shape}")
@@ -700,7 +702,9 @@ def train_chronos_specialized():
                         print(f"⚠️ Skipping extremely negative temporal loss: {loss.item():.3f}")
                         continue
                 
+                print(f"Debug: Starting backward pass for batch {batch_idx}")
                 scaler.scale(loss).backward()
+                print(f"Debug: Backward pass completed for batch {batch_idx}")
                 
                 if (batch_idx + 1) % CHRONOS_CONFIG['gradient_accumulation'] == 0:
                     scaler.unscale_(optimizer)
@@ -782,8 +786,8 @@ def train_chronos_specialized():
                         leap_batch['pattern_types'], leap_pred, leap_output_oh
                     )
                 
-                # MEPT experience collection (temporal transformations)
-                if USE_MEPT and 'replay_buffer' in systems:
+                # MEPT experience collection (temporal transformations) - DISABLED FOR DEBUGGING
+                if False and USE_MEPT and 'replay_buffer' in systems:
                     pred_indices = pred_output.argmax(dim=1)
                     target_indices = output_grids.argmax(dim=1)
                     exact_matches = (pred_indices == target_indices).all(dim=[1,2])

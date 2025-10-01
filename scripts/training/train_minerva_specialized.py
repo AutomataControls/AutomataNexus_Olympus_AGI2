@@ -87,12 +87,12 @@ from colab_training_v4_megascale_curriculum import CurriculumMegaScaleDataset, T
 
 # MINERVA-Specific Configuration with 8-Stage Progressive Curriculum - OPTIMIZED V2
 MINERVA_CONFIG = {
-    'batch_size': 384,  # Increased for better gradient stability
+    'batch_size': 192,  # Reduced to prevent hanging
     'learning_rate': 0.003,  # Increased from 0.001 based on 4.03% success
     'num_epochs': 400,  # 8 stages x 50 epochs - longer training
     'hidden_dim': 256,
     'pattern_memory_size': 200,
-    'gradient_accumulation': 2,  # Effective batch: 768
+    'gradient_accumulation': 2,  # Effective batch: 384
     'transform_penalty': 0.3,  # Reduced - allow more transformations
     'exact_match_bonus': 3.0,  # Increased from 1.0 to reinforce success
     'curriculum_stages': 8,  # Progressive 8-stage curriculum
@@ -621,6 +621,10 @@ def train_minerva_specialized():
                     target_accuracy=target_acc
                 )
                 print(f"💉 Exact injection completed - Stage {stage}, Epoch {global_epoch}")
+                # Memory cleanup after exact match injection
+                torch.cuda.empty_cache()
+                gc.collect()
+                time.sleep(2)  # Brief pause to ensure cleanup
             else:
                 if stage < 2:  # Only log for relevant stages
                     print(f"⏭️ Skipping exact injection: Stage {stage}, Epoch {epoch}")

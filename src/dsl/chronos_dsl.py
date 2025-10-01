@@ -550,7 +550,7 @@ class CHRONOSDSLGenerator:
             grid[:, 2, 5:7, 5:7] = 1
             sequence = [grid.clone()]
             for i in range(4):
-                grid = self.dsl._grow(grid, amount=1)
+                grid = self.dsl._grow(grid, factor=1.2 + i * 0.2)
                 sequence.append(grid.clone())
                 
         elif pattern_type == 'cascade_sequence':

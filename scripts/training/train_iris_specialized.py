@@ -14,6 +14,7 @@ import json
 import os
 import sys
 import gc
+import time
 from tqdm import tqdm
 from typing import Dict, List, Optional
 import random
@@ -588,12 +589,13 @@ def train_iris_specialized():
             )
         
         # Data loaders with stage-specific grid sizes - no persistent workers for stage transitions
+        # Use 0 workers to avoid hanging issues
         train_loader = DataLoader(
             train_dataset,
             batch_size=IRIS_CONFIG['batch_size'],
             shuffle=True,
-            num_workers=2,  # Reduced workers to prevent hanging
-            pin_memory=True,
+            num_workers=0,  # Set to 0 to avoid multiprocessing issues
+            pin_memory=False,  # Disable when using 0 workers
             collate_fn=lambda batch: custom_collate_fn(batch, stage)
         )
         
@@ -601,8 +603,8 @@ def train_iris_specialized():
             val_dataset,
             batch_size=IRIS_CONFIG['batch_size'],
             shuffle=False,
-            num_workers=2,  # Reduced workers to prevent hanging
-            pin_memory=True,
+            num_workers=0,  # Set to 0 to avoid multiprocessing issues
+            pin_memory=False,  # Disable when using 0 workers
             collate_fn=lambda batch: custom_collate_fn(batch, stage)
         )
         
@@ -647,20 +649,32 @@ def train_iris_specialized():
             
             print(f"🔄 Starting training loop for Stage {stage}, Epoch {epoch+1}, Global epoch {global_epoch}")
             
-            # Add timeout to prevent hanging
-            import signal
-            def timeout_handler(signum, frame):
-                raise TimeoutError("Training batch timeout")
-            
-            pbar = tqdm(train_loader, desc=f"IRIS Stage {stage}, Epoch {epoch+1}", 
-                       colour='cyan', bar_format='{l_bar}{bar:30}{r_bar}')
-            optimizer.zero_grad()
-            
-            batch_count = 0
-            for batch_idx, batch in enumerate(pbar):
-                batch_count += 1
-                if batch_count % 10 == 0:
-                    print(f"Processing batch {batch_count}...")
+            # Create data loader iterator with timeout protection
+            try:
+                pbar = tqdm(train_loader, desc=f"IRIS Stage {stage}, Epoch {epoch+1}", 
+                           colour='cyan', bar_format='{l_bar}{bar:30}{r_bar}')
+                optimizer.zero_grad()
+                
+                batch_count = 0
+                stuck_counter = 0
+                last_batch_time = time.time()
+                
+                for batch_idx, batch in enumerate(pbar):
+                    current_time = time.time()
+                    # Check if we're stuck (more than 60 seconds on a batch)
+                    if current_time - last_batch_time > 60:
+                        stuck_counter += 1
+                        print(f"⚠️ Warning: Batch {batch_idx} taking too long ({current_time - last_batch_time:.1f}s)")
+                        if stuck_counter > 3:
+                            print("❌ Training appears stuck, breaking out of epoch")
+                            break
+                    else:
+                        stuck_counter = 0
+                    last_batch_time = current_time
+                    
+                    batch_count += 1
+                    if batch_count % 10 == 0:
+                        print(f"Processing batch {batch_count}...")
                 inputs = batch['inputs'].to(device, non_blocking=True)
                 outputs = batch['outputs'].to(device, non_blocking=True)
                 
@@ -799,7 +813,11 @@ def train_iris_specialized():
                                 is_exact=exact_matches[i].item()
                             )
             
-            scheduler.step()
+                scheduler.step()
+                
+            except Exception as e:
+                print(f"❌ Error in training loop: {e}")
+                print("Attempting to continue...")
             
             # Validation every 5 epochs
             if epoch % 5 == 0:

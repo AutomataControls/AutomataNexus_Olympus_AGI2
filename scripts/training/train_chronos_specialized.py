@@ -139,18 +139,25 @@ class ChronosSpecializedDataset(Dataset):
     def __getitem__(self, idx):
         # MEPT replay integration - prioritize temporal patterns
         if (self.replay_buffer and random.random() < self.replay_ratio and 
-            len(self.replay_buffer.buffer) > 0):
+            len(self.replay_buffer.temporal_memory) > 0):
             # Handle different replay buffer APIs
-            if hasattr(self.replay_buffer, 'sample_batch'):
+            if hasattr(self.replay_buffer, 'replay_experiences'):
                 # CHRONOS-specific memory system
-                experiences = self.replay_buffer.sample_batch(1, strategy='temporal_coherence')
+                experiences = self.replay_buffer.replay_experiences(1)
             else:
                 # Generic replay buffer
                 experiences = self.replay_buffer.sample(1, exact_ratio=0.7)  # Favor temporal matches
             if experiences:
                 exp = experiences[0]
-                input_tensor = exp['input']
-                output_tensor = exp['output']
+                if hasattr(exp, 'sequence'):
+                    # CHRONOS TemporalMemory object
+                    sequence = exp.sequence
+                    input_tensor = sequence[0] if len(sequence) > 0 else torch.zeros(1, 10, 6, 6)
+                    output_tensor = sequence[-1] if len(sequence) > 1 else input_tensor
+                else:
+                    # Generic replay buffer format
+                    input_tensor = exp['input']
+                    output_tensor = exp['output']
                 
                 # Handle tensor dimensions
                 if input_tensor.dim() == 4:

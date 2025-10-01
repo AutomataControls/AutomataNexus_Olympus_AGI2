@@ -45,15 +45,15 @@ class MinervaOperation(Enum):
     GRID_XOR = "grid_xor"
     GRID_NOT = "grid_not"
     
-    # Subdivision operations
-    SPLIT_QUADRANTS = "split_quadrants"
-    EXTRACT_QUADRANT = "extract_quadrant"
-    MERGE_QUADRANTS = "merge_quadrants"
-    
     # Frame operations
     EXTRACT_FRAME = "extract_frame"
     FILL_FRAME = "fill_frame"
     REMOVE_FRAME = "remove_frame"
+    
+    # Subdivision operations
+    SPLIT_QUADRANTS = "split_quadrants"
+    EXTRACT_QUADRANT = "extract_quadrant"
+    MERGE_QUADRANTS = "merge_quadrants"
 
 
 class MinervaDSLProgram:
@@ -113,6 +113,14 @@ class MinervaDSLExecutor:
         elif op == MinervaOperation.EXTRACT_CENTER:
             return MinervaDSLExecutor._extract_center(grid, params)
         
+        # Frame operations
+        elif op == MinervaOperation.EXTRACT_FRAME:
+            return MinervaDSLExecutor._extract_frame(grid, params)
+        elif op == MinervaOperation.FILL_FRAME:
+            return MinervaDSLExecutor._fill_frame(grid, params)
+        elif op == MinervaOperation.REMOVE_FRAME:
+            return MinervaDSLExecutor._remove_frame(grid, params)
+        
         # Pattern operations
         elif op == MinervaOperation.COMPLETE_SYMMETRY:
             return MinervaDSLExecutor._complete_symmetry(grid, params)
@@ -154,14 +162,6 @@ class MinervaDSLExecutor:
             return MinervaDSLExecutor._extract_quadrant(grid, params)
         elif op == MinervaOperation.MERGE_QUADRANTS:
             return MinervaDSLExecutor._merge_quadrants(grid, params)
-        
-        # Frame operations
-        elif op == MinervaOperation.EXTRACT_FRAME:
-            return MinervaDSLExecutor._extract_frame(grid, params)
-        elif op == MinervaOperation.FILL_FRAME:
-            return MinervaDSLExecutor._fill_frame(grid, params)
-        elif op == MinervaOperation.REMOVE_FRAME:
-            return MinervaDSLExecutor._remove_frame(grid, params)
         
         else:
             return grid
@@ -630,9 +630,16 @@ class MINERVADSLTraining:
             base_grids = MINERVADSLTraining._create_advanced_grids(curriculum_stage)
             programs = MINERVADSLGenerator.generate_strategic_programs()
         
-        # Generate samples
+        # Generate samples (with limit to prevent hanging)
+        sample_count = 0
+        max_samples = 100  # Limit to prevent hanging
+        
         for grid in base_grids:
+            if sample_count >= max_samples:
+                break
             for program in programs:
+                if sample_count >= max_samples:
+                    break
                 try:
                     output = program.execute(grid)
                     if output.shape == grid.shape and not np.array_equal(output, grid):
@@ -643,6 +650,7 @@ class MINERVADSLTraining:
                             'stage': curriculum_stage,
                             'type': 'minerva_dsl'
                         })
+                        sample_count += 1
                 except Exception:
                     continue
         

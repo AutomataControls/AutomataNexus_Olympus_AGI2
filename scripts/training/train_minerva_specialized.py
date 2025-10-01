@@ -405,8 +405,9 @@ def train_minerva_specialized():
     # Mixed precision
     scaler = GradScaler()
     
-    # Data directory
+    # Data directory and models directory
     DATA_DIR = '/content/AutomataNexus_Olympus_AGI2/data'
+    os.makedirs('/content/AutomataNexus_Olympus_AGI2/models', exist_ok=True)
     
     # Training metrics
     best_exact = 0.0
@@ -474,13 +475,17 @@ def train_minerva_specialized():
             global_epoch += 1
             
             # Exact match injection training (Stage 0 only, first 5 epochs)
+            print(f"DEBUG: Stage={stage}, Epoch={epoch}, exact_dataset={exact_dataset is not None}")
             if exact_dataset and stage == 0 and epoch < 5:  # Only first 5 epochs of Stage 0
+                print(f"🔥 Running exact injection: Stage {stage}, Epoch {epoch}")
                 model = inject_exact_match_training(
                     model, device=device,
                     num_epochs=1,
                     target_accuracy=95.0
                 )
                 print(f"💉 Exact injection completed - Epoch {global_epoch}")
+            else:
+                print(f"⏭️ Skipping exact injection: Stage {stage}, Epoch {epoch}")
             
             # Main training
             model.train()

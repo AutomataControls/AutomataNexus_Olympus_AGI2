@@ -425,8 +425,9 @@ def train_iris_specialized():
     # Mixed precision
     scaler = GradScaler()
     
-    # Data directory
+    # Data directory and models directory
     DATA_DIR = '/content/AutomataNexus_Olympus_AGI2/data'
+    os.makedirs('/content/AutomataNexus_Olympus_AGI2/models', exist_ok=True)
     
     # Training metrics
     best_exact = 0.0

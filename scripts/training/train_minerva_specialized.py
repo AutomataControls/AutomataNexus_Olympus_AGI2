@@ -693,12 +693,24 @@ def train_minerva_specialized():
                 train_metrics['exact'] += losses['exact_count'].item()
                 train_metrics['samples'] += input_grids.size(0)
                 
-                pbar.set_postfix({
+                # Handle different loss function outputs
+                postfix_dict = {
                     'loss': f"{losses['total'].item():.3f}",
-                    'exact': f"{losses['exact_count'].item():.0f}",
-                    'relational': f"{losses['relational'].item():.3f}",
-                    'pattern': f"{losses['pattern_memory'].item():.3f}"
-                })
+                    'exact': f"{losses['exact_count'].item():.0f}"
+                }
+                
+                # Add optional keys if they exist
+                if 'relational' in losses:
+                    postfix_dict['relational'] = f"{losses['relational'].item():.3f}"
+                elif 'spatial' in losses:
+                    postfix_dict['spatial'] = f"{losses['spatial'].item():.3f}"
+                    
+                if 'pattern_memory' in losses:
+                    postfix_dict['pattern'] = f"{losses['pattern_memory'].item():.3f}"
+                elif 'object' in losses:
+                    postfix_dict['object'] = f"{losses['object'].item():.3f}"
+                
+                pbar.set_postfix(postfix_dict)
                 
                 # LEAP training integration with stage-specific complexity
                 if USE_LEAP and 'leap_trainer' in systems and batch_idx % 3 == 0:

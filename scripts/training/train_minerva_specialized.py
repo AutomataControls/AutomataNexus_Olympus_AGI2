@@ -74,7 +74,7 @@ except ImportError:
     print("⚠️ LEAP-PRISM bridge not available")
 
 # MINERVA-specific exact match injection
-def minerva_exact_match_injection(model, device, num_epochs=25, target_accuracy=50.0):
+def minerva_exact_match_injection(model, device, num_epochs=50, target_accuracy=85.0):
     """MINERVA-specific exact match injection using MINERVA_CONFIG - EXTENDED FOR ARC COMPETITION"""
     print("🎯 MINERVA EXACT MATCH INJECTION - EXTENDED")
     print("=" * 50)
@@ -709,11 +709,11 @@ def train_minerva_specialized():
             target_acc = 50.0 if stage == 0 else 60.0  # Realistic targets for injection
             
             if exact_dataset and stage_config['exact_injection'] and epoch == 0:  # ONLY FIRST EPOCH
-                print(f"🔥 Running MINERVA exact injection: Stage {stage}, Epoch {epoch}, Target: {target_acc}%")
+                print(f"🔥 Running MINERVA exact injection: Stage {stage}, Epoch {epoch}, Target: 85.0%")
                 model = minerva_exact_match_injection(
                     model, device=device,
-                    num_epochs=10,
-                    target_accuracy=target_acc
+                    num_epochs=50,  # Much longer for 85% target
+                    target_accuracy=85.0  # AGGRESSIVE 85% target for ARC
                 )
                 print(f"💉 Exact injection completed - Stage {stage}, Epoch {global_epoch}")
                 # Memory cleanup after exact match injection

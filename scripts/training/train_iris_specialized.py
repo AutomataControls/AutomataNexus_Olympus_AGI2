@@ -1255,12 +1255,39 @@ def train_iris_specialized():
                 stuck_counter = 0
                 last_batch_time = time.time()
                 
-                # Use manual progress tracking instead of tqdm
-                for batch_idx, batch in enumerate(train_loader):
+                # Create iterator manually to debug hanging issue
+                train_iter = iter(train_loader)
+                
+                for batch_idx in range(len(train_loader)):
+                    print(f"\n🔍 DEBUG: About to fetch batch {batch_idx+1}/{len(train_loader)}", flush=True)
+                    
+                    # Try to get the next batch with timeout
+                    import signal
+                    
+                    def timeout_handler(signum, frame):
+                        raise TimeoutError(f"DataLoader timeout on batch {batch_idx+1}")
+                    
+                    signal.signal(signal.SIGALRM, timeout_handler)
+                    signal.alarm(30)  # 30 second timeout
+                    
+                    try:
+                        batch = next(train_iter)
+                        signal.alarm(0)  # Cancel alarm
+                        print(f"✅ Successfully fetched batch {batch_idx+1}/{len(train_loader)}", flush=True)
+                    except (StopIteration, TimeoutError) as e:
+                        signal.alarm(0)  # Cancel alarm
+                        print(f"❌ Failed to fetch batch {batch_idx+1}: {e}")
+                        if batch_idx == 0:
+                            print("❌ Cannot even get first batch, breaking")
+                            break
+                        else:
+                            print(f"✅ Successfully processed {batch_idx} batches, moving to next epoch")
+                            break
+                    
                     # Update progress manually
                     progress = (batch_idx + 1) / len(train_loader) * 100
                     print(f"\rIRIS Stage {stage}, Epoch {epoch+1}: {progress:.0f}% {batch_idx+1}/{len(train_loader)}", end='', flush=True)
-                    print(f"\n🔍 DEBUG: Starting batch {batch_idx+1}/{len(train_loader)}")
+                    print(f"\n🔍 DEBUG: Starting batch processing {batch_idx+1}/{len(train_loader)}")
                     current_time = time.time()
                     # Check if we're stuck (more than 60 seconds on a batch)
                     if current_time - last_batch_time > 60:

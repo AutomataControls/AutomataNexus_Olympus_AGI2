@@ -23,8 +23,24 @@ if MINERVA_SYSTEMS_AVAILABLE:
         'create_minerva_prism_system', 'MinervaProgramSynthesizer', 'MinervaProgramLibrary'
     ])
 
+# IRIS training systems
+try:
+    from .iris_leap import create_iris_leap_system, IrisLEAPTrainer, IrisPatternGenerator
+    from .iris_mept import create_iris_mept_system, IrisMEPTLoss, IrisExperienceReplayBuffer, IrisPatternBank
+    from .iris_prism import create_iris_prism_system, IrisProgramSynthesizer, IrisProgramLibrary
+    IRIS_SYSTEMS_AVAILABLE = True
+except ImportError as e:
+    IRIS_SYSTEMS_AVAILABLE = False
+    print(f"Warning: IRIS training systems not available: {e}")
+
+if IRIS_SYSTEMS_AVAILABLE:
+    __all__.extend([
+        'create_iris_leap_system', 'IrisLEAPTrainer', 'IrisPatternGenerator',
+        'create_iris_mept_system', 'IrisMEPTLoss', 'IrisExperienceReplayBuffer', 'IrisPatternBank',
+        'create_iris_prism_system', 'IrisProgramSynthesizer', 'IrisProgramLibrary'
+    ])
+
 # Future model-specific systems will be added here:
-# - IRIS systems (color pattern focus)
 # - ATLAS systems (spatial transformation focus)  
 # - CHRONOS systems (temporal sequence focus)
 # - PROMETHEUS systems (meta-learning focus)

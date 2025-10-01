@@ -1,93 +1,768 @@
 """
 IRIS-specific DSL integration for color patterns and transformations
-Generates deterministic training samples optimized for IRIS's color perception
+COMPLETELY INDEPENDENT - No imports from base DSL
 """
 
 import numpy as np
 import torch
 from typing import List, Dict, Any, Tuple, Optional
-from .arc_dsl import DSLProgram, DSLProgramGenerator, DSLExecutor, Operation
+from enum import Enum
+
+
+class IrisOperation(Enum):
+    """IRIS-specific operations for color perception and transformation"""
+    # Basic color transformations
+    SWAP_COLORS = "swap_colors"
+    INVERT_COLORS = "invert_colors"
+    CYCLE_COLORS = "cycle_colors"
+    MAP_COLORS = "map_colors"
+    
+    # Color filtering
+    FILTER_BY_COLOR = "filter_by_color"
+    EXTRACT_COLOR_MASK = "extract_color_mask"
+    REMOVE_COLOR = "remove_color"
+    ISOLATE_COLOR = "isolate_color"
+    
+    # Gradient operations
+    CREATE_GRADIENT = "create_gradient"
+    APPLY_COLOR_FADE = "apply_color_fade"
+    COLOR_DISTANCE_MAP = "color_distance_map"
+    RADIAL_GRADIENT = "radial_gradient"
+    
+    # Multi-color patterns
+    ALTERNATE_COLORS = "alternate_colors"
+    RAINBOW_PATTERN = "rainbow_pattern"
+    COLOR_BY_REGION = "color_by_region"
+    CHECKERBOARD_COLORS = "checkerboard_colors"
+    
+    # Color mixing
+    BLEND_COLORS = "blend_colors"
+    COLOR_ARITHMETIC = "color_arithmetic"
+    CONDITIONAL_COLOR = "conditional_color"
+    MIX_ADJACENT = "mix_adjacent"
+    
+    # Perceptual operations
+    COLOR_CLUSTERING = "color_clustering"
+    PALETTE_REDUCTION = "palette_reduction"
+    PERCEPTUAL_GROUPING = "perceptual_grouping"
+    COLOR_QUANTIZATION = "color_quantization"
+    
+    # Advanced color ops
+    COLOR_WAVE = "color_wave"
+    COLOR_SPIRAL = "color_spiral"
+    COLOR_MOSAIC = "color_mosaic"
+    COLOR_PROPAGATION = "color_propagation"
+
+
+class IrisDSLProgram:
+    """IRIS-specific DSL program representation"""
+    
+    def __init__(self, operations: List[Tuple[IrisOperation, Dict[str, Any]]]):
+        self.operations = operations
+    
+    def execute(self, grid: np.ndarray) -> np.ndarray:
+        """Execute the IRIS DSL program on input grid"""
+        result = grid.copy()
+        for op, params in self.operations:
+            result = IrisDSLExecutor.execute_operation(result, op, params)
+        return result
+    
+    def to_string(self) -> str:
+        """Convert program to readable string"""
+        prog_str = []
+        for op, params in self.operations:
+            param_str = ", ".join(f"{k}={v}" for k, v in params.items())
+            prog_str.append(f"{op.value}({param_str})")
+        return " -> ".join(prog_str)
+
+
+class IrisDSLExecutor:
+    """Executes IRIS-specific DSL operations"""
+    
+    @staticmethod
+    def execute_operation(grid: np.ndarray, op: IrisOperation, params: Dict[str, Any]) -> np.ndarray:
+        """Execute a single IRIS DSL operation"""
+        
+        # Basic color transformations
+        if op == IrisOperation.SWAP_COLORS:
+            return IrisDSLExecutor._swap_colors(grid, params)
+        elif op == IrisOperation.INVERT_COLORS:
+            return IrisDSLExecutor._invert_colors(grid, params)
+        elif op == IrisOperation.CYCLE_COLORS:
+            return IrisDSLExecutor._cycle_colors(grid, params)
+        elif op == IrisOperation.MAP_COLORS:
+            return IrisDSLExecutor._map_colors(grid, params)
+        
+        # Color filtering
+        elif op == IrisOperation.FILTER_BY_COLOR:
+            return IrisDSLExecutor._filter_by_color(grid, params)
+        elif op == IrisOperation.EXTRACT_COLOR_MASK:
+            return IrisDSLExecutor._extract_color_mask(grid, params)
+        elif op == IrisOperation.REMOVE_COLOR:
+            return IrisDSLExecutor._remove_color(grid, params)
+        elif op == IrisOperation.ISOLATE_COLOR:
+            return IrisDSLExecutor._isolate_color(grid, params)
+        
+        # Gradient operations
+        elif op == IrisOperation.CREATE_GRADIENT:
+            return IrisDSLExecutor._create_gradient(grid, params)
+        elif op == IrisOperation.APPLY_COLOR_FADE:
+            return IrisDSLExecutor._apply_color_fade(grid, params)
+        elif op == IrisOperation.COLOR_DISTANCE_MAP:
+            return IrisDSLExecutor._color_distance_map(grid, params)
+        elif op == IrisOperation.RADIAL_GRADIENT:
+            return IrisDSLExecutor._radial_gradient(grid, params)
+        
+        # Multi-color patterns
+        elif op == IrisOperation.ALTERNATE_COLORS:
+            return IrisDSLExecutor._alternate_colors(grid, params)
+        elif op == IrisOperation.RAINBOW_PATTERN:
+            return IrisDSLExecutor._rainbow_pattern(grid, params)
+        elif op == IrisOperation.COLOR_BY_REGION:
+            return IrisDSLExecutor._color_by_region(grid, params)
+        elif op == IrisOperation.CHECKERBOARD_COLORS:
+            return IrisDSLExecutor._checkerboard_colors(grid, params)
+        
+        # Color mixing
+        elif op == IrisOperation.BLEND_COLORS:
+            return IrisDSLExecutor._blend_colors(grid, params)
+        elif op == IrisOperation.COLOR_ARITHMETIC:
+            return IrisDSLExecutor._color_arithmetic(grid, params)
+        elif op == IrisOperation.CONDITIONAL_COLOR:
+            return IrisDSLExecutor._conditional_color(grid, params)
+        elif op == IrisOperation.MIX_ADJACENT:
+            return IrisDSLExecutor._mix_adjacent(grid, params)
+        
+        # Perceptual operations
+        elif op == IrisOperation.COLOR_CLUSTERING:
+            return IrisDSLExecutor._color_clustering(grid, params)
+        elif op == IrisOperation.PALETTE_REDUCTION:
+            return IrisDSLExecutor._palette_reduction(grid, params)
+        elif op == IrisOperation.PERCEPTUAL_GROUPING:
+            return IrisDSLExecutor._perceptual_grouping(grid, params)
+        elif op == IrisOperation.COLOR_QUANTIZATION:
+            return IrisDSLExecutor._color_quantization(grid, params)
+        
+        # Advanced color operations
+        elif op == IrisOperation.COLOR_WAVE:
+            return IrisDSLExecutor._color_wave(grid, params)
+        elif op == IrisOperation.COLOR_SPIRAL:
+            return IrisDSLExecutor._color_spiral(grid, params)
+        elif op == IrisOperation.COLOR_MOSAIC:
+            return IrisDSLExecutor._color_mosaic(grid, params)
+        elif op == IrisOperation.COLOR_PROPAGATION:
+            return IrisDSLExecutor._color_propagation(grid, params)
+        
+        else:
+            return grid
+    
+    @staticmethod
+    def _swap_colors(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Swap two colors"""
+        color1 = params.get('color1', 0)
+        color2 = params.get('color2', 1)
+        result = grid.copy()
+        
+        mask1 = grid == color1
+        mask2 = grid == color2
+        result[mask1] = color2
+        result[mask2] = color1
+        
+        return result
+    
+    @staticmethod
+    def _invert_colors(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Invert color values"""
+        max_color = params.get('max_color', 9)
+        return max_color - grid
+    
+    @staticmethod
+    def _cycle_colors(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Cycle colors by offset"""
+        offset = params.get('offset', 1)
+        max_color = params.get('max_color', 9)
+        return (grid + offset) % (max_color + 1)
+    
+    @staticmethod
+    def _map_colors(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Map colors according to dictionary"""
+        mapping = params.get('mapping', {})
+        result = grid.copy()
+        
+        for old_color, new_color in mapping.items():
+            result[grid == old_color] = new_color
+        
+        return result
+    
+    @staticmethod
+    def _filter_by_color(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Keep only specified colors"""
+        colors_to_keep = params.get('colors', [1, 2, 3])
+        background = params.get('background', 0)
+        result = np.full_like(grid, background)
+        
+        for color in colors_to_keep:
+            result[grid == color] = color
+        
+        return result
+    
+    @staticmethod
+    def _extract_color_mask(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Extract binary mask for color"""
+        target_color = params.get('color', 1)
+        result = np.zeros_like(grid)
+        result[grid == target_color] = 1
+        return result
+    
+    @staticmethod
+    def _remove_color(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Remove specific color"""
+        color_to_remove = params.get('color', 0)
+        replacement = params.get('replacement', 0)
+        result = grid.copy()
+        result[grid == color_to_remove] = replacement
+        return result
+    
+    @staticmethod
+    def _isolate_color(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Isolate single color, set others to background"""
+        target_color = params.get('color', 1)
+        background = params.get('background', 0)
+        result = np.full_like(grid, background)
+        result[grid == target_color] = target_color
+        return result
+    
+    @staticmethod
+    def _create_gradient(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Create color gradient"""
+        direction = params.get('direction', 'horizontal')
+        start_color = params.get('start', 0)
+        end_color = params.get('end', 9)
+        
+        h, w = grid.shape
+        result = np.zeros_like(grid)
+        
+        if direction == 'horizontal':
+            for j in range(w):
+                color = start_color + (end_color - start_color) * j // max(1, w - 1)
+                result[:, j] = color
+        elif direction == 'vertical':
+            for i in range(h):
+                color = start_color + (end_color - start_color) * i // max(1, h - 1)
+                result[i, :] = color
+        elif direction == 'diagonal':
+            for i in range(h):
+                for j in range(w):
+                    progress = (i + j) / max(1, h + w - 2)
+                    color = int(start_color + (end_color - start_color) * progress)
+                    result[i, j] = color
+        
+        return result
+    
+    @staticmethod
+    def _apply_color_fade(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Apply fading effect to colors"""
+        fade_direction = params.get('direction', 'right')
+        fade_strength = params.get('strength', 0.5)
+        
+        h, w = grid.shape
+        result = grid.copy().astype(float)
+        
+        if fade_direction == 'right':
+            for j in range(w):
+                factor = 1.0 - (j / w) * fade_strength
+                result[:, j] *= factor
+        elif fade_direction == 'left':
+            for j in range(w):
+                factor = 1.0 - ((w - 1 - j) / w) * fade_strength
+                result[:, j] *= factor
+        elif fade_direction == 'down':
+            for i in range(h):
+                factor = 1.0 - (i / h) * fade_strength
+                result[i, :] *= factor
+        elif fade_direction == 'up':
+            for i in range(h):
+                factor = 1.0 - ((h - 1 - i) / h) * fade_strength
+                result[i, :] *= factor
+        
+        return np.round(result).astype(np.int32)
+    
+    @staticmethod
+    def _color_distance_map(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Create map based on distance from color"""
+        reference_color = params.get('reference', 5)
+        result = np.abs(grid - reference_color)
+        return np.clip(result, 0, 9)
+    
+    @staticmethod
+    def _radial_gradient(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Create radial color gradient"""
+        center_color = params.get('center', 0)
+        edge_color = params.get('edge', 9)
+        
+        h, w = grid.shape
+        center_h, center_w = h // 2, w // 2
+        max_dist = np.sqrt(center_h**2 + center_w**2)
+        
+        result = np.zeros_like(grid)
+        
+        for i in range(h):
+            for j in range(w):
+                dist = np.sqrt((i - center_h)**2 + (j - center_w)**2)
+                progress = dist / max_dist
+                color = int(center_color + (edge_color - center_color) * progress)
+                result[i, j] = np.clip(color, 0, 9)
+        
+        return result
+    
+    @staticmethod
+    def _alternate_colors(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Create alternating color pattern"""
+        colors = params.get('colors', [1, 2, 3])
+        pattern = params.get('pattern', 'row')
+        
+        h, w = grid.shape
+        result = np.zeros_like(grid)
+        
+        if pattern == 'row':
+            for i in range(h):
+                result[i, :] = colors[i % len(colors)]
+        elif pattern == 'column':
+            for j in range(w):
+                result[:, j] = colors[j % len(colors)]
+        elif pattern == 'diagonal':
+            for i in range(h):
+                for j in range(w):
+                    result[i, j] = colors[(i + j) % len(colors)]
+        
+        return result
+    
+    @staticmethod
+    def _rainbow_pattern(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Create rainbow pattern"""
+        direction = params.get('direction', 'horizontal')
+        colors = [1, 2, 3, 4, 5, 6, 7]  # Rainbow colors
+        
+        h, w = grid.shape
+        result = np.zeros_like(grid)
+        
+        if direction == 'horizontal':
+            band_width = max(1, w // len(colors))
+            for j in range(w):
+                color_idx = min(j // band_width, len(colors) - 1)
+                result[:, j] = colors[color_idx]
+        else:
+            band_width = max(1, h // len(colors))
+            for i in range(h):
+                color_idx = min(i // band_width, len(colors) - 1)
+                result[i, :] = colors[color_idx]
+        
+        return result
+    
+    @staticmethod
+    def _color_by_region(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Color by connected regions"""
+        background = params.get('background', 0)
+        
+        try:
+            from scipy import ndimage
+            # Label connected components
+            labeled, num_features = ndimage.label(grid != background)
+            
+            result = np.zeros_like(grid)
+            for i in range(1, min(num_features + 1, 10)):
+                result[labeled == i] = i
+            
+            return result
+        except:
+            # Fallback: simple region coloring
+            return grid
+    
+    @staticmethod
+    def _checkerboard_colors(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Create checkerboard with specified colors"""
+        color1 = params.get('color1', 0)
+        color2 = params.get('color2', 1)
+        size = params.get('size', 1)
+        
+        h, w = grid.shape
+        result = np.zeros_like(grid)
+        
+        for i in range(h):
+            for j in range(w):
+                if ((i // size) + (j // size)) % 2 == 0:
+                    result[i, j] = color1
+                else:
+                    result[i, j] = color2
+        
+        return result
+    
+    @staticmethod
+    def _blend_colors(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Blend adjacent colors"""
+        mode = params.get('mode', 'average')
+        
+        h, w = grid.shape
+        result = grid.copy().astype(float)
+        
+        if mode == 'average':
+            # Average with neighbors
+            for i in range(1, h-1):
+                for j in range(1, w-1):
+                    neighbors = [
+                        grid[i-1, j], grid[i+1, j],
+                        grid[i, j-1], grid[i, j+1]
+                    ]
+                    result[i, j] = np.mean(neighbors)
+        
+        return np.round(result).astype(np.int32)
+    
+    @staticmethod
+    def _color_arithmetic(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Perform arithmetic operations on colors"""
+        operation = params.get('operation', 'add')
+        value = params.get('value', 1)
+        
+        if operation == 'add':
+            result = grid + value
+        elif operation == 'subtract':
+            result = grid - value
+        elif operation == 'multiply':
+            result = grid * value
+        elif operation == 'divide':
+            result = grid // max(1, value)
+        else:
+            result = grid
+        
+        return np.clip(result, 0, 9)
+    
+    @staticmethod
+    def _conditional_color(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Apply color based on condition"""
+        condition = params.get('condition', 'threshold')
+        threshold = params.get('threshold', 5)
+        true_color = params.get('true_color', 9)
+        false_color = params.get('false_color', 0)
+        
+        if condition == 'threshold':
+            result = np.where(grid >= threshold, true_color, false_color)
+        elif condition == 'even':
+            result = np.where(grid % 2 == 0, true_color, false_color)
+        elif condition == 'odd':
+            result = np.where(grid % 2 == 1, true_color, false_color)
+        else:
+            result = grid
+        
+        return result
+    
+    @staticmethod
+    def _mix_adjacent(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Mix colors with adjacent cells"""
+        direction = params.get('direction', 'horizontal')
+        
+        h, w = grid.shape
+        result = grid.copy()
+        
+        if direction == 'horizontal' and w > 1:
+            for i in range(h):
+                for j in range(1, w):
+                    result[i, j] = (grid[i, j] + grid[i, j-1]) // 2
+        elif direction == 'vertical' and h > 1:
+            for i in range(1, h):
+                for j in range(w):
+                    result[i, j] = (grid[i, j] + grid[i-1, j]) // 2
+        
+        return result
+    
+    @staticmethod
+    def _color_clustering(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Cluster similar colors together"""
+        n_clusters = params.get('n_clusters', 3)
+        
+        # Simple clustering by value ranges
+        unique_colors = np.unique(grid)
+        if len(unique_colors) <= n_clusters:
+            return grid
+        
+        # Create clusters
+        result = np.zeros_like(grid)
+        cluster_size = 10 // n_clusters
+        
+        for i in range(grid.shape[0]):
+            for j in range(grid.shape[1]):
+                cluster_id = min(grid[i, j] // cluster_size, n_clusters - 1)
+                result[i, j] = cluster_id * cluster_size
+        
+        return result
+    
+    @staticmethod
+    def _palette_reduction(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Reduce color palette"""
+        n_colors = params.get('n_colors', 4)
+        
+        # Get unique colors sorted by frequency
+        unique, counts = np.unique(grid, return_counts=True)
+        sorted_idx = np.argsort(counts)[::-1]
+        keep_colors = unique[sorted_idx][:n_colors]
+        
+        # Map other colors to nearest kept color
+        result = grid.copy()
+        for i in range(grid.shape[0]):
+            for j in range(grid.shape[1]):
+                if grid[i, j] not in keep_colors:
+                    # Find nearest kept color
+                    distances = np.abs(keep_colors - grid[i, j])
+                    nearest_idx = np.argmin(distances)
+                    result[i, j] = keep_colors[nearest_idx]
+        
+        return result
+    
+    @staticmethod
+    def _perceptual_grouping(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Group colors by perceptual similarity"""
+        threshold = params.get('threshold', 2)
+        
+        h, w = grid.shape
+        result = grid.copy()
+        
+        # Simple perceptual grouping by color distance
+        processed = np.zeros((h, w), dtype=bool)
+        group_color = 0
+        
+        for i in range(h):
+            for j in range(w):
+                if not processed[i, j]:
+                    # Start new group
+                    base_color = grid[i, j]
+                    
+                    # Find all similar colors
+                    for ii in range(h):
+                        for jj in range(w):
+                            if not processed[ii, jj]:
+                                if abs(grid[ii, jj] - base_color) <= threshold:
+                                    result[ii, jj] = group_color
+                                    processed[ii, jj] = True
+                    
+                    group_color = (group_color + 1) % 10
+        
+        return result
+    
+    @staticmethod
+    def _color_quantization(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Quantize colors to levels"""
+        levels = params.get('levels', 4)
+        
+        # Quantize to specified levels
+        step = 10 // levels
+        result = (grid // step) * step
+        
+        return np.clip(result, 0, 9)
+    
+    @staticmethod
+    def _color_wave(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Create wave-like color pattern"""
+        frequency = params.get('frequency', 1)
+        amplitude = params.get('amplitude', 3)
+        phase = params.get('phase', 0)
+        
+        h, w = grid.shape
+        result = np.zeros_like(grid)
+        
+        for i in range(h):
+            for j in range(w):
+                wave = np.sin((i + phase) * frequency * np.pi / h) + \
+                       np.sin((j + phase) * frequency * np.pi / w)
+                color = int((wave + 2) * amplitude) % 10
+                result[i, j] = color
+        
+        return result
+    
+    @staticmethod
+    def _color_spiral(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Create spiral color pattern"""
+        colors = params.get('colors', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+        
+        h, w = grid.shape
+        result = np.zeros_like(grid)
+        
+        # Generate spiral coordinates
+        top, bottom = 0, h - 1
+        left, right = 0, w - 1
+        color_idx = 0
+        
+        while top <= bottom and left <= right:
+            # Top row
+            for j in range(left, right + 1):
+                result[top, j] = colors[color_idx % len(colors)]
+                color_idx += 1
+            top += 1
+            
+            # Right column
+            for i in range(top, bottom + 1):
+                result[i, right] = colors[color_idx % len(colors)]
+                color_idx += 1
+            right -= 1
+            
+            # Bottom row
+            if top <= bottom:
+                for j in range(right, left - 1, -1):
+                    result[bottom, j] = colors[color_idx % len(colors)]
+                    color_idx += 1
+                bottom -= 1
+            
+            # Left column
+            if left <= right:
+                for i in range(bottom, top - 1, -1):
+                    result[i, left] = colors[color_idx % len(colors)]
+                    color_idx += 1
+                left += 1
+        
+        return result
+    
+    @staticmethod
+    def _color_mosaic(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Create mosaic color pattern"""
+        tile_size = params.get('tile_size', 2)
+        colors = params.get('colors', [1, 2, 3, 4])
+        
+        h, w = grid.shape
+        result = np.zeros_like(grid)
+        
+        for i in range(0, h, tile_size):
+            for j in range(0, w, tile_size):
+                # Random color for each tile
+                color_idx = ((i // tile_size) * (w // tile_size) + (j // tile_size)) % len(colors)
+                color = colors[color_idx]
+                
+                # Fill tile
+                for di in range(min(tile_size, h - i)):
+                    for dj in range(min(tile_size, w - j)):
+                        result[i + di, j + dj] = color
+        
+        return result
+    
+    @staticmethod
+    def _color_propagation(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Propagate colors from seed points"""
+        iterations = params.get('iterations', 5)
+        
+        h, w = grid.shape
+        result = grid.copy()
+        
+        # Find seed points (non-zero colors)
+        seeds = []
+        for i in range(h):
+            for j in range(w):
+                if grid[i, j] > 0:
+                    seeds.append((i, j, grid[i, j]))
+        
+        # Propagate colors
+        for _ in range(iterations):
+            new_result = result.copy()
+            for i in range(1, h-1):
+                for j in range(1, w-1):
+                    if result[i, j] == 0:
+                        # Check neighbors
+                        neighbors = []
+                        for di in [-1, 0, 1]:
+                            for dj in [-1, 0, 1]:
+                                if di == 0 and dj == 0:
+                                    continue
+                                ni, nj = i + di, j + dj
+                                if 0 <= ni < h and 0 <= nj < w and result[ni, nj] > 0:
+                                    neighbors.append(result[ni, nj])
+                        
+                        if neighbors:
+                            # Take most common neighbor color
+                            from collections import Counter
+                            color_counts = Counter(neighbors)
+                            new_result[i, j] = color_counts.most_common(1)[0][0]
+            
+            result = new_result
+        
+        return result
 
 
 class IRISDSLGenerator:
     """Generates DSL programs specifically for IRIS's color perception capabilities"""
     
     @staticmethod
-    def generate_color_pattern_programs() -> List[DSLProgram]:
+    def generate_color_pattern_programs() -> List[IrisDSLProgram]:
         """Generate programs focused on color-based patterns and transformations"""
         programs = []
         
-        # Color-specific operations for IRIS
-        color_operations = [
-            # Basic color transformations
-            [Operation.SWAP_COLORS],
-            [Operation.INVERT_COLORS],
-            [Operation.CYCLE_COLORS],
-            [Operation.MAP_COLORS],
-            
-            # Color filtering operations
-            [Operation.FILTER_BY_COLOR, 1],
-            [Operation.FILTER_BY_COLOR, 2],
-            [Operation.EXTRACT_COLOR_MASK, 3],
-            
-            # Color gradient operations
-            [Operation.CREATE_GRADIENT],
-            [Operation.APPLY_COLOR_FADE],
-            [Operation.COLOR_DISTANCE_MAP],
-            
-            # Multi-color patterns
-            [Operation.ALTERNATE_COLORS],
-            [Operation.RAINBOW_PATTERN],
-            [Operation.COLOR_BY_REGION],
-            
-            # Color mixing operations
-            [Operation.BLEND_COLORS],
-            [Operation.COLOR_ARITHMETIC],
-            [Operation.CONDITIONAL_COLOR],
-            
-            # Complex color transformations
-            [Operation.COLOR_PROPAGATION],
-            [Operation.COLOR_CLUSTERING],
-            [Operation.PALETTE_REDUCTION],
-        ]
+        # Basic color transformations
+        programs.append(IrisDSLProgram([(IrisOperation.SWAP_COLORS, {'color1': 1, 'color2': 2})]))
+        programs.append(IrisDSLProgram([(IrisOperation.INVERT_COLORS, {'max_color': 9})]))
+        programs.append(IrisDSLProgram([(IrisOperation.CYCLE_COLORS, {'offset': 1, 'max_color': 9})]))
         
-        for ops in color_operations:
-            program = DSLProgram(ops)
-            programs.append(program)
-            
+        # Color filtering
+        programs.append(IrisDSLProgram([(IrisOperation.FILTER_BY_COLOR, {'colors': [1, 2, 3], 'background': 0})]))
+        programs.append(IrisDSLProgram([(IrisOperation.EXTRACT_COLOR_MASK, {'color': 1})]))
+        programs.append(IrisDSLProgram([(IrisOperation.ISOLATE_COLOR, {'color': 2, 'background': 0})]))
+        
+        # Gradient patterns
+        programs.append(IrisDSLProgram([(IrisOperation.CREATE_GRADIENT, {'direction': 'horizontal', 'start': 0, 'end': 9})]))
+        programs.append(IrisDSLProgram([(IrisOperation.CREATE_GRADIENT, {'direction': 'vertical', 'start': 1, 'end': 8})]))
+        programs.append(IrisDSLProgram([(IrisOperation.RADIAL_GRADIENT, {'center': 0, 'edge': 9})]))
+        
+        # Multi-color patterns
+        programs.append(IrisDSLProgram([(IrisOperation.ALTERNATE_COLORS, {'colors': [1, 2, 3], 'pattern': 'row'})]))
+        programs.append(IrisDSLProgram([(IrisOperation.RAINBOW_PATTERN, {'direction': 'horizontal'})]))
+        programs.append(IrisDSLProgram([(IrisOperation.CHECKERBOARD_COLORS, {'color1': 0, 'color2': 1, 'size': 1})]))
+        
+        # Color mixing
+        programs.append(IrisDSLProgram([(IrisOperation.BLEND_COLORS, {'mode': 'average'})]))
+        programs.append(IrisDSLProgram([(IrisOperation.MIX_ADJACENT, {'direction': 'horizontal'})]))
+        
+        # Advanced patterns
+        programs.append(IrisDSLProgram([(IrisOperation.COLOR_WAVE, {'frequency': 1, 'amplitude': 3, 'phase': 0})]))
+        programs.append(IrisDSLProgram([(IrisOperation.COLOR_MOSAIC, {'tile_size': 2, 'colors': [1, 2, 3, 4]})]))
+        
+        # Combined operations
+        programs.append(IrisDSLProgram([
+            (IrisOperation.CREATE_GRADIENT, {'direction': 'horizontal', 'start': 0, 'end': 5}),
+            (IrisOperation.CYCLE_COLORS, {'offset': 2, 'max_color': 9})
+        ]))
+        
+        programs.append(IrisDSLProgram([
+            (IrisOperation.FILTER_BY_COLOR, {'colors': [1, 2, 3], 'background': 0}),
+            (IrisOperation.INVERT_COLORS, {'max_color': 9})
+        ]))
+        
         return programs
     
     @staticmethod
-    def generate_perceptual_programs() -> List[DSLProgram]:
+    def generate_perceptual_programs() -> List[IrisDSLProgram]:
         """Generate programs for perceptual color analysis"""
         programs = []
         
-        # Perceptual operations for advanced color reasoning
-        perceptual_ops = [
-            # Color relationship detection
-            [Operation.FIND_COLOR_PAIRS],
-            [Operation.DETECT_COLOR_HARMONY],
-            [Operation.IDENTIFY_DOMINANT_COLOR],
-            
-            # Color-based segmentation
-            [Operation.SEGMENT_BY_COLOR],
-            [Operation.GROUP_SIMILAR_COLORS],
-            [Operation.COLOR_CONNECTIVITY],
-            
-            # Conditional color operations
-            [Operation.IF_COLOR_PRESENT, Operation.APPLY_TRANSFORM],
-            [Operation.COLOR_BASED_RULE, Operation.EXECUTE_ACTION],
-            
-            # Complex color manipulations
-            [Operation.COLOR_WAVE_PATTERN],
-            [Operation.RADIAL_COLOR_GRADIENT],
-            [Operation.COLOR_SYMMETRY_CHECK],
-        ]
+        # Color grouping and clustering
+        programs.append(IrisDSLProgram([(IrisOperation.COLOR_CLUSTERING, {'n_clusters': 3})]))
+        programs.append(IrisDSLProgram([(IrisOperation.PALETTE_REDUCTION, {'n_colors': 4})]))
+        programs.append(IrisDSLProgram([(IrisOperation.PERCEPTUAL_GROUPING, {'threshold': 2})]))
+        programs.append(IrisDSLProgram([(IrisOperation.COLOR_QUANTIZATION, {'levels': 4})]))
         
-        for ops in perceptual_ops:
-            program = DSLProgram(ops)
-            programs.append(program)
-            
+        # Conditional operations
+        programs.append(IrisDSLProgram([(IrisOperation.CONDITIONAL_COLOR, {'condition': 'threshold', 'threshold': 5, 'true_color': 9, 'false_color': 0})]))
+        programs.append(IrisDSLProgram([(IrisOperation.COLOR_ARITHMETIC, {'operation': 'add', 'value': 2})]))
+        
+        # Spatial color operations
+        programs.append(IrisDSLProgram([(IrisOperation.COLOR_BY_REGION, {'background': 0})]))
+        programs.append(IrisDSLProgram([(IrisOperation.COLOR_PROPAGATION, {'iterations': 5})]))
+        programs.append(IrisDSLProgram([(IrisOperation.COLOR_SPIRAL, {'colors': list(range(10))})]))
+        
+        # Complex transformations
+        programs.append(IrisDSLProgram([
+            (IrisOperation.PALETTE_REDUCTION, {'n_colors': 3}),
+            (IrisOperation.COLOR_WAVE, {'frequency': 2, 'amplitude': 2, 'phase': 0})
+        ]))
+        
+        programs.append(IrisDSLProgram([
+            (IrisOperation.PERCEPTUAL_GROUPING, {'threshold': 2}),
+            (IrisOperation.ALTERNATE_COLORS, {'colors': [1, 4, 7], 'pattern': 'diagonal'})
+        ]))
+        
         return programs
 
 
@@ -411,8 +1086,11 @@ class IRISDSLTraining:
         total_transitions = h_transitions + v_transitions
         
         # Color clustering
-        from scipy import ndimage
-        labeled, num_regions = ndimage.label(grid)
+        try:
+            from scipy import ndimage
+            labeled, num_regions = ndimage.label(grid)
+        except:
+            num_regions = num_colors
         
         return {
             'size': (h, w),

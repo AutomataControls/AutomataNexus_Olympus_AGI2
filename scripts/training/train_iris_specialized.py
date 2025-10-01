@@ -29,24 +29,40 @@ from src.models.iris_model import EnhancedIrisNet
 
 # Import ALL AutomataNexus novel training components
 from src.dsl import DSLTrainingIntegration, DSLProgramGenerator
+from src.dsl.iris_dsl import IRISDSLTraining, IRISDSLGenerator
 from src.program_synthesis.synthesis_integration import LightweightProgramSynthesizer, ProgramSynthesisDataGenerator
 
-# PRISM System
+# PRISM System - Use IRIS-specific version
 try:
-    from src.program_synthesis.prism_system import PRISMSynthesizer, create_prism_system
-    PRISM_AVAILABLE = True
+    from src.training_systems.iris_prism import create_iris_prism_system
+    IRIS_PRISM_AVAILABLE = True
 except ImportError:
-    PRISM_AVAILABLE = False
-    print("⚠️ PRISM not available")
+    IRIS_PRISM_AVAILABLE = False
+    print("⚠️ IRIS-specific PRISM not available")
+    # Fallback to generic version
+    try:
+        from src.program_synthesis.prism_system import PRISMSynthesizer, create_prism_system
+        PRISM_AVAILABLE = True
+    except ImportError:
+        PRISM_AVAILABLE = False
+        print("⚠️ Generic PRISM not available")
 
-# MEPT and LEAP Systems
+# MEPT and LEAP Systems - Use IRIS-specific versions
 try:
-    from src.utils.mept_system import ExperienceReplayBuffer, PatternBank, MEPTLoss, create_mept_system
-    from src.utils.leap_system import AdaptivePatternGenerator, LEAPTrainer, create_leap_system
-    MEPT_LEAP_AVAILABLE = True
+    from src.training_systems.iris_mept import create_iris_mept_system, IrisMEPTLoss
+    from src.training_systems.iris_leap import create_iris_leap_system, IrisLEAPTrainer
+    IRIS_MEPT_LEAP_AVAILABLE = True
 except ImportError:
-    MEPT_LEAP_AVAILABLE = False
-    print("⚠️ MEPT/LEAP not available")
+    IRIS_MEPT_LEAP_AVAILABLE = False
+    print("⚠️ IRIS-specific MEPT/LEAP not available")
+    # Fallback to generic versions
+    try:
+        from src.utils.mept_system import ExperienceReplayBuffer, PatternBank, MEPTLoss, create_mept_system
+        from src.utils.leap_system import AdaptivePatternGenerator, LEAPTrainer, create_leap_system
+        MEPT_LEAP_AVAILABLE = True
+    except ImportError:
+        MEPT_LEAP_AVAILABLE = False
+        print("⚠️ Generic MEPT/LEAP not available")
 
 # LEAP-PRISM Bridge
 try:
@@ -99,9 +115,9 @@ STAGE_CONFIG = {
 }
 
 # Training components flags
-USE_MEPT = True and MEPT_LEAP_AVAILABLE
-USE_LEAP = True and MEPT_LEAP_AVAILABLE
-USE_PRISM = True and PRISM_AVAILABLE
+USE_MEPT = True and (IRIS_MEPT_LEAP_AVAILABLE or MEPT_LEAP_AVAILABLE)
+USE_LEAP = True and (IRIS_MEPT_LEAP_AVAILABLE or MEPT_LEAP_AVAILABLE)
+USE_PRISM = True and (IRIS_PRISM_AVAILABLE or PRISM_AVAILABLE)
 USE_EXACT_BOOST = True and EXACT_BOOST_AVAILABLE
 USE_LEAP_PRISM_BRIDGE = True and LEAP_PRISM_BRIDGE_AVAILABLE
 
@@ -418,30 +434,50 @@ def train_iris_specialized():
     # Initialize all AutomataNexus training systems
     systems = {}
     
-    # MEPT System
+    # MEPT System - Use IRIS-specific if available
     if USE_MEPT:
-        mept_components = create_mept_system(
-            capacity=40000,  # Smaller for color-focused patterns
-            pattern_bank_size=8000,
-            transformation_penalty=IRIS_CONFIG['transform_penalty'],
-            exact_match_bonus=IRIS_CONFIG['exact_match_bonus']
-        )
+        if IRIS_MEPT_LEAP_AVAILABLE:
+            mept_components = create_iris_mept_system(
+                capacity=40000,  # Smaller for color-focused patterns
+                pattern_bank_size=8000,
+                transformation_penalty=IRIS_CONFIG['transform_penalty'],
+                exact_match_bonus=IRIS_CONFIG['exact_match_bonus']
+            )
+            print("✅ IRIS-specific MEPT system initialized")
+        else:
+            mept_components = create_mept_system(
+                capacity=40000,
+                pattern_bank_size=8000,
+                transformation_penalty=IRIS_CONFIG['transform_penalty'],
+                exact_match_bonus=IRIS_CONFIG['exact_match_bonus']
+            )
+            print("✅ Generic MEPT system initialized")
         systems['replay_buffer'] = mept_components['replay_buffer']
         systems['pattern_bank'] = mept_components['pattern_bank']
-        print("✅ MEPT system initialized")
+        systems['loss_fn'] = mept_components.get('loss_fn')  # For IRIS-specific loss
     
-    # LEAP System  
+    # LEAP System - Use IRIS-specific if available
     if USE_LEAP:
-        leap_components = create_leap_system(device)
+        if IRIS_MEPT_LEAP_AVAILABLE:
+            leap_components = create_iris_leap_system(device)
+            print("✅ IRIS-specific LEAP system initialized")
+        else:
+            leap_components = create_leap_system(device)
+            print("✅ Generic LEAP system initialized")
         systems['leap_trainer'] = leap_components['trainer']
-        systems['pattern_generator'] = leap_components['pattern_generator']
-        systems['weak_detector'] = leap_components['detector']
-        print("✅ LEAP system initialized")
+        systems['pattern_generator'] = leap_components.get('pattern_generator')
+        systems['weak_detector'] = leap_components.get('detector')
     
-    # PRISM System
+    # PRISM System - Use IRIS-specific if available
     if USE_PRISM:
-        systems['prism_synthesizer'] = create_prism_system()
-        print("✅ PRISM system initialized")
+        if IRIS_PRISM_AVAILABLE:
+            prism_components = create_iris_prism_system()
+            systems['prism_synthesizer'] = prism_components['synthesizer']
+            systems['prism_library'] = prism_components['library']
+            print("✅ IRIS-specific PRISM system initialized")
+        else:
+            systems['prism_synthesizer'] = create_prism_system()
+            print("✅ Generic PRISM system initialized")
     
     # LEAP-PRISM Bridge
     if USE_LEAP_PRISM_BRIDGE and USE_LEAP and USE_PRISM:

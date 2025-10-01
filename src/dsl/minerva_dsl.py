@@ -1,90 +1,598 @@
 """
 MINERVA-specific DSL integration for grid reasoning and strategic analysis
-Generates deterministic training samples optimized for MINERVA's architecture
+COMPLETELY INDEPENDENT - No imports from base DSL
 """
 
 import numpy as np
 import torch
 from typing import List, Dict, Any, Tuple, Optional
-try:
-    from scipy import ndimage
-except ImportError:
-    ndimage = None
-from .arc_dsl import DSLProgram, DSLProgramGenerator, DSLExecutor, Operation
+from enum import Enum
+
+
+class MinervaOperation(Enum):
+    """MINERVA-specific operations for grid reasoning"""
+    # Basic grid transformations
+    ROTATE_90 = "rotate_90"
+    ROTATE_180 = "rotate_180"
+    ROTATE_270 = "rotate_270"
+    FLIP_HORIZONTAL = "flip_horizontal"
+    FLIP_VERTICAL = "flip_vertical"
+    TRANSPOSE = "transpose"
+    
+    # Grid-specific operations
+    EXTRACT_GRID_LINES = "extract_grid_lines"
+    FILL_GRID_CELLS = "fill_grid_cells"
+    CREATE_CHECKERBOARD = "create_checkerboard"
+    EXTRACT_CORNERS = "extract_corners"
+    EXTRACT_EDGES = "extract_edges"
+    EXTRACT_CENTER = "extract_center"
+    
+    # Pattern operations
+    COMPLETE_SYMMETRY = "complete_symmetry"
+    EXTRACT_PATTERN = "extract_pattern"
+    REPEAT_PATTERN = "repeat_pattern"
+    MIRROR_PATTERN = "mirror_pattern"
+    
+    # Strategic operations
+    FIND_LARGEST_REGION = "find_largest_region"
+    FIND_SMALLEST_REGION = "find_smallest_region"
+    COUNT_REGIONS = "count_regions"
+    EXTRACT_BY_SIZE = "extract_by_size"
+    
+    # Logical grid operations
+    GRID_AND = "grid_and"
+    GRID_OR = "grid_or"
+    GRID_XOR = "grid_xor"
+    GRID_NOT = "grid_not"
+    
+    # Subdivision operations
+    SPLIT_QUADRANTS = "split_quadrants"
+    EXTRACT_QUADRANT = "extract_quadrant"
+    MERGE_QUADRANTS = "merge_quadrants"
+    
+    # Frame operations
+    EXTRACT_FRAME = "extract_frame"
+    FILL_FRAME = "fill_frame"
+    REMOVE_FRAME = "remove_frame"
+
+
+class MinervaDSLProgram:
+    """MINERVA-specific DSL program representation"""
+    
+    def __init__(self, operations: List[Tuple[MinervaOperation, Dict[str, Any]]]):
+        self.operations = operations
+    
+    def execute(self, grid: np.ndarray) -> np.ndarray:
+        """Execute the MINERVA DSL program on input grid"""
+        result = grid.copy()
+        for op, params in self.operations:
+            result = MinervaDSLExecutor.execute_operation(result, op, params)
+        return result
+    
+    def to_string(self) -> str:
+        """Convert program to readable string"""
+        prog_str = []
+        for op, params in self.operations:
+            param_str = ", ".join(f"{k}={v}" for k, v in params.items())
+            prog_str.append(f"{op.value}({param_str})")
+        return " -> ".join(prog_str)
+
+
+class MinervaDSLExecutor:
+    """Executes MINERVA-specific DSL operations"""
+    
+    @staticmethod
+    def execute_operation(grid: np.ndarray, op: MinervaOperation, params: Dict[str, Any]) -> np.ndarray:
+        """Execute a single MINERVA DSL operation"""
+        
+        # Basic transformations
+        if op == MinervaOperation.ROTATE_90:
+            return np.rot90(grid, k=1)
+        elif op == MinervaOperation.ROTATE_180:
+            return np.rot90(grid, k=2)
+        elif op == MinervaOperation.ROTATE_270:
+            return np.rot90(grid, k=3)
+        elif op == MinervaOperation.FLIP_HORIZONTAL:
+            return np.fliplr(grid)
+        elif op == MinervaOperation.FLIP_VERTICAL:
+            return np.flipud(grid)
+        elif op == MinervaOperation.TRANSPOSE:
+            return grid.T
+        
+        # Grid-specific operations
+        elif op == MinervaOperation.EXTRACT_GRID_LINES:
+            return MinervaDSLExecutor._extract_grid_lines(grid, params)
+        elif op == MinervaOperation.FILL_GRID_CELLS:
+            return MinervaDSLExecutor._fill_grid_cells(grid, params)
+        elif op == MinervaOperation.CREATE_CHECKERBOARD:
+            return MinervaDSLExecutor._create_checkerboard(grid, params)
+        elif op == MinervaOperation.EXTRACT_CORNERS:
+            return MinervaDSLExecutor._extract_corners(grid, params)
+        elif op == MinervaOperation.EXTRACT_EDGES:
+            return MinervaDSLExecutor._extract_edges(grid, params)
+        elif op == MinervaOperation.EXTRACT_CENTER:
+            return MinervaDSLExecutor._extract_center(grid, params)
+        
+        # Pattern operations
+        elif op == MinervaOperation.COMPLETE_SYMMETRY:
+            return MinervaDSLExecutor._complete_symmetry(grid, params)
+        elif op == MinervaOperation.EXTRACT_PATTERN:
+            return MinervaDSLExecutor._extract_pattern(grid, params)
+        elif op == MinervaOperation.REPEAT_PATTERN:
+            return MinervaDSLExecutor._repeat_pattern(grid, params)
+        elif op == MinervaOperation.MIRROR_PATTERN:
+            return MinervaDSLExecutor._mirror_pattern(grid, params)
+        
+        # Strategic operations
+        elif op == MinervaOperation.FIND_LARGEST_REGION:
+            return MinervaDSLExecutor._find_largest_region(grid, params)
+        elif op == MinervaOperation.FIND_SMALLEST_REGION:
+            return MinervaDSLExecutor._find_smallest_region(grid, params)
+        elif op == MinervaOperation.COUNT_REGIONS:
+            return MinervaDSLExecutor._count_regions(grid, params)
+        elif op == MinervaOperation.EXTRACT_BY_SIZE:
+            return MinervaDSLExecutor._extract_by_size(grid, params)
+        
+        # Logical operations
+        elif op == MinervaOperation.GRID_AND:
+            other = params.get('other', grid)
+            return np.minimum(grid, other)
+        elif op == MinervaOperation.GRID_OR:
+            other = params.get('other', grid)
+            return np.maximum(grid, other)
+        elif op == MinervaOperation.GRID_XOR:
+            other = params.get('other', grid)
+            return np.where(grid != other, np.maximum(grid, other), 0)
+        elif op == MinervaOperation.GRID_NOT:
+            max_val = params.get('max_val', 9)
+            return max_val - grid
+        
+        # Subdivision operations
+        elif op == MinervaOperation.SPLIT_QUADRANTS:
+            return MinervaDSLExecutor._split_quadrants(grid, params)
+        elif op == MinervaOperation.EXTRACT_QUADRANT:
+            return MinervaDSLExecutor._extract_quadrant(grid, params)
+        elif op == MinervaOperation.MERGE_QUADRANTS:
+            return MinervaDSLExecutor._merge_quadrants(grid, params)
+        
+        # Frame operations
+        elif op == MinervaOperation.EXTRACT_FRAME:
+            return MinervaDSLExecutor._extract_frame(grid, params)
+        elif op == MinervaOperation.FILL_FRAME:
+            return MinervaDSLExecutor._fill_frame(grid, params)
+        elif op == MinervaOperation.REMOVE_FRAME:
+            return MinervaDSLExecutor._remove_frame(grid, params)
+        
+        else:
+            return grid
+    
+    @staticmethod
+    def _extract_grid_lines(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Extract horizontal and vertical lines"""
+        spacing = params.get('spacing', 3)
+        color = params.get('color', 1)
+        result = np.zeros_like(grid)
+        
+        # Extract lines at regular intervals
+        for i in range(0, grid.shape[0], spacing):
+            result[i, :] = color
+        for j in range(0, grid.shape[1], spacing):
+            result[:, j] = color
+        
+        return result
+    
+    @staticmethod
+    def _fill_grid_cells(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Fill alternating grid cells"""
+        cell_size = params.get('cell_size', 2)
+        colors = params.get('colors', [1, 2])
+        result = grid.copy()
+        
+        for i in range(0, grid.shape[0], cell_size):
+            for j in range(0, grid.shape[1], cell_size):
+                color_idx = ((i // cell_size) + (j // cell_size)) % len(colors)
+                result[i:i+cell_size, j:j+cell_size] = colors[color_idx]
+        
+        return result
+    
+    @staticmethod
+    def _create_checkerboard(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Create checkerboard pattern"""
+        color1 = params.get('color1', 0)
+        color2 = params.get('color2', 1)
+        result = np.zeros_like(grid)
+        
+        for i in range(grid.shape[0]):
+            for j in range(grid.shape[1]):
+                if (i + j) % 2 == 0:
+                    result[i, j] = color1
+                else:
+                    result[i, j] = color2
+        
+        return result
+    
+    @staticmethod
+    def _extract_corners(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Extract corner regions"""
+        size = params.get('size', 2)
+        result = np.zeros_like(grid)
+        
+        # Top-left
+        result[:size, :size] = grid[:size, :size]
+        # Top-right
+        result[:size, -size:] = grid[:size, -size:]
+        # Bottom-left
+        result[-size:, :size] = grid[-size:, :size]
+        # Bottom-right
+        result[-size:, -size:] = grid[-size:, -size:]
+        
+        return result
+    
+    @staticmethod
+    def _extract_edges(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Extract edge pixels"""
+        width = params.get('width', 1)
+        result = np.zeros_like(grid)
+        
+        # Top and bottom edges
+        result[:width, :] = grid[:width, :]
+        result[-width:, :] = grid[-width:, :]
+        
+        # Left and right edges
+        result[:, :width] = grid[:, :width]
+        result[:, -width:] = grid[:, -width:]
+        
+        return result
+    
+    @staticmethod
+    def _extract_center(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Extract center region"""
+        ratio = params.get('ratio', 0.5)
+        h, w = grid.shape
+        center_h = int(h * ratio)
+        center_w = int(w * ratio)
+        
+        start_h = (h - center_h) // 2
+        start_w = (w - center_w) // 2
+        
+        result = np.zeros_like(grid)
+        result[start_h:start_h+center_h, start_w:start_w+center_w] = \
+            grid[start_h:start_h+center_h, start_w:start_w+center_w]
+        
+        return result
+    
+    @staticmethod
+    def _complete_symmetry(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Complete symmetrical pattern"""
+        axis = params.get('axis', 'horizontal')
+        
+        if axis == 'horizontal':
+            # Use top half to complete bottom
+            half = grid[:grid.shape[0]//2]
+            return np.vstack([half, np.flipud(half)])
+        else:
+            # Use left half to complete right
+            half = grid[:, :grid.shape[1]//2]
+            return np.hstack([half, np.fliplr(half)])
+    
+    @staticmethod
+    def _extract_pattern(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Extract repeating pattern"""
+        pattern_size = params.get('pattern_size', 3)
+        result = np.zeros_like(grid)
+        
+        # Extract first occurrence of pattern
+        result[:pattern_size, :pattern_size] = grid[:pattern_size, :pattern_size]
+        
+        return result
+    
+    @staticmethod
+    def _repeat_pattern(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Repeat a small pattern across the grid"""
+        pattern_h = params.get('pattern_h', 2)
+        pattern_w = params.get('pattern_w', 2)
+        
+        # Extract pattern from top-left
+        pattern = grid[:pattern_h, :pattern_w]
+        
+        # Repeat pattern
+        result = np.tile(pattern, (grid.shape[0] // pattern_h + 1, 
+                                  grid.shape[1] // pattern_w + 1))
+        
+        return result[:grid.shape[0], :grid.shape[1]]
+    
+    @staticmethod
+    def _mirror_pattern(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Mirror pattern in specified direction"""
+        direction = params.get('direction', 'horizontal')
+        
+        if direction == 'horizontal':
+            return np.hstack([grid, np.fliplr(grid)])
+        else:
+            return np.vstack([grid, np.flipud(grid)])
+    
+    @staticmethod
+    def _find_largest_region(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Find and extract largest connected region"""
+        background = params.get('background', 0)
+        
+        try:
+            from scipy import ndimage
+            labeled, num_features = ndimage.label(grid != background)
+            
+            if num_features == 0:
+                return np.full_like(grid, background)
+            
+            # Find largest region
+            sizes = [np.sum(labeled == i) for i in range(1, num_features + 1)]
+            largest_idx = np.argmax(sizes) + 1
+            
+            result = np.full_like(grid, background)
+            mask = (labeled == largest_idx)
+            result[mask] = grid[mask]
+            
+            return result
+        except:
+            # Fallback: return original grid
+            return grid
+    
+    @staticmethod
+    def _find_smallest_region(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Find and extract smallest connected region"""
+        background = params.get('background', 0)
+        
+        try:
+            from scipy import ndimage
+            labeled, num_features = ndimage.label(grid != background)
+            
+            if num_features == 0:
+                return np.full_like(grid, background)
+            
+            # Find smallest region
+            sizes = [np.sum(labeled == i) for i in range(1, num_features + 1)]
+            smallest_idx = np.argmin(sizes) + 1
+            
+            result = np.full_like(grid, background)
+            mask = (labeled == smallest_idx)
+            result[mask] = grid[mask]
+            
+            return result
+        except:
+            # Fallback: return original grid
+            return grid
+    
+    @staticmethod
+    def _count_regions(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Count and label connected regions"""
+        background = params.get('background', 0)
+        
+        try:
+            from scipy import ndimage
+            labeled, num_features = ndimage.label(grid != background)
+            
+            # Create result showing region count
+            result = np.full_like(grid, min(num_features, 9))
+            
+            return result
+        except:
+            # Fallback: return count of 1
+            return np.ones_like(grid)
+    
+    @staticmethod
+    def _extract_by_size(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Extract regions by size threshold"""
+        min_size = params.get('min_size', 3)
+        background = params.get('background', 0)
+        
+        try:
+            from scipy import ndimage
+            labeled, num_features = ndimage.label(grid != background)
+            
+            result = np.full_like(grid, background)
+            
+            for i in range(1, num_features + 1):
+                region_size = np.sum(labeled == i)
+                if region_size >= min_size:
+                    mask = (labeled == i)
+                    result[mask] = grid[mask]
+            
+            return result
+        except:
+            # Fallback: return original grid
+            return grid
+    
+    @staticmethod
+    def _split_quadrants(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Split grid into quadrants with different colors"""
+        h, w = grid.shape
+        mid_h, mid_w = h // 2, w // 2
+        
+        result = grid.copy()
+        
+        # Assign different values to each quadrant
+        result[:mid_h, :mid_w] = 1  # Top-left
+        result[:mid_h, mid_w:] = 2  # Top-right
+        result[mid_h:, :mid_w] = 3  # Bottom-left
+        result[mid_h:, mid_w:] = 4  # Bottom-right
+        
+        return result
+    
+    @staticmethod
+    def _extract_quadrant(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Extract specific quadrant"""
+        quadrant = params.get('quadrant', 1)  # 1=TL, 2=TR, 3=BL, 4=BR
+        h, w = grid.shape
+        mid_h, mid_w = h // 2, w // 2
+        
+        result = np.zeros_like(grid)
+        
+        if quadrant == 1:
+            result[:mid_h, :mid_w] = grid[:mid_h, :mid_w]
+        elif quadrant == 2:
+            result[:mid_h, mid_w:] = grid[:mid_h, mid_w:]
+        elif quadrant == 3:
+            result[mid_h:, :mid_w] = grid[mid_h:, :mid_w]
+        elif quadrant == 4:
+            result[mid_h:, mid_w:] = grid[mid_h:, mid_w:]
+        
+        return result
+    
+    @staticmethod
+    def _merge_quadrants(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Merge quadrants with specific rule"""
+        rule = params.get('rule', 'max')
+        h, w = grid.shape
+        mid_h, mid_w = h // 2, w // 2
+        
+        quadrants = [
+            grid[:mid_h, :mid_w],
+            grid[:mid_h, mid_w:],
+            grid[mid_h:, :mid_w],
+            grid[mid_h:, mid_w:]
+        ]
+        
+        if rule == 'max':
+            merged = np.maximum.reduce(quadrants)
+        elif rule == 'min':
+            merged = np.minimum.reduce(quadrants)
+        elif rule == 'sum':
+            merged = np.sum(quadrants, axis=0)
+        else:
+            merged = quadrants[0]
+        
+        # Tile the merged result
+        result = np.tile(merged, (2, 2))[:h, :w]
+        
+        return result
+    
+    @staticmethod
+    def _extract_frame(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Extract frame of the grid"""
+        width = params.get('width', 1)
+        result = np.zeros_like(grid)
+        
+        # Extract frame
+        result[:width, :] = grid[:width, :]
+        result[-width:, :] = grid[-width:, :]
+        result[:, :width] = grid[:, :width]
+        result[:, -width:] = grid[:, -width:]
+        
+        return result
+    
+    @staticmethod
+    def _fill_frame(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Fill frame with specific color"""
+        width = params.get('width', 1)
+        color = params.get('color', 1)
+        result = grid.copy()
+        
+        # Fill frame
+        result[:width, :] = color
+        result[-width:, :] = color
+        result[:, :width] = color
+        result[:, -width:] = color
+        
+        return result
+    
+    @staticmethod
+    def _remove_frame(grid: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
+        """Remove frame by setting to background"""
+        width = params.get('width', 1)
+        background = params.get('background', 0)
+        result = grid.copy()
+        
+        # Remove frame
+        result[:width, :] = background
+        result[-width:, :] = background
+        result[:, :width] = background
+        result[:, -width:] = background
+        
+        return result
 
 
 class MINERVADSLGenerator:
     """Generates DSL programs specifically for MINERVA's grid reasoning capabilities"""
     
     @staticmethod
-    def generate_grid_reasoning_programs() -> List[DSLProgram]:
+    def generate_grid_reasoning_programs() -> List[MinervaDSLProgram]:
         """Generate programs focused on grid-based patterns and transformations"""
         programs = []
         
-        # Grid-specific operations for MINERVA
-        grid_operations = [
-            # Basic grid transformations
-            [Operation.ROTATE_90],
-            [Operation.ROTATE_180],
-            [Operation.ROTATE_270],
-            [Operation.FLIP_HORIZONTAL],
-            [Operation.FLIP_VERTICAL],
-            [Operation.TRANSPOSE],
-            
-            # Strategic pattern operations
-            [Operation.FLOOD_FILL, 2],  # Fill with color 2
-            [Operation.FLOOD_FILL, 3],  # Fill with color 3
-            [Operation.EXTRACT_OBJECTS],
-            [Operation.SORT_BY_SIZE],
-            
-            # Combined transformations for complex reasoning
-            [Operation.ROTATE_90, Operation.FLIP_HORIZONTAL],
-            [Operation.TRANSPOSE, Operation.ROTATE_90],
-            [Operation.FLOOD_FILL, 1, Operation.ROTATE_180],
-            
-            # Pattern completion operations
-            [Operation.COMPLETE_PATTERN],
-            [Operation.MIRROR_PATTERN],
-            [Operation.REPEAT_PATTERN],
-            
-            # Grid analysis operations
-            [Operation.FIND_SYMMETRY],
-            [Operation.DETECT_GRID_LINES],
-            [Operation.EXTRACT_SUBGRIDS],
-        ]
+        # Basic transformations
+        programs.append(MinervaDSLProgram([(MinervaOperation.ROTATE_90, {})]))
+        programs.append(MinervaDSLProgram([(MinervaOperation.ROTATE_180, {})]))
+        programs.append(MinervaDSLProgram([(MinervaOperation.ROTATE_270, {})]))
+        programs.append(MinervaDSLProgram([(MinervaOperation.FLIP_HORIZONTAL, {})]))
+        programs.append(MinervaDSLProgram([(MinervaOperation.FLIP_VERTICAL, {})]))
+        programs.append(MinervaDSLProgram([(MinervaOperation.TRANSPOSE, {})]))
         
-        for ops in grid_operations:
-            program = DSLProgram(ops)
-            programs.append(program)
-            
+        # Grid patterns
+        programs.append(MinervaDSLProgram([(MinervaOperation.CREATE_CHECKERBOARD, {'color1': 0, 'color2': 1})]))
+        programs.append(MinervaDSLProgram([(MinervaOperation.EXTRACT_GRID_LINES, {'spacing': 3, 'color': 1})]))
+        programs.append(MinervaDSLProgram([(MinervaOperation.FILL_GRID_CELLS, {'cell_size': 2, 'colors': [1, 2]})]))
+        
+        # Corner and edge operations
+        programs.append(MinervaDSLProgram([(MinervaOperation.EXTRACT_CORNERS, {'size': 2})]))
+        programs.append(MinervaDSLProgram([(MinervaOperation.EXTRACT_EDGES, {'width': 1})]))
+        programs.append(MinervaDSLProgram([(MinervaOperation.EXTRACT_CENTER, {'ratio': 0.5})]))
+        
+        # Frame operations
+        programs.append(MinervaDSLProgram([(MinervaOperation.EXTRACT_FRAME, {'width': 1})]))
+        programs.append(MinervaDSLProgram([(MinervaOperation.FILL_FRAME, {'width': 1, 'color': 2})]))
+        programs.append(MinervaDSLProgram([(MinervaOperation.REMOVE_FRAME, {'width': 1, 'background': 0})]))
+        
+        # Symmetry operations
+        programs.append(MinervaDSLProgram([(MinervaOperation.COMPLETE_SYMMETRY, {'axis': 'horizontal'})]))
+        programs.append(MinervaDSLProgram([(MinervaOperation.COMPLETE_SYMMETRY, {'axis': 'vertical'})]))
+        programs.append(MinervaDSLProgram([(MinervaOperation.MIRROR_PATTERN, {'direction': 'horizontal'})]))
+        
+        # Combined operations
+        programs.append(MinervaDSLProgram([
+            (MinervaOperation.ROTATE_90, {}),
+            (MinervaOperation.FLIP_HORIZONTAL, {})
+        ]))
+        
+        programs.append(MinervaDSLProgram([
+            (MinervaOperation.EXTRACT_CORNERS, {'size': 2}),
+            (MinervaOperation.ROTATE_180, {})
+        ]))
+        
         return programs
     
     @staticmethod
-    def generate_strategic_programs() -> List[DSLProgram]:
+    def generate_strategic_programs() -> List[MinervaDSLProgram]:
         """Generate programs for strategic pattern analysis"""
         programs = []
         
-        # Strategic operations for advanced grid reasoning
-        strategic_ops = [
-            # Multi-step transformations
-            [Operation.EXTRACT_OBJECTS, Operation.SORT_BY_SIZE, Operation.APPLY_RULE],
-            [Operation.FIND_SYMMETRY, Operation.COMPLETE_PATTERN],
-            [Operation.DETECT_GRID_LINES, Operation.FLOOD_FILL, 4],
-            
-            # Conditional operations
-            [Operation.IF_SYMMETRIC, Operation.MIRROR_PATTERN],
-            [Operation.IF_HAS_PATTERN, Operation.REPEAT_PATTERN],
-            
-            # Complex grid manipulations
-            [Operation.SPLIT_GRID, Operation.TRANSFORM_EACH, Operation.MERGE_GRIDS],
-            [Operation.EXTRACT_BOUNDARY, Operation.FILL_INTERIOR],
-            [Operation.FIND_CONNECTED_COMPONENTS, Operation.COLOR_BY_SIZE],
-        ]
+        # Region-based operations
+        programs.append(MinervaDSLProgram([(MinervaOperation.FIND_LARGEST_REGION, {'background': 0})]))
+        programs.append(MinervaDSLProgram([(MinervaOperation.FIND_SMALLEST_REGION, {'background': 0})]))
+        programs.append(MinervaDSLProgram([(MinervaOperation.COUNT_REGIONS, {'background': 0})]))
+        programs.append(MinervaDSLProgram([(MinervaOperation.EXTRACT_BY_SIZE, {'min_size': 3, 'background': 0})]))
         
-        for ops in strategic_ops:
-            program = DSLProgram(ops)
-            programs.append(program)
-            
+        # Quadrant operations
+        programs.append(MinervaDSLProgram([(MinervaOperation.SPLIT_QUADRANTS, {})]))
+        programs.append(MinervaDSLProgram([(MinervaOperation.EXTRACT_QUADRANT, {'quadrant': 1})]))
+        programs.append(MinervaDSLProgram([(MinervaOperation.MERGE_QUADRANTS, {'rule': 'max'})]))
+        
+        # Pattern completion
+        programs.append(MinervaDSLProgram([(MinervaOperation.EXTRACT_PATTERN, {'pattern_size': 3})]))
+        programs.append(MinervaDSLProgram([(MinervaOperation.REPEAT_PATTERN, {'pattern_h': 2, 'pattern_w': 2})]))
+        
+        # Logical operations
+        programs.append(MinervaDSLProgram([(MinervaOperation.GRID_NOT, {'max_val': 9})]))
+        
+        # Complex multi-step operations
+        programs.append(MinervaDSLProgram([
+            (MinervaOperation.FIND_LARGEST_REGION, {'background': 0}),
+            (MinervaOperation.ROTATE_90, {})
+        ]))
+        
+        programs.append(MinervaDSLProgram([
+            (MinervaOperation.EXTRACT_EDGES, {'width': 1}),
+            (MinervaOperation.FILL_FRAME, {'width': 1, 'color': 3})
+        ]))
+        
         return programs
 
 
@@ -376,9 +884,10 @@ class MINERVADSLTraining:
         has_rotation = np.array_equal(grid, np.rot90(grid, k=4))
         
         # Count connected components
-        if ndimage:
+        try:
+            from scipy import ndimage
             components = ndimage.label(grid > 0)[1]
-        else:
+        except:
             # Simple approximation if scipy not available
             components = len(np.unique(grid)) - 1
         

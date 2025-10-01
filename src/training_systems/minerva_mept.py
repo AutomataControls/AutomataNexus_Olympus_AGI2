@@ -357,6 +357,12 @@ class MinervaPatternBank:
         elif pattern.dim() == 3:
             pattern = pattern.squeeze(0)
         
+        # Ensure we have a 2D tensor
+        while pattern.dim() > 2:
+            pattern = pattern.squeeze(0)
+        if pattern.dim() < 2:
+            return False
+            
         unique_values = torch.unique(pattern)
         return len(unique_values) > 2
     
@@ -367,6 +373,12 @@ class MinervaPatternBank:
         elif pattern.dim() == 3:
             pattern = pattern.squeeze(0)
         
+        # Ensure we have a 2D tensor
+        while pattern.dim() > 2:
+            pattern = pattern.squeeze(0)
+        if pattern.dim() < 2:
+            return False
+            
         pattern_np = pattern.cpu().numpy()
         
         return (np.array_equal(pattern_np, np.fliplr(pattern_np)) or
@@ -379,6 +391,12 @@ class MinervaPatternBank:
         elif pattern.dim() == 3:
             pattern = pattern.squeeze(0)
         
+        # Ensure we have a 2D tensor
+        while pattern.dim() > 2:
+            pattern = pattern.squeeze(0)
+        if pattern.dim() < 2:
+            return False
+            
         # Check for regular intervals or repeating structures
         h, w = pattern.shape
         

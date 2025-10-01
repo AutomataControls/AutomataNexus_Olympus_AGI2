@@ -435,12 +435,12 @@ def train_minerva_specialized():
             
             # Exact match injection training (Stage 0 only)
             if exact_dataset and epoch < 50:  # First 50 epochs
-                exact_metrics = inject_exact_match_training(
+                model = inject_exact_match_training(
                     model, device=device,
                     num_epochs=1,
                     target_accuracy=95.0
                 )
-                print(f"💉 Exact injection - Epoch {global_epoch}: {exact_metrics['final_accuracy']:.1f}%")
+                print(f"💉 Exact injection completed - Epoch {global_epoch}")
             
             # Main training
             model.train()

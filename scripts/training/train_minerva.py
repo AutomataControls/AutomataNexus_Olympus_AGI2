@@ -151,11 +151,6 @@ print(f"  PRISM: {'Enabled' if USE_PRISM else 'Disabled'}")
 
 def custom_collate_fn(batch):
     """Custom collate function to handle different grid sizes and data formats"""
-    if not hasattr(custom_collate_fn, '_debug_printed'):
-        custom_collate_fn._debug_printed = False
-    if not custom_collate_fn._debug_printed and len(batch) > 0:
-        print(f"DEBUG: custom_collate_fn first call - batch size: {len(batch)}")
-        custom_collate_fn._debug_printed = True
     
     inputs = []
     outputs = []
@@ -176,34 +171,25 @@ def custom_collate_fn(batch):
                 out = out.squeeze(0)
             
             if inp.dim() != 2 or out.dim() != 2:
-                print(f"Warning: Unexpected tensor dimensions - input: {inp.shape}, output: {out.shape}")
                 continue
             
             if inp.shape[0] < 1 or inp.shape[1] < 1 or out.shape[0] < 1 or out.shape[1] < 1:
-                print(f"Warning: Invalid grid size - input: {inp.shape}, output: {out.shape}")
                 continue
                 
             if inp.shape[0] > MAX_GRID_SIZE or inp.shape[1] > MAX_GRID_SIZE:
-                print(f"Warning: Grid too large - input: {inp.shape}, truncating to {MAX_GRID_SIZE}")
                 inp = inp[:MAX_GRID_SIZE, :MAX_GRID_SIZE]
                 
             if out.shape[0] > MAX_GRID_SIZE or out.shape[1] > MAX_GRID_SIZE:
-                print(f"Warning: Grid too large - output: {out.shape}, truncating to {MAX_GRID_SIZE}")
                 out = out[:MAX_GRID_SIZE, :MAX_GRID_SIZE]
             
             inputs.append(inp)
             outputs.append(out)
             
         except Exception as e:
-            print(f"Warning: Error processing batch item: {e}")
             continue
     
     if not inputs:
-        print("Warning: All batch items were invalid, returning dummy batch")
-        return {
-            'inputs': torch.zeros(1, MAX_GRID_SIZE, MAX_GRID_SIZE, dtype=torch.long),
-            'outputs': torch.zeros(1, MAX_GRID_SIZE, MAX_GRID_SIZE, dtype=torch.long)
-        }
+        raise ValueError("All batch items were invalid - check data pipeline")
     
     max_h = max(inp.shape[0] for inp in inputs)
     max_w = max(inp.shape[1] for inp in inputs)
@@ -408,9 +394,14 @@ def train_minerva():
                 replay_ratio=0.3 if stage == 0 else 0.2
             )
         
-        # Consistent configuration across all stages
-        stage_workers = NUM_WORKERS
-        stage_batch_size = BATCH_SIZE
+        # Stage 1 hanging fixes - reduced resources for Stage 1+
+        if stage >= 1:
+            stage_workers = 4  # REDUCED for Stage 1+
+            stage_batch_size = 256  # REDUCED for Stage 1+
+            print(f"⚠️ Stage {stage} hanging fix: reduced workers to {stage_workers}, batch size to {stage_batch_size}")
+        else:
+            stage_workers = NUM_WORKERS
+            stage_batch_size = BATCH_SIZE
         
         
         train_loader_kwargs = {

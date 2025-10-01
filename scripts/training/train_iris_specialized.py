@@ -618,16 +618,26 @@ def train_iris_specialized():
                 print(f"⚠️ Could not create exact match dataset: {e}")
         
         # Stage training loop
-        for epoch in range(IRIS_CONFIG['epochs_per_stage']):
-            global_epoch += 1
+        # Calculate starting epoch for this stage when resuming
+        stage_start_epoch = 0
+        if stage == start_stage and global_epoch > 0:
+            # We're resuming in the middle of a stage
+            stage_start_epoch = global_epoch % IRIS_CONFIG['epochs_per_stage']
+            
+        for epoch in range(stage_start_epoch, IRIS_CONFIG['epochs_per_stage']):
+            if epoch == stage_start_epoch and stage == start_stage and global_epoch > 0:
+                # Don't increment on first iteration when resuming
+                pass
+            else:
+                global_epoch += 1
             
             # Exact match injection training (Stage 0 ONLY, epoch 0 ONLY)
             if exact_dataset and stage == 0 and epoch == 0:  # ONLY FIRST EPOCH
                 print(f"🔥 Running ONE-TIME exact injection for Stage {stage}")
                 model = inject_exact_match_training(
                     model, device=device,
-                    num_epochs=1,
-                    target_accuracy=92.0  # Slightly lower for complex color patterns
+                    num_epochs=5,  # Reduced from default
+                    target_accuracy=50.0  # Much more realistic target
                 )
                 print(f"🎨 Color injection completed - Epoch {global_epoch}")
             
@@ -635,11 +645,22 @@ def train_iris_specialized():
             model.train()
             train_metrics = {'loss': 0, 'exact': 0, 'samples': 0}
             
+            print(f"🔄 Starting training loop for Stage {stage}, Epoch {epoch+1}, Global epoch {global_epoch}")
+            
+            # Add timeout to prevent hanging
+            import signal
+            def timeout_handler(signum, frame):
+                raise TimeoutError("Training batch timeout")
+            
             pbar = tqdm(train_loader, desc=f"IRIS Stage {stage}, Epoch {epoch+1}", 
                        colour='cyan', bar_format='{l_bar}{bar:30}{r_bar}')
             optimizer.zero_grad()
             
+            batch_count = 0
             for batch_idx, batch in enumerate(pbar):
+                batch_count += 1
+                if batch_count % 10 == 0:
+                    print(f"Processing batch {batch_count}...")
                 inputs = batch['inputs'].to(device, non_blocking=True)
                 outputs = batch['outputs'].to(device, non_blocking=True)
                 

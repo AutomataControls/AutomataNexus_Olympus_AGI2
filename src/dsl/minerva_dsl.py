@@ -868,11 +868,31 @@ class MINERVADSLTraining:
             if dsl_samples:
                 # Replace some batch samples with DSL examples
                 indices = torch.randperm(B)[:num_dsl]
+                target_size = batch[input_key].shape[-1]  # Get target grid size
+                
                 for idx, i in enumerate(indices):
                     if idx < len(dsl_samples):
                         sample_idx = idx % len(dsl_samples)
-                        batch[input_key][i] = torch.tensor(dsl_samples[sample_idx]['input'])
-                        batch[output_key][i] = torch.tensor(dsl_samples[sample_idx]['output'])
+                        
+                        # Get DSL sample grids
+                        dsl_input = dsl_samples[sample_idx]['input']
+                        dsl_output = dsl_samples[sample_idx]['output']
+                        
+                        # Create tensors of target size
+                        input_tensor = torch.zeros(target_size, target_size, dtype=torch.long)
+                        output_tensor = torch.zeros(target_size, target_size, dtype=torch.long)
+                        
+                        # Copy DSL data (handling size mismatch)
+                        h, w = dsl_input.shape
+                        copy_h = min(h, target_size)
+                        copy_w = min(w, target_size)
+                        
+                        input_tensor[:copy_h, :copy_w] = torch.tensor(dsl_input[:copy_h, :copy_w])
+                        output_tensor[:copy_h, :copy_w] = torch.tensor(dsl_output[:copy_h, :copy_w])
+                        
+                        # Assign to batch
+                        batch[input_key][i] = input_tensor
+                        batch[output_key][i] = output_tensor
         
         return batch
     

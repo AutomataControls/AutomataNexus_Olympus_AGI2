@@ -562,9 +562,7 @@ def train_minerva_specialized():
                     leap_grid_size = min(grid_size, 12)  # Cap LEAP at 12x12 for stability
                     
                     leap_batch = systems['leap_trainer'].generate_leap_batch(
-                        batch_size=max(32, 64 - stage*8),  # Reduce batch size for larger grids
-                        max_grid_size=leap_grid_size,
-                        complexity=leap_complexity
+                        batch_size=max(32, 64 - stage*8)  # Reduce batch size for larger grids
                     )
                     leap_inputs = leap_batch['inputs'].to(device)
                     leap_outputs = leap_batch['outputs'].to(device)

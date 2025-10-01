@@ -570,8 +570,8 @@ def train_chronos_specialized():
                 pbar.set_postfix({
                     'loss': f"{losses['total'].item():.3f}",
                     'exact': f"{losses['exact_count'].item():.0f}",
-                    'temporal': f"{losses['temporal'].item():.3f}",
-                    'movement': f"{losses['movement'].item():.3f}"
+                    'temporal': f"{losses['temporal']:.3f}",
+                    'movement': f"{losses['movement']:.3f}"
                 })
                 
                 # LEAP training integration (temporal-focused patterns)

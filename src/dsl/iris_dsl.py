@@ -773,36 +773,42 @@ class IRISDSLTraining:
     def create_iris_dsl_samples(curriculum_stage: int = 0) -> List[Dict[str, np.ndarray]]:
         """Create DSL samples tailored for IRIS's color perception at each curriculum stage"""
         samples = []
+        max_samples = 500  # Limit to prevent hanging
         
         # Stage-specific color patterns optimized for IRIS
         if curriculum_stage == 0:
             # Stage 0: Simple 3x3 to 6x6 grids with basic color patterns
             base_grids = IRISDSLTraining._create_stage0_color_grids()
-            programs = IRISDSLGenerator.generate_color_pattern_programs()[:15]
+            programs = IRISDSLGenerator.generate_color_pattern_programs()[:10]  # Reduced
             
         elif curriculum_stage == 1:
             # Stage 1: 4x4 to 8x8 grids with intermediate color patterns
             base_grids = IRISDSLTraining._create_stage1_color_grids()
-            programs = IRISDSLGenerator.generate_color_pattern_programs()[:25]
+            programs = IRISDSLGenerator.generate_color_pattern_programs()[:15]  # Reduced
             
         elif curriculum_stage in [2, 3]:
             # Stages 2-3: 6x6 to 15x15 grids with complex color patterns
             base_grids = IRISDSLTraining._create_stage2_3_color_grids(curriculum_stage)
-            programs = IRISDSLGenerator.generate_color_pattern_programs()
+            programs = IRISDSLGenerator.generate_color_pattern_programs()[:20]  # Reduced
             
         elif curriculum_stage in [4, 5]:
             # Stages 4-5: 10x10 to 20x20 grids with perceptual color reasoning
             base_grids = IRISDSLTraining._create_stage4_5_color_grids(curriculum_stage)
-            programs = IRISDSLGenerator.generate_perceptual_programs()[:20]
+            programs = IRISDSLGenerator.generate_perceptual_programs()[:15]  # Reduced
             
         else:  # Stages 6-7
             # Stages 6-7: 15x15 to 30x30 grids with advanced color patterns
             base_grids = IRISDSLTraining._create_advanced_color_grids(curriculum_stage)
-            programs = IRISDSLGenerator.generate_perceptual_programs()
+            programs = IRISDSLGenerator.generate_perceptual_programs()[:10]  # Reduced
         
-        # Generate samples
+        # Generate samples with limit to prevent hanging
+        sample_count = 0
         for grid in base_grids:
+            if sample_count >= max_samples:
+                break
             for program in programs:
+                if sample_count >= max_samples:
+                    break
                 try:
                     output = program.execute(grid)
                     if output.shape == grid.shape and not np.array_equal(output, grid):
@@ -813,6 +819,7 @@ class IRISDSLTraining:
                             'stage': curriculum_stage,
                             'type': 'iris_dsl'
                         })
+                        sample_count += 1
                 except Exception:
                     continue
         
@@ -978,8 +985,9 @@ class IRISDSLTraining:
             # Color clustering pattern
             grid = np.zeros((size, size), dtype=np.int32)
             num_clusters = 5
-            centers = [(np.random.randint(0, size), np.random.randint(0, size)) 
-                      for _ in range(num_clusters)]
+            # Use deterministic positions to prevent hanging
+            step = max(1, size // num_clusters)
+            centers = [(i * step, j * step) for i in range(num_clusters) for j in range(1)][:num_clusters]
             
             for i in range(size):
                 for j in range(size):

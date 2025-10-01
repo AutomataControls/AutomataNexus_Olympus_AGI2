@@ -87,12 +87,12 @@ from colab_training_v4_megascale_curriculum import CurriculumMegaScaleDataset, T
 
 # IRIS-Specific Configuration with 8-Stage Progressive Curriculum
 IRIS_CONFIG = {
-    'batch_size': 384,  # Larger for IRIS's efficient color processing
+    'batch_size': 192,  # Reduced to prevent hanging
     'learning_rate': 0.004,  # Reduced for stability
     'num_epochs': 320,  # 8 stages x 40 epochs
     'color_embed_dim': 64,
     'color_attention_heads': 4,
-    'gradient_accumulation': 2,  # Effective batch: 768
+    'gradient_accumulation': 2,  # Effective batch: 384
     'transform_penalty': 0.3,  # Lower - IRIS should do color transformations
     'exact_match_bonus': 3.0,  # Reduced to prevent negative losses
     'curriculum_stages': 8,  # Progressive 8-stage curriculum

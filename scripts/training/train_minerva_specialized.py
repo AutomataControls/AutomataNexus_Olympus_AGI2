@@ -547,6 +547,9 @@ class MinervaSpecializedDataset(Dataset):
         if (self.replay_buffer and random.random() < self.replay_ratio and 
             hasattr(self.replay_buffer, 'buffer') and len(self.replay_buffer.buffer) > 0):
             try:
+                # Check if buffer has enough samples
+                if len(self.replay_buffer.buffer) < 1:
+                    raise ValueError("Replay buffer empty")
                 experiences = self.replay_buffer.sample(1, strategy='mixed')  # Use MINERVA's mixed strategy
                 if experiences:
                     exp = experiences[0]
@@ -701,7 +704,7 @@ def custom_collate_fn(batch, stage=0):
     inputs = []
     outputs = []
     
-    print(f"   [collate_fn] Processing batch of {len(batch)} items, target_size={target_size}", flush=True)
+    # print(f"   [collate_fn] Processing batch of {len(batch)} items, target_size={target_size}", flush=True)
     
     for i, item in enumerate(batch):
         input_grid = item['inputs']
@@ -749,12 +752,12 @@ def custom_collate_fn(batch, stage=0):
         inputs.append(input_grid[:target_size, :target_size])
         outputs.append(output_grid[:target_size, :target_size])
     
-    print(f"   [collate_fn] Stacking {len(inputs)} tensors", flush=True)
+    # print(f"   [collate_fn] Stacking {len(inputs)} tensors", flush=True)
     result = {
         'inputs': torch.stack(inputs),
         'outputs': torch.stack(outputs)
     }
-    print(f"   [collate_fn] Done, returning batch", flush=True)
+    # print(f"   [collate_fn] Done, returning batch", flush=True)
     return result
 
 
@@ -1167,9 +1170,9 @@ def train_minerva_specialized():
                 while batch_idx < len(train_loader):
                     try:
                         # Try to get batch with a manual timeout check
-                        print(f"   Attempting to get batch {batch_idx}...", flush=True)
+                        if batch_idx % 10 == 0:  # Only print every 10th batch
+                            print(f"   Processing batch {batch_idx}/{len(train_loader)}...", flush=True)
                         batch = next(train_iter)
-                        print(f"   Got batch {batch_idx} successfully", flush=True)
                     except StopIteration:
                         print(f"   Iterator exhausted at batch {batch_idx}")
                         break

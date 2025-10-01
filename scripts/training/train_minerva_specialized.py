@@ -68,22 +68,33 @@ except ImportError:
 from src.data.arc_data_synthesis import ARCDataSynthesizer, ARCDataAugmenter
 from colab_training_v4_megascale_curriculum import CurriculumMegaScaleDataset, TrainingReporter
 
-# MINERVA-Specific Configuration
+# MINERVA-Specific Configuration with 8-Stage Progressive Curriculum
 MINERVA_CONFIG = {
     'batch_size': 256,  # Smaller for MINERVA's complex attention
     'learning_rate': 0.008,  # Higher for grid attention learning
-    'num_epochs': 300,
-    'max_grid_size': 30,
+    'num_epochs': 320,  # 8 stages x 40 epochs
     'hidden_dim': 256,
     'pattern_memory_size': 200,
     'gradient_accumulation': 2,  # Effective batch: 512
     'transform_penalty': 0.5,
     'exact_match_bonus': 7.0,  # Higher for MINERVA's precision
-    'curriculum_stages': 3,
-    'epochs_per_stage': 100,
+    'curriculum_stages': 8,  # Progressive 8-stage curriculum
+    'epochs_per_stage': 40,  # Shorter stages for smoother progression
     'attention_heads': 8,
     'relational_weight': 0.4,  # MINERVA-specific loss component
     'pattern_memory_weight': 0.3
+}
+
+# 8-Stage Progressive Grid Size Curriculum
+STAGE_CONFIG = {
+    0: {'max_grid_size': 6,  'synthesis_ratio': 0.6, 'exact_injection': True,  'leap_complexity': 'basic'},
+    1: {'max_grid_size': 8,  'synthesis_ratio': 0.5, 'exact_injection': False, 'leap_complexity': 'basic'},
+    2: {'max_grid_size': 10, 'synthesis_ratio': 0.5, 'exact_injection': False, 'leap_complexity': 'simple'},
+    3: {'max_grid_size': 13, 'synthesis_ratio': 0.4, 'exact_injection': False, 'leap_complexity': 'simple'},
+    4: {'max_grid_size': 16, 'synthesis_ratio': 0.4, 'exact_injection': False, 'leap_complexity': 'medium'},
+    5: {'max_grid_size': 20, 'synthesis_ratio': 0.3, 'exact_injection': False, 'leap_complexity': 'medium'},
+    6: {'max_grid_size': 25, 'synthesis_ratio': 0.3, 'exact_injection': False, 'leap_complexity': 'complex'},
+    7: {'max_grid_size': 30, 'synthesis_ratio': 0.2, 'exact_injection': False, 'leap_complexity': 'complex'}
 }
 
 # Training components flags
@@ -265,11 +276,11 @@ class MinervaSpecializedLoss(nn.Module):
         return F.mse_loss(pred_local, target_local)
 
 
-def custom_collate_fn(batch):
-    """MINERVA-optimized collate function with guaranteed size consistency"""
+def custom_collate_fn(batch, stage=0):
+    """MINERVA-optimized collate function with stage-specific grid sizes"""
     inputs = []
     outputs = []
-    target_size = MINERVA_CONFIG['max_grid_size']
+    target_size = STAGE_CONFIG[stage]['max_grid_size']
     
     for i, item in enumerate(batch):
         try:
@@ -412,17 +423,24 @@ def train_minerva_specialized():
     best_exact = 0.0
     global_epoch = 0
     
-    # Curriculum training loop
+    # 8-Stage Progressive Curriculum Training Loop
+    stage_metrics = []  # Track learning progression
+    
     for stage in range(MINERVA_CONFIG['curriculum_stages']):
-        print(f"\n🎯 MINERVA Stage {stage}: Grid Reasoning Focus")
-        print("=" * 50)
+        stage_config = STAGE_CONFIG[stage]
+        grid_size = stage_config['max_grid_size']
+        synthesis_ratio = stage_config['synthesis_ratio']
         
-        # Create curriculum dataset
+        print(f"\n🎯 MINERVA Stage {stage}: {grid_size}x{grid_size} Grid Reasoning")
+        print(f"   📏 Grid Size: {grid_size}x{grid_size} | Synthesis: {synthesis_ratio*100:.0f}% | LEAP: {stage_config['leap_complexity']}")
+        print("=" * 60)
+        
+        # Create curriculum dataset with stage-specific grid size
         dataset = CurriculumMegaScaleDataset(
             DATA_DIR,
-            curriculum_stage=stage,
+            curriculum_stage=min(stage, 2),  # Cap at stage 2 for compatibility
             use_arc_synthesis=True,
-            synthesis_ratio=0.4 if stage == 0 else 0.3
+            synthesis_ratio=synthesis_ratio
         )
         
         # Split dataset
@@ -438,14 +456,14 @@ def train_minerva_specialized():
                 replay_ratio=0.3 if stage == 0 else 0.2
             )
         
-        # Data loaders
+        # Data loaders with stage-specific grid sizes
         train_loader = DataLoader(
             train_dataset,
             batch_size=MINERVA_CONFIG['batch_size'],
             shuffle=True,
             num_workers=4,
             pin_memory=True,
-            collate_fn=custom_collate_fn,
+            collate_fn=lambda batch: custom_collate_fn(batch, stage),
             persistent_workers=True
         )
         
@@ -455,17 +473,17 @@ def train_minerva_specialized():
             shuffle=False,
             num_workers=4,
             pin_memory=True,
-            collate_fn=custom_collate_fn
+            collate_fn=lambda batch: custom_collate_fn(batch, stage)
         )
         
-        print(f"📚 Stage {stage} - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
+        print(f"📚 Stage {stage} ({grid_size}x{grid_size}) - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
         
-        # Exact match injection for Stage 0
+        # Exact match injection for Stage 0 only
         exact_dataset = None
-        if stage == 0 and USE_EXACT_BOOST:
+        if stage_config['exact_injection'] and USE_EXACT_BOOST:
             try:
-                exact_dataset = ExactMatchBoostDataset(1500, fixed_size=8)  # Larger for MINERVA
-                print("✅ Exact match injection dataset created")
+                exact_dataset = ExactMatchBoostDataset(1500, fixed_size=grid_size)
+                print(f"✅ Stage {stage} exact match injection dataset created ({grid_size}x{grid_size})")
             except Exception as e:
                 print(f"⚠️ Could not create exact match dataset: {e}")
         
@@ -536,17 +554,25 @@ def train_minerva_specialized():
                     'pattern': f"{losses['pattern_memory'].item():.3f}"
                 })
                 
-                # LEAP training integration
+                # LEAP training integration with stage-specific complexity
                 if USE_LEAP and 'leap_trainer' in systems and batch_idx % 3 == 0:
-                    leap_batch = systems['leap_trainer'].generate_leap_batch(batch_size=64)
+                    # Adjust LEAP complexity based on current stage
+                    leap_complexity = stage_config['leap_complexity']
+                    leap_grid_size = min(grid_size, 12)  # Cap LEAP at 12x12 for stability
+                    
+                    leap_batch = systems['leap_trainer'].generate_leap_batch(
+                        batch_size=max(32, 64 - stage*8),  # Reduce batch size for larger grids
+                        max_grid_size=leap_grid_size,
+                        complexity=leap_complexity
+                    )
                     leap_inputs = leap_batch['inputs'].to(device)
                     leap_outputs = leap_batch['outputs'].to(device)
                     
-                    # Ensure proper grid size
+                    # Ensure proper grid size for current stage
                     H, W = leap_inputs.shape[-2:]
-                    if H < MINERVA_CONFIG['max_grid_size'] or W < MINERVA_CONFIG['max_grid_size']:
-                        pad_h = MINERVA_CONFIG['max_grid_size'] - H
-                        pad_w = MINERVA_CONFIG['max_grid_size'] - W
+                    if H < grid_size or W < grid_size:
+                        pad_h = grid_size - H
+                        pad_w = grid_size - W
                         leap_inputs = F.pad(leap_inputs, (0, pad_w, 0, pad_h), value=0)
                         leap_outputs = F.pad(leap_outputs, (0, pad_w, 0, pad_h), value=0)
                     
@@ -623,20 +649,63 @@ def train_minerva_specialized():
                 val_exact_pct = val_metrics['exact'] / val_metrics['samples'] * 100
                 val_pixel_acc = val_metrics['pixel_acc'] / val_metrics['samples'] * 100
                 
-                print(f"\n🧠 MINERVA Epoch {global_epoch} (Stage {stage}):")
-                print(f"   Train Loss: {train_loss:.4f}, Train Exact: {train_exact_pct:.2f}%")
-                print(f"   Val Loss: {val_loss:.4f}, Val Exact: {val_exact_pct:.2f}%, Pixel: {val_pixel_acc:.2f}%")
+                # Track learning progress
+                current_metrics = {
+                    'train_exact': train_exact_pct,
+                    'val_exact': val_exact_pct,
+                    'train_loss': train_loss,
+                    'val_loss': val_loss,
+                    'pixel_acc': val_pixel_acc,
+                    'stage': stage,
+                    'grid_size': grid_size
+                }
+                stage_metrics.append(current_metrics)
                 
-                # System status reports
+                # Calculate learning trends
+                if len(stage_metrics) > 1:
+                    prev = stage_metrics[-2]
+                    exact_trend = val_exact_pct - prev['val_exact']
+                    loss_trend = val_loss - prev['val_loss']
+                    trend_icon = "📈" if exact_trend > 0 else "📉" if exact_trend < 0 else "➡️"
+                    trend_text = f"({exact_trend:+.2f}%)"
+                else:
+                    trend_icon = "🎆"
+                    trend_text = "(baseline)"
+                
+                # Enhanced learning indicators
+                print(f"\n🧠 MINERVA Epoch {global_epoch} (Stage {stage}, {grid_size}x{grid_size}):")
+                print(f"   📏 GRID SIZE: {grid_size}x{grid_size} | LEARNING: {trend_icon} {trend_text}")
+                print(f"   🎯 Train: {train_exact_pct:.2f}% exact, Loss: {train_loss:.3f}")
+                print(f"   🎯 Val: {val_exact_pct:.2f}% exact, Loss: {val_loss:.3f}, Pixel: {val_pixel_acc:.1f}%")
+                
+                # Stage progress indicator
+                stage_progress = (epoch + 1) / MINERVA_CONFIG['epochs_per_stage'] * 100
+                total_progress = (stage * MINERVA_CONFIG['epochs_per_stage'] + epoch + 1) / (MINERVA_CONFIG['curriculum_stages'] * MINERVA_CONFIG['epochs_per_stage']) * 100
+                print(f"   📏 Stage Progress: {stage_progress:.0f}% | Total Progress: {total_progress:.0f}%")
+                
+                # Enhanced system status reports
                 if USE_MEPT and 'replay_buffer' in systems:
                     buffer_stats = systems['replay_buffer'].get_stats()
-                    print(f"   📊 MEPT: {buffer_stats['total_experiences']:,} experiences, "
-                          f"{buffer_stats['exact_matches']:,} exact matches")
+                    exact_rate = (buffer_stats['exact_matches'] / max(1, buffer_stats['total_experiences'])) * 100
+                    print(f"   📊 MEPT: {buffer_stats['total_experiences']:,} experiences | {buffer_stats['exact_matches']:,} exact ({exact_rate:.1f}% rate)")
                 
                 if USE_LEAP and 'leap_trainer' in systems:
                     leap_report = systems['leap_trainer'].get_performance_report()
-                    if leap_report:
+                    if leap_report and "0.0%" not in leap_report:
                         print(f"   🎯 LEAP: {leap_report}")
+                    else:
+                        print(f"   ⚠️ LEAP: Pattern learning stuck at 0.0% - needs complexity adjustment for {grid_size}x{grid_size} grids")
+                
+                # Learning status analysis
+                if val_exact_pct >= 5.0:
+                    status = f"🏆 EXCELLENT learning for {grid_size}x{grid_size} grids!"
+                elif val_exact_pct >= 1.0:
+                    status = f"📈 GOOD progress on {grid_size}x{grid_size} patterns"
+                elif val_exact_pct >= 0.1:
+                    status = f"🔄 LEARNING basics for {grid_size}x{grid_size} grids"
+                else:
+                    status = f"⚠️ Still learning {grid_size}x{grid_size} fundamentals"
+                print(f"   📊 STATUS: {status}")
                 
                 # Save best model
                 if val_exact_pct > best_exact:
@@ -645,15 +714,32 @@ def train_minerva_specialized():
                     torch.save({
                         'epoch': global_epoch,
                         'stage': stage,
+                        'grid_size': grid_size,
                         'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict(),
                         'val_exact': val_exact_pct,
                         'best_exact': val_exact_pct,
-                        'config': MINERVA_CONFIG
+                        'config': MINERVA_CONFIG,
+                        'stage_config': STAGE_CONFIG
                     }, model_path)
-                    print(f"   💾 New best model saved: {val_exact_pct:.2f}%")
+                    print(f"   💾 NEW BEST: {val_exact_pct:.2f}% exact match saved!")
     
-    print(f"\n🎉 MINERVA Training Complete! Best exact match: {best_exact:.2f}%")
+    # Final training summary
+    print(f"\n🎉 MINERVA 8-Stage Training Complete!")
+    print(f"   🏆 Best exact match: {best_exact:.2f}%")
+    print(f"   📏 Stages completed: {MINERVA_CONFIG['curriculum_stages']} (6x6 → 30x30 grids)")
+    print(f"   📊 Total epochs: {global_epoch}")
+    
+    # Stage-by-stage progress summary
+    if stage_metrics:
+        print(f"\n📏 Stage-by-stage Learning Progression:")
+        for i, stage_config in enumerate(STAGE_CONFIG.values()):
+            stage_final = [m for m in stage_metrics if m['stage'] == i]
+            if stage_final:
+                final_exact = stage_final[-1]['val_exact']
+                grid_size = stage_config['max_grid_size']
+                print(f"   Stage {i} ({grid_size}x{grid_size}): {final_exact:.2f}% exact match")
+    
     return model, best_exact
 
 

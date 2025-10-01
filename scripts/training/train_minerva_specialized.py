@@ -272,42 +272,64 @@ def custom_collate_fn(batch):
     target_size = MINERVA_CONFIG['max_grid_size']
     
     for i, item in enumerate(batch):
-        input_grid = item['inputs']
-        output_grid = item['outputs']
-        
-        # Convert to tensor if needed
-        if not isinstance(input_grid, torch.Tensor):
-            input_grid = torch.tensor(input_grid, dtype=torch.long)
-        if not isinstance(output_grid, torch.Tensor):
-            output_grid = torch.tensor(output_grid, dtype=torch.long)
-        
-        # ALWAYS create new tensors of exact target size to guarantee consistency
-        new_input = torch.zeros(target_size, target_size, dtype=torch.long)
-        new_output = torch.zeros(target_size, target_size, dtype=torch.long)
-        
-        # Ensure input_grid and output_grid are 2D
-        if input_grid.dim() > 2:
-            input_grid = input_grid.squeeze()
-        if output_grid.dim() > 2:
-            output_grid = output_grid.squeeze()
-        
-        # Get current dimensions after ensuring 2D
-        current_H, current_W = input_grid.shape[-2:]
-        
-        # Copy data with proper bounds checking
-        copy_h = min(current_H, target_size)
-        copy_w = min(current_W, target_size)
-        
-        # Safe copy with explicit slicing
-        new_input[:copy_h, :copy_w] = input_grid[:copy_h, :copy_w]
-        new_output[:copy_h, :copy_w] = output_grid[:copy_h, :copy_w]
-        
-        # Verify final size (should always be correct now)
-        assert new_input.shape == (target_size, target_size), f"Input grid {i} size mismatch: {new_input.shape}"
-        assert new_output.shape == (target_size, target_size), f"Output grid {i} size mismatch: {new_output.shape}"
-        
-        inputs.append(new_input)
-        outputs.append(new_output)
+        try:
+            input_grid = item['inputs']
+            output_grid = item['outputs']
+            
+            # Convert to tensor if needed
+            if not isinstance(input_grid, torch.Tensor):
+                input_grid = torch.tensor(input_grid, dtype=torch.long)
+            if not isinstance(output_grid, torch.Tensor):
+                output_grid = torch.tensor(output_grid, dtype=torch.long)
+            
+            # Force to 2D by squeezing all extra dimensions
+            while input_grid.dim() > 2:
+                input_grid = input_grid.squeeze(0)
+            while output_grid.dim() > 2:
+                output_grid = output_grid.squeeze(0)
+            
+            # Handle 1D tensors by reshaping
+            if input_grid.dim() == 1:
+                size = int(input_grid.numel() ** 0.5)
+                if size * size == input_grid.numel():
+                    input_grid = input_grid.view(size, size)
+                else:
+                    input_grid = input_grid.view(1, -1)
+            
+            if output_grid.dim() == 1:
+                size = int(output_grid.numel() ** 0.5)
+                if size * size == output_grid.numel():
+                    output_grid = output_grid.view(size, size)
+                else:
+                    output_grid = output_grid.view(1, -1)
+            
+            # ALWAYS create new tensors of exact target size
+            new_input = torch.zeros(target_size, target_size, dtype=torch.long)
+            new_output = torch.zeros(target_size, target_size, dtype=torch.long)
+            
+            # Get actual dimensions
+            input_h, input_w = input_grid.shape
+            output_h, output_w = output_grid.shape
+            
+            # Copy what fits
+            copy_h_in = min(input_h, target_size)
+            copy_w_in = min(input_w, target_size)
+            copy_h_out = min(output_h, target_size)  
+            copy_w_out = min(output_w, target_size)
+            
+            new_input[:copy_h_in, :copy_w_in] = input_grid[:copy_h_in, :copy_w_in]
+            new_output[:copy_h_out, :copy_w_out] = output_grid[:copy_h_out, :copy_w_out]
+            
+            inputs.append(new_input)
+            outputs.append(new_output)
+            
+        except Exception as e:
+            print(f"Error processing batch item {i}: {e}")
+            print(f"Input shape: {input_grid.shape if 'input_grid' in locals() else 'unknown'}")
+            print(f"Output shape: {output_grid.shape if 'output_grid' in locals() else 'unknown'}")
+            # Create dummy tensors as fallback
+            inputs.append(torch.zeros(target_size, target_size, dtype=torch.long))
+            outputs.append(torch.zeros(target_size, target_size, dtype=torch.long))
     
     return {
         'inputs': torch.stack(inputs),

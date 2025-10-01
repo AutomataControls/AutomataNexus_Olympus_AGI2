@@ -17,6 +17,7 @@ import gc
 from tqdm import tqdm
 from typing import Dict, List, Optional
 import random
+import time
 from collections import defaultdict
 
 # Add project paths
@@ -68,33 +69,36 @@ except ImportError:
 from src.data.arc_data_synthesis import ARCDataSynthesizer, ARCDataAugmenter
 from colab_training_v4_megascale_curriculum import CurriculumMegaScaleDataset, TrainingReporter
 
-# MINERVA-Specific Configuration with 8-Stage Progressive Curriculum
+# MINERVA-Specific Configuration with 8-Stage Progressive Curriculum - OPTIMIZED V2
 MINERVA_CONFIG = {
-    'batch_size': 256,  # Smaller for MINERVA's complex attention
-    'learning_rate': 0.001,  # Normal learning rate with simplified loss
-    'num_epochs': 320,  # 8 stages x 40 epochs
+    'batch_size': 384,  # Increased for better gradient stability
+    'learning_rate': 0.003,  # Increased from 0.001 based on 4.03% success
+    'num_epochs': 400,  # 8 stages x 50 epochs - longer training
     'hidden_dim': 256,
     'pattern_memory_size': 200,
-    'gradient_accumulation': 2,  # Effective batch: 512
-    'transform_penalty': 0.5,
-    'exact_match_bonus': 1.0,  # CRITICAL: Minimal to prevent instability
+    'gradient_accumulation': 2,  # Effective batch: 768
+    'transform_penalty': 0.3,  # Reduced - allow more transformations
+    'exact_match_bonus': 3.0,  # Increased from 1.0 to reinforce success
     'curriculum_stages': 8,  # Progressive 8-stage curriculum
-    'epochs_per_stage': 40,  # Shorter stages for smoother progression
+    'epochs_per_stage': 50,  # Extended for better convergence
     'attention_heads': 8,
-    'relational_weight': 0.01,  # Ultra-minimal for emergency stability
-    'pattern_memory_weight': 0.0  # DISABLED - causing severe instability
+    'relational_weight': 0.05,  # Slightly increased for grid reasoning
+    'pattern_memory_weight': 0.01,  # Re-enabled with minimal weight
+    'adaptive_lr': True,  # Enable adaptive learning rate per stage
+    'warmup_epochs': 10,  # Warmup for larger grids
+    'grid_size_penalty': 0.1  # Penalty scaling with grid complexity
 }
 
-# 8-Stage Progressive Grid Size Curriculum
+# 8-Stage Progressive Grid Size Curriculum - OPTIMIZED FOR PERFORMANCE SCALING
 STAGE_CONFIG = {
-    0: {'max_grid_size': 6,  'synthesis_ratio': 0.6, 'exact_injection': True,  'leap_complexity': 'basic'},
-    1: {'max_grid_size': 8,  'synthesis_ratio': 0.5, 'exact_injection': False, 'leap_complexity': 'basic'},
-    2: {'max_grid_size': 10, 'synthesis_ratio': 0.5, 'exact_injection': False, 'leap_complexity': 'simple'},
-    3: {'max_grid_size': 13, 'synthesis_ratio': 0.4, 'exact_injection': False, 'leap_complexity': 'simple'},
-    4: {'max_grid_size': 16, 'synthesis_ratio': 0.4, 'exact_injection': False, 'leap_complexity': 'medium'},
-    5: {'max_grid_size': 20, 'synthesis_ratio': 0.3, 'exact_injection': False, 'leap_complexity': 'medium'},
-    6: {'max_grid_size': 25, 'synthesis_ratio': 0.3, 'exact_injection': False, 'leap_complexity': 'complex'},
-    7: {'max_grid_size': 30, 'synthesis_ratio': 0.2, 'exact_injection': False, 'leap_complexity': 'complex'}
+    0: {'max_grid_size': 6,  'synthesis_ratio': 0.7, 'exact_injection': True,  'leap_complexity': 'basic', 'lr_mult': 1.0},
+    1: {'max_grid_size': 7,  'synthesis_ratio': 0.6, 'exact_injection': True,  'leap_complexity': 'basic', 'lr_mult': 0.8},
+    2: {'max_grid_size': 9,  'synthesis_ratio': 0.6, 'exact_injection': False, 'leap_complexity': 'simple', 'lr_mult': 0.7},
+    3: {'max_grid_size': 12, 'synthesis_ratio': 0.5, 'exact_injection': False, 'leap_complexity': 'simple', 'lr_mult': 0.6},
+    4: {'max_grid_size': 15, 'synthesis_ratio': 0.5, 'exact_injection': False, 'leap_complexity': 'medium', 'lr_mult': 0.5},
+    5: {'max_grid_size': 19, 'synthesis_ratio': 0.4, 'exact_injection': False, 'leap_complexity': 'medium', 'lr_mult': 0.4},
+    6: {'max_grid_size': 24, 'synthesis_ratio': 0.4, 'exact_injection': False, 'leap_complexity': 'complex', 'lr_mult': 0.3},
+    7: {'max_grid_size': 30, 'synthesis_ratio': 0.3, 'exact_injection': False, 'leap_complexity': 'complex', 'lr_mult': 0.2}
 }
 
 # Training components flags
@@ -438,18 +442,36 @@ def train_minerva_specialized():
         stage_config = STAGE_CONFIG[stage]
         grid_size = stage_config['max_grid_size']
         synthesis_ratio = stage_config['synthesis_ratio']
+        lr_multiplier = stage_config['lr_mult']
         
         print(f"\n🎯 MINERVA Stage {stage}: {grid_size}x{grid_size} Grid Reasoning")
         print(f"   📏 Grid Size: {grid_size}x{grid_size} | Synthesis: {synthesis_ratio*100:.0f}% | LEAP: {stage_config['leap_complexity']}")
         print("=" * 60)
         
-        # Create curriculum dataset with stage-specific grid size
+        # Adaptive learning rate adjustment for larger grids
+        if MINERVA_CONFIG['adaptive_lr'] and stage > 0:
+            adjusted_lr = MINERVA_CONFIG['learning_rate'] * lr_multiplier
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = adjusted_lr
+            print(f"🔧 Adaptive LR: {adjusted_lr:.4f} (multiplier: {lr_multiplier:.1f})")
+        
+        # Warmup for complex grids (Stage 3+)
+        warmup_needed = stage >= 3 and grid_size >= 12
+        if warmup_needed:
+            print(f"🔥 Complex grid warmup enabled for {grid_size}x{grid_size}")
+        
+        # Create curriculum dataset with stage-specific grid size - EFFICIENT SIZE
         dataset = CurriculumMegaScaleDataset(
             DATA_DIR,
             curriculum_stage=min(stage, 2),  # Cap at stage 2 for compatibility
             use_arc_synthesis=True,
-            synthesis_ratio=synthesis_ratio
+            synthesis_ratio=max(0.2, synthesis_ratio * 0.5)  # Reduce synthesis by 50%
         )
+        
+        # Limit dataset size for efficient training
+        if len(dataset) > 15000:  # Reasonable limit
+            print(f"⚠️ Reducing dataset from {len(dataset):,} to 15,000 samples for efficiency")
+            dataset = torch.utils.data.Subset(dataset, list(range(15000)))
         
         # Split dataset
         train_size = int(0.9 * len(dataset))
@@ -486,31 +508,38 @@ def train_minerva_specialized():
         
         print(f"📚 Stage {stage} ({grid_size}x{grid_size}) - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
         
-        # Exact match injection for Stage 0 only
+        # Extended exact match injection for Stage 0 and 1
         exact_dataset = None
         if stage_config['exact_injection'] and USE_EXACT_BOOST:
             try:
-                exact_dataset = ExactMatchBoostDataset(1500, fixed_size=grid_size)
-                print(f"✅ Stage {stage} exact match injection dataset created ({grid_size}x{grid_size})")
+                injection_size = 1500 if stage == 0 else 1000  # Reduce for Stage 1
+                exact_dataset = ExactMatchBoostDataset(injection_size, fixed_size=grid_size)
+                print(f"✅ Stage {stage} exact match injection dataset created ({grid_size}x{grid_size}, {injection_size} samples)")
             except Exception as e:
                 print(f"⚠️ Could not create exact match dataset: {e}")
+        
+        # Stage-specific performance tracking
+        stage_start_time = time.time()
+        stage_exact_progression = []
         
         # Stage training loop
         for epoch in range(MINERVA_CONFIG['epochs_per_stage']):
             global_epoch += 1
             
-            # Exact match injection training (Stage 0 only, first 5 epochs)
-            print(f"DEBUG: Stage={stage}, Epoch={epoch}, exact_dataset={exact_dataset is not None}")
-            if exact_dataset and stage == 0 and epoch < 5:  # Only first 5 epochs of Stage 0
-                print(f"🔥 Running exact injection: Stage {stage}, Epoch {epoch}")
+            # Extended exact match injection training (Stage 0 and 1, FIRST EPOCH ONLY)
+            target_acc = 95.0 if stage == 0 else 92.0  # Slightly lower for Stage 1
+            
+            if exact_dataset and stage_config['exact_injection'] and epoch == 0:  # ONLY FIRST EPOCH
+                print(f"🔥 Running exact injection: Stage {stage}, Epoch {epoch}, Target: {target_acc}%")
                 model = inject_exact_match_training(
                     model, device=device,
                     num_epochs=1,
-                    target_accuracy=95.0
+                    target_accuracy=target_acc
                 )
-                print(f"💉 Exact injection completed - Epoch {global_epoch}")
+                print(f"💉 Exact injection completed - Stage {stage}, Epoch {global_epoch}")
             else:
-                print(f"⏭️ Skipping exact injection: Stage {stage}, Epoch {epoch}")
+                if stage < 2:  # Only log for relevant stages
+                    print(f"⏭️ Skipping exact injection: Stage {stage}, Epoch {epoch}")
             
             # Main training
             model.train()
@@ -675,6 +704,9 @@ def train_minerva_specialized():
                 val_exact_pct = val_metrics['exact'] / max(val_metrics['samples'], 1) * 100
                 val_pixel_acc = val_metrics['pixel_acc'] / max(val_metrics['samples'], 1) * 100
                 
+                # Track stage progression for early stopping
+                stage_exact_progression.append(val_exact_pct)
+                
                 # Track learning progress
                 current_metrics = {
                     'train_exact': train_exact_pct,
@@ -733,10 +765,29 @@ def train_minerva_specialized():
                     status = f"⚠️ Still learning {grid_size}x{grid_size} fundamentals"
                 print(f"   📊 STATUS: {status}")
                 
+                # Create models directory if needed
+                models_dir = '/content/AutomataNexus_Olympus_AGI2/arc_models_v4'
+                os.makedirs(models_dir, exist_ok=True)
+                
+                # Save checkpoint every validation
+                checkpoint_path = f'{models_dir}/minerva_checkpoint.pt'
+                torch.save({
+                    'epoch': global_epoch,
+                    'stage': stage,
+                    'grid_size': grid_size,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'val_exact': val_exact_pct,
+                    'best_exact': best_exact,
+                    'val_loss': val_loss,
+                    'config': MINERVA_CONFIG,
+                    'stage_config': STAGE_CONFIG
+                }, checkpoint_path)
+                
                 # Save best model
                 if val_exact_pct > best_exact:
                     best_exact = val_exact_pct
-                    model_path = f'/content/AutomataNexus_Olympus_AGI2/src/models/minerva_specialized_best.pth'
+                    best_model_path = f'{models_dir}/minerva_best.pt'
                     torch.save({
                         'epoch': global_epoch,
                         'stage': stage,
@@ -745,10 +796,31 @@ def train_minerva_specialized():
                         'optimizer_state_dict': optimizer.state_dict(),
                         'val_exact': val_exact_pct,
                         'best_exact': val_exact_pct,
+                        'val_loss': val_loss,
                         'config': MINERVA_CONFIG,
                         'stage_config': STAGE_CONFIG
-                    }, model_path)
+                    }, best_model_path)
                     print(f"   💾 NEW BEST: {val_exact_pct:.2f}% exact match saved!")
+        
+        # Stage completion summary
+        stage_duration = time.time() - stage_start_time
+        final_exact = stage_exact_progression[-1] if stage_exact_progression else 0.0
+        
+        print(f"\n📏 Stage {stage} ({grid_size}x{grid_size}) COMPLETED:")
+        print(f"   ⏱️ Duration: {stage_duration/60:.1f} minutes")
+        print(f"   🎯 Final exact match: {final_exact:.2f}%")
+        
+        # Learning progression analysis
+        if len(stage_exact_progression) >= 2:
+            improvement = final_exact - stage_exact_progression[0]
+            trend = "📈 IMPROVING" if improvement > 0.5 else "➡️ STABLE" if improvement > -0.5 else "📉 DECLINING"
+            print(f"   📊 Learning trend: {trend} ({improvement:+.2f}%)")
+        
+        # Early progression criteria
+        if stage >= 2 and final_exact < 0.5:  # If stuck on larger grids
+            print(f"   ⚠️ WARNING: Low performance on {grid_size}x{grid_size} grids - consider adjusting learning rate")
+        elif final_exact >= 3.0:
+            print(f"   🏆 EXCELLENT: Strong performance on {grid_size}x{grid_size} grids!")
     
     # Final training summary
     print(f"\n🎉 MINERVA 8-Stage Training Complete!")

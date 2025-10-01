@@ -488,13 +488,18 @@ def train_iris_specialized():
         print(f"   📏 Grid Size: {grid_size}x{grid_size} | Synthesis: {synthesis_ratio*100:.0f}% | LEAP: {stage_config['leap_complexity']}")
         print("=" * 60)
         
-        # Create curriculum dataset with stage-specific grid size
+        # Create curriculum dataset with stage-specific grid size - EFFICIENT SIZE
         dataset = CurriculumMegaScaleDataset(
             DATA_DIR,
             curriculum_stage=min(stage, 2),  # Cap at stage 2 for compatibility
             use_arc_synthesis=True,
-            synthesis_ratio=synthesis_ratio
+            synthesis_ratio=max(0.2, synthesis_ratio * 0.5)  # Reduce synthesis by 50%
         )
+        
+        # Limit dataset size for efficient training
+        if len(dataset) > 15000:  # Reasonable limit
+            print(f"⚠️ Reducing dataset from {len(dataset):,} to 15,000 samples for efficiency")
+            dataset = torch.utils.data.Subset(dataset, list(range(15000)))
         
         # Split dataset
         train_size = int(0.9 * len(dataset))
@@ -543,8 +548,9 @@ def train_iris_specialized():
         for epoch in range(IRIS_CONFIG['epochs_per_stage']):
             global_epoch += 1
             
-            # Exact match injection training (Stage 0 only, first 5 epochs)
-            if exact_dataset and stage == 0 and epoch < 5:  # Only first 5 epochs of Stage 0
+            # Exact match injection training (Stage 0 ONLY, epoch 0 ONLY)
+            if exact_dataset and stage == 0 and epoch == 0:  # ONLY FIRST EPOCH
+                print(f"🔥 Running ONE-TIME exact injection for Stage {stage}")
                 model = inject_exact_match_training(
                     model, device=device,
                     num_epochs=1,
@@ -615,8 +621,8 @@ def train_iris_specialized():
                     'color_bal': f"{losses['color_balance'].item():.3f}"
                 })
                 
-                # LEAP training integration with stage-specific complexity
-                if USE_LEAP and 'leap_trainer' in systems and batch_idx % 2 == 0:
+                # LEAP training integration with reduced frequency for speed
+                if USE_LEAP and 'leap_trainer' in systems and batch_idx % 10 == 0:  # Every 10 batches instead of 2
                     # Adjust LEAP complexity based on current stage
                     leap_complexity = stage_config['leap_complexity']
                     leap_grid_size = min(grid_size, 12)  # Cap LEAP at 12x12 for stability
@@ -770,10 +776,29 @@ def train_iris_specialized():
                     status = f"⚠️ Still learning {grid_size}x{grid_size} color fundamentals"
                 print(f"   📊 STATUS: {status}")
                 
+                # Create models directory if needed
+                models_dir = '/content/AutomataNexus_Olympus_AGI2/arc_models_v4'
+                os.makedirs(models_dir, exist_ok=True)
+                
+                # Save checkpoint every validation
+                checkpoint_path = f'{models_dir}/iris_checkpoint.pt'
+                torch.save({
+                    'epoch': global_epoch,
+                    'stage': stage,
+                    'grid_size': grid_size,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'val_exact': val_exact_pct,
+                    'best_exact': best_exact,
+                    'val_loss': val_loss,
+                    'config': IRIS_CONFIG,
+                    'stage_config': STAGE_CONFIG
+                }, checkpoint_path)
+                
                 # Save best model
                 if val_exact_pct > best_exact:
                     best_exact = val_exact_pct
-                    model_path = f'/content/AutomataNexus_Olympus_AGI2/src/models/iris_specialized_best.pth'
+                    best_model_path = f'{models_dir}/iris_best.pt'
                     torch.save({
                         'epoch': global_epoch,
                         'stage': stage,
@@ -782,9 +807,10 @@ def train_iris_specialized():
                         'optimizer_state_dict': optimizer.state_dict(),
                         'val_exact': val_exact_pct,
                         'best_exact': val_exact_pct,
+                        'val_loss': val_loss,
                         'config': IRIS_CONFIG,
                         'stage_config': STAGE_CONFIG
-                    }, model_path)
+                    }, best_model_path)
                     print(f"   💾 NEW BEST: {val_exact_pct:.2f}% color exact match saved!")
     
     # Final training summary

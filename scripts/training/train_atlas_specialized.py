@@ -1,6 +1,6 @@
 """
-CHRONOS Specialized Training Script - Temporal Sequence Analysis Expert
-Integrates ALL AutomataNexus novel training methods for CHRONOS's unique temporal architecture
+ATLAS Specialized Training Script - Spatial Transformation Expert
+Integrates ALL AutomataNexus novel training methods for ATLAS's unique spatial architecture
 """
 
 import torch
@@ -24,8 +24,8 @@ sys.path.append('/content/AutomataNexus_Olympus_AGI2')
 sys.path.append('/content/AutomataNexus_Olympus_AGI2/src')
 sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
 
-# Import CHRONOS model
-from src.models.chronos_model import EnhancedChronosNet
+# Import ATLAS model
+from src.models.atlas_model import EnhancedAtlasNet
 
 # Import ALL AutomataNexus novel training components
 from src.dsl import DSLTrainingIntegration, DSLProgramGenerator
@@ -68,34 +68,22 @@ except ImportError:
 from src.data.arc_data_synthesis import ARCDataSynthesizer, ARCDataAugmenter
 from colab_training_v4_megascale_curriculum import CurriculumMegaScaleDataset, TrainingReporter
 
-# CHRONOS-Specific Configuration with 8-Stage Progressive Curriculum
-CHRONOS_CONFIG = {
-    'batch_size': 256,  # Smaller for temporal complexity
-    'learning_rate': 0.002,  # Further reduced for temporal stability
-    'num_epochs': 320,  # 8 stages x 40 epochs
-    'sequence_length': 3,  # Max sequence for temporal analysis
-    'hidden_dim': 256,
-    'gradient_accumulation': 2,  # Effective batch: 512
-    'transform_penalty': 0.3,  # Lower - CHRONOS should do temporal transformations
-    'exact_match_bonus': 2.5,  # Reduced to prevent negative losses
-    'curriculum_stages': 8,  # Progressive 8-stage curriculum
-    'epochs_per_stage': 40,  # Shorter stages for smoother progression
-    'temporal_weight': 0.2,  # Reduced for stability
-    'movement_weight': 0.15,  # Reduced for stability
-    'object_tracking_weight': 0.1,  # Reduced for stability
-    'sequence_consistency_weight': 0.15  # Reduced for stability
-}
-
-# 8-Stage Progressive Grid Size Curriculum for Temporal Learning
-STAGE_CONFIG = {
-    0: {'max_grid_size': 6,  'synthesis_ratio': 0.6, 'exact_injection': True,  'leap_complexity': 'basic'},
-    1: {'max_grid_size': 8,  'synthesis_ratio': 0.5, 'exact_injection': False, 'leap_complexity': 'basic'},
-    2: {'max_grid_size': 10, 'synthesis_ratio': 0.5, 'exact_injection': False, 'leap_complexity': 'simple'},
-    3: {'max_grid_size': 13, 'synthesis_ratio': 0.4, 'exact_injection': False, 'leap_complexity': 'simple'},
-    4: {'max_grid_size': 16, 'synthesis_ratio': 0.4, 'exact_injection': False, 'leap_complexity': 'medium'},
-    5: {'max_grid_size': 20, 'synthesis_ratio': 0.3, 'exact_injection': False, 'leap_complexity': 'medium'},
-    6: {'max_grid_size': 25, 'synthesis_ratio': 0.3, 'exact_injection': False, 'leap_complexity': 'complex'},
-    7: {'max_grid_size': 30, 'synthesis_ratio': 0.2, 'exact_injection': False, 'leap_complexity': 'complex'}
+# ATLAS-Specific Configuration
+ATLAS_CONFIG = {
+    'batch_size': 320,  # Medium for spatial complexity
+    'learning_rate': 0.005,  # Standard for spatial learning
+    'num_epochs': 300,
+    'max_grid_size': 30,  # Larger for spatial transformations
+    'gradient_accumulation': 2,  # Effective batch: 640
+    'transform_penalty': 0.2,  # Very low - ATLAS should do spatial transformations
+    'exact_match_bonus': 7.0,  # High for spatial precision
+    'curriculum_stages': 3,
+    'epochs_per_stage': 100,
+    'spatial_weight': 0.6,  # ATLAS-specific loss component
+    'affine_weight': 0.4,  # Spatial transformer weight
+    'rotation_weight': 0.3,  # Discrete rotation weight
+    'reflection_weight': 0.3,  # Discrete reflection weight
+    'geometric_consistency_weight': 0.5  # Geometric transformation consistency
 }
 
 # Training components flags
@@ -107,11 +95,11 @@ USE_LEAP_PRISM_BRIDGE = True and LEAP_PRISM_BRIDGE_AVAILABLE
 
 # Device setup
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print(f"⏰ CHRONOS Training on {device}")
+print(f"🌍 ATLAS Training on {device}")
 
 
-class ChronosSpecializedDataset(Dataset):
-    """CHRONOS-optimized dataset with temporal sequence focus"""
+class AtlasSpecializedDataset(Dataset):
+    """ATLAS-optimized dataset with spatial transformation focus"""
     def __init__(self, base_dataset, replay_buffer=None, replay_ratio=0.3):
         self.base_dataset = base_dataset
         self.replay_buffer = replay_buffer
@@ -121,10 +109,10 @@ class ChronosSpecializedDataset(Dataset):
         return len(self.base_dataset)
     
     def __getitem__(self, idx):
-        # MEPT replay integration - prioritize temporal patterns
+        # MEPT replay integration - prioritize spatial transformation patterns
         if (self.replay_buffer and random.random() < self.replay_ratio and 
             len(self.replay_buffer.buffer) > 0):
-            experiences = self.replay_buffer.sample(1, exact_ratio=0.7)  # Favor temporal matches
+            experiences = self.replay_buffer.sample(1, exact_ratio=0.7)  # Favor spatial matches
             if experiences:
                 exp = experiences[0]
                 input_tensor = exp['input']
@@ -149,22 +137,29 @@ class ChronosSpecializedDataset(Dataset):
         return self.base_dataset[idx]
 
 
-class ChronosSpecializedLoss(nn.Module):
-    """CHRONOS-specific loss - SIMPLIFIED FOR STABILITY"""
+class AtlasSpecializedLoss(nn.Module):
+    """ATLAS-specific loss incorporating spatial-focused training methods"""
     def __init__(self):
         super().__init__()
         self.weights = {
             'reconstruction': 1.0,
-            'transformation': CHRONOS_CONFIG['transform_penalty'],
-            'exact_match': CHRONOS_CONFIG['exact_match_bonus']
+            'transformation': ATLAS_CONFIG['transform_penalty'],
+            'exact_match': ATLAS_CONFIG['exact_match_bonus'],
+            'spatial': ATLAS_CONFIG['spatial_weight'],
+            'affine': ATLAS_CONFIG['affine_weight'],
+            'rotation': ATLAS_CONFIG['rotation_weight'],
+            'reflection': ATLAS_CONFIG['reflection_weight'],
+            'geometric_consistency': ATLAS_CONFIG['geometric_consistency_weight'],
+            'edge': 0.3,  # Moderate - spatial boundaries matter
+            'color_balance': 0.2  # Lower - focus on spatial not color
         }
         
     def forward(self, pred_output, target_output, input_grid, model_outputs=None):
-        """SIMPLIFIED CHRONOS loss - based on working IRIS approach"""
+        """ATLAS-specialized loss function"""
         B, C, H, W = pred_output.shape
         
-        # Simple focal loss like IRIS  
-        focal_loss = self._focal_loss(pred_output, target_output, gamma=2.0)
+        # Core reconstruction loss with spatial focus
+        spatial_focal_loss = self._spatial_focal_loss(pred_output, target_output, gamma=1.4)
         
         # Exact match detection and bonus
         pred_indices = pred_output.argmax(dim=1)
@@ -172,111 +167,166 @@ class ChronosSpecializedLoss(nn.Module):
         exact_matches = (pred_indices == target_indices).all(dim=[1,2]).float()
         exact_count = exact_matches.sum()
         exact_bonus = -exact_matches.mean() * self.weights['exact_match']
-        exact_bonus = exact_bonus.clamp(min=-2.0)  # Prevent excessive negative contribution
         
-        # Simple transformation penalty
+        # ATLAS-specific: Spatial transformation penalty (should be very low)
         input_indices = input_grid.argmax(dim=1)
         copy_penalty = (pred_indices == input_indices).all(dim=[1,2]).float()
         transform_penalty = copy_penalty.mean() * self.weights['transformation']
         
-        # SIMPLE total loss - only 3 components like IRIS
-        total_loss = focal_loss + transform_penalty + exact_bonus
+        # ATLAS-specific: Affine transformation consistency
+        affine_loss = 0.0
+        if model_outputs and 'theta' in model_outputs:
+            theta = model_outputs['theta']  # B, 2, 3
+            # Encourage reasonable affine transformations (not too extreme)
+            scale_regularization = torch.norm(theta[:, :2, :2], dim=(1, 2))  # Scale/rotation part
+            translation_regularization = torch.norm(theta[:, :, 2], dim=1)  # Translation part
+            affine_loss = (scale_regularization.mean() + translation_regularization.mean() * 0.1) * self.weights['affine']
         
-        # Simple stability check
-        if torch.isnan(total_loss) or torch.isinf(total_loss):
-            print(f"⚠️ NaN/Inf loss, using focal only")
-            total_loss = focal_loss.clamp(max=10.0)
+        # ATLAS-specific: Rotation prediction consistency
+        rotation_loss = 0.0
+        if model_outputs and 'rotation_logits' in model_outputs:
+            rotation_logits = model_outputs['rotation_logits']  # B, 4
+            # Encourage confident rotation predictions
+            rotation_entropy = -torch.sum(F.softmax(rotation_logits, dim=1) * F.log_softmax(rotation_logits, dim=1), dim=1)
+            rotation_loss = rotation_entropy.mean() * self.weights['rotation']
         
-        # Prevent extremely negative losses that indicate instability
-        if total_loss < -5.0:
-            print(f"⚠️ Loss too negative ({total_loss.item():.3f}), clamping")
-            total_loss = total_loss.clamp(min=-5.0)
+        # ATLAS-specific: Reflection prediction consistency
+        reflection_loss = 0.0
+        if model_outputs and 'reflection_logits' in model_outputs:
+            reflection_logits = model_outputs['reflection_logits']  # B, 3
+            # Encourage confident reflection predictions
+            reflection_entropy = -torch.sum(F.softmax(reflection_logits, dim=1) * F.log_softmax(reflection_logits, dim=1), dim=1)
+            reflection_loss = reflection_entropy.mean() * self.weights['reflection']
+        
+        # ATLAS-specific: Geometric consistency (spatial relationships preserved)
+        geometric_consistency_loss = self._geometric_consistency_loss(pred_output, target_output, input_grid) * self.weights['geometric_consistency']
+        
+        # Enhanced edge loss for spatial boundaries
+        edge_loss = self._enhanced_edge_loss(pred_output, target_output) * self.weights['edge']
+        
+        # Minimal color balance (spatial transformations more important)
+        color_balance_loss = self._minimal_color_balance_loss(pred_output, target_output) * self.weights['color_balance']
+        
+        # Total loss
+        total_loss = (spatial_focal_loss + transform_penalty + affine_loss + 
+                     rotation_loss + reflection_loss + geometric_consistency_loss +
+                     edge_loss + color_balance_loss + exact_bonus)
         
         return {
             'total': total_loss,
-            'focal': focal_loss,
+            'spatial_focal': spatial_focal_loss,
             'transform': transform_penalty,
             'exact_bonus': exact_bonus,
             'exact_count': exact_count,
-            'temporal': torch.tensor(0.0, device=total_loss.device),  # Dummy for display
-            'movement': torch.tensor(0.0, device=total_loss.device)  # Dummy for display
+            'affine': affine_loss,
+            'rotation': rotation_loss,
+            'reflection': reflection_loss,
+            'geometric_consistency': geometric_consistency_loss,
+            'edge': edge_loss,
+            'color_balance': color_balance_loss
         }
     
-    def _focal_loss(self, pred, target, gamma=2.0):
-        """Simple focal loss like IRIS"""
-        target_idx = target.argmax(dim=1)
-        ce_loss = F.cross_entropy(pred, target_idx, reduction='none')
-        pt = torch.exp(-ce_loss)
-        focal_loss = (1 - pt) ** gamma * ce_loss
-        return focal_loss.mean()
-    
-    def _temporal_focal_loss(self, pred, target, gamma=1.3):
-        """Focal loss optimized for temporal patterns"""
+    def _spatial_focal_loss(self, pred, target, gamma=1.4):
+        """Focal loss optimized for spatial transformations"""
         target_idx = target.argmax(dim=1)
         ce_loss = F.cross_entropy(pred, target_idx, reduction='none')
         
-        # Temporal-specific focal weighting
+        # Spatial-specific focal weighting
         pt = torch.exp(-ce_loss)
-        temporal_weights = torch.ones_like(target_idx, dtype=torch.float)
-        # Weight changed pixels more heavily for temporal learning
-        changed_mask = target_idx != target.argmax(dim=1)
-        temporal_weights[changed_mask] = 1.8
+        spatial_weights = torch.ones_like(target_idx, dtype=torch.float)
+        # Weight edge pixels more heavily for spatial learning
+        edge_mask = self._detect_edges(target_idx)
+        spatial_weights[edge_mask] = 1.5
         
-        focal = (1 - pt) ** gamma * ce_loss * temporal_weights
+        focal = (1 - pt) ** gamma * ce_loss * spatial_weights
         return focal.mean()
     
-    def _object_tracking_loss(self, pred, target):
-        """Encourage object consistency for tracking"""
+    def _detect_edges(self, grid_batch):
+        """Detect edge pixels for spatial weighting"""
+        edges = torch.zeros_like(grid_batch, dtype=torch.bool)
+        for b in range(grid_batch.shape[0]):
+            grid = grid_batch[b]
+            # Simple edge detection using differences
+            diff_h = torch.abs(grid[1:, :] - grid[:-1, :]) > 0
+            diff_w = torch.abs(grid[:, 1:] - grid[:, :-1]) > 0
+            edges[b, 1:, :] |= diff_h
+            edges[b, :-1, :] |= diff_h
+            edges[b, :, 1:] |= diff_w
+            edges[b, :, :-1] |= diff_w
+        return edges
+    
+    def _geometric_consistency_loss(self, pred, target, input_grid):
+        """Encourage preservation of geometric relationships"""
+        pred_idx = pred.argmax(dim=1)
+        target_idx = target.argmax(dim=1)
+        input_idx = input_grid.argmax(dim=1)
+        
+        # Check if spatial relationships are preserved
+        # Simple approach: compare center of mass for each color
+        consistency_loss = 0.0
+        for b in range(pred.shape[0]):
+            pred_centers = self._get_color_centers(pred_idx[b])
+            target_centers = self._get_color_centers(target_idx[b])
+            
+            if len(pred_centers) > 0 and len(target_centers) > 0:
+                # Compare relative distances between centers
+                pred_dists = self._get_center_distances(pred_centers)
+                target_dists = self._get_center_distances(target_centers)
+                
+                if len(pred_dists) > 0 and len(target_dists) > 0:
+                    min_len = min(len(pred_dists), len(target_dists))
+                    pred_dists = pred_dists[:min_len]
+                    target_dists = target_dists[:min_len]
+                    consistency_loss += F.mse_loss(pred_dists, target_dists)
+        
+        return consistency_loss / max(1, pred.shape[0])
+    
+    def _get_color_centers(self, grid):
+        """Get center of mass for each color"""
+        centers = []
+        for color in torch.unique(grid):
+            if color > 0:  # Skip background
+                mask = (grid == color)
+                if mask.any():
+                    y_coords, x_coords = torch.where(mask)
+                    center_y = y_coords.float().mean()
+                    center_x = x_coords.float().mean()
+                    centers.append(torch.stack([center_y, center_x]))
+        return centers
+    
+    def _get_center_distances(self, centers):
+        """Get distances between centers"""
+        distances = []
+        for i in range(len(centers)):
+            for j in range(i + 1, len(centers)):
+                dist = torch.norm(centers[i] - centers[j])
+                distances.append(dist)
+        return torch.stack(distances) if distances else torch.tensor([])
+    
+    def _enhanced_edge_loss(self, pred, target):
+        """Enhanced edge awareness for spatial transformations"""
         pred_idx = pred.argmax(dim=1)
         target_idx = target.argmax(dim=1)
         
-        # Simple object consistency check using connected components
-        pred_objects = self._get_object_centers(pred_idx)
-        target_objects = self._get_object_centers(target_idx)
+        # Sobel edge detection
+        sobel_x = torch.tensor([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=torch.float32).to(pred.device)
+        sobel_y = torch.tensor([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], dtype=torch.float32).to(pred.device)
         
-        if len(pred_objects) == 0 or len(target_objects) == 0:
-            return torch.tensor(0.0).to(pred.device)
+        sobel_x = sobel_x.view(1, 1, 3, 3)
+        sobel_y = sobel_y.view(1, 1, 3, 3)
         
-        # Compute distance between object centers
-        center_distances = []
-        for pred_center in pred_objects:
-            if target_objects:
-                min_dist = min(torch.norm(pred_center - target_center).item() 
-                              for target_center in target_objects)
-                center_distances.append(min_dist)
+        pred_edges_x = F.conv2d(pred_idx.float().unsqueeze(1), sobel_x, padding=1)
+        pred_edges_y = F.conv2d(pred_idx.float().unsqueeze(1), sobel_y, padding=1)
+        pred_edges = torch.sqrt(pred_edges_x**2 + pred_edges_y**2)
         
-        if center_distances:
-            return torch.tensor(np.mean(center_distances)).to(pred.device)
-        return torch.tensor(0.0).to(pred.device)
+        target_edges_x = F.conv2d(target_idx.float().unsqueeze(1), sobel_x, padding=1)
+        target_edges_y = F.conv2d(target_idx.float().unsqueeze(1), sobel_y, padding=1)
+        target_edges = torch.sqrt(target_edges_x**2 + target_edges_y**2)
+        
+        return F.mse_loss(pred_edges, target_edges)
     
-    def _get_object_centers(self, grid_batch):
-        """Get centers of non-zero objects in grid batch"""
-        centers = []
-        for b in range(grid_batch.shape[0]):
-            grid = grid_batch[b]
-            nonzero_positions = torch.nonzero(grid, as_tuple=False)
-            if len(nonzero_positions) > 0:
-                center = nonzero_positions.float().mean(dim=0)
-                centers.append(center)
-        return centers
-    
-    def _sequence_consistency_loss(self, pred, input_grid):
-        """Encourage temporal consistency in predictions"""
-        pred_idx = pred.argmax(dim=1)
-        input_idx = input_grid.argmax(dim=1)
-        
-        # Check for smooth transitions (avoid abrupt changes)
-        pred_gradients = torch.gradient(pred_idx.float(), dim=[1, 2])
-        input_gradients = torch.gradient(input_idx.float(), dim=[1, 2])
-        
-        # Compare gradient magnitudes for smoothness
-        pred_grad_mag = sum(g.abs().mean() for g in pred_gradients)
-        input_grad_mag = sum(g.abs().mean() for g in input_gradients)
-        
-        return F.mse_loss(pred_grad_mag, input_grad_mag)
-    
-    def _enhanced_color_balance_loss(self, pred, target):
-        """Enhanced color distribution preservation for object tracking"""
+    def _minimal_color_balance_loss(self, pred, target):
+        """Minimal color distribution preservation for spatial model"""
         pred_colors = F.softmax(pred, dim=1).sum(dim=[2, 3])  # B, 10
         target_colors = target.sum(dim=[2, 3])  # B, 10
         
@@ -284,26 +334,14 @@ class ChronosSpecializedLoss(nn.Module):
         pred_colors = pred_colors / (pred_colors.sum(dim=1, keepdim=True) + 1e-8)
         target_colors = target_colors / (target_colors.sum(dim=1, keepdim=True) + 1e-8)
         
-        # KL divergence for better color distribution matching
-        return F.kl_div(torch.log(pred_colors + 1e-8), target_colors, reduction='batchmean')
-    
-    def _minimal_edge_loss(self, pred, target):
-        """Minimal edge awareness for temporal model"""
-        pred_idx = pred.argmax(dim=1)
-        target_idx = target.argmax(dim=1)
-        
-        # Simple boundary detection
-        pred_diff = torch.abs(pred_idx[:, 1:, :] - pred_idx[:, :-1, :]).float()
-        target_diff = torch.abs(target_idx[:, 1:, :] - target_idx[:, :-1, :]).float()
-        
-        return F.mse_loss(pred_diff, target_diff)
+        return F.mse_loss(pred_colors, target_colors)
 
 
-def custom_collate_fn(batch, stage=0):
-    """CHRONOS-optimized collate function with stage-specific grid sizes"""
+def custom_collate_fn(batch):
+    """ATLAS-optimized collate function with guaranteed size consistency"""
     inputs = []
     outputs = []
-    target_size = STAGE_CONFIG[stage]['max_grid_size']
+    target_size = ATLAS_CONFIG['max_grid_size']
     
     for i, item in enumerate(batch):
         try:
@@ -371,19 +409,17 @@ def custom_collate_fn(batch, stage=0):
     }
 
 
-def train_chronos_specialized():
-    """Main CHRONOS specialized training function"""
-    print("⏰ Starting CHRONOS Specialized Training")
+def train_atlas_specialized():
+    """Main ATLAS specialized training function"""
+    print("🌍 Starting ATLAS Specialized Training")
     print("=" * 60)
     
-    # Initialize model with maximum grid size from final stage
-    max_grid_size = STAGE_CONFIG[7]['max_grid_size']  # Final stage size (30x30)
-    model = EnhancedChronosNet(
-        max_grid_size=max_grid_size,
-        hidden_dim=CHRONOS_CONFIG['hidden_dim']
+    # Initialize model
+    model = EnhancedAtlasNet(
+        max_grid_size=ATLAS_CONFIG['max_grid_size']
     ).to(device)
     
-    print(f"📊 CHRONOS Model: {sum(p.numel() for p in model.parameters()):,} parameters")
+    print(f"📊 ATLAS Model: {sum(p.numel() for p in model.parameters()):,} parameters")
     
     # Initialize all AutomataNexus training systems
     systems = {}
@@ -391,10 +427,10 @@ def train_chronos_specialized():
     # MEPT System
     if USE_MEPT:
         mept_components = create_mept_system(
-            capacity=60000,  # Medium for temporal patterns
-            pattern_bank_size=12000,
-            transformation_penalty=CHRONOS_CONFIG['transform_penalty'],
-            exact_match_bonus=CHRONOS_CONFIG['exact_match_bonus']
+            capacity=70000,  # Large for spatial patterns
+            pattern_bank_size=15000,
+            transformation_penalty=ATLAS_CONFIG['transform_penalty'],
+            exact_match_bonus=ATLAS_CONFIG['exact_match_bonus']
         )
         systems['replay_buffer'] = mept_components['replay_buffer']
         systems['pattern_bank'] = mept_components['pattern_bank']
@@ -421,19 +457,20 @@ def train_chronos_specialized():
         print("✅ LEAP-PRISM bridge initialized")
     
     # Initialize specialized loss
-    loss_fn = ChronosSpecializedLoss().to(device)
+    loss_fn = AtlasSpecializedLoss().to(device)
     
-    # Optimizer - Adam for temporal sequence learning
-    optimizer = optim.Adam(
+    # Optimizer - SGD with Nesterov for spatial transformation stability
+    optimizer = optim.SGD(
         model.parameters(),
-        lr=CHRONOS_CONFIG['learning_rate'],
-        betas=(0.9, 0.999),
-        weight_decay=1e-4
+        lr=ATLAS_CONFIG['learning_rate'],
+        momentum=0.9,
+        nesterov=True,
+        weight_decay=5e-4
     )
     
     # Scheduler
     scheduler = optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=CHRONOS_CONFIG['epochs_per_stage']
+        optimizer, T_max=ATLAS_CONFIG['epochs_per_stage']
     )
     
     # Mixed precision
@@ -446,88 +483,89 @@ def train_chronos_specialized():
     best_exact = 0.0
     global_epoch = 0
     
-    # 8-Stage Progressive Curriculum Training Loop
-    stage_metrics = []  # Track learning progression
-    
-    for stage in range(CHRONOS_CONFIG['curriculum_stages']):
-        stage_config = STAGE_CONFIG[stage]
-        grid_size = stage_config['max_grid_size']
-        synthesis_ratio = stage_config['synthesis_ratio']
+    # Curriculum training loop
+    for stage in range(ATLAS_CONFIG['curriculum_stages']):
+        print(f"\n🌍 ATLAS Stage {stage}: Spatial Transformation Focus")
+        print("=" * 50)
         
-        print(f"\n⏰ CHRONOS Stage {stage}: {grid_size}x{grid_size} Temporal Sequence Analysis")
-        print(f"   📏 Grid Size: {grid_size}x{grid_size} | Synthesis: {synthesis_ratio*100:.0f}% | LEAP: {stage_config['leap_complexity']}")
-        print("=" * 60)
-        
-        # Create curriculum dataset with stage-specific grid size
+        # Create curriculum dataset - EFFICIENT SIZE
         dataset = CurriculumMegaScaleDataset(
             DATA_DIR,
-            curriculum_stage=min(stage, 2),  # Cap at stage 2 for compatibility
+            curriculum_stage=stage,
             use_arc_synthesis=True,
-            synthesis_ratio=synthesis_ratio
+            synthesis_ratio=max(0.2, (0.4 if stage == 0 else 0.3) * 0.5)  # Reduce by 50%
         )
+        
+        # Limit dataset size for efficient training
+        if len(dataset) > 15000:  # Reasonable limit
+            print(f"⚠️ Reducing dataset from {len(dataset):,} to 15,000 samples for efficiency")
+            dataset = torch.utils.data.Subset(dataset, list(range(15000)))
         
         # Split dataset
         train_size = int(0.9 * len(dataset))
         val_size = len(dataset) - train_size
         train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
         
-        # Apply CHRONOS-specialized dataset wrapper
+        # Apply ATLAS-specialized dataset wrapper
         if USE_MEPT and 'replay_buffer' in systems:
-            train_dataset = ChronosSpecializedDataset(
+            train_dataset = AtlasSpecializedDataset(
                 train_dataset, 
                 systems['replay_buffer'],
                 replay_ratio=0.3 if stage == 0 else 0.2
             )
         
-        # Data loaders with stage-specific grid sizes
+        # Data loaders
         train_loader = DataLoader(
             train_dataset,
-            batch_size=CHRONOS_CONFIG['batch_size'],
+            batch_size=ATLAS_CONFIG['batch_size'],
             shuffle=True,
             num_workers=4,
             pin_memory=True,
-            collate_fn=lambda batch: custom_collate_fn(batch, stage),
+            collate_fn=custom_collate_fn,
             persistent_workers=True
         )
         
         val_loader = DataLoader(
             val_dataset,
-            batch_size=CHRONOS_CONFIG['batch_size'],
+            batch_size=ATLAS_CONFIG['batch_size'],
             shuffle=False,
             num_workers=4,
             pin_memory=True,
-            collate_fn=lambda batch: custom_collate_fn(batch, stage)
+            collate_fn=custom_collate_fn
         )
         
-        print(f"📚 Stage {stage} ({grid_size}x{grid_size}) - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
+        print(f"📚 Stage {stage} - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
         
-        # Exact match injection for Stage 0 only
+        # Exact match injection for Stage 0 (spatial-focused)
         exact_dataset = None
-        if stage_config['exact_injection'] and USE_EXACT_BOOST:
+        if stage == 0 and USE_EXACT_BOOST:
             try:
-                exact_dataset = ExactMatchBoostDataset(1300, fixed_size=grid_size)
-                print(f"✅ Stage {stage} temporal-focused exact match injection dataset created ({grid_size}x{grid_size})")
+                exact_dataset = ExactMatchBoostDataset(1400, fixed_size=8)  # Larger grids for spatial focus
+                print("✅ Spatial-focused exact match injection dataset created")
             except Exception as e:
                 print(f"⚠️ Could not create exact match dataset: {e}")
         
         # Stage training loop
-        for epoch in range(CHRONOS_CONFIG['epochs_per_stage']):
+        for epoch in range(ATLAS_CONFIG['epochs_per_stage']):
             global_epoch += 1
             
             # Exact match injection training (Stage 0 only, FIRST EPOCH ONLY)
             if exact_dataset and stage == 0 and epoch == 0:  # ONLY FIRST EPOCH
+                print(f"🔥 Running exact injection: Stage {stage}, Epoch {epoch}")
                 model = inject_exact_match_training(
                     model, device=device,
                     num_epochs=1,
-                    target_accuracy=93.0  # Slightly lower for complex temporal patterns
+                    target_accuracy=94.0  # Slightly lower for complex spatial patterns
                 )
-                print(f"⏰ Temporal injection completed - Epoch {global_epoch}")
+                print(f"🌍 Spatial injection completed - Epoch {global_epoch}")
+            else:
+                print(f"⏭️ Skipping exact injection: Stage {stage}, Epoch {epoch}")
             
             # Main training
             model.train()
             train_metrics = {'loss': 0, 'exact': 0, 'samples': 0}
             
-            pbar = tqdm(train_loader, desc=f"CHRONOS Stage {stage}, Epoch {epoch+1}", 
+            pbar = tqdm(train_loader, desc=f"ATLAS Stage {stage}, Epoch {epoch+1}", 
                        colour='cyan', bar_format='{l_bar}{bar:30}{r_bar}')
             optimizer.zero_grad()
             
@@ -544,34 +582,19 @@ def train_chronos_specialized():
                 output_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
                 
                 with autocast('cuda'):
-                    # CHRONOS forward pass - expects list of tensors for sequence
-                    model_outputs = model([input_grids])
+                    # ATLAS forward pass
+                    model_outputs = model(input_grids, output_grids, mode='train')
                     pred_output = model_outputs['predicted_output']
                     
                     # Specialized loss
                     losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
-                    loss = losses['total'] / CHRONOS_CONFIG['gradient_accumulation']
-                    
-                    # CHRONOS-specific temporal loss validation
-                    if torch.isnan(loss) or torch.isinf(loss):
-                        print(f"⚠️ Skipping invalid temporal loss at batch {batch_idx}")
-                        continue
-                    
-                    # Skip if loss is extremely negative (temporal instability)
-                    if loss < -4.0:
-                        print(f"⚠️ Skipping extremely negative temporal loss: {loss.item():.3f}")
-                        continue
+                    loss = losses['total'] / ATLAS_CONFIG['gradient_accumulation']
                 
                 scaler.scale(loss).backward()
                 
-                if (batch_idx + 1) % CHRONOS_CONFIG['gradient_accumulation'] == 0:
+                if (batch_idx + 1) % ATLAS_CONFIG['gradient_accumulation'] == 0:
                     scaler.unscale_(optimizer)
-                    
-                    # Normal gradient clipping like IRIS
-                    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-                    if grad_norm > 5.0:
-                        print(f"⚠️ Large gradient norm: {grad_norm:.2f}, clipped to 1.0")
-                    
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                     scaler.step(optimizer)
                     scaler.update()
                     optimizer.zero_grad()
@@ -584,27 +607,21 @@ def train_chronos_specialized():
                 pbar.set_postfix({
                     'loss': f"{losses['total'].item():.3f}",
                     'exact': f"{losses['exact_count'].item():.0f}",
-                    'temporal': f"{losses['temporal']:.3f}",
-                    'movement': f"{losses['movement']:.3f}"
+                    'affine': f"{losses['affine']:.3f}",
+                    'spatial': f"{losses['geometric_consistency']:.3f}"
                 })
                 
-                # LEAP training integration with stage-specific complexity
+                # LEAP training integration (spatial-focused patterns)
                 if USE_LEAP and 'leap_trainer' in systems and batch_idx % 3 == 0:
-                    # Adjust LEAP complexity based on current stage
-                    leap_complexity = stage_config['leap_complexity']
-                    leap_grid_size = min(grid_size, 12)  # Cap LEAP at 12x12 for stability
-                    
-                    leap_batch = systems['leap_trainer'].generate_leap_batch(
-                        batch_size=max(32, 64 - stage*8)  # Reduce batch size for larger grids
-                    )
+                    leap_batch = systems['leap_trainer'].generate_leap_batch(batch_size=64)
                     leap_inputs = leap_batch['inputs'].to(device)
                     leap_outputs = leap_batch['outputs'].to(device)
                     
-                    # Ensure proper grid size for current stage
+                    # Ensure proper grid size
                     H, W = leap_inputs.shape[-2:]
-                    if H < grid_size or W < grid_size:
-                        pad_h = grid_size - H
-                        pad_w = grid_size - W
+                    if H < ATLAS_CONFIG['max_grid_size'] or W < ATLAS_CONFIG['max_grid_size']:
+                        pad_h = ATLAS_CONFIG['max_grid_size'] - H
+                        pad_w = ATLAS_CONFIG['max_grid_size'] - W
                         leap_inputs = F.pad(leap_inputs, (0, pad_w, 0, pad_h), value=0)
                         leap_outputs = F.pad(leap_outputs, (0, pad_w, 0, pad_h), value=0)
                     
@@ -612,10 +629,10 @@ def train_chronos_specialized():
                     leap_output_oh = F.one_hot(leap_outputs, num_classes=10).permute(0, 3, 1, 2).float()
                     
                     with autocast('cuda'):
-                        leap_model_outputs = model([leap_input_oh])
+                        leap_model_outputs = model(leap_input_oh, leap_output_oh, mode='train')
                         leap_pred = leap_model_outputs['predicted_output']
                         leap_losses = loss_fn(leap_pred, leap_output_oh, leap_input_oh, leap_model_outputs)
-                        leap_loss = leap_losses['total'] / CHRONOS_CONFIG['gradient_accumulation']
+                        leap_loss = leap_losses['total'] / ATLAS_CONFIG['gradient_accumulation']
                     
                     scaler.scale(leap_loss).backward()
                     
@@ -624,18 +641,18 @@ def train_chronos_specialized():
                         leap_batch['pattern_types'], leap_pred, leap_output_oh
                     )
                 
-                # MEPT experience collection (temporal transformations)
+                # MEPT experience collection (spatial transformations)
                 if USE_MEPT and 'replay_buffer' in systems:
                     pred_indices = pred_output.argmax(dim=1)
                     target_indices = output_grids.argmax(dim=1)
                     exact_matches = (pred_indices == target_indices).all(dim=[1,2])
                     
-                    # Also collect temporal patterns with good accuracy
-                    temporal_accuracy = (pred_indices == target_indices).float().mean(dim=[1,2])
-                    good_temporal_matches = temporal_accuracy > 0.75
+                    # Also collect spatial patterns with good transformation quality
+                    spatial_accuracy = (pred_indices == target_indices).float().mean(dim=[1,2])
+                    good_spatial_matches = spatial_accuracy > 0.85
                     
                     for i in range(input_grids.size(0)):
-                        if exact_matches[i] or good_temporal_matches[i]:
+                        if exact_matches[i] or good_spatial_matches[i]:
                             systems['replay_buffer'].add(
                                 input_grids[i],
                                 output_grids[i],
@@ -663,7 +680,7 @@ def train_chronos_specialized():
                         output_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
                         
                         with autocast('cuda'):
-                            model_outputs = model([input_grids])
+                            model_outputs = model(input_grids, output_grids, mode='train')
                             pred_output = model_outputs['predicted_output']
                             losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
                         
@@ -685,119 +702,57 @@ def train_chronos_specialized():
                 val_exact_pct = val_metrics['exact'] / val_metrics['samples'] * 100
                 val_pixel_acc = val_metrics['pixel_acc'] / val_metrics['samples'] * 100
                 
-                # Track learning progress
-                current_metrics = {
-                    'train_exact': train_exact_pct,
-                    'val_exact': val_exact_pct,
-                    'train_loss': train_loss,
-                    'val_loss': val_loss,
-                    'pixel_acc': val_pixel_acc,
-                    'stage': stage,
-                    'grid_size': grid_size
-                }
-                stage_metrics.append(current_metrics)
+                print(f"\n🌍 ATLAS Epoch {global_epoch} (Stage {stage}):")
+                print(f"   Train Loss: {train_loss:.4f}, Train Exact: {train_exact_pct:.2f}%")
+                print(f"   Val Loss: {val_loss:.4f}, Val Exact: {val_exact_pct:.2f}%, Pixel: {val_pixel_acc:.2f}%")
                 
-                # Calculate learning trends
-                if len(stage_metrics) > 1:
-                    prev = stage_metrics[-2]
-                    exact_trend = val_exact_pct - prev['val_exact']
-                    loss_trend = val_loss - prev['val_loss']
-                    trend_icon = "📈" if exact_trend > 0 else "📉" if exact_trend < 0 else "➡️"
-                    trend_text = f"({exact_trend:+.2f}%)"
-                else:
-                    trend_icon = "🎆"
-                    trend_text = "(baseline)"
-                
-                # Enhanced learning indicators
-                print(f"\n⏰ CHRONOS Epoch {global_epoch} (Stage {stage}, {grid_size}x{grid_size}):")
-                print(f"   ⏰ GRID SIZE: {grid_size}x{grid_size} | TEMPORAL LEARNING: {trend_icon} {trend_text}")
-                print(f"   🎯 Train: {train_exact_pct:.2f}% exact, Loss: {train_loss:.3f}")
-                print(f"   🎯 Val: {val_exact_pct:.2f}% exact, Loss: {val_loss:.3f}, Pixel: {val_pixel_acc:.1f}%")
-                
-                # Stage progress indicator
-                stage_progress = (epoch + 1) / CHRONOS_CONFIG['epochs_per_stage'] * 100
-                total_progress = (stage * CHRONOS_CONFIG['epochs_per_stage'] + epoch + 1) / (CHRONOS_CONFIG['curriculum_stages'] * CHRONOS_CONFIG['epochs_per_stage']) * 100
-                print(f"   📏 Stage Progress: {stage_progress:.0f}% | Total Progress: {total_progress:.0f}%")
-                
-                # Enhanced system status reports
+                # System status reports
                 if USE_MEPT and 'replay_buffer' in systems:
                     buffer_stats = systems['replay_buffer'].get_stats()
-                    exact_rate = (buffer_stats['exact_matches'] / max(1, buffer_stats['total_experiences'])) * 100
-                    print(f"   📊 MEPT: {buffer_stats['total_experiences']:,} experiences | {buffer_stats['exact_matches']:,} exact ({exact_rate:.1f}% rate)")
+                    print(f"   📊 MEPT: {buffer_stats['total_experiences']:,} experiences, "
+                          f"{buffer_stats['exact_matches']:,} spatial matches")
                 
                 if USE_LEAP and 'leap_trainer' in systems:
                     leap_report = systems['leap_trainer'].get_performance_report()
-                    if leap_report and "0.0%" not in leap_report:
+                    if leap_report:
                         print(f"   🎯 LEAP: {leap_report}")
-                    else:
-                        print(f"   ⚠️ LEAP: Temporal pattern learning stuck at 0.0% - needs complexity adjustment for {grid_size}x{grid_size} grids")
-                
-                # Learning status analysis
-                if val_exact_pct >= 5.0:
-                    status = f"🏆 EXCELLENT temporal learning for {grid_size}x{grid_size} grids!"
-                elif val_exact_pct >= 1.0:
-                    status = f"📈 GOOD temporal progress on {grid_size}x{grid_size} sequences"
-                elif val_exact_pct >= 0.1:
-                    status = f"🔄 LEARNING temporal basics for {grid_size}x{grid_size} grids"
-                else:
-                    status = f"⚠️ Still learning {grid_size}x{grid_size} temporal fundamentals"
-                print(f"   📊 STATUS: {status}")
                 
                 # Create models directory if needed
                 models_dir = '/content/AutomataNexus_Olympus_AGI2/arc_models_v4'
                 os.makedirs(models_dir, exist_ok=True)
                 
                 # Save checkpoint every validation
-                checkpoint_path = f'{models_dir}/chronos_checkpoint.pt'
+                checkpoint_path = f'{models_dir}/atlas_checkpoint.pt'
                 torch.save({
                     'epoch': global_epoch,
                     'stage': stage,
-                    'grid_size': grid_size,
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
                     'val_exact': val_exact_pct,
                     'best_exact': best_exact,
                     'val_loss': val_loss,
-                    'config': CHRONOS_CONFIG,
-                    'stage_config': STAGE_CONFIG
+                    'config': ATLAS_CONFIG
                 }, checkpoint_path)
                 
                 # Save best model
                 if val_exact_pct > best_exact:
                     best_exact = val_exact_pct
-                    best_model_path = f'{models_dir}/chronos_best.pt'
+                    best_model_path = f'{models_dir}/atlas_best.pt'
                     torch.save({
                         'epoch': global_epoch,
                         'stage': stage,
-                        'grid_size': grid_size,
                         'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict(),
                         'val_exact': val_exact_pct,
                         'best_exact': val_exact_pct,
                         'val_loss': val_loss,
-                        'config': CHRONOS_CONFIG,
-                        'stage_config': STAGE_CONFIG
+                        'config': ATLAS_CONFIG
                     }, best_model_path)
-                    print(f"   💾 NEW BEST: {val_exact_pct:.2f}% temporal exact match saved!")
+                    print(f"   💾 NEW BEST: {val_exact_pct:.2f}% exact match saved!")
     
-    # Final training summary
-    print(f"\n🎉 CHRONOS 8-Stage Training Complete!")
-    print(f"   🏆 Best exact match: {best_exact:.2f}%")
-    print(f"   📏 Stages completed: {CHRONOS_CONFIG['curriculum_stages']} (6x6 → 30x30 grids)")
-    print(f"   📊 Total epochs: {global_epoch}")
-    
-    # Stage-by-stage progress summary
-    if stage_metrics:
-        print(f"\n📏 Stage-by-stage Temporal Learning Progression:")
-        for i, stage_config in enumerate(STAGE_CONFIG.values()):
-            stage_final = [m for m in stage_metrics if m['stage'] == i]
-            if stage_final:
-                final_exact = stage_final[-1]['val_exact']
-                grid_size = stage_config['max_grid_size']
-                print(f"   Stage {i} ({grid_size}x{grid_size}): {final_exact:.2f}% temporal exact match")
-    
+    print(f"\n🎉 ATLAS Training Complete! Best exact match: {best_exact:.2f}%")
     return model, best_exact
 
 
 if __name__ == "__main__":
-    train_chronos_specialized()
+    train_atlas_specialized()

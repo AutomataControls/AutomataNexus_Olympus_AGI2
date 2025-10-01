@@ -509,22 +509,21 @@ def train_iris_specialized():
                 replay_ratio=0.4 if stage == 0 else 0.2  # Higher replay for color learning
             )
         
-        # Data loaders with stage-specific grid sizes
+        # Data loaders with stage-specific grid sizes - no persistent workers for stage transitions
         train_loader = DataLoader(
             train_dataset,
             batch_size=IRIS_CONFIG['batch_size'],
             shuffle=True,
-            num_workers=4,
+            num_workers=2,  # Reduced workers to prevent hanging
             pin_memory=True,
-            collate_fn=lambda batch: custom_collate_fn(batch, stage),
-            persistent_workers=True
+            collate_fn=lambda batch: custom_collate_fn(batch, stage)
         )
         
         val_loader = DataLoader(
             val_dataset,
             batch_size=IRIS_CONFIG['batch_size'],
             shuffle=False,
-            num_workers=4,
+            num_workers=2,  # Reduced workers to prevent hanging
             pin_memory=True,
             collate_fn=lambda batch: custom_collate_fn(batch, stage)
         )

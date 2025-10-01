@@ -269,8 +269,9 @@ def custom_collate_fn(batch):
     """MINERVA-optimized collate function with proper tensor handling"""
     inputs = []
     outputs = []
+    target_size = MINERVA_CONFIG['max_grid_size']
     
-    for item in batch:
+    for i, item in enumerate(batch):
         input_grid = item['inputs']
         output_grid = item['outputs']
         
@@ -282,7 +283,6 @@ def custom_collate_fn(batch):
         
         # Get current dimensions
         H, W = input_grid.shape[-2:]
-        target_size = MINERVA_CONFIG['max_grid_size']
         
         # Truncate if too large
         if H > target_size or W > target_size:
@@ -290,13 +290,22 @@ def custom_collate_fn(batch):
             output_grid = output_grid[:target_size, :target_size]
             H, W = input_grid.shape[-2:]
         
-        # Pad to target size
+        # Pad to exact target size - ALWAYS
         pad_h = target_size - H
         pad_w = target_size - W
         
-        if pad_h > 0 or pad_w > 0:
-            input_grid = F.pad(input_grid, (0, pad_w, 0, pad_h), value=0)
-            output_grid = F.pad(output_grid, (0, pad_w, 0, pad_h), value=0)
+        input_grid = F.pad(input_grid, (0, pad_w, 0, pad_h), value=0)
+        output_grid = F.pad(output_grid, (0, pad_w, 0, pad_h), value=0)
+        
+        # Verify final size
+        final_H, final_W = input_grid.shape[-2:]
+        if final_H != target_size or final_W != target_size:
+            print(f"ERROR: Grid {i} size {final_H}x{final_W} != {target_size}x{target_size}")
+            # Force to correct size
+            input_grid = F.interpolate(input_grid.float().unsqueeze(0).unsqueeze(0), 
+                                     size=(target_size, target_size), mode='nearest').squeeze().long()
+            output_grid = F.interpolate(output_grid.float().unsqueeze(0).unsqueeze(0), 
+                                      size=(target_size, target_size), mode='nearest').squeeze().long()
         
         inputs.append(input_grid)
         outputs.append(output_grid)

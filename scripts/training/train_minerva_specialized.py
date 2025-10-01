@@ -632,11 +632,22 @@ def train_minerva_specialized():
             target_acc = 50.0 if stage == 0 else 60.0  # Realistic targets for injection
             
             if exact_dataset and stage_config['exact_injection'] and epoch == 0:  # ONLY FIRST EPOCH
-                print(f"🔥 Running exact injection: Stage {stage}, Epoch {epoch}, Target: {target_acc}%")
+                print(f"🔥 Running MINERVA exact injection: Stage {stage}, Epoch {epoch}, Target: {target_acc}%")
+                print("🎯 MINERVA EXACT MATCH INJECTION")
+                print("=" * 50)
+                print(f"  Batch size: {MINERVA_CONFIG['batch_size']}")
+                print(f"  Learning rate: {MINERVA_CONFIG['learning_rate']}")
+                print(f"  Transform penalty: {MINERVA_CONFIG['transform_penalty']}")
+                print(f"  Exact match bonus: {MINERVA_CONFIG['exact_match_bonus']}")
+                
+                # Use MINERVA-specific exact match training
+                from stage0_exact_match_boost import inject_exact_match_training
                 model = inject_exact_match_training(
                     model, device=device,
-                    num_epochs=10,  # Reduced from default 100
-                    target_accuracy=target_acc
+                    num_epochs=10,
+                    target_accuracy=target_acc,
+                    batch_size=MINERVA_CONFIG['batch_size'],  # Use MINERVA batch size
+                    learning_rate=MINERVA_CONFIG['learning_rate']  # Use MINERVA LR
                 )
                 print(f"💉 Exact injection completed - Stage {stage}, Epoch {global_epoch}")
                 # Memory cleanup after exact match injection

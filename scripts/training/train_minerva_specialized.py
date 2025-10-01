@@ -79,7 +79,7 @@ def minerva_exact_match_injection(model, device, num_epochs=100, target_accuracy
     print("🎯 MINERVA EXACT MATCH INJECTION - EXTENDED")
     print("=" * 50)
     print(f"  Batch size: {MINERVA_CONFIG['batch_size']}")
-    print(f"  Learning rate: {MINERVA_CONFIG['learning_rate']*5} (warmup -> {MINERVA_CONFIG['learning_rate']*15})")
+    print(f"  Learning rate: {MINERVA_CONFIG['learning_rate']*5} -> {MINERVA_CONFIG['learning_rate']*15} (with warmup)")
     print(f"  Transform penalty: {MINERVA_CONFIG['transform_penalty']}")
     print(f"  Exact match bonus: {MINERVA_CONFIG['exact_match_bonus']}")
     print(f"  Epochs: {num_epochs} (EXTENDED)")
@@ -219,13 +219,24 @@ def minerva_exact_match_injection(model, device, num_epochs=100, target_accuracy
             pred_idx = pred.argmax(dim=1)
             exact_matches = (pred_idx == outputs).all(dim=[1,2]).float()
             
-            # Progressive bonus that increases with epoch
-            bonus_scale = min(3.0, 1.0 + epoch / 20)  # Gradually increase bonus
-            exact_bonus = -exact_matches.mean() * bonus_scale
+            # Progressive bonus that increases with epoch  
+            # Start with no bonus, gradually increase to avoid destabilization
+            if epoch < 5:
+                bonus_scale = 0.0  # No bonus first 5 epochs
+            else:
+                bonus_scale = min(1.5, 0.5 + (epoch - 5) / 30)  # Gradually increase from 0.5 to 1.5
+            
+            # Only apply bonus when we have some exact matches to avoid negative spiral
+            if exact_matches.mean() > 0.1:
+                exact_bonus = -exact_matches.mean() * bonus_scale
+            else:
+                exact_bonus = 0.0
+                
             total_loss = loss + exact_bonus
             
-            # Prevent overly negative losses
-            total_loss = total_loss.clamp(min=0.001)
+            # Ensure loss stays positive
+            if total_loss < 0.1:
+                total_loss = loss * 0.1  # Use 10% of original loss as minimum
             
             # Add L2 regularization for stability
             l2_reg = sum(p.pow(2.0).sum() for p in model.parameters())

@@ -83,7 +83,6 @@ except ImportError:
 
 # Data systems
 from src.data.arc_data_synthesis import ARCDataSynthesizer, ARCDataAugmenter
-from colab_training_v4_megascale_curriculum import CurriculumMegaScaleDataset, TrainingReporter
 
 # IRIS-Specific Configuration with 8-Stage Progressive Curriculum
 IRIS_CONFIG = {

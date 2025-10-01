@@ -358,8 +358,9 @@ class MinervaPatternBank:
             pattern = pattern.squeeze(0)
         
         # Ensure we have a 2D tensor
-        while pattern.dim() > 2:
-            pattern = pattern.squeeze(0)
+        if pattern.dim() > 2:
+            # If more than 2D, take the first 2D slice
+            pattern = pattern.view(-1, pattern.shape[-2], pattern.shape[-1])[0]
         if pattern.dim() < 2:
             return False
             
@@ -374,8 +375,9 @@ class MinervaPatternBank:
             pattern = pattern.squeeze(0)
         
         # Ensure we have a 2D tensor
-        while pattern.dim() > 2:
-            pattern = pattern.squeeze(0)
+        if pattern.dim() > 2:
+            # If more than 2D, take the first 2D slice
+            pattern = pattern.view(-1, pattern.shape[-2], pattern.shape[-1])[0]
         if pattern.dim() < 2:
             return False
             
@@ -392,8 +394,9 @@ class MinervaPatternBank:
             pattern = pattern.squeeze(0)
         
         # Ensure we have a 2D tensor
-        while pattern.dim() > 2:
-            pattern = pattern.squeeze(0)
+        if pattern.dim() > 2:
+            # If more than 2D, take the first 2D slice
+            pattern = pattern.view(-1, pattern.shape[-2], pattern.shape[-1])[0]
         if pattern.dim() < 2:
             return False
             

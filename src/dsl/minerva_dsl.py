@@ -887,8 +887,8 @@ class MINERVADSLTraining:
                         copy_h = min(h, target_size)
                         copy_w = min(w, target_size)
                         
-                        input_tensor[:copy_h, :copy_w] = torch.tensor(dsl_input[:copy_h, :copy_w])
-                        output_tensor[:copy_h, :copy_w] = torch.tensor(dsl_output[:copy_h, :copy_w])
+                        input_tensor[:copy_h, :copy_w] = torch.tensor(dsl_input[:copy_h, :copy_w].copy())
+                        output_tensor[:copy_h, :copy_w] = torch.tensor(dsl_output[:copy_h, :copy_w].copy())
                         
                         # Assign to batch
                         batch[input_key][i] = input_tensor

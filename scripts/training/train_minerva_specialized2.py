@@ -482,13 +482,14 @@ def train_minerva_specialized_v2():
         val_size = len(dataset) - train_size
         train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
         
-        # Apply MINERVA-specialized dataset wrapper
-        if USE_MEPT and 'replay_buffer' in systems:
-            train_dataset = MinervaSpecializedDataset(
-                train_dataset,
-                systems['replay_buffer'],
-                replay_ratio=0.3
-            )
+        # DISABLE the specialized dataset wrapper - it's causing DataLoader hanging
+        # The MinervaSpecializedDataset replay buffer sampling is the source of the hang
+        # if USE_MEPT and 'replay_buffer' in systems:
+        #     train_dataset = MinervaSpecializedDataset(
+        #         train_dataset,
+        #         systems['replay_buffer'],
+        #         replay_ratio=0.3
+        #     )
         
         print(f"📚 Stage {stage} ({grid_size}x{grid_size}) - Train: {train_size}, Val: {val_size}")
         

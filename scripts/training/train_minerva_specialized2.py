@@ -240,9 +240,56 @@ def mixup_data(x, y, alpha=1.0):
 
 
 def custom_collate_fn_v2(batch, stage):
-    """V2 collate function - just use V1's collate function since it works"""
-    # V1's collate function works fine, just use it
-    return custom_collate_fn(batch, stage)
+    """V2 collate function that handles numpy arrays with negative strides"""
+    inputs = []
+    outputs = []
+    
+    # Determine target size based on stage
+    target_sizes = {0: 6, 1: 8, 2: 10, 3: 12, 4: 15, 5: 19, 6: 25, 7: 30}
+    target_size = target_sizes.get(stage, 30)
+    
+    for item in batch:
+        input_grid = item['inputs']
+        output_grid = item['outputs']
+        
+        # Convert numpy arrays to tensors with .copy() to handle negative strides
+        if isinstance(input_grid, np.ndarray):
+            input_grid = torch.from_numpy(input_grid.copy()).long()
+        if isinstance(output_grid, np.ndarray):
+            output_grid = torch.from_numpy(output_grid.copy()).long()
+        
+        # Ensure 2D tensors
+        while input_grid.dim() > 2:
+            input_grid = input_grid.squeeze(0)
+        while output_grid.dim() > 2:
+            output_grid = output_grid.squeeze(0)
+        while input_grid.dim() < 2:
+            input_grid = input_grid.unsqueeze(0)
+        while output_grid.dim() < 2:
+            output_grid = output_grid.unsqueeze(0)
+        
+        # Resize to target size using interpolation
+        h, w = input_grid.shape
+        if h != target_size or w != target_size:
+            # Use interpolation to resize to exact target size
+            input_grid = F.interpolate(input_grid.unsqueeze(0).unsqueeze(0).float(), 
+                                     size=(target_size, target_size), 
+                                     mode='nearest').squeeze().long()
+            output_grid = F.interpolate(output_grid.unsqueeze(0).unsqueeze(0).float(), 
+                                      size=(target_size, target_size), 
+                                      mode='nearest').squeeze().long()
+        
+        inputs.append(input_grid)
+        outputs.append(output_grid)
+    
+    # Stack tensors
+    inputs_tensor = torch.stack(inputs)
+    outputs_tensor = torch.stack(outputs)
+    
+    return {
+        'inputs': inputs_tensor,
+        'outputs': outputs_tensor
+    }
 
 
 class WarmupCosineSchedule(optim.lr_scheduler._LRScheduler):

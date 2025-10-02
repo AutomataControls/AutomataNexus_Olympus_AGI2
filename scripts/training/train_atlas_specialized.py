@@ -842,7 +842,7 @@ def train_atlas_specialized():
         if ATLAS_PRISM_AVAILABLE:
             prism_components = create_atlas_prism_system(model=model, device=device)
             systems['prism_synthesizer'] = prism_components['synthesizer']
-            systems['prism_library'] = prism_components['library']
+            systems['prism_library'] = prism_components['program_bank']
             print("✅ ATLAS-specific PRISM system initialized")
         else:
             systems['prism_synthesizer'] = create_prism_system()

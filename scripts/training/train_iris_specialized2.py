@@ -1,6 +1,6 @@
 """
-IRIS Specialized Training Script 2 - AGGRESSIVE 4th Run Optimizations
-Ultra-optimized for rapid convergence and maximum color pattern mastery
+IRIS Specialized Training Script V2 - Enhanced Color Pattern Recognition Expert
+Builds upon train_iris_specialized.py with targeted improvements
 """
 
 import torch
@@ -92,403 +92,292 @@ except ImportError:
 # Data systems
 from src.data.arc_data_synthesis import ARCDataSynthesizer, ARCDataAugmenter
 
-# IRIS V2 - AGGRESSIVE Configuration for 4th Run
-IRIS_CONFIG = {
-    'batch_size': 256,  # Increased for better gradient estimates
-    'learning_rate': 0.006,  # Higher base rate for faster learning
-    'num_epochs': 240,  # 6 stages x 40 epochs (reduced stages)
-    'color_embed_dim': 96,  # Increased capacity
-    'color_attention_heads': 6,  # More attention heads
-    'gradient_accumulation': 1,  # Direct updates for faster feedback
-    'transform_penalty': 0.1,  # Much lower - let IRIS transform freely
-    'exact_match_bonus': 5.0,  # Higher bonus for exact matches
-    'curriculum_stages': 6,  # Compressed curriculum
-    'epochs_per_stage': 40,  # Same per stage
-    'color_mapping_weight': 0.4,  # Increased color focus
-    'color_consistency_weight': 0.3,  # Higher consistency
-    'color_diversity_weight': 0.1,  # Less diversity focus
-    'lstm_rule_weight': 0.2,  # Higher rule learning
-    'warmup_epochs': 3,  # Faster warmup
-    'plateau_patience': 8,  # Earlier stopping
-    'min_improvement': 0.1  # Lower improvement threshold
-}
+# Import the ENTIRE original script to build upon it
+from train_iris_specialized import (
+    IrisSpecializedDataset, 
+    IrisSpecializedLoss,
+    iris_exact_match_injection,
+    iris_mept_injection,
+    iris_leap_injection,
+    iris_prism_injection,
+    custom_collate_fn,
+    train_iris_specialized as train_iris_specialized_v1,
+    IRIS_CONFIG as IRIS_CONFIG_V1,
+    STAGE_CONFIG as STAGE_CONFIG_V1
+)
 
-# 6-Stage AGGRESSIVE Progressive Curriculum - Skip smallest sizes
-STAGE_CONFIG = {
-    0: {'max_grid_size': 8,  'synthesis_ratio': 0.7, 'exact_injection': True,  'leap_complexity': 'minimal'},
-    1: {'max_grid_size': 12, 'synthesis_ratio': 0.6, 'exact_injection': False, 'leap_complexity': 'basic'},
-    2: {'max_grid_size': 16, 'synthesis_ratio': 0.5, 'exact_injection': False, 'leap_complexity': 'simple'},
-    3: {'max_grid_size': 20, 'synthesis_ratio': 0.4, 'exact_injection': False, 'leap_complexity': 'medium'},
-    4: {'max_grid_size': 25, 'synthesis_ratio': 0.3, 'exact_injection': False, 'leap_complexity': 'complex'},
-    5: {'max_grid_size': 30, 'synthesis_ratio': 0.2, 'exact_injection': False, 'leap_complexity': 'expert'}
-}
+# Enhanced IRIS Configuration V2 - Building on V1
+IRIS_CONFIG = IRIS_CONFIG_V1.copy()
+IRIS_CONFIG.update({
+    # Refined parameters based on V1 issues
+    'batch_size': 128,  # Smaller than V1 for better gradients
+    'learning_rate': 0.001,  # More conservative than V1
+    'gradient_accumulation': 2,  # Effective batch: 256
+    'transform_penalty': 0.2,  # Lower for color transformations
+    'exact_match_bonus': 2.5,  # Balanced bonus
+    'color_mapping_weight': 0.15,  # More conservative
+    'color_consistency_weight': 0.15,
+    'color_diversity_weight': 0.25,  # Slightly higher for diversity
+    'lstm_rule_weight': 0.05,  # Very conservative
+    
+    # New V2 features
+    'use_mixup': True,  # Color mixup augmentation
+    'mixup_alpha': 0.3,  # Higher for color mixing
+    'gradient_clip': 0.5,  # More aggressive clipping
+    'warmup_steps': 1000,  # Longer warmup
+    'cosine_restarts': True,  # Cosine annealing with restarts
+    'label_smoothing': 0.05,  # Less smoothing for color precision
+    'color_augmentation': True,  # New color-specific augmentation
+    'perceptual_loss_weight': 0.1,  # New perceptual color loss
+})
 
-# Training components flags
-USE_MEPT = True and (IRIS_MEPT_LEAP_AVAILABLE or MEPT_LEAP_AVAILABLE)
-USE_LEAP = True and (IRIS_MEPT_LEAP_AVAILABLE or MEPT_LEAP_AVAILABLE)
-USE_PRISM = True and (IRIS_PRISM_AVAILABLE or PRISM_AVAILABLE)
-USE_EXACT_BOOST = True and EXACT_BOOST_AVAILABLE
-USE_LEAP_PRISM_BRIDGE = True and LEAP_PRISM_BRIDGE_AVAILABLE
+# Enhanced Stage Configuration V2
+STAGE_CONFIG = STAGE_CONFIG_V1.copy()
+# Adjust learning rates more conservatively
+for stage in STAGE_CONFIG:
+    STAGE_CONFIG[stage]['lr_mult'] = 1.0 - (stage * 0.1)  # More gradual decay
 
 # Device setup
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print(f"🎨 IRIS V2 AGGRESSIVE Training on {device}")
+print(f'Using device: {device}')
 
 
-class IrisSpecializedDataset(Dataset):
-    """IRIS-optimized dataset with color pattern focus"""
-    def __init__(self, base_dataset, replay_buffer=None, replay_ratio=0.3):
-        self.base_dataset = base_dataset
-        self.replay_buffer = replay_buffer
-        self.replay_ratio = replay_ratio
-        
-    def __len__(self):
-        return len(self.base_dataset)
+class IrisSpecializedLossV2(IrisSpecializedLoss):
+    """Enhanced IRIS loss with mixup and perceptual color loss"""
     
-    def __getitem__(self, idx):
-        # DISABLE replay buffer sampling for now to avoid hanging
-        # The replay buffer sampling is causing DataLoader to hang
-        # TODO: Fix replay buffer sampling in future version
-        
-        # Get item from base dataset - handle both regular datasets and Subset objects
-        try:
-            item = self.base_dataset[idx]
-            # Ensure it returns the right format
-            if isinstance(item, dict):
-                # Handle both 'inputs'/'outputs' and 'input'/'output' formats
-                if 'inputs' in item and 'outputs' in item:
-                    return item
-                elif 'input' in item and 'output' in item:
-                    # DSL format - convert to standard format
-                    return {'inputs': item['input'], 'outputs': item['output']}
-                else:
-                    raise ValueError(f"Invalid item format: {item.keys()}")
-            else:
-                # Tuple format
-                if len(item) == 2:
-                    return {'inputs': item[0], 'outputs': item[1]}
-                else:
-                    raise ValueError(f"Invalid tuple format: {len(item)} elements")
-        except Exception as e:
-            print(f"⚠️ Error getting item {idx}: {e}")
-            # Return a dummy item to prevent crashes
-            dummy_grid = torch.zeros((3, 3), dtype=torch.long)
-            return {'inputs': dummy_grid, 'outputs': dummy_grid}
-
-
-class IrisSpecializedLoss(nn.Module):
-    """Ultra-aggressive IRIS loss function for 4th run"""
     def __init__(self):
         super().__init__()
-        
-    def forward(self, model_outputs, targets, stage=0):
-        predictions = model_outputs['color_output']
-        B, C, H, W = predictions.shape
-        
-        # 1. AGGRESSIVE Exact Match Loss (highest priority)
-        exact_match_loss = F.cross_entropy(predictions, targets, reduction='mean')
-        exact_matches = (predictions.argmax(dim=1) == targets).float()
-        exact_count = exact_matches.sum()
-        
-        # 2. BOOSTED Color Mapping Loss
-        color_mapping_loss = 0
-        if 'color_attention' in model_outputs:
-            attention_weights = model_outputs['color_attention']
-            # Encourage sharp attention on correct colors
-            target_onehot = F.one_hot(targets, num_classes=C).float()
-            color_mapping_loss = F.mse_loss(attention_weights, target_onehot)
-        
-        # 3. Color Consistency Loss (much higher weight)
-        consistency_loss = 0
-        if H > 1 and W > 1:
-            # Penalize inconsistent color predictions in local regions
-            pred_colors = predictions.argmax(dim=1)
-            # 2x2 region consistency
-            for i in range(H-1):
-                for j in range(W-1):
-                    region_pred = pred_colors[:, i:i+2, j:j+2]
-                    region_target = targets[:, i:i+2, j:j+2]
-                    region_consistency = (region_pred == region_target).float().mean()
-                    consistency_loss += (1.0 - region_consistency)
-            consistency_loss /= (H-1) * (W-1)
-        
-        # 4. IRIS-specific Color Rule Loss
-        rule_loss = 0
-        if 'lstm_rules' in model_outputs:
-            rule_output = model_outputs['lstm_rules']
-            rule_target = self._generate_color_rules(targets)
-            rule_loss = F.mse_loss(rule_output, rule_target)
-        
-        # AGGRESSIVE loss combination for 4th run
-        total_loss = (
-            exact_match_loss * 1.0 +  # Base loss
-            color_mapping_loss * IRIS_CONFIG['color_mapping_weight'] +
-            consistency_loss * IRIS_CONFIG['color_consistency_weight'] +
-            rule_loss * IRIS_CONFIG['lstm_rule_weight']
-        )
-        
-        # MASSIVE exact match bonus
-        if exact_count > 0:
-            exact_bonus = exact_count / B * IRIS_CONFIG['exact_match_bonus']
-            total_loss = total_loss - exact_bonus
-        
-        # Prevent negative losses
-        total_loss = torch.clamp(total_loss, min=0.001)
-        
-        return {
-            'total': total_loss,
-            'exact_match': exact_match_loss,
-            'color_mapping': color_mapping_loss,
-            'color_consistency': consistency_loss,
-            'rule_learning': rule_loss,
-            'exact_count': exact_count
-        }
+        # Add perceptual loss weight
+        self.weights['perceptual'] = IRIS_CONFIG.get('perceptual_loss_weight', 0.1)
     
-    def _generate_color_rules(self, targets):
-        """Generate color transformation rules from targets"""
-        B, H, W = targets.shape
-        rules = torch.zeros(B, 10, device=targets.device)  # 10 possible colors
+    def forward(self, pred_output, target_output, input_grid, model_outputs=None, mixup_lambda=None):
+        """Enhanced forward with mixup support"""
         
-        for b in range(B):
-            colors = targets[b].unique()
-            for i, color in enumerate(colors):
-                if i < 10:
-                    rules[b, i] = color.float()
-        
-        return rules
-
-
-# AGGRESSIVE exact match injection for 4th run
-def iris_exact_match_injection_v2(model, device, num_epochs=40, target_accuracy=95.0):
-    """ULTRA-AGGRESSIVE exact match injection for 4th run"""
-    print("🎨 IRIS V2 ULTRA-AGGRESSIVE EXACT MATCH")
-    print("=" * 50)
-    print(f"  Batch size: {IRIS_CONFIG['batch_size']}")
-    print(f"  Learning rate: {IRIS_CONFIG['learning_rate']*4} (aggressive)")
-    print(f"  Transform penalty: {IRIS_CONFIG['transform_penalty']}")
-    print(f"  Exact match bonus: {IRIS_CONFIG['exact_match_bonus']}")
-    print(f"  Epochs: {num_epochs}")
-    print(f"  Target: {target_accuracy}% (higher target)")
-    
-    # Exact match training for color patterns
-    model.train()
-    # Disable dropout for exact match
-    for module in model.modules():
-        if isinstance(module, nn.Dropout) or isinstance(module, nn.Dropout2d):
-            module.p = 0.0
-    
-    # AGGRESSIVE optimizer settings
-    base_lr = IRIS_CONFIG['learning_rate'] * 4  # Much higher LR
-    optimizer = optim.AdamW(model.parameters(), lr=base_lr, betas=(0.9, 0.95), weight_decay=0.001)
-    scheduler = optim.lr_scheduler.OneCycleLR(
-        optimizer, max_lr=base_lr*2, epochs=num_epochs, 
-        steps_per_epoch=20, pct_start=0.1, anneal_strategy='cos'
-    )
-    
-    # AGGRESSIVE pattern generation
-    patterns = []
-    
-    # 1. Simple patterns (2x2 to 6x6)
-    for color in range(1, 10):
-        for size in [2, 3, 4, 5, 6]:
-            pattern = torch.full((size, size), color, dtype=torch.long)
-            patterns.append({'inputs': pattern, 'outputs': pattern})
-    
-    # 2. Two-color splits
-    for c1 in range(1, 8):
-        for c2 in range(c1+1, 9):
-            for size in [4, 6, 8]:
-                # Vertical split
-                pattern = torch.zeros((size, size), dtype=torch.long)
-                pattern[:, :size//2] = c1
-                pattern[:, size//2:] = c2
-                patterns.append({'inputs': pattern, 'outputs': pattern})
-                
-                # Horizontal split
-                pattern = torch.zeros((size, size), dtype=torch.long)
-                pattern[:size//2, :] = c1
-                pattern[size//2:, :] = c2
-                patterns.append({'inputs': pattern, 'outputs': pattern})
-    
-    # 3. Checkerboard patterns
-    for c1 in range(1, 6):
-        for c2 in range(c1+1, 7):
-            for size in [4, 6, 8]:
-                pattern = torch.zeros((size, size), dtype=torch.long)
-                for i in range(size):
-                    for j in range(size):
-                        pattern[i, j] = c1 if (i + j) % 2 == 0 else c2
-                patterns.append({'inputs': pattern, 'outputs': pattern})
-    
-    # 4. Border patterns
-    for c1 in range(1, 6):
-        for c2 in range(c1+1, 7):
-            for size in [5, 7]:
-                pattern = torch.full((size, size), c2, dtype=torch.long)
-                pattern[1:-1, 1:-1] = c1  # Inner region
-                patterns.append({'inputs': pattern, 'outputs': pattern})
-    
-    # Shuffle patterns
-    random.shuffle(patterns)
-    print(f"  Generated {len(patterns)} aggressive training patterns")
-    
-    # AGGRESSIVE training loop
-    best_acc = 0
-    plateau_count = 0
-    patience = 8  # Reduced patience
-    
-    for epoch in range(num_epochs):
-        correct = 0
-        total = 0
-        epoch_loss = 0
-        
-        random.shuffle(patterns)
-        
-        for batch_start in range(0, len(patterns), IRIS_CONFIG['batch_size']):
-            batch_patterns = patterns[batch_start:batch_start + IRIS_CONFIG['batch_size']]
+        # If using mixup, adjust the loss calculation
+        if mixup_lambda is not None:
+            # Get base losses for both targets
+            losses1 = super().forward(pred_output, target_output[0], input_grid, model_outputs)
+            losses2 = super().forward(pred_output, target_output[1], input_grid, model_outputs)
             
-            # Pad to consistent size
-            max_h = max(p['inputs'].shape[0] for p in batch_patterns)
-            max_w = max(p['inputs'].shape[1] for p in batch_patterns)
-            
-            padded_inputs = []
-            padded_outputs = []
-            for p in batch_patterns:
-                inp = p['inputs']
-                out = p['outputs']
-                h, w = inp.shape
-                pad_h = max_h - h
-                pad_w = max_w - w
-                if pad_h > 0 or pad_w > 0:
-                    padded_inp = F.pad(inp, (0, pad_w, 0, pad_h), value=0)
-                    padded_out = F.pad(out, (0, pad_w, 0, pad_h), value=0)
+            # Mix the losses
+            mixed_losses = {}
+            for key in losses1:
+                if torch.is_tensor(losses1[key]):
+                    mixed_losses[key] = mixup_lambda * losses1[key] + (1 - mixup_lambda) * losses2[key]
                 else:
-                    padded_inp = inp
-                    padded_out = out
-                padded_inputs.append(padded_inp)
-                padded_outputs.append(padded_out)
+                    mixed_losses[key] = losses1[key]  # For counts, use first
             
-            inputs = torch.stack(padded_inputs).to(device)
-            outputs = torch.stack(padded_outputs).to(device)
-            
-            # Convert to one-hot for model input
-            input_onehot = F.one_hot(inputs, num_classes=10).float().permute(0, 3, 1, 2)
-            
-            optimizer.zero_grad()
-            
-            # Forward pass
-            with autocast(device_type='cuda'):
-                model_outputs = model(input_onehot, outputs, mode='training')
-                loss_fn = IrisSpecializedLoss()
-                losses = loss_fn(model_outputs, outputs, stage=0)
-                total_loss = losses['total']
-            
-            # Backward pass
-            total_loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            optimizer.step()
-            scheduler.step()
-            
-            # Calculate accuracy
-            predictions = model_outputs['color_output'].argmax(dim=1)
-            exact_matches = (predictions == outputs).all(dim=(1, 2))
-            correct += exact_matches.sum().item()
-            total += outputs.size(0)
-            epoch_loss += total_loss.item()
+            return mixed_losses
         
-        acc = correct / total * 100
-        avg_loss = epoch_loss / (len(patterns) // IRIS_CONFIG['batch_size'] + 1)
-        current_lr = optimizer.param_groups[0]['lr']
+        # Apply label smoothing if configured
+        if hasattr(self, 'label_smoothing') and self.label_smoothing > 0:
+            C = target_output.shape[1]
+            smooth_target = target_output * (1 - self.label_smoothing)
+            smooth_target += self.label_smoothing / C
+            target_output = smooth_target
         
-        print(f"Epoch {epoch+1}/{num_epochs}: {acc:.1f}% exact | Loss: {avg_loss:.3f} | LR: {current_lr:.5f}")
+        # Get base loss
+        base_losses = super().forward(pred_output, target_output, input_grid, model_outputs)
         
-        if acc > best_acc:
-            best_acc = acc
-            plateau_count = 0
-        else:
-            plateau_count += 1
+        # Add perceptual color loss
+        perceptual_loss = self._perceptual_color_loss(pred_output, target_output)
+        base_losses['perceptual'] = perceptual_loss
+        base_losses['total'] = base_losses['total'] + perceptual_loss * self.weights['perceptual']
         
-        if acc >= target_accuracy:
-            print(f"🏆 AGGRESSIVE TARGET REACHED: {acc:.1f}% >= {target_accuracy}%")
-            break
-        elif plateau_count >= patience:
-            print(f"⚠️ EARLY STOP: Plateaued for {patience} epochs at {acc:.1f}% (best: {best_acc:.1f}%)")
-            break
-        elif epoch == num_epochs - 1:
-            print(f"⚠️ AGGRESSIVE COMPLETE: {acc:.1f}% (best: {best_acc:.1f}%, target: {target_accuracy}%)")
+        return base_losses
     
-    return model
+    def _perceptual_color_loss(self, pred, target):
+        """Perceptual color similarity loss"""
+        # Color distance in perceptual space
+        pred_idx = pred.argmax(dim=1)
+        target_idx = target.argmax(dim=1)
+        
+        # Define perceptual color distances (simplified)
+        # Colors that are perceptually similar have lower distance
+        color_distances = torch.tensor([
+            [0, 3, 4, 5, 4, 5, 6, 7, 8, 9],  # 0 (black)
+            [3, 0, 2, 3, 4, 5, 6, 7, 8, 9],  # 1 (blue)
+            [4, 2, 0, 2, 3, 4, 5, 6, 7, 8],  # 2 (red)
+            [5, 3, 2, 0, 2, 3, 4, 5, 6, 7],  # 3 (green)
+            [4, 4, 3, 2, 0, 2, 3, 4, 5, 6],  # 4 (yellow)
+            [5, 5, 4, 3, 2, 0, 2, 3, 4, 5],  # 5 (gray)
+            [6, 6, 5, 4, 3, 2, 0, 2, 3, 4],  # 6 (magenta)
+            [7, 7, 6, 5, 4, 3, 2, 0, 2, 3],  # 7 (orange)
+            [8, 8, 7, 6, 5, 4, 3, 2, 0, 2],  # 8 (light blue)
+            [9, 9, 8, 7, 6, 5, 4, 3, 2, 0],  # 9 (brown)
+        ], dtype=torch.float32, device=pred.device) / 9.0  # Normalize
+        
+        # Calculate perceptual distance
+        pred_flat = pred_idx.flatten()
+        target_flat = target_idx.flatten()
+        
+        perceptual_dist = 0
+        for i in range(len(pred_flat)):
+            perceptual_dist += color_distances[pred_flat[i], target_flat[i]]
+        
+        return perceptual_dist / len(pred_flat)
 
 
-def prepare_batch_data(batch_data, device):
-    """Prepare batch data for training"""
-    if isinstance(batch_data, dict):
-        inputs = batch_data['inputs'].to(device, non_blocking=True)
-        targets = batch_data['outputs'].to(device, non_blocking=True)
+def color_augmentation(input_grid, output_grid):
+    """Apply color-specific augmentation"""
+    if random.random() < 0.3:
+        # Color shift
+        shift = random.randint(1, 9)
+        input_shifted = (input_grid + shift) % 10
+        output_shifted = (output_grid + shift) % 10
+        return input_shifted, output_shifted
+    elif random.random() < 0.3:
+        # Color swap
+        c1, c2 = random.sample(range(10), 2)
+        input_swapped = input_grid.clone()
+        output_swapped = output_grid.clone()
+        mask1 = input_grid == c1
+        mask2 = input_grid == c2
+        input_swapped[mask1] = c2
+        input_swapped[mask2] = c1
+        mask1 = output_grid == c1
+        mask2 = output_grid == c2
+        output_swapped[mask1] = c2
+        output_swapped[mask2] = c1
+        return input_swapped, output_swapped
+    return input_grid, output_grid
+
+
+def mixup_data(x, y, alpha=1.0):
+    """Apply mixup augmentation for color patterns"""
+    if alpha > 0:
+        lam = np.random.beta(alpha, alpha)
     else:
-        inputs, targets = batch_data
-        inputs = inputs.to(device, non_blocking=True)
-        targets = targets.to(device, non_blocking=True)
+        lam = 1
+
+    batch_size = x.size()[0]
+    index = torch.randperm(batch_size).to(x.device)
+
+    mixed_x = lam * x + (1 - lam) * x[index]
+    y_a, y_b = y, y[index]
     
-    return inputs, targets
+    return mixed_x, y_a, y_b, lam
+
+
+class WarmupCosineSchedule(optim.lr_scheduler._LRScheduler):
+    """Cosine learning rate schedule with warmup"""
+    
+    def __init__(self, optimizer, warmup_steps, training_steps, cycles=1, last_epoch=-1):
+        self.warmup_steps = warmup_steps
+        self.training_steps = training_steps
+        self.cycles = cycles
+        super().__init__(optimizer, last_epoch)
+    
+    def get_lr(self):
+        if self.last_epoch < self.warmup_steps:
+            # Linear warmup
+            return [base_lr * self.last_epoch / self.warmup_steps for base_lr in self.base_lrs]
+        else:
+            # Cosine annealing
+            progress = (self.last_epoch - self.warmup_steps) / (self.training_steps - self.warmup_steps)
+            if self.cycles > 1:
+                # With restarts
+                cycle_progress = progress * self.cycles
+                progress = cycle_progress - int(cycle_progress)
+            return [base_lr * (0.5 * (1 + np.cos(np.pi * progress))) for base_lr in self.base_lrs]
 
 
 def train_iris_specialized_v2():
-    """AGGRESSIVE IRIS V2 training for 4th run"""
-    print("🎨 Starting IRIS V2 AGGRESSIVE Training")
+    """Enhanced IRIS training building on V1"""
+    print("🎨 Starting IRIS Specialized Training V2")
+    print("=" * 60)
+    print("📊 Enhancements over V1:")
+    print("  • Color mixup augmentation")
+    print("  • Perceptual color loss")
+    print("  • Color-specific augmentation")
+    print("  • Warmup + cosine annealing with restarts")
+    print("  • Label smoothing for color precision")
+    print("  • Better batch size and learning rate")
     print("=" * 60)
     
-    # Initialize model with increased capacity
-    model = EnhancedIrisNet(max_grid_size=30).to(device)
-    print(f"📊 IRIS V2 Model: {sum(p.numel() for p in model.parameters()):,} parameters")
+    # Initialize model with maximum grid size from final stage
+    max_grid_size = STAGE_CONFIG[7]['max_grid_size']  # 30x30
+    model = EnhancedIrisNet(
+        max_grid_size=max_grid_size
+    ).to(device)
     
-    # Initialize all systems
+    print(f"📊 IRIS Model: {sum(p.numel() for p in model.parameters()):,} parameters")
+    
+    # Initialize all AutomataNexus training systems
     systems = {}
     
-    # MEPT System
+    # MEPT System - Use IRIS-specific if available
     if USE_MEPT:
         if IRIS_MEPT_LEAP_AVAILABLE:
-            mept_components = create_iris_mept_system(model, device)
+            mept_components = create_iris_mept_system()
+            systems['replay_buffer'] = mept_components['replay_buffer']
+            systems['pattern_bank'] = mept_components['pattern_bank']
+            systems['loss_fn'] = mept_components['loss_function']
             print("✅ IRIS-specific MEPT system initialized")
         else:
             mept_components = create_mept_system(
-                capacity=50000,  # Increased capacity
-                pattern_bank_size=10000
+                capacity=50000,
+                pattern_bank_size=10000,
+                transformation_penalty=IRIS_CONFIG['transform_penalty'],
+                exact_match_bonus=IRIS_CONFIG['exact_match_bonus']
             )
+            systems['replay_buffer'] = mept_components['replay_buffer']
+            systems['pattern_bank'] = mept_components['pattern_bank']
+            systems['loss_fn'] = mept_components.get('loss_fn')
             print("✅ Generic MEPT system initialized")
-        systems['mept'] = mept_components
     
-    # LEAP System
+    # LEAP System - Use IRIS-specific if available
     if USE_LEAP:
         if IRIS_MEPT_LEAP_AVAILABLE:
-            leap_components = create_iris_leap_system(model, device)
+            leap_components = create_iris_leap_system()
+            systems['leap_trainer'] = leap_components['trainer']
+            systems['pattern_generator'] = leap_components['pattern_generator']
             print("✅ IRIS-specific LEAP system initialized")
         else:
             leap_components = create_leap_system(device)
+            systems['leap_trainer'] = leap_components['trainer']
+            systems['pattern_generator'] = leap_components['pattern_generator']
             print("✅ Generic LEAP system initialized")
-        systems['leap_trainer'] = leap_components.get('trainer')
     
-    # PRISM System
+    # PRISM System - Use IRIS-specific if available
     if USE_PRISM:
         if IRIS_PRISM_AVAILABLE:
-            prism_components = create_iris_prism_system(model, device)
+            prism_components = create_iris_prism_system()
+            systems['prism_synthesizer'] = prism_components['synthesizer']
+            systems['program_library'] = prism_components['program_library']
             print("✅ IRIS-specific PRISM system initialized")
         else:
-            prism_components = create_prism_system(device)
+            prism_components = create_prism_system()
+            systems['prism_synthesizer'] = prism_components['synthesizer']
+            systems['program_library'] = prism_components['program_library']
             print("✅ Generic PRISM system initialized")
-        systems['prism'] = prism_components
     
-    # LEAP-PRISM Bridge
-    if USE_LEAP_PRISM_BRIDGE:
-        bridge_components = create_leap_prism_bridge(device)
-        print("✅ LEAP-PRISM bridge initialized")
-        systems['bridge'] = bridge_components
+    # Initialize V2 enhanced loss
+    loss_fn = IrisSpecializedLossV2().to(device)
+    loss_fn.label_smoothing = IRIS_CONFIG.get('label_smoothing', 0.05)
     
-    # Program synthesis
-    if IRIS_SYNTHESIS_AVAILABLE:
-        synthesis_components = create_iris_synthesis_system(device)
-        print("✅ IRIS-specific program synthesis initialized")
-        systems['synthesis'] = synthesis_components
+    # Optimizer - AdamW for better regularization
+    optimizer = optim.AdamW(
+        model.parameters(),
+        lr=IRIS_CONFIG['learning_rate'],
+        betas=(0.9, 0.999),
+        weight_decay=5e-5
+    )
+    
+    # Calculate total training steps
+    total_epochs = IRIS_CONFIG['num_epochs']
+    steps_per_epoch = 100  # Approximate
+    total_steps = total_epochs * steps_per_epoch
+    
+    # Warmup + Cosine scheduler with restarts
+    scheduler = WarmupCosineSchedule(
+        optimizer,
+        warmup_steps=IRIS_CONFIG['warmup_steps'],
+        training_steps=total_steps,
+        cycles=3 if IRIS_CONFIG.get('cosine_restarts') else 1
+    )
+    
+    scaler = GradScaler('cuda')
     
     # Data directory
     DATA_DIR = '/content/AutomataNexus_Olympus_AGI2/data'
@@ -496,246 +385,333 @@ def train_iris_specialized_v2():
     # Training metrics
     best_exact = 0.0
     global_epoch = 0
-    start_stage = 0
+    global_step = 0
     
-    # Check for existing models
-    models_dir = '/content/AutomataNexus_Olympus_AGI2/arc_models_v4'
-    os.makedirs(models_dir, exist_ok=True)
+    # Skip checkpoint loading - always fresh start in V2
+    print("🆕 Starting fresh training (V2 always starts fresh)")
     
-    checkpoint_path = f'{models_dir}/iris_checkpoint.pt'
-    best_model_path = f'{models_dir}/iris_best.pt'
+    # Training history
+    history = defaultdict(list)
     
-    # ALWAYS load best model for 4th run
-    if os.path.exists(best_model_path):
-        print(f"🔄 Loading best model from {best_model_path}")
-        try:
-            best_checkpoint = torch.load(best_model_path, map_location=device)
-            model.load_state_dict(best_checkpoint['model_state_dict'])
-            best_exact = best_checkpoint.get('best_exact', 0.0)
-            print(f"✅ Loaded best model with {best_exact:.2f}% exact match")
-        except Exception as e:
-            print(f"⚠️ Failed to load best model: {e}")
-            print("🔄 Starting fresh training")
-    else:
-        print("🆕 No existing models found - starting fresh training")
+    # 8-Stage Progressive Curriculum Training Loop
+    stage_metrics = []
     
-    # Optimizer and scheduler
-    optimizer = optim.AdamW(
-        model.parameters(), 
-        lr=IRIS_CONFIG['learning_rate'], 
-        betas=(0.9, 0.95), 
-        weight_decay=0.01
-    )
+    # 4-PHASE INJECTION (if stage 0)
+    if USE_EXACT_BOOST:
+        print("\n" + "=" * 60)
+        print("🌈 IRIS 4-PHASE COLOR PERCEPTION INJECTION SEQUENCE")
+        print("=" * 60)
+        
+        # Phase 1: Exact Match
+        print("\n🎨 PHASE 1: Color Identity Mapping")
+        model = iris_exact_match_injection(model, device, num_epochs=120, target_accuracy=88.0)
+        
+        # Phase 2: MEPT
+        if USE_MEPT:
+            print("\n🎨 PHASE 2: Color Memory Enhancement (MEPT)")
+            model = iris_mept_injection(model, device, num_epochs=100, target_accuracy=90.0)
+        
+        # Phase 3: LEAP
+        if USE_LEAP:
+            print("\n🎨 PHASE 3: Adaptive Color Learning (LEAP)")
+            model = iris_leap_injection(model, device, num_epochs=100, target_accuracy=90.0)
+        
+        # Phase 4: PRISM
+        if USE_PRISM:
+            print("\n🎨 PHASE 4: Color Program Synthesis (PRISM)")
+            model = iris_prism_injection(model, device, num_epochs=100)
+        
+        print("\n✅ 4-PHASE INJECTION COMPLETE")
+        print("=" * 60)
     
-    # AGGRESSIVE 4-PHASE INJECTION SEQUENCE
-    print("\n" + "=" * 60)
-    print("🌈 IRIS V2 ULTRA-AGGRESSIVE 4-PHASE COLOR INJECTION")
-    print("=" * 60)
-    
-    # Phase 1: ULTRA-AGGRESSIVE Exact Match
-    print("\n📍 PHASE 1: Ultra-Aggressive Color Identity")
-    model = iris_exact_match_injection_v2(model, device, num_epochs=40, target_accuracy=95.0)
-    
-    # Phase 2: BOOSTED MEPT
-    if USE_MEPT and 'mept' in systems:
-        print("\n📍 PHASE 2: Boosted Color Memory (MEPT)")
-        # Implement aggressive MEPT training here
-        print("🏆 MEPT TARGET REACHED: 95.0%")  # Placeholder
-    
-    # Phase 3: BOOSTED LEAP
-    if USE_LEAP and 'leap_trainer' in systems:
-        print("\n📍 PHASE 3: Boosted Adaptive Learning (LEAP)")
-        # Implement aggressive LEAP training here
-        print("🏆 LEAP TARGET REACHED: 95.0%")  # Placeholder
-    
-    # Phase 4: BOOSTED PRISM
-    if USE_PRISM and 'prism' in systems:
-        print("\n📍 PHASE 4: Boosted Program Synthesis (PRISM)")
-        # Implement aggressive PRISM training here
-        print("🏆 PRISM TARGET REACHED: 95.0%")  # Placeholder
-    
-    print("\n✅ 4-PHASE ULTRA-AGGRESSIVE INJECTION COMPLETE!")
-    print("=" * 60)
-    
-    # Stage metrics tracking
-    stage_metrics = defaultdict(list)
-    
-    # AGGRESSIVE 6-stage curriculum
+    # Main curriculum training
     for stage in range(IRIS_CONFIG['curriculum_stages']):
         stage_config = STAGE_CONFIG[stage]
         grid_size = stage_config['max_grid_size']
         
-        print(f"\n🎨 IRIS V2 Stage {stage}: {grid_size}x{grid_size} Color Mastery")
-        print(f"   📏 Grid Size: {grid_size}x{grid_size} | Synthesis: {int(stage_config['synthesis_ratio']*100)}% | LEAP: {stage_config['leap_complexity']}")
+        print(f"\n🎨 IRIS Stage {stage}: {grid_size}x{grid_size} Color Pattern Recognition")
+        print(f"   📏 Grid Size: {grid_size}x{grid_size} | Synthesis: {int(stage_config['synthesis_ratio']*100)}%")
         print("=" * 60)
         
-        # Generate DSL data for this stage
-        dsl_training = IRISDSLTraining(device=device)
-        dsl_samples = dsl_training.generate_training_samples(
-            num_samples=30,  # More samples
-            grid_size_range=(max(4, grid_size-2), grid_size),
-            complexity_level=stage_config['leap_complexity']
-        )
+        # Create dataset using V1 approach but with enhancements
+        print(f"🔧 Generating IRIS-specific DSL color patterns for stage {stage}...")
+        
+        # Initialize DSL trainer
+        dsl_samples = IRISDSLTraining.create_iris_dsl_samples(curriculum_stage=stage)
         print(f"✅ Created {len(dsl_samples)} IRIS DSL color pattern samples")
         
-        # Load ARC data with higher synthesis ratio
-        try:
-            from src.data.load_data import load_arc_data
-            train_data, val_data = load_arc_data(
-                data_dir=DATA_DIR,
-                max_grid_size=grid_size,
-                synthesis_ratio=stage_config['synthesis_ratio'],
-                dsl_samples=dsl_samples
-            )
-            print(f"📚 Stage {stage} ({grid_size}x{grid_size}) - Train: {len(train_data)}, Val: {len(val_data)}")
-        except Exception as e:
-            print(f"⚠️ Failed to load data: {e}")
-            continue
+        # Create dataset
+        dataset_samples = []
+        dataset_samples.extend(dsl_samples)
         
-        # Create datasets
-        train_dataset = IrisSpecializedDataset(train_data)
-        val_dataset = IrisSpecializedDataset(val_data)
+        # Load ARC JSON files
+        arc_files = ['arc-agi_training_challenges.json', 'arc-agi_evaluation_challenges.json']
         
+        for filename in arc_files:
+            filepath = os.path.join(DATA_DIR, filename)
+            if os.path.exists(filepath):
+                with open(filepath, 'r') as f:
+                    tasks = json.load(f)
+                    for task_id, task_data in tasks.items():
+                        for example in task_data['train']:
+                            input_grid = np.array(example['input'])
+                            output_grid = np.array(example['output'])
+                            if input_grid.shape[0] <= grid_size and input_grid.shape[1] <= grid_size:
+                                dataset_samples.append({'inputs': input_grid, 'outputs': output_grid})
+        
+        # Add synthetic color patterns
+        for i in range(300):  # More synthetic data for color learning
+            size = min(random.choice([4, 5, 6]), grid_size)
+            input_grid = np.random.randint(0, 8, (size, size))  # Use fewer colors initially
+            
+            # Color transformations
+            transform = random.choice(['gradient', 'blocks', 'stripes', 'shift'])
+            if transform == 'gradient':
+                output_grid = np.zeros_like(input_grid)
+                for row in range(size):
+                    output_grid[row, :] = (row * 7) // size + 1
+            elif transform == 'blocks':
+                output_grid = np.zeros_like(input_grid)
+                block_size = size // 2
+                for bi in range(2):
+                    for bj in range(2):
+                        color = bi * 2 + bj + 1
+                        output_grid[bi*block_size:(bi+1)*block_size, bj*block_size:(bj+1)*block_size] = color
+            elif transform == 'stripes':
+                output_grid = np.zeros_like(input_grid)
+                for col in range(size):
+                    output_grid[:, col] = (col % 4) + 1
+            else:  # shift
+                output_grid = (input_grid + 2) % 8
+            
+            dataset_samples.append({'inputs': input_grid, 'outputs': output_grid})
+        
+        # Create dataset
+        class SimpleARCDataset(Dataset):
+            def __init__(self, samples):
+                self.samples = samples
+            def __len__(self):
+                return len(self.samples)
+            def __getitem__(self, idx):
+                return self.samples[idx]
+        
+        dataset = SimpleARCDataset(dataset_samples)
+        
+        # Limit dataset size
+        if len(dataset) > 20000:
+            dataset = torch.utils.data.Subset(dataset, list(range(20000)))
+        
+        train_size = int(0.9 * len(dataset))
+        val_size = len(dataset) - train_size
+        train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+        
+        print(f"📚 Stage {stage} ({grid_size}x{grid_size}) - Train: {train_size}, Val: {val_size}")
+        
+        # Create data loaders
         train_loader = DataLoader(
-            train_dataset, 
-            batch_size=IRIS_CONFIG['batch_size'], 
-            shuffle=True, 
-            num_workers=0, 
-            pin_memory=True
+            train_dataset,
+            batch_size=IRIS_CONFIG['batch_size'],
+            shuffle=True,
+            num_workers=0,
+            pin_memory=False,
+            collate_fn=lambda batch: custom_collate_fn(batch, stage),
+            drop_last=True
         )
+        
         val_loader = DataLoader(
-            val_dataset, 
-            batch_size=IRIS_CONFIG['batch_size'], 
-            shuffle=False, 
-            num_workers=0
+            val_dataset,
+            batch_size=IRIS_CONFIG['batch_size'],
+            shuffle=False,
+            num_workers=0,
+            pin_memory=False,
+            collate_fn=lambda batch: custom_collate_fn(batch, stage),
+            drop_last=False
         )
+        
+        # Adjust learning rate for stage
+        stage_lr = IRIS_CONFIG['learning_rate'] * stage_config['lr_mult']
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = stage_lr
         
         # Stage training loop
+        print(f"\n🔄 Training Stage {stage} for {IRIS_CONFIG['epochs_per_stage']} epochs...")
+        
         for epoch in range(IRIS_CONFIG['epochs_per_stage']):
             global_epoch += 1
             
-            # Training
+            # Training phase
             model.train()
-            train_metrics = {'loss': 0, 'exact': 0, 'samples': 0}
+            train_metrics = defaultdict(float)
             
-            for batch_idx, batch in enumerate(train_loader):
-                # Update progress
-                progress = (batch_idx + 1) / len(train_loader) * 100
-                print(f"\rIRIS V2 Stage {stage}, Epoch {epoch+1}: {progress:.0f}% {batch_idx+1}/{len(train_loader)}", end='', flush=True)
+            pbar = tqdm(train_loader, desc=f"Stage {stage}, Epoch {epoch+1}")
+            
+            for batch_idx, batch in enumerate(pbar):
+                global_step += 1
                 
                 inputs = batch['inputs'].to(device, non_blocking=True)
                 outputs = batch['outputs'].to(device, non_blocking=True)
                 
+                # Clamp values
+                inputs = torch.clamp(inputs, 0, 9)
+                outputs = torch.clamp(outputs, 0, 9)
+                
+                # Apply color augmentation
+                if IRIS_CONFIG.get('color_augmentation') and random.random() < 0.5:
+                    inputs, outputs = color_augmentation(inputs, outputs)
+                
                 # Convert to one-hot
-                input_onehot = F.one_hot(inputs, num_classes=10).float().permute(0, 3, 1, 2)
+                input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+                output_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
                 
-                optimizer.zero_grad()
+                # Apply mixup if enabled
+                if IRIS_CONFIG.get('use_mixup') and random.random() < 0.5:
+                    mixed_input, target_a, target_b, lam = mixup_data(
+                        input_grids, output_grids, alpha=IRIS_CONFIG.get('mixup_alpha', 0.3)
+                    )
+                    
+                    with autocast('cuda'):
+                        model_outputs = model(mixed_input, target_a, mode='train')
+                        pred_output = model_outputs['predicted_output']
+                        losses = loss_fn(pred_output, (target_a, target_b), mixed_input, 
+                                       model_outputs, mixup_lambda=lam)
+                else:
+                    with autocast('cuda'):
+                        model_outputs = model(input_grids, output_grids, mode='train')
+                        pred_output = model_outputs['predicted_output']
+                        losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
                 
-                # Forward pass
-                with autocast(device_type='cuda'):
-                    model_outputs = model(input_onehot, outputs, mode='training')
-                    loss_fn = IrisSpecializedLoss()
-                    losses = loss_fn(model_outputs, outputs, stage=stage)
-                    total_loss = losses['total']
+                loss = losses['total'] / IRIS_CONFIG['gradient_accumulation']
                 
                 # Backward pass
-                total_loss.backward()
-                torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
-                optimizer.step()
+                scaler.scale(loss).backward()
+                
+                # Gradient accumulation
+                if (batch_idx + 1) % IRIS_CONFIG['gradient_accumulation'] == 0:
+                    # Gradient clipping
+                    scaler.unscale_(optimizer)
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), IRIS_CONFIG['gradient_clip'])
+                    
+                    scaler.step(optimizer)
+                    scaler.update()
+                    optimizer.zero_grad()
+                    
+                    # Update scheduler
+                    scheduler.step()
                 
                 # Update metrics
-                train_metrics['loss'] += losses['total'].item() * inputs.size(0)
+                train_metrics['loss'] += losses['total'].item()
                 train_metrics['exact'] += losses['exact_count'].item()
                 train_metrics['samples'] += inputs.size(0)
+                
+                pbar.set_postfix({
+                    'loss': f"{losses['total'].item():.3f}",
+                    'exact': f"{losses['exact_count'].item():.0f}",
+                    'lr': f"{scheduler.get_lr()[0]:.6f}"
+                })
             
-            print()  # New line after progress
-            
-            # Validation every 15 epochs (less frequent)
-            if epoch % 15 == 0:
+            # Validation phase
+            if epoch % 5 == 0 or epoch == IRIS_CONFIG['epochs_per_stage'] - 1:
                 model.eval()
-                val_metrics = {'loss': 0, 'exact': 0, 'pixel_acc': 0, 'samples': 0}
+                val_metrics = defaultdict(float)
                 
                 with torch.no_grad():
-                    for val_batch in tqdm(val_loader, desc="Validation"):
-                        val_inputs = val_batch['inputs'].to(device, non_blocking=True)
-                        val_outputs = val_batch['outputs'].to(device, non_blocking=True)
+                    for batch in tqdm(val_loader, desc="Validation"):
+                        inputs = batch['inputs'].to(device, non_blocking=True)
+                        outputs = batch['outputs'].to(device, non_blocking=True)
                         
-                        val_input_onehot = F.one_hot(val_inputs, num_classes=10).float().permute(0, 3, 1, 2)
-                        val_model_outputs = model(val_input_onehot, val_outputs, mode='inference')
+                        inputs = torch.clamp(inputs, 0, 9)
+                        outputs = torch.clamp(outputs, 0, 9)
                         
-                        loss_fn = IrisSpecializedLoss()
-                        val_losses = loss_fn(val_model_outputs, val_outputs, stage=stage)
+                        input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+                        output_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
                         
-                        val_metrics['loss'] += val_losses['total'].item() * val_inputs.size(0)
-                        val_metrics['exact'] += val_losses['exact_count'].item()
-                        val_metrics['samples'] += val_inputs.size(0)
+                        with autocast('cuda'):
+                            model_outputs = model(input_grids, mode='inference')
+                            pred_output = model_outputs['predicted_output']
+                            losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
                         
-                        # Pixel accuracy
-                        val_predictions = val_model_outputs['color_output'].argmax(dim=1)
-                        pixel_correct = (val_predictions == val_outputs).float().mean()
-                        val_metrics['pixel_acc'] += pixel_correct.item() * val_inputs.size(0)
+                        pred_indices = pred_output.argmax(dim=1)
+                        target_indices = output_grids.argmax(dim=1)
+                        pixel_acc = (pred_indices == target_indices).float().mean()
+                        
+                        val_metrics['loss'] += losses['total'].item()
+                        val_metrics['exact'] += losses['exact_count'].item()
+                        val_metrics['pixel_acc'] += pixel_acc.item()
+                        val_metrics['samples'] += inputs.size(0)
                 
-                # Calculate validation metrics
-                val_loss = val_metrics['loss'] / val_metrics['samples']
+                # Calculate averages
+                train_loss = train_metrics['loss'] / len(train_loader)
+                train_exact_pct = train_metrics['exact'] / train_metrics['samples'] * 100
+                val_loss = val_metrics['loss'] / len(val_loader)
                 val_exact_pct = val_metrics['exact'] / val_metrics['samples'] * 100
-                val_pixel_pct = val_metrics['pixel_acc'] / val_metrics['samples'] * 100
+                val_pixel_acc = val_metrics['pixel_acc'] / len(val_loader) * 100
                 
-                print(f"\n🎨 IRIS V2 Epoch {global_epoch} (Stage {stage}, {grid_size}x{grid_size}):")
-                print(f"   🎨 GRID SIZE: {grid_size}x{grid_size} | COLOR LEARNING: 🎆 (aggressive)")
-                print(f"   🎯 Train: {train_metrics['exact']/train_metrics['samples']*100:.2f}% exact, Loss: {train_metrics['loss']/train_metrics['samples']:.3f}")
-                print(f"   🎯 Val: {val_exact_pct:.2f}% exact, Loss: {val_loss:.3f}, Pixel: {val_pixel_pct:.1f}%")
-                print(f"   📏 Stage Progress: {(epoch+1)/IRIS_CONFIG['epochs_per_stage']*100:.0f}% | Total Progress: {global_epoch/IRIS_CONFIG['num_epochs']*100:.0f}%")
+                print(f"\n🎨 IRIS Epoch {epoch+1} (Stage {stage}, {grid_size}x{grid_size}):")
+                print(f"   🎯 Train: {train_exact_pct:.2f}% exact, Loss: {train_loss:.3f}")
+                print(f"   🎯 Val: {val_exact_pct:.2f}% exact, Loss: {val_loss:.3f}, Pixel: {val_pixel_acc:.1f}%")
                 
-                # Save checkpoint
-                torch.save({
-                    'epoch': global_epoch,
-                    'stage': stage,
-                    'grid_size': grid_size,
-                    'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict(),
-                    'val_exact': val_exact_pct,
-                    'best_exact': best_exact,
-                    'val_loss': val_loss,
-                    'config': IRIS_CONFIG,
-                    'stage_config': STAGE_CONFIG
-                }, checkpoint_path)
+                # Save history
+                history['train_loss'].append(train_loss)
+                history['train_exact'].append(train_exact_pct)
+                history['val_loss'].append(val_loss)
+                history['val_exact'].append(val_exact_pct)
+                history['learning_rate'].append(scheduler.get_lr()[0])
                 
                 # Save best model
                 if val_exact_pct > best_exact:
                     best_exact = val_exact_pct
-                    best_model_path = f'{models_dir}/iris_best.pt'
                     torch.save({
                         'epoch': global_epoch,
                         'stage': stage,
-                        'grid_size': grid_size,
                         'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict(),
-                        'val_exact': val_exact_pct,
-                        'best_exact': val_exact_pct,
-                        'val_loss': val_loss,
-                        'config': IRIS_CONFIG,
-                        'stage_config': STAGE_CONFIG
-                    }, best_model_path)
-                    print(f"   💾 NEW BEST: {val_exact_pct:.2f}% color exact match saved!")
-                
-                # Record stage metrics
-                stage_metrics[stage].append({
-                    'epoch': global_epoch,
-                    'val_exact': val_exact_pct,
-                    'val_loss': val_loss
-                })
+                        'best_exact': best_exact,
+                        'val_loss': val_loss
+                    }, f'/content/AutomataNexus_Olympus_AGI2/arc_models_v4/iris_v2_best.pt')
+                    print(f"   🏆 New best model! Exact: {best_exact:.2f}%")
         
-        # End of stage
-        print(f"\n✅ Stage {stage} complete! Moving to next stage...\n")
+        # Stage complete
+        stage_exact = train_exact_pct
+        stage_metrics.append({
+            'stage': stage,
+            'grid_size': grid_size,
+            'final_exact': stage_exact
+        })
+        
+        print(f"\n✅ Stage {stage} complete! Final exact: {stage_exact:.2f}%")
+        
+        # Clear memory
+        del train_loader, val_loader, dataset
+        gc.collect()
+        torch.cuda.empty_cache()
     
-    # Final training summary
-    print(f"\n🎉 IRIS V2 AGGRESSIVE 6-Stage Training Complete!")
+    # Training complete
+    print("\n" + "=" * 60)
+    print("🎉 IRIS V2 8-Stage Training Complete!")
     print(f"   🏆 Best exact match: {best_exact:.2f}%")
-    print(f"   🎨 Stages completed: {IRIS_CONFIG['curriculum_stages']} (8x8 → 30x30 aggressive)")
+    print(f"   📏 Stages completed: 8 (6x6 → 30x30 grids)")
     print(f"   📊 Total epochs: {global_epoch}")
     
-    return model, best_exact
+    print(f"\n📏 Stage-by-stage Color Learning Progression:")
+    for metrics in stage_metrics:
+        print(f"   Stage {metrics['stage']} ({metrics['grid_size']}x{metrics['grid_size']}): "
+              f"{metrics['final_exact']:.2f}% exact match")
+    
+    return model, history
+
+
+# Training components flags (from V1)
+USE_MEPT = True and (IRIS_MEPT_LEAP_AVAILABLE or MEPT_LEAP_AVAILABLE)
+USE_LEAP = True and (IRIS_MEPT_LEAP_AVAILABLE or MEPT_LEAP_AVAILABLE)
+USE_PRISM = True and (IRIS_PRISM_AVAILABLE or PRISM_AVAILABLE)
+USE_EXACT_BOOST = True and EXACT_BOOST_AVAILABLE
+USE_LEAP_PRISM_BRIDGE = True and LEAP_PRISM_BRIDGE_AVAILABLE
 
 
 if __name__ == "__main__":
+    print("=" * 80)
+    print("IRIS Specialized Training V2 - Building on V1")
+    print("Color Pattern Recognition Expert with Targeted Enhancements")
+    print("=" * 80)
+    
     train_iris_specialized_v2()

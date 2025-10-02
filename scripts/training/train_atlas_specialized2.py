@@ -242,7 +242,7 @@ def train_atlas_specialized_v2():
             )
             systems['spatial_memory'] = mept_components['spatial_memory']
             systems['pattern_bank'] = mept_components['pattern_bank']
-            systems['loss_fn'] = mept_components['loss_fn']
+            systems['loss_fn'] = mept_components['loss_function']
             print("✅ ATLAS-specific MEPT system initialized")
         else:
             mept_components = create_mept_system(
@@ -256,8 +256,33 @@ def train_atlas_specialized_v2():
             systems['loss_fn'] = mept_components.get('loss_fn')
             print("✅ Generic MEPT system initialized")
     
-    # Initialize other systems (LEAP, PRISM, etc.) - same as V1
-    # ... (keeping same initialization code as V1)
+    # LEAP System - Use ATLAS-specific if available
+    if USE_LEAP:
+        if ATLAS_MEPT_LEAP_AVAILABLE:
+            leap_components = create_atlas_leap_system(model=model, device=device)
+            systems['leap_trainer'] = leap_components['trainer']
+            systems['pattern_generator'] = leap_components.get('pattern_generator')
+            systems['weak_detector'] = leap_components.get('detector')
+            print("✅ ATLAS-specific LEAP system initialized")
+        else:
+            leap_components = create_leap_system(device)
+            systems['leap_trainer'] = leap_components['trainer']
+            systems['pattern_generator'] = leap_components.get('pattern_generator')
+            systems['weak_detector'] = leap_components.get('detector')
+            print("✅ Generic LEAP system initialized")
+    
+    # PRISM System - Use ATLAS-specific if available
+    if USE_PRISM:
+        if ATLAS_PRISM_AVAILABLE:
+            prism_components = create_atlas_prism_system(model=model, device=device)
+            systems['prism_synthesizer'] = prism_components['synthesizer']
+            systems['prism_library'] = prism_components['program_bank']
+            print("✅ ATLAS-specific PRISM system initialized")
+        else:
+            prism_components = create_prism_system()
+            systems['prism_synthesizer'] = prism_components['synthesizer']
+            # Generic PRISM doesn't have program_library
+            print("✅ Generic PRISM system initialized")
     
     # Initialize V2 enhanced loss
     loss_fn = AtlasSpecializedLossV2().to(device)
@@ -286,6 +311,9 @@ def train_atlas_specialized_v2():
     
     scaler = GradScaler('cuda')
     
+    # Data directory
+    DATA_DIR = '/content/AutomataNexus_Olympus_AGI2/data'
+    
     # Training metrics
     best_exact = 0.0
     global_epoch = 0
@@ -300,7 +328,7 @@ def train_atlas_specialized_v2():
     # 8-Stage Progressive Curriculum Training Loop
     stage_metrics = []
     
-    # 4-PHASE INJECTION (if stage 0)
+    # 4-PHASE INJECTION (before main training)
     if USE_EXACT_BOOST:
         print("\n" + "=" * 60)
         print("🌍 ATLAS 4-PHASE SPATIAL TRANSFORMATION INJECTION SEQUENCE")
@@ -590,8 +618,6 @@ USE_PRISM = True and (ATLAS_PRISM_AVAILABLE or PRISM_AVAILABLE)
 USE_EXACT_BOOST = True and EXACT_BOOST_AVAILABLE
 USE_LEAP_PRISM_BRIDGE = True and LEAP_PRISM_BRIDGE_AVAILABLE
 
-# Data directory
-DATA_DIR = '/content/AutomataNexus_Olympus_AGI2/data'
 
 
 if __name__ == "__main__":

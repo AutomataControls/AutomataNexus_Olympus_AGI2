@@ -416,20 +416,13 @@ def train_minerva_specialized_v2():
         # Create dataset using V1 approach but with enhancements
         print(f"🔧 Generating MINERVA-specific DSL grid patterns for stage {stage}...")
         
-        # Initialize DSL trainer
-        dsl_trainer = MINERVADSLTraining(model, device)
-        print(f"✅ MINERVA DSL grid pattern trainer initialized")
-        
         # Create dataset
         dataset_samples = []
         
-        # Generate MINERVA-specific DSL samples
-        dsl_samples = dsl_trainer.generate_dsl_samples(
-            num_samples=500,  # More samples
-            grid_size=grid_size,
-            complexity=stage_config['leap_complexity']
-        )
+        # Generate MINERVA-specific DSL samples using static method
+        dsl_samples = MINERVADSLTraining.create_minerva_dsl_samples(curriculum_stage=stage)
         dataset_samples.extend(dsl_samples)
+        print(f"✅ Generated {len(dsl_samples)} MINERVA DSL grid pattern samples")
         
         # Load ARC JSON files
         arc_files = ['arc-agi_training_challenges.json', 'arc-agi_evaluation_challenges.json']

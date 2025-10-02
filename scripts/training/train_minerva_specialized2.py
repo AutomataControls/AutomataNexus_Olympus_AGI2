@@ -324,12 +324,12 @@ def train_minerva_specialized_v2():
         if MINERVA_PRISM_AVAILABLE:
             prism_components = create_minerva_prism_system()
             systems['prism_synthesizer'] = prism_components['synthesizer']
-            systems['program_library'] = prism_components['program_library']
+            systems['program_library'] = prism_components['library']
             print("✅ MINERVA-specific PRISM system initialized")
         else:
             prism_components = create_prism_system()
             systems['prism_synthesizer'] = prism_components['synthesizer']
-            systems['program_library'] = prism_components['program_library']
+            # Generic PRISM doesn't have program_library
             print("✅ Generic PRISM system initialized")
     
     # Initialize V2 enhanced loss

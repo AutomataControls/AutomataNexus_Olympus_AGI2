@@ -344,12 +344,12 @@ def train_iris_specialized_v2():
         if IRIS_PRISM_AVAILABLE:
             prism_components = create_iris_prism_system()
             systems['prism_synthesizer'] = prism_components['synthesizer']
-            systems['program_library'] = prism_components['program_library']
+            systems['program_library'] = prism_components['library']
             print("✅ IRIS-specific PRISM system initialized")
         else:
             prism_components = create_prism_system()
             systems['prism_synthesizer'] = prism_components['synthesizer']
-            systems['program_library'] = prism_components['program_library']
+            systems['program_library'] = prism_components['library']
             print("✅ Generic PRISM system initialized")
     
     # Initialize V2 enhanced loss

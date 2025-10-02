@@ -859,7 +859,7 @@ def train_atlas_specialized():
     if ATLAS_SYNTHESIS_AVAILABLE:
         synthesis_components = create_atlas_synthesis_system()
         systems['atlas_synthesizer'] = synthesis_components['synthesizer']
-        systems['atlas_program_library'] = synthesis_components['program_library']
+        systems['atlas_program_library'] = synthesis_components['get_library']
         print("✅ ATLAS-specific program synthesis initialized")
     
     # Initialize specialized loss

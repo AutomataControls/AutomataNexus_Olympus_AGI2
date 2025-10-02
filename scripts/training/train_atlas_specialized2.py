@@ -354,38 +354,287 @@ def train_atlas_specialized_v2():
         print("🌍 ATLAS 4-PHASE SPATIAL TRANSFORMATION INJECTION SEQUENCE")
         print("=" * 60)
         
-        # Phase 1: Exact Match (CUSTOM FOR PRE-TRAINED MODEL)
+        # Phase 1: Exact Match (CUSTOM IMPLEMENTATION FOR V2)
         print("\n📍 PHASE 1: Conservative Spatial Identity Mapping")
         print(f"🔄 Custom injection for pre-trained model (current: {best_exact:.2f}%)")
         
-        # Custom injection with pre-trained model compatible parameters
+        # Custom exact match injection for V2
         model.train()
-        # Use very low learning rate for pre-trained model
-        injection_optimizer = optim.Adam(model.parameters(), lr=0.0005, betas=(0.9, 0.999), weight_decay=1e-6)
+        exact_optimizer = optim.Adam(model.parameters(), lr=0.0005, betas=(0.9, 0.999), weight_decay=1e-6)
         
-        target_acc = max(best_exact + 5.0, 60.0)
-        print(f"🎯 Target: {target_acc:.1f}% (conservative increase)")
-        print("⚠️ Using custom pre-trained injection (lr=0.0005)")
+        # Create exact match training samples
+        exact_samples = []
+        for i in range(120):
+            size = random.choice([3, 4, 5])
+            input_grid = np.random.randint(0, 4, (size, size))
+            # For exact match, output should be identical to input
+            output_grid = input_grid.copy()
+            exact_samples.append({'inputs': input_grid, 'outputs': output_grid})
         
-        # Skip detailed injection training for now - it's fundamentally broken
-        print("✅ Skipping problematic injection - proceeding to main training")
+        # Run exact match injection training
+        exact_success = 0
+        for epoch in range(25):
+            epoch_correct = 0
+            epoch_total = 0
+            
+            for sample in exact_samples:
+                inputs = torch.tensor(sample['inputs']).long().unsqueeze(0).to(device)
+                outputs = torch.tensor(sample['outputs']).long().unsqueeze(0).to(device)
+                
+                inputs = torch.clamp(inputs, 0, 9)
+                outputs = torch.clamp(outputs, 0, 9)
+                
+                input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+                output_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
+                
+                with autocast('cuda'):
+                    model_outputs = model(input_grids, output_grids, mode='train')
+                    pred_output = model_outputs['predicted_output']
+                    losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
+                
+                loss = losses['total'] * 0.15  # Gentle loss for exact match
+                
+                exact_optimizer.zero_grad()
+                scaler.scale(loss).backward()
+                scaler.step(exact_optimizer)
+                scaler.update()
+                
+                # Check accuracy
+                pred_indices = pred_output.argmax(dim=1)
+                target_indices = output_grids.argmax(dim=1)
+                correct = (pred_indices == target_indices).all().item()
+                epoch_correct += correct
+                epoch_total += 1
+            
+            epoch_acc = (epoch_correct / epoch_total) * 100
+            if epoch % 5 == 0:
+                print(f"   Exact Match Epoch {epoch+1}: {epoch_acc:.1f}% accuracy")
+            
+            if epoch_acc > 70.0:
+                exact_success = epoch_acc
+                break
         
-        # Phase 2: MEPT (skip if not available)
+        if exact_success > 0:
+            print(f"✅ Exact Match injection successful: {exact_success:.1f}% accuracy")
+        else:
+            print("⚠️ Exact Match injection had low success, continuing anyway")
+        
+        # Phase 2: MEPT (CUSTOM IMPLEMENTATION FOR V2)
         if USE_MEPT and 'spatial_memory' in systems:
             print("\n📍 PHASE 2: Spatial Memory Enhancement (MEPT)")
-            print("⚠️ MEPT injection not implemented in V1, skipping")
+            print("🔄 Running custom MEPT injection for pre-trained model...")
+            
+            # Custom MEPT injection for V2
+            model.train()
+            mept_optimizer = optim.Adam(model.parameters(), lr=0.0003, weight_decay=1e-6)
+            
+            # Create small MEPT training dataset
+            mept_samples = []
+            for i in range(100):
+                size = random.choice([4, 5, 6])
+                input_grid = np.random.randint(0, 5, (size, size))
+                # Simple transformation patterns for MEPT
+                transform = random.choice(['identity', 'rotate', 'flip'])
+                if transform == 'identity':
+                    output_grid = input_grid.copy()
+                elif transform == 'rotate':
+                    output_grid = np.rot90(input_grid, k=1).copy()
+                else:  # flip
+                    output_grid = np.flip(input_grid, axis=0).copy()
+                mept_samples.append({'inputs': input_grid, 'outputs': output_grid})
+            
+            # Run MEPT injection training
+            mept_success = 0
+            for epoch in range(20):  # Short MEPT training
+                epoch_correct = 0
+                epoch_total = 0
+                
+                for sample in mept_samples:
+                    inputs = torch.tensor(sample['inputs']).long().unsqueeze(0).to(device)
+                    outputs = torch.tensor(sample['outputs']).long().unsqueeze(0).to(device)
+                    
+                    inputs = torch.clamp(inputs, 0, 9)
+                    outputs = torch.clamp(outputs, 0, 9)
+                    
+                    input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+                    output_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
+                    
+                    with autocast('cuda'):
+                        model_outputs = model(input_grids, output_grids, mode='train')
+                        pred_output = model_outputs['predicted_output']
+                        losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
+                    
+                    loss = losses['total'] * 0.1  # Very gentle loss for MEPT
+                    
+                    mept_optimizer.zero_grad()
+                    scaler.scale(loss).backward()
+                    scaler.step(mept_optimizer)
+                    scaler.update()
+                    
+                    # Check accuracy
+                    pred_indices = pred_output.argmax(dim=1)
+                    target_indices = output_grids.argmax(dim=1)
+                    correct = (pred_indices == target_indices).all().item()
+                    epoch_correct += correct
+                    epoch_total += 1
+                
+                epoch_acc = (epoch_correct / epoch_total) * 100
+                if epoch % 5 == 0:
+                    print(f"   MEPT Epoch {epoch+1}: {epoch_acc:.1f}% accuracy")
+                
+                if epoch_acc > 50.0:
+                    mept_success = epoch_acc
+                    break
+            
+            if mept_success > 0:
+                print(f"✅ MEPT injection successful: {mept_success:.1f}% accuracy")
+            else:
+                print("⚠️ MEPT injection had low success, continuing anyway")
         
-        # Phase 3: LEAP (CUSTOM FOR PRE-TRAINED MODEL)  
+        # Phase 3: LEAP (CUSTOM IMPLEMENTATION FOR V2)  
         if USE_LEAP and 'leap_trainer' in systems:
             print("\n📍 PHASE 3: Conservative Adaptive Spatial Learning (LEAP)")
-            print("🔄 Custom LEAP for pre-trained model - skipping problematic injection")
-            print("✅ LEAP injection bypassed - proceeding to main training")
+            print("🔄 Running custom LEAP injection for pre-trained model...")
+            
+            # Custom LEAP injection for V2
+            model.train()
+            leap_optimizer = optim.Adam(model.parameters(), lr=0.0002, weight_decay=1e-6)
+            
+            # Create LEAP pattern samples
+            leap_samples = []
+            for i in range(80):
+                size = random.choice([5, 6, 7])
+                input_grid = np.random.randint(0, 4, (size, size))
+                # LEAP-style spatial patterns
+                pattern = random.choice(['shift', 'mirror', 'pattern'])
+                if pattern == 'shift':
+                    output_grid = np.roll(input_grid, shift=1, axis=random.randint(0, 1))
+                elif pattern == 'mirror':
+                    output_grid = np.flip(input_grid, axis=random.randint(0, 1)).copy()
+                else:  # pattern completion
+                    output_grid = input_grid.copy()
+                    output_grid[0, 0] = (input_grid[0, 0] + 1) % 4
+                leap_samples.append({'inputs': input_grid, 'outputs': output_grid})
+            
+            # Run LEAP injection training
+            leap_success = 0
+            for epoch in range(15):
+                epoch_correct = 0
+                epoch_total = 0
+                
+                for sample in leap_samples:
+                    inputs = torch.tensor(sample['inputs']).long().unsqueeze(0).to(device)
+                    outputs = torch.tensor(sample['outputs']).long().unsqueeze(0).to(device)
+                    
+                    inputs = torch.clamp(inputs, 0, 9)
+                    outputs = torch.clamp(outputs, 0, 9)
+                    
+                    input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+                    output_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
+                    
+                    with autocast('cuda'):
+                        model_outputs = model(input_grids, output_grids, mode='train')
+                        pred_output = model_outputs['predicted_output']
+                        losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
+                    
+                    loss = losses['total'] * 0.08  # Very gentle loss for LEAP
+                    
+                    leap_optimizer.zero_grad()
+                    scaler.scale(loss).backward()
+                    scaler.step(leap_optimizer)
+                    scaler.update()
+                    
+                    # Check accuracy
+                    pred_indices = pred_output.argmax(dim=1)
+                    target_indices = output_grids.argmax(dim=1)
+                    correct = (pred_indices == target_indices).all().item()
+                    epoch_correct += correct
+                    epoch_total += 1
+                
+                epoch_acc = (epoch_correct / epoch_total) * 100
+                if epoch % 5 == 0:
+                    print(f"   LEAP Epoch {epoch+1}: {epoch_acc:.1f}% accuracy")
+                
+                if epoch_acc > 40.0:
+                    leap_success = epoch_acc
+                    break
+            
+            if leap_success > 0:
+                print(f"✅ LEAP injection successful: {leap_success:.1f}% accuracy")
+            else:
+                print("⚠️ LEAP injection had low success, continuing anyway")
         
-        # Phase 4: PRISM (CUSTOM FOR PRE-TRAINED MODEL)
+        # Phase 4: PRISM (CUSTOM IMPLEMENTATION FOR V2)
         if USE_PRISM and 'prism_synthesizer' in systems:
             print("\n📍 PHASE 4: Conservative Spatial Program Synthesis (PRISM)")
-            print("🔄 Custom PRISM for pre-trained model - skipping problematic injection")
-            print("✅ PRISM injection bypassed - proceeding to main training")
+            print("🔄 Running custom PRISM injection for pre-trained model...")
+            
+            # Custom PRISM injection for V2
+            model.train()
+            prism_optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-6)
+            
+            # Create PRISM program synthesis samples
+            prism_samples = []
+            for i in range(60):
+                size = random.choice([4, 5, 6])
+                input_grid = np.random.randint(0, 3, (size, size))
+                # PRISM-style program synthesis patterns
+                program = random.choice(['copy', 'invert', 'add_one'])
+                if program == 'copy':
+                    output_grid = input_grid.copy()
+                elif program == 'invert':
+                    output_grid = (2 - input_grid).clip(0, 2)
+                else:  # add_one
+                    output_grid = (input_grid + 1) % 3
+                prism_samples.append({'inputs': input_grid, 'outputs': output_grid})
+            
+            # Run PRISM injection training
+            prism_success = 0
+            for epoch in range(12):
+                epoch_correct = 0
+                epoch_total = 0
+                
+                for sample in prism_samples:
+                    inputs = torch.tensor(sample['inputs']).long().unsqueeze(0).to(device)
+                    outputs = torch.tensor(sample['outputs']).long().unsqueeze(0).to(device)
+                    
+                    inputs = torch.clamp(inputs, 0, 9)
+                    outputs = torch.clamp(outputs, 0, 9)
+                    
+                    input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+                    output_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
+                    
+                    with autocast('cuda'):
+                        model_outputs = model(input_grids, output_grids, mode='train')
+                        pred_output = model_outputs['predicted_output']
+                        losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
+                    
+                    loss = losses['total'] * 0.05  # Very gentle loss for PRISM
+                    
+                    prism_optimizer.zero_grad()
+                    scaler.scale(loss).backward()
+                    scaler.step(prism_optimizer)
+                    scaler.update()
+                    
+                    # Check accuracy
+                    pred_indices = pred_output.argmax(dim=1)
+                    target_indices = output_grids.argmax(dim=1)
+                    correct = (pred_indices == target_indices).all().item()
+                    epoch_correct += correct
+                    epoch_total += 1
+                
+                epoch_acc = (epoch_correct / epoch_total) * 100
+                if epoch % 4 == 0:
+                    print(f"   PRISM Epoch {epoch+1}: {epoch_acc:.1f}% accuracy")
+                
+                if epoch_acc > 35.0:
+                    prism_success = epoch_acc
+                    break
+            
+            if prism_success > 0:
+                print(f"✅ PRISM injection successful: {prism_success:.1f}% accuracy")
+            else:
+                print("⚠️ PRISM injection had low success, continuing anyway")
         
         print("\n✅ 4-PHASE INJECTION COMPLETE")
         print("=" * 60)

@@ -239,6 +239,36 @@ def mixup_data(x, y, alpha=1.0):
     return mixed_x, y_a, y_b, lam
 
 
+def custom_collate_fn_v2(batch, stage):
+    """V2 collate function that handles numpy arrays with negative strides"""
+    inputs = []
+    outputs = []
+    
+    for item in batch:
+        input_grid = item['inputs']
+        output_grid = item['outputs']
+        
+        # Convert to tensors - always use .copy() to avoid negative stride issues
+        if isinstance(input_grid, np.ndarray):
+            input_grid = torch.from_numpy(input_grid.copy()).long()
+        else:
+            input_grid = torch.tensor(input_grid, dtype=torch.long)
+            
+        if isinstance(output_grid, np.ndarray):
+            output_grid = torch.from_numpy(output_grid.copy()).long()
+        else:
+            output_grid = torch.tensor(output_grid, dtype=torch.long)
+        
+        inputs.append(input_grid)
+        outputs.append(output_grid)
+    
+    # Stack all inputs and outputs
+    inputs = torch.stack(inputs)
+    outputs = torch.stack(outputs)
+    
+    return {'inputs': inputs, 'outputs': outputs}
+
+
 class WarmupCosineSchedule(optim.lr_scheduler._LRScheduler):
     """Cosine learning rate schedule with warmup"""
     
@@ -514,7 +544,7 @@ def train_minerva_specialized_v2():
             shuffle=True,
             num_workers=0,
             pin_memory=False,
-            collate_fn=lambda batch: custom_collate_fn(batch, stage),
+            collate_fn=lambda batch: custom_collate_fn_v2(batch, stage),
             drop_last=True
         )
         
@@ -524,7 +554,7 @@ def train_minerva_specialized_v2():
             shuffle=False,
             num_workers=0,
             pin_memory=False,
-            collate_fn=lambda batch: custom_collate_fn(batch, stage),
+            collate_fn=lambda batch: custom_collate_fn_v2(batch, stage),
             drop_last=False
         )
         

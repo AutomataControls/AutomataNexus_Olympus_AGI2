@@ -240,80 +240,9 @@ def mixup_data(x, y, alpha=1.0):
 
 
 def custom_collate_fn_v2(batch, stage):
-    """V2 collate function that handles numpy arrays with negative strides and padding"""
-    inputs = []
-    outputs = []
-    
-    # Determine target size based on stage
-    target_sizes = {0: 6, 1: 8, 2: 10, 3: 12, 4: 15, 5: 19, 6: 25, 7: 30}
-    target_size = target_sizes.get(stage, 30)
-    
-    for item in batch:
-        input_grid = item['inputs']
-        output_grid = item['outputs']
-        
-        # Convert to tensors - always use .copy() to avoid negative stride issues
-        if isinstance(input_grid, np.ndarray):
-            input_grid = torch.from_numpy(input_grid.copy()).long()
-        else:
-            input_grid = torch.tensor(input_grid, dtype=torch.long)
-            
-        if isinstance(output_grid, np.ndarray):
-            output_grid = torch.from_numpy(output_grid.copy()).long()
-        else:
-            output_grid = torch.tensor(output_grid, dtype=torch.long)
-        
-        # Ensure 2D
-        while input_grid.dim() > 2:
-            input_grid = input_grid.squeeze(0)
-        while output_grid.dim() > 2:
-            output_grid = output_grid.squeeze(0)
-        while input_grid.dim() < 2:
-            input_grid = input_grid.unsqueeze(0)
-        while output_grid.dim() < 2:
-            output_grid = output_grid.unsqueeze(0)
-        
-        # Ensure the grid is exactly target_size x target_size
-        h, w = input_grid.shape
-        
-        # If grid is larger than target, crop from center
-        if h > target_size or w > target_size:
-            start_h = max(0, (h - target_size) // 2)
-            start_w = max(0, (w - target_size) // 2)
-            input_grid = input_grid[start_h:start_h+target_size, start_w:start_w+target_size]
-            output_grid = output_grid[start_h:start_h+target_size, start_w:start_w+target_size]
-        
-        # Recheck dimensions after cropping
-        h, w = input_grid.shape
-        
-        # If still too large (shouldn't happen), force crop
-        if h > target_size:
-            input_grid = input_grid[:target_size, :]
-            output_grid = output_grid[:target_size, :]
-        if w > target_size:
-            input_grid = input_grid[:, :target_size]
-            output_grid = output_grid[:, :target_size]
-        
-        # Pad if too small
-        h, w = input_grid.shape
-        if h < target_size or w < target_size:
-            pad_h = max(0, target_size - h)
-            pad_w = max(0, target_size - w)
-            input_grid = F.pad(input_grid, (0, pad_w, 0, pad_h), value=0)
-            output_grid = F.pad(output_grid, (0, pad_w, 0, pad_h), value=0)
-        
-        # Final check - ensure exactly target_size
-        assert input_grid.shape == (target_size, target_size), f"Input shape {input_grid.shape} != ({target_size}, {target_size})"
-        assert output_grid.shape == (target_size, target_size), f"Output shape {output_grid.shape} != ({target_size}, {target_size})"
-        
-        inputs.append(input_grid)
-        outputs.append(output_grid)
-    
-    # Stack all inputs and outputs
-    inputs = torch.stack(inputs)
-    outputs = torch.stack(outputs)
-    
-    return {'inputs': inputs, 'outputs': outputs}
+    """V2 collate function - just use V1's collate function since it works"""
+    # V1's collate function works fine, just use it
+    return custom_collate_fn(batch, stage)
 
 
 class WarmupCosineSchedule(optim.lr_scheduler._LRScheduler):

@@ -667,7 +667,7 @@ def train_iris_specialized_v2():
                         'optimizer_state_dict': optimizer.state_dict(),
                         'best_exact': best_exact,
                         'val_loss': val_loss
-                    }, f'/content/AutomataNexus_Olympus_AGI2/arc_models_v4/iris_v2_best.pt')
+                    }, f'/content/AutomataNexus_Olympus_AGI2/arc_models_v4/iris_best.pt')
                     print(f"   🏆 New best model! Exact: {best_exact:.2f}%")
         
         # Stage complete

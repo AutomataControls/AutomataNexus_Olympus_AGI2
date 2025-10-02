@@ -369,11 +369,11 @@ def train_atlas_specialized_v2():
             # Enhanced transformations
             transform = random.choice(['rotate', 'flip', 'transpose', 'shift'])
             if transform == 'rotate':
-                output_grid = np.rot90(input_grid, k=random.randint(1, 3))
+                output_grid = np.rot90(input_grid, k=random.randint(1, 3)).copy()
             elif transform == 'flip':
-                output_grid = np.flip(input_grid, axis=random.randint(0, 1))
+                output_grid = np.flip(input_grid, axis=random.randint(0, 1)).copy()
             elif transform == 'transpose':
-                output_grid = input_grid.T
+                output_grid = input_grid.T.copy()
             else:  # shift
                 output_grid = np.roll(input_grid, shift=1, axis=random.randint(0, 1))
             dataset_samples.append({'inputs': input_grid, 'outputs': output_grid})

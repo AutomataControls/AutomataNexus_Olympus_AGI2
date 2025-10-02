@@ -751,14 +751,14 @@ def custom_collate_fn(batch, stage=0):
         
         # Convert to tensors efficiently
         if isinstance(input_grid, np.ndarray):
-            input_grid = torch.from_numpy(input_grid).long()
+            input_grid = torch.from_numpy(input_grid.copy()).long()
         elif torch.is_tensor(input_grid):
             input_grid = input_grid.long()
         else:
             input_grid = torch.tensor(input_grid, dtype=torch.long)
             
         if isinstance(output_grid, np.ndarray):
-            output_grid = torch.from_numpy(output_grid).long()
+            output_grid = torch.from_numpy(output_grid.copy()).long()
         elif torch.is_tensor(output_grid):
             output_grid = output_grid.long()
         else:

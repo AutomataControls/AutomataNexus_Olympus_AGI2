@@ -821,9 +821,9 @@ def train_atlas_specialized():
                 exact_match_bonus=ATLAS_CONFIG['exact_match_bonus']
             )
             print("✅ Generic MEPT system initialized")
-        systems['replay_buffer'] = mept_components['replay_buffer']
+        systems['spatial_memory'] = mept_components['spatial_memory']
         systems['pattern_bank'] = mept_components['pattern_bank']
-        systems['loss_fn'] = mept_components.get('loss_fn')  # For ATLAS-specific loss
+        systems['loss_fn'] = mept_components['loss_function']  # For ATLAS-specific loss
     
     # LEAP System - Use ATLAS-specific if available
     if USE_LEAP:

@@ -478,9 +478,9 @@ def atlas_mept_injection(model, device, systems, num_epochs=100, target_accuracy
             # Store successful patterns
             for i, is_exact in enumerate(exact):
                 if is_exact:
-                    systems['spatial_memory'].add(
-                        input_oh[i], output_oh[i], pred_idx[i],
-                        loss.item(), is_exact=True
+                    systems['spatial_memory'].store_transformation(
+                        input_oh[i], output_oh[i], 
+                        "mept_pattern", True
                     )
         
         acc = correct / total * 100
@@ -1189,12 +1189,11 @@ def train_atlas_specialized():
                     
                     for i in range(input_grids.size(0)):
                         if exact_matches[i] or good_spatial_matches[i]:
-                            systems['spatial_memory'].add(
+                            systems['spatial_memory'].store_transformation(
                                 input_grids[i],
                                 output_grids[i],
-                                pred_indices[i],
-                                losses['total'].item(),
-                                is_exact=exact_matches[i].item()
+                                "spatial_pattern",
+                                bool(exact_matches[i].item())
                             )
             
             # End of batch processing loop

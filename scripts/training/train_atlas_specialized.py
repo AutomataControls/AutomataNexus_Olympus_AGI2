@@ -513,7 +513,7 @@ def atlas_leap_injection(model, device, systems, num_epochs=100, target_accuracy
         patterns = []
         
         for i in range(batch_size):
-            size = random.choice([4, 5, 6])
+            size = 6  # Fixed size to avoid tensor stacking errors
             pattern_type = i % 6
             
             if pattern_type == 0:  # Adaptive rotation

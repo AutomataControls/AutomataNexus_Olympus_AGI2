@@ -95,15 +95,15 @@ from src.data.arc_data_synthesis import ARCDataSynthesizer, ARCDataAugmenter
 # IRIS-Specific Configuration with 8-Stage Progressive Curriculum
 IRIS_CONFIG = {
     'batch_size': 192,  # Reduced to prevent hanging
-    'learning_rate': 0.004,  # Reduced for stability
-    'num_epochs': 320,  # 8 stages x 40 epochs
+    'learning_rate': 0.002,  # Much lower for knowledge retention
+    'num_epochs': 640,  # 8 stages x 80 epochs
     'color_embed_dim': 64,
     'color_attention_heads': 4,
-    'gradient_accumulation': 2,  # Effective batch: 384
+    'gradient_accumulation': 4,  # Effective batch: 768 for stability
     'transform_penalty': 0.3,  # Lower - IRIS should do color transformations
     'exact_match_bonus': 3.0,  # Reduced to prevent negative losses
     'curriculum_stages': 8,  # Progressive 8-stage curriculum
-    'epochs_per_stage': 40,  # Shorter stages for smoother progression
+    'epochs_per_stage': 80,  # Much longer stages for knowledge retention
     'color_mapping_weight': 0.2,  # Reduced for stability
     'color_consistency_weight': 0.2,  # Reduced for stability
     'color_diversity_weight': 0.2,  # Encourage diverse color usage
@@ -1079,6 +1079,14 @@ def train_iris_specialized():
         print(f"   📏 Grid Size: {grid_size}x{grid_size} | Synthesis: {synthesis_ratio*100:.0f}% | LEAP: {stage_config['leap_complexity']}")
         print("=" * 60)
         
+        # Learning rate warmup for each new stage (except first)
+        if stage > 0:
+            # Reset to lower learning rate and warmup
+            warmup_lr = IRIS_CONFIG['learning_rate'] * 0.1  # Start 10x lower
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = warmup_lr
+            print(f"🔧 Stage {stage} warmup: LR reset to {warmup_lr:.5f} (will warm up to {IRIS_CONFIG['learning_rate']:.5f})")
+        
         # Generate IRIS-specific DSL samples for this stage
         print(f"🔧 Generating IRIS-specific DSL color patterns for stage {stage}...")
         dsl_samples = IRISDSLTraining.create_iris_dsl_samples(curriculum_stage=stage)
@@ -1216,11 +1224,27 @@ def train_iris_specialized():
             
             print("\n✅ 4-PHASE INJECTION COMPLETE - IRIS is primed for color pattern recognition!")
             print("="*60 + "\n")
+            
+            # Save injection-trained model for knowledge distillation
+            injection_state = {
+                'model_state_dict': model.state_dict(),
+                'injection_complete': True
+            }
+            print("💾 Saving injection-trained model for knowledge distillation")
         
         # Stage training loop
             
         for epoch in range(stage_start_epoch, IRIS_CONFIG['epochs_per_stage']):
             global_epoch += 1
+            
+            # Learning rate warmup for each new stage
+            if stage > 0 and epoch < 10:  # Warmup first 10 epochs of each stage
+                warmup_progress = epoch / 10.0
+                target_lr = IRIS_CONFIG['learning_rate']
+                warmup_lr = IRIS_CONFIG['learning_rate'] * 0.1  # Start at 10%
+                current_lr = warmup_lr + (target_lr - warmup_lr) * warmup_progress
+                for param_group in optimizer.param_groups:
+                    param_group['lr'] = current_lr
             
             # Main training
             model.train()
@@ -1309,6 +1333,29 @@ def train_iris_specialized():
                         # Specialized loss
                         losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
                         loss = losses['total'] / IRIS_CONFIG['gradient_accumulation']
+                        
+                        # Knowledge distillation from injection phases (every 20 batches)
+                        if stage == 0 and 'injection_state' in locals() and batch_idx % 20 == 0:
+                            # Get outputs from injection-trained model
+                            injection_model = EnhancedIrisNet(max_grid_size=30).to(device)
+                            injection_model.load_state_dict(injection_state['model_state_dict'])
+                            injection_model.eval()
+                            
+                            with torch.no_grad():
+                                injection_outputs = injection_model(input_grids, output_grids, mode='inference')
+                                injection_pred = injection_outputs['predicted_output']
+                            
+                            # Soft targets from injection model (temperature scaling)
+                            temperature = 3.0
+                            soft_targets = F.softmax(injection_pred / temperature, dim=1)
+                            soft_pred = F.log_softmax(pred_output / temperature, dim=1)
+                            
+                            # Knowledge distillation loss
+                            distill_loss = F.kl_div(soft_pred, soft_targets, reduction='batchmean') * (temperature ** 2)
+                            distill_loss = distill_loss / IRIS_CONFIG['gradient_accumulation']
+                            
+                            # Add to total loss with small weight
+                            loss = loss + 0.1 * distill_loss
                         
                         # IRIS-specific loss validation
                         if torch.isnan(loss) or torch.isinf(loss):

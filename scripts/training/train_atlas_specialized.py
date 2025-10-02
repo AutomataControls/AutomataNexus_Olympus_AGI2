@@ -271,7 +271,7 @@ def atlas_exact_match_injection(model, device, num_epochs=150, target_accuracy=9
     """ATLAS-specific exact match injection - spatial transformation patterns"""
     print("🌍 ATLAS EXACT MATCH INJECTION - SPATIAL PATTERNS")
     print("=" * 50)
-    print(f"  Batch size: 96 (fixed for stability)")
+    print(f"  Batch size: 32 (reduced for better learning)")
     print(f"  Learning rate: 0.008 -> 0.025 (with warmup)")
     print(f"  Transform penalty: {ATLAS_CONFIG['transform_penalty']}")
     print(f"  Exact match bonus: {ATLAS_CONFIG['exact_match_bonus']}")
@@ -303,7 +303,7 @@ def atlas_exact_match_injection(model, device, num_epochs=150, target_accuracy=9
     # Generate spatial transformation patterns
     def generate_spatial_patterns():
         patterns = []
-        batch_size = 96
+        batch_size = 32  # Reduced for better learning
         
         for pattern_type in range(8):
             size = random.choice([4, 5, 6])
@@ -908,7 +908,13 @@ def train_atlas_specialized():
     checkpoint_path = f'{models_dir}/atlas_checkpoint.pt'
     best_model_path = f'{models_dir}/atlas_best.pt'
     
-    if os.path.exists(checkpoint_path):
+    # FORCE FRESH START - Previous model is broken
+    FORCE_FRESH_START = True
+    
+    if FORCE_FRESH_START:
+        print("🔄 FORCED FRESH START - Ignoring checkpoints")
+        print("🆕 Starting fresh ATLAS training from scratch")
+    elif os.path.exists(checkpoint_path):
         print(f"🔄 Loading checkpoint from {checkpoint_path}")
         try:
             checkpoint = torch.load(checkpoint_path, map_location=device)

@@ -1277,9 +1277,9 @@ def train_atlas_specialized():
                 
                 # Enhanced system status reports
                 if USE_MEPT and 'spatial_memory' in systems:
-                    buffer_stats = systems['spatial_memory'].get_stats()
-                    exact_rate = (buffer_stats['exact_matches'] / max(1, buffer_stats['total_experiences'])) * 100
-                    print(f"   📊 MEPT: {buffer_stats['total_experiences']:,} experiences | {buffer_stats['exact_matches']:,} exact ({exact_rate:.1f}% rate)")
+                    total_patterns = len(systems['spatial_memory'].spatial_patterns)
+                    total_transformations = len(systems['spatial_memory'].transformation_history)
+                    print(f"   📊 MEPT: {total_patterns:,} spatial patterns | {total_transformations:,} transformations")
                 
                 if USE_LEAP and 'leap_trainer' in systems:
                     leap_report = systems['leap_trainer'].get_performance_report()

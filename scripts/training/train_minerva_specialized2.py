@@ -240,9 +240,13 @@ def mixup_data(x, y, alpha=1.0):
 
 
 def custom_collate_fn_v2(batch, stage):
-    """V2 collate function that handles numpy arrays with negative strides"""
+    """V2 collate function that handles numpy arrays with negative strides and padding"""
     inputs = []
     outputs = []
+    
+    # Determine target size based on stage
+    target_sizes = {0: 6, 1: 8, 2: 10, 3: 12, 4: 15, 5: 19, 6: 25, 7: 30}
+    target_size = target_sizes.get(stage, 30)
     
     for item in batch:
         input_grid = item['inputs']
@@ -258,6 +262,24 @@ def custom_collate_fn_v2(batch, stage):
             output_grid = torch.from_numpy(output_grid.copy()).long()
         else:
             output_grid = torch.tensor(output_grid, dtype=torch.long)
+        
+        # Ensure 2D
+        while input_grid.dim() > 2:
+            input_grid = input_grid.squeeze(0)
+        while output_grid.dim() > 2:
+            output_grid = output_grid.squeeze(0)
+        while input_grid.dim() < 2:
+            input_grid = input_grid.unsqueeze(0)
+        while output_grid.dim() < 2:
+            output_grid = output_grid.unsqueeze(0)
+        
+        # Pad to target size
+        h, w = input_grid.shape
+        if h < target_size or w < target_size:
+            pad_h = target_size - h
+            pad_w = target_size - w
+            input_grid = F.pad(input_grid, (0, pad_w, 0, pad_h), value=0)
+            output_grid = F.pad(output_grid, (0, pad_w, 0, pad_h), value=0)
         
         inputs.append(input_grid)
         outputs.append(output_grid)

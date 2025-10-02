@@ -455,11 +455,16 @@ def train_minerva_specialized_v2():
             else:  # quadrant
                 output_grid = np.zeros_like(input_grid)
                 mid_h, mid_w = size // 2, size // 2
-                # Swap quadrants
-                output_grid[:mid_h, :mid_w] = input_grid[mid_h:, mid_w:]
-                output_grid[mid_h:, mid_w:] = input_grid[:mid_h, :mid_w]
-                output_grid[:mid_h, mid_w:] = input_grid[mid_h:, :mid_w]
-                output_grid[mid_h:, :mid_w] = input_grid[:mid_h, mid_w:]
+                # Only do quadrant swap if grid is even-sized
+                if size % 2 == 0:
+                    # Swap quadrants
+                    output_grid[:mid_h, :mid_w] = input_grid[mid_h:, mid_w:]
+                    output_grid[mid_h:, mid_w:] = input_grid[:mid_h, :mid_w]
+                    output_grid[:mid_h, mid_w:] = input_grid[mid_h:, :mid_w]
+                    output_grid[mid_h:, :mid_w] = input_grid[:mid_h, mid_w:]
+                else:
+                    # For odd-sized grids, just rotate 180 degrees
+                    output_grid = np.rot90(input_grid, k=2).copy()
             
             dataset_samples.append({'inputs': input_grid, 'outputs': output_grid})
         

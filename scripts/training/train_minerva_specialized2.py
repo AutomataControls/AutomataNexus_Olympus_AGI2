@@ -273,11 +273,22 @@ def custom_collate_fn_v2(batch, stage):
         while output_grid.dim() < 2:
             output_grid = output_grid.unsqueeze(0)
         
-        # Pad to target size
+        # Pad or crop to target size
+        h, w = input_grid.shape
+        
+        # Crop if too large
+        if h > target_size:
+            input_grid = input_grid[:target_size, :]
+            output_grid = output_grid[:target_size, :]
+        if w > target_size:
+            input_grid = input_grid[:, :target_size]
+            output_grid = output_grid[:, :target_size]
+        
+        # Pad if too small
         h, w = input_grid.shape
         if h < target_size or w < target_size:
-            pad_h = target_size - h
-            pad_w = target_size - w
+            pad_h = max(0, target_size - h)
+            pad_w = max(0, target_size - w)
             input_grid = F.pad(input_grid, (0, pad_w, 0, pad_h), value=0)
             output_grid = F.pad(output_grid, (0, pad_w, 0, pad_h), value=0)
         

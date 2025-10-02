@@ -94,18 +94,18 @@ from src.data.arc_data_synthesis import ARCDataSynthesizer, ARCDataAugmenter
 
 # ATLAS-Specific Configuration with 8-Stage Progressive Curriculum
 ATLAS_CONFIG = {
-    'batch_size': 128,  # Reduced to prevent hanging
-    'learning_rate': 0.001,  # Further reduced for stability
+    'batch_size': 64,  # Further reduced for better gradient quality
+    'learning_rate': 0.005,  # Increased for better learning
     'num_epochs': 320,  # 8 stages x 40 epochs
     'hidden_dim': 128,
     'spatial_memory_size': 200,
-    'gradient_accumulation': 3,  # Effective batch: 384
+    'gradient_accumulation': 4,  # Effective batch: 256
     'transform_penalty': 0.5,  # Increased to match NexusReference.md requirement
     'exact_match_bonus': 5.0,  # Higher bonus to encourage exact matches
     'focal_gamma': 2.0,  # Focal loss gamma parameter
     'curriculum_stages': 8,  # Progressive 8-stage curriculum
     'epochs_per_stage': 40,  # Standard for better convergence
-    'spatial_weight': 0.8,  # ATLAS-specific loss component
+    'spatial_weight': 0.3,  # Reduced to balance with focal loss
     'affine_weight': 0.6,  # Spatial transformer weight
     'rotation_weight': 0.4,  # Discrete rotation weight
     'reflection_weight': 0.4,  # Discrete reflection weight
@@ -117,14 +117,14 @@ ATLAS_CONFIG = {
 
 # 8-Stage Progressive Grid Size Curriculum - OPTIMIZED FOR SPATIAL TRANSFORMATIONS
 STAGE_CONFIG = {
-    0: {'max_grid_size': 6,  'synthesis_ratio': 0.8, 'exact_injection': True,  'leap_complexity': 'basic', 'lr_mult': 2.0},
-    1: {'max_grid_size': 8,  'synthesis_ratio': 0.7, 'exact_injection': True,  'leap_complexity': 'basic', 'lr_mult': 1.5},
-    2: {'max_grid_size': 10, 'synthesis_ratio': 0.7, 'exact_injection': False, 'leap_complexity': 'simple', 'lr_mult': 0.8},
-    3: {'max_grid_size': 13, 'synthesis_ratio': 0.6, 'exact_injection': False, 'leap_complexity': 'simple', 'lr_mult': 0.7},
-    4: {'max_grid_size': 16, 'synthesis_ratio': 0.6, 'exact_injection': False, 'leap_complexity': 'medium', 'lr_mult': 0.6},
-    5: {'max_grid_size': 20, 'synthesis_ratio': 0.5, 'exact_injection': False, 'leap_complexity': 'medium', 'lr_mult': 0.5},
-    6: {'max_grid_size': 25, 'synthesis_ratio': 0.5, 'exact_injection': False, 'leap_complexity': 'complex', 'lr_mult': 0.4},
-    7: {'max_grid_size': 30, 'synthesis_ratio': 0.4, 'exact_injection': False, 'leap_complexity': 'complex', 'lr_mult': 0.3}
+    0: {'max_grid_size': 6,  'synthesis_ratio': 0.8, 'exact_injection': True,  'leap_complexity': 'basic', 'lr_mult': 1.0},
+    1: {'max_grid_size': 8,  'synthesis_ratio': 0.7, 'exact_injection': True,  'leap_complexity': 'basic', 'lr_mult': 1.0},
+    2: {'max_grid_size': 10, 'synthesis_ratio': 0.7, 'exact_injection': False, 'leap_complexity': 'simple', 'lr_mult': 1.0},
+    3: {'max_grid_size': 13, 'synthesis_ratio': 0.6, 'exact_injection': False, 'leap_complexity': 'simple', 'lr_mult': 0.9},
+    4: {'max_grid_size': 16, 'synthesis_ratio': 0.6, 'exact_injection': False, 'leap_complexity': 'medium', 'lr_mult': 0.8},
+    5: {'max_grid_size': 20, 'synthesis_ratio': 0.5, 'exact_injection': False, 'leap_complexity': 'medium', 'lr_mult': 0.7},
+    6: {'max_grid_size': 25, 'synthesis_ratio': 0.5, 'exact_injection': False, 'leap_complexity': 'complex', 'lr_mult': 0.6},
+    7: {'max_grid_size': 30, 'synthesis_ratio': 0.4, 'exact_injection': False, 'leap_complexity': 'complex', 'lr_mult': 0.5}
 }
 
 # Training components flags
@@ -194,7 +194,7 @@ class AtlasSpecializedLoss(nn.Module):
         B, C, H, W = pred_output.shape
         
         # Simple focal loss like IRIS
-        focal_loss = self._focal_loss(pred_output, target_output, gamma=2.0)
+        focal_loss = self._focal_loss(pred_output, target_output, gamma=ATLAS_CONFIG['focal_gamma'])
         
         # Exact match detection and bonus
         pred_indices = pred_output.argmax(dim=1)
@@ -260,8 +260,8 @@ class AtlasSpecializedLoss(nn.Module):
             spatial_penalty = (diff * (neighbor_errors.squeeze(1) < 3).float()).mean()
             total_spatial = base_loss + spatial_penalty * 0.5
         else:
-            # Even when perfect match, add small gradient to prevent stuck learning
-            total_spatial = base_loss + 0.01
+            # When perfect match, minimal spatial loss
+            total_spatial = base_loss
         
         return total_spatial * self.weights['spatial']
 

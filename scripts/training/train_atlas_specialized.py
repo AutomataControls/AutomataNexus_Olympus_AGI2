@@ -478,7 +478,7 @@ def atlas_mept_injection(model, device, systems, num_epochs=100, target_accuracy
             # Store successful patterns
             for i, is_exact in enumerate(exact):
                 if is_exact:
-                    systems['replay_buffer'].add(
+                    systems['spatial_memory'].add(
                         input_oh[i], output_oh[i], pred_idx[i],
                         loss.item(), is_exact=True
                     )
@@ -1229,7 +1229,7 @@ def train_atlas_specialized():
                     
                     for i in range(input_grids.size(0)):
                         if exact_matches[i] or good_spatial_matches[i]:
-                            systems['replay_buffer'].add(
+                            systems['spatial_memory'].add(
                                 input_grids[i],
                                 output_grids[i],
                                 pred_indices[i],
@@ -1317,8 +1317,8 @@ def train_atlas_specialized():
                 print(f"   📏 Stage Progress: {stage_progress:.0f}% | Total Progress: {total_progress:.0f}%")
                 
                 # Enhanced system status reports
-                if USE_MEPT and 'replay_buffer' in systems:
-                    buffer_stats = systems['replay_buffer'].get_stats()
+                if USE_MEPT and 'spatial_memory' in systems:
+                    buffer_stats = systems['spatial_memory'].get_stats()
                     exact_rate = (buffer_stats['exact_matches'] / max(1, buffer_stats['total_experiences'])) * 100
                     print(f"   📊 MEPT: {buffer_stats['total_experiences']:,} experiences | {buffer_stats['exact_matches']:,} exact ({exact_rate:.1f}% rate)")
                 

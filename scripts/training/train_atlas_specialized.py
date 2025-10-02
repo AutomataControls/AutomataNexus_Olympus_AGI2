@@ -809,10 +809,8 @@ def train_atlas_specialized():
     if USE_MEPT:
         if ATLAS_MEPT_LEAP_AVAILABLE:
             mept_components = create_atlas_mept_system(
-                capacity=40000,  # Spatial pattern capacity
-                pattern_bank_size=8000,
-                transformation_penalty=ATLAS_CONFIG['transform_penalty'],
-                exact_match_bonus=ATLAS_CONFIG['exact_match_bonus']
+                model=model,
+                device=device
             )
             print("✅ ATLAS-specific MEPT system initialized")
         else:

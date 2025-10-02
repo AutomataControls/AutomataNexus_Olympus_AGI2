@@ -273,10 +273,20 @@ def custom_collate_fn_v2(batch, stage):
         while output_grid.dim() < 2:
             output_grid = output_grid.unsqueeze(0)
         
-        # Pad or crop to target size
+        # Ensure the grid is exactly target_size x target_size
         h, w = input_grid.shape
         
-        # Crop if too large
+        # If grid is larger than target, crop from center
+        if h > target_size or w > target_size:
+            start_h = max(0, (h - target_size) // 2)
+            start_w = max(0, (w - target_size) // 2)
+            input_grid = input_grid[start_h:start_h+target_size, start_w:start_w+target_size]
+            output_grid = output_grid[start_h:start_h+target_size, start_w:start_w+target_size]
+        
+        # Recheck dimensions after cropping
+        h, w = input_grid.shape
+        
+        # If still too large (shouldn't happen), force crop
         if h > target_size:
             input_grid = input_grid[:target_size, :]
             output_grid = output_grid[:target_size, :]
@@ -291,6 +301,10 @@ def custom_collate_fn_v2(batch, stage):
             pad_w = max(0, target_size - w)
             input_grid = F.pad(input_grid, (0, pad_w, 0, pad_h), value=0)
             output_grid = F.pad(output_grid, (0, pad_w, 0, pad_h), value=0)
+        
+        # Final check - ensure exactly target_size
+        assert input_grid.shape == (target_size, target_size), f"Input shape {input_grid.shape} != ({target_size}, {target_size})"
+        assert output_grid.shape == (target_size, target_size), f"Output shape {output_grid.shape} != ({target_size}, {target_size})"
         
         inputs.append(input_grid)
         outputs.append(output_grid)

@@ -14,6 +14,7 @@ import json
 import os
 import sys
 import gc
+import time
 from tqdm import tqdm
 from typing import Dict, List, Optional
 import random
@@ -155,9 +156,9 @@ class ChronosSpecializedDataset(Dataset):
                     input_tensor = sequence[0] if len(sequence) > 0 else torch.zeros(1, 10, 6, 6)
                     output_tensor = sequence[-1] if len(sequence) > 1 else input_tensor
                 else:
-                    # Generic replay buffer format
-                    input_tensor = exp['input']
-                    output_tensor = exp['output']
+                    # Generic replay buffer format - handle key variations
+                    input_tensor = exp.get('input', exp.get('inputs'))
+                    output_tensor = exp.get('output', exp.get('outputs'))
                 
                 # Handle tensor dimensions
                 if input_tensor.dim() == 4:
@@ -569,13 +570,14 @@ def train_chronos_specialized():
         val_size = len(dataset) - train_size
         train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
         
-        # Apply CHRONOS-specialized dataset wrapper
-        if USE_MEPT and 'replay_buffer' in systems:
-            train_dataset = ChronosSpecializedDataset(
-                train_dataset, 
-                systems['replay_buffer'],
-                replay_ratio=0.3 if stage == 0 else 0.2
-            )
+        # DISABLE the specialized dataset wrapper - it's causing DataLoader hanging
+        # The ChronosSpecializedDataset replay buffer sampling is the source of the hang
+        # if USE_MEPT and 'replay_buffer' in systems:
+        #     train_dataset = ChronosSpecializedDataset(
+        #         train_dataset, 
+        #         systems['replay_buffer'],
+        #         replay_ratio=0.3 if stage == 0 else 0.2
+        #     )
         
         # Data loaders with stage-specific grid sizes
         # Use 0 workers to avoid hanging issues
@@ -630,28 +632,9 @@ def train_chronos_specialized():
                        colour='cyan', bar_format='{l_bar}{bar:30}{r_bar}')
             optimizer.zero_grad()
             
-            # Timeout detection to prevent hanging
-            import time
-            last_batch_time = time.time()
-            stuck_counter = 0
-            
             for batch_idx, batch in enumerate(pbar):
-                current_time = time.time()
-                if current_time - last_batch_time > 15:  # Reduced to 15 seconds timeout
-                    stuck_counter += 1
-                    print(f"⚠️ Warning: Batch {batch_idx} taking too long (stuck counter: {stuck_counter})")
-                    if stuck_counter > 1:  # Reduced threshold
-                        print("❌ Training appears stuck, breaking epoch")
-                        break
-                
-                last_batch_time = current_time
-                
-                # Debug print every 10 batches
-                if batch_idx % 10 == 0:
-                    print(f"Debug: Processing batch {batch_idx}")
-                
-                # CHRONOS DSL augmentation - DISABLED FOR DEBUGGING
-                if False and batch_idx % 5 == 0 and dsl_samples:  # Every 5th batch
+                # CHRONOS DSL augmentation
+                if batch_idx % 5 == 0 and dsl_samples:  # Every 5th batch
                     try:
                         batch = CHRONOSDSLTraining.augment_batch_with_chronos_dsl(
                             batch, curriculum_stage=stage, dsl_ratio=0.3
@@ -672,25 +655,13 @@ def train_chronos_specialized():
                 output_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
                 
                 with autocast('cuda'):
-                    try:
-                        # CHRONOS forward pass - use simple single frame mode for stability
-                        # Pass as single frame to avoid temporal processing complexity
-                        model_outputs = model([input_grids])  # This will trigger _forward_single
-                        pred_output = model_outputs['predicted_output']
-                        
-                        # Add timeout for forward pass
-                        if batch_idx % 10 == 0:
-                            print(f"Debug: Forward pass completed for batch {batch_idx}")
-                        
-                        # Specialized loss
-                        print(f"Debug: Computing loss for batch {batch_idx}")
-                        losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
-                        loss = losses['total'] / CHRONOS_CONFIG['gradient_accumulation']
-                        print(f"Debug: Loss computed for batch {batch_idx}: {loss.item():.3f}")
-                    except Exception as e:
-                        print(f"⚠️ Error in forward pass at batch {batch_idx}: {e}")
-                        print(f"Input shape: {input_grids.shape}")
-                        continue
+                    # CHRONOS forward pass - use simple single frame mode for stability
+                    model_outputs = model([input_grids])  # This will trigger _forward_single
+                    pred_output = model_outputs['predicted_output']
+                    
+                    # Specialized loss
+                    losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
+                    loss = losses['total'] / CHRONOS_CONFIG['gradient_accumulation']
                     
                     # CHRONOS-specific temporal loss validation
                     if torch.isnan(loss) or torch.isinf(loss):
@@ -702,9 +673,7 @@ def train_chronos_specialized():
                         print(f"⚠️ Skipping extremely negative temporal loss: {loss.item():.3f}")
                         continue
                 
-                print(f"Debug: Starting backward pass for batch {batch_idx}")
                 scaler.scale(loss).backward()
-                print(f"Debug: Backward pass completed for batch {batch_idx}")
                 
                 if (batch_idx + 1) % CHRONOS_CONFIG['gradient_accumulation'] == 0:
                     scaler.unscale_(optimizer)
@@ -742,8 +711,8 @@ def train_chronos_specialized():
                 
                 pbar.set_postfix(postfix_dict)
                 
-                # LEAP training integration with stage-specific complexity - DISABLED FOR DEBUGGING
-                if False and USE_LEAP and 'leap_trainer' in systems and batch_idx % 3 == 0:
+                # LEAP training integration with stage-specific complexity
+                if USE_LEAP and 'leap_trainer' in systems and batch_idx % 3 == 0:
                     # Adjust LEAP complexity based on current stage
                     leap_complexity = stage_config['leap_complexity']
                     leap_grid_size = min(grid_size, 12)  # Cap LEAP at 12x12 for stability
@@ -786,8 +755,8 @@ def train_chronos_specialized():
                         leap_batch['pattern_types'], leap_pred, leap_output_oh
                     )
                 
-                # MEPT experience collection (temporal transformations) - DISABLED FOR DEBUGGING
-                if False and USE_MEPT and 'replay_buffer' in systems:
+                # MEPT experience collection (temporal transformations)
+                if USE_MEPT and 'replay_buffer' in systems:
                     pred_indices = pred_output.argmax(dim=1)
                     target_indices = output_grids.argmax(dim=1)
                     exact_matches = (pred_indices == target_indices).all(dim=[1,2])

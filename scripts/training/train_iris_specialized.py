@@ -1319,7 +1319,7 @@ def train_iris_specialized():
                         # IRIS-specific gradient clipping (less aggressive than MINERVA)
                         grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
                         if grad_norm > 5.0:
-                            # print(f"⚠️ Large gradient norm in IRIS: {grad_norm:.2f}, clipped to 0.5")
+                            pass  # print(f"⚠️ Large gradient norm in IRIS: {grad_norm:.2f}, clipped to 0.5")
                         scaler.step(optimizer)
                         scaler.update()
                         optimizer.zero_grad()

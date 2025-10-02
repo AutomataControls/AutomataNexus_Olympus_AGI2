@@ -106,32 +106,38 @@ from train_atlas_specialized import (
     STAGE_CONFIG as STAGE_CONFIG_V1
 )
 
-# Enhanced ATLAS Configuration V2 - Building on V1
+# Enhanced ATLAS Configuration V2 - Building on V1 (SLOWED DOWN)
 ATLAS_CONFIG = ATLAS_CONFIG_V1.copy()
 ATLAS_CONFIG.update({
-    # Refined parameters based on V1 issues
-    'batch_size': 32,  # Smaller batches for better gradients
-    'learning_rate': 0.002,  # More conservative than 0.005
-    'gradient_accumulation': 2,  # Effective batch: 64
-    'transform_penalty': 0.2,  # Lower penalty for ATLAS
-    'exact_match_bonus': 4.0,  # Balanced bonus
-    'focal_gamma': 1.5,  # Less aggressive
-    'spatial_weight': 0.4,  # Slightly higher for spatial focus
+    # Much slower parameters for better learning
+    'batch_size': 16,  # Even smaller batches for precise gradients
+    'learning_rate': 0.001,  # Much slower learning rate
+    'gradient_accumulation': 4,  # Effective batch: 64
+    'transform_penalty': 0.1,  # Much lower penalty
+    'exact_match_bonus': 2.5,  # More conservative bonus
+    'focal_gamma': 1.2,  # Gentler focal loss
+    'spatial_weight': 0.25,  # Lower spatial focus
     
-    # New V2 features
-    'use_mixup': True,  # Mixup augmentation
-    'mixup_alpha': 0.2,
-    'gradient_clip': 1.0,
-    'warmup_steps': 500,  # Warmup for stability
-    'cosine_restarts': True,  # Cosine annealing with restarts
-    'label_smoothing': 0.1,
+    # Conservative V2 features
+    'use_mixup': False,  # Disable mixup for slower learning
+    'mixup_alpha': 0.1,
+    'gradient_clip': 0.5,  # Gentler gradient clipping
+    'warmup_steps': 800,  # Longer warmup for stability
+    'cosine_restarts': False,  # Disable restarts for steady learning
+    'label_smoothing': 0.05,  # Minimal smoothing
+    
+    # Extended training
+    'epochs_per_stage': 60,  # Longer training per stage
+    'patience': 15,  # More patience for early stopping
 })
 
-# Enhanced Stage Configuration V2
+# Enhanced Stage Configuration V2 - Much Gentler LR Decay
 STAGE_CONFIG = STAGE_CONFIG_V1.copy()
-# Keep same grid sizes but adjust learning dynamics
+# Keep same grid sizes but use much gentler learning rate decay
 for stage in STAGE_CONFIG:
-    STAGE_CONFIG[stage]['lr_mult'] = min(1.0, STAGE_CONFIG[stage]['lr_mult'] * 1.5)  # Less aggressive LR decay
+    # Much gentler LR multipliers to maintain learning across stages
+    STAGE_CONFIG[stage]['lr_mult'] = max(0.85, STAGE_CONFIG[stage]['lr_mult'])  # Prevent drastic LR drops
+    STAGE_CONFIG[stage]['epochs'] = 60  # Extended epochs per stage
 
 
 # Device setup
@@ -348,24 +354,24 @@ def train_atlas_specialized_v2():
         print("🌍 ATLAS 4-PHASE SPATIAL TRANSFORMATION INJECTION SEQUENCE")
         print("=" * 60)
         
-        # Phase 1: Exact Match
-        print("\n📍 PHASE 1: Spatial Identity Mapping")
-        model = atlas_exact_match_injection(model, device, num_epochs=100, target_accuracy=85.0)
+        # Phase 1: Exact Match (SLOWED DOWN)
+        print("\n📍 PHASE 1: Conservative Spatial Identity Mapping")
+        model = atlas_exact_match_injection(model, device, num_epochs=150, target_accuracy=75.0)  # Longer training, lower target
         
         # Phase 2: MEPT (skip if not available)
         if USE_MEPT and 'spatial_memory' in systems:
             print("\n📍 PHASE 2: Spatial Memory Enhancement (MEPT)")
             print("⚠️ MEPT injection not implemented in V1, skipping")
         
-        # Phase 3: LEAP
+        # Phase 3: LEAP (SLOWED DOWN)
         if USE_LEAP and 'leap_trainer' in systems:
-            print("\n📍 PHASE 3: Adaptive Spatial Learning (LEAP)")
-            model = atlas_leap_injection(model, device, systems, num_epochs=80)
+            print("\n📍 PHASE 3: Conservative Adaptive Spatial Learning (LEAP)")
+            model = atlas_leap_injection(model, device, systems, num_epochs=120)  # Extended LEAP training
         
-        # Phase 4: PRISM
+        # Phase 4: PRISM (SLOWED DOWN)
         if USE_PRISM and 'prism_synthesizer' in systems:
-            print("\n📍 PHASE 4: Spatial Program Synthesis (PRISM)")
-            model = atlas_prism_injection(model, device, systems, num_epochs=80)
+            print("\n📍 PHASE 4: Conservative Spatial Program Synthesis (PRISM)")
+            model = atlas_prism_injection(model, device, systems, num_epochs=120)  # Extended PRISM training
         
         print("\n✅ 4-PHASE INJECTION COMPLETE")
         print("=" * 60)
@@ -534,8 +540,8 @@ def train_atlas_specialized_v2():
                     'lr': f"{scheduler.get_lr()[0]:.6f}"
                 })
             
-            # Validation phase
-            if epoch % 5 == 0 or epoch == ATLAS_CONFIG['epochs_per_stage'] - 1:
+            # Validation phase (slower validation for extended training)
+            if epoch % 10 == 0 or epoch == ATLAS_CONFIG['epochs_per_stage'] - 1:
                 model.eval()
                 val_metrics = defaultdict(float)
                 

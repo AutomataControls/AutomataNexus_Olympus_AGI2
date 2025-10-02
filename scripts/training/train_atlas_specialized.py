@@ -1119,14 +1119,8 @@ def train_atlas_specialized():
                             'outputs': outputs
                         }
                         
-                        # Augment with ATLAS-specific DSL samples using trainer
-                        augmented_inputs, augmented_outputs = dsl_trainer.create_dsl_augmented_batch(
-                            inputs, outputs
-                        )
-                        # Use augmented data if available, otherwise use original
-                        if augmented_inputs is not None:
-                            inputs = augmented_inputs
-                            outputs = augmented_outputs
+                        # DSL augmentation disabled due to tensor size mismatches
+                        # The ATLAS DSL creates different sized tensors that can't be stacked
                         
                         
                         # Ensure values are still in range
@@ -1181,44 +1175,10 @@ def train_atlas_specialized():
                 # Print metrics
                 print(f"   Batch metrics - loss: {losses['total'].item():.3f}, exact: {losses['exact_count'].item():.0f}, spatial: {losses['spatial'].item():.3f}, affine: {losses['affine'].item():.3f}")
                 
-                # LEAP training integration with reduced frequency for speed
-                if USE_LEAP and 'leap_trainer' in systems and batch_idx % 10 == 0:  # Every 10 batches instead of 2
-                    # Adjust LEAP complexity based on current stage
-                    leap_complexity = stage_config['leap_complexity']
-                    leap_grid_size = min(grid_size, 12)  # Cap LEAP at 12x12 for stability
-                    
-                    leap_batch = systems['leap_trainer'].generate_leap_batch(
-                        batch_size=max(32, 64 - stage*8)  # Reduce batch size for larger grids
-                    )
-                    leap_inputs = leap_batch['inputs'].to(device)
-                    leap_outputs = leap_batch['outputs'].to(device)
-                    
-                    # Ensure proper grid size for current stage
-                    H, W = leap_inputs.shape[-2:]
-                    if H < grid_size or W < grid_size:
-                        pad_h = grid_size - H
-                        pad_w = grid_size - W
-                        leap_inputs = F.pad(leap_inputs, (0, pad_w, 0, pad_h), value=0)
-                        leap_outputs = F.pad(leap_outputs, (0, pad_w, 0, pad_h), value=0)
-                    
-                    leap_input_oh = F.one_hot(leap_inputs, num_classes=10).permute(0, 3, 1, 2).float()
-                    leap_output_oh = F.one_hot(leap_outputs, num_classes=10).permute(0, 3, 1, 2).float()
-                    
-                    with autocast('cuda'):
-                        leap_model_outputs = model(leap_input_oh, leap_output_oh, mode='train')
-                        leap_pred = leap_model_outputs['predicted_output']
-                        leap_losses = loss_fn(leap_pred, leap_output_oh, leap_input_oh, leap_model_outputs)
-                        leap_loss = leap_losses['total'] / ATLAS_CONFIG['gradient_accumulation']
-                    
-                    scaler.scale(leap_loss).backward()
-                    
-                    # Update LEAP pattern statistics
-                    systems['leap_trainer'].update_pattern_stats(
-                        leap_batch['pattern_types'], leap_pred, leap_output_oh
-                        )
+                # LEAP training integration disabled - AtlasLEAPTrainer doesn't have generate_leap_batch method
                 
                 # MEPT experience collection (spatial transformations)
-                if USE_MEPT and 'replay_buffer' in systems:
+                if USE_MEPT and 'spatial_memory' in systems:
                     pred_indices = pred_output.argmax(dim=1)
                     target_indices = output_grids.argmax(dim=1)
                     exact_matches = (pred_indices == target_indices).all(dim=[1,2])

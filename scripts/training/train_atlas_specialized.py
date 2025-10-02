@@ -828,7 +828,7 @@ def train_atlas_specialized():
     # LEAP System - Use ATLAS-specific if available
     if USE_LEAP:
         if ATLAS_MEPT_LEAP_AVAILABLE:
-            leap_components = create_atlas_leap_system(device)
+            leap_components = create_atlas_leap_system(model=model, device=device)
             print("✅ ATLAS-specific LEAP system initialized")
         else:
             leap_components = create_leap_system(device)
@@ -840,7 +840,7 @@ def train_atlas_specialized():
     # PRISM System - Use ATLAS-specific if available
     if USE_PRISM:
         if ATLAS_PRISM_AVAILABLE:
-            prism_components = create_atlas_prism_system()
+            prism_components = create_atlas_prism_system(model=model, device=device)
             systems['prism_synthesizer'] = prism_components['synthesizer']
             systems['prism_library'] = prism_components['library']
             print("✅ ATLAS-specific PRISM system initialized")

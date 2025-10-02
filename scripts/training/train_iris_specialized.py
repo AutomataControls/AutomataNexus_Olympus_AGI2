@@ -1223,7 +1223,7 @@ def train_iris_specialized():
             # Create data loader iterator with timeout protection
             try:
                 # Manual iteration for debugging
-                print(f"   Total batches to process: {len(train_loader)}")
+                # print(f"   Total batches to process: {len(train_loader)}")
                 optimizer.zero_grad()
                 
                 batch_count = 0
@@ -1231,14 +1231,14 @@ def train_iris_specialized():
                 last_batch_time = time.time()
                 
                 # Manual iteration for debugging
-                print(f"   Total batches to process: {len(train_loader)}")
+                # print(f"   Total batches to process: {len(train_loader)}")
                 
                 for batch_idx, batch in enumerate(train_loader):
-                    print(f"\n🔍 DEBUG: Processing batch {batch_idx+1}/{len(train_loader)}", flush=True)
+                    # print(f"\n🔍 DEBUG: Processing batch {batch_idx+1}/{len(train_loader)}", flush=True)
                     # Update progress manually
                     progress = (batch_idx + 1) / len(train_loader) * 100
                     print(f"\rIRIS Stage {stage}, Epoch {epoch+1}: {progress:.0f}% {batch_idx+1}/{len(train_loader)}", end='', flush=True)
-                    print(f"\n🔍 DEBUG: Starting batch {batch_idx+1}/{len(train_loader)}")
+                    # print(f"\n🔍 DEBUG: Starting batch {batch_idx+1}/{len(train_loader)}")
                     current_time = time.time()
                     # Check if we're stuck (more than 60 seconds on a batch)
                     if current_time - last_batch_time > 60:
@@ -1252,7 +1252,7 @@ def train_iris_specialized():
                     last_batch_time = current_time
                     
                     batch_count += 1
-                    print(f"   Batch count: {batch_count}, batch_idx: {batch_idx}")
+                    # print(f"   Batch count: {batch_count}, batch_idx: {batch_idx}")
                     
                     inputs = batch['inputs'].to(device, non_blocking=True)
                     outputs = batch['outputs'].to(device, non_blocking=True)
@@ -1319,7 +1319,7 @@ def train_iris_specialized():
                         # IRIS-specific gradient clipping (less aggressive than MINERVA)
                         grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
                         if grad_norm > 5.0:
-                            print(f"⚠️ Large gradient norm in IRIS: {grad_norm:.2f}, clipped to 0.5")
+                            # print(f"⚠️ Large gradient norm in IRIS: {grad_norm:.2f}, clipped to 0.5")
                         scaler.step(optimizer)
                         scaler.update()
                         optimizer.zero_grad()
@@ -1330,7 +1330,7 @@ def train_iris_specialized():
                     train_metrics['samples'] += input_grids.size(0)
                     
                     # Print metrics instead of using pbar
-                    print(f"   Batch metrics - loss: {losses['total'].item():.3f}, exact: {losses['exact_count'].item():.0f}, color_map: {losses['color_mapping'].item():.3f}, color_bal: {losses['color_balance'].item():.3f}")
+                    # print(f"   Batch metrics - loss: {losses['total'].item():.3f}, exact: {losses['exact_count'].item():.0f}, color_map: {losses['color_mapping'].item():.3f}, color_bal: {losses['color_balance'].item():.3f}")
                     
                     # LEAP training integration with reduced frequency for speed
                     if USE_LEAP and 'leap_trainer' in systems and batch_idx % 10 == 0:  # Every 10 batches instead of 2
@@ -1390,9 +1390,9 @@ def train_iris_specialized():
             
                 
                 # End of batch processing loop
-                print(f"\n✅ Completed all {batch_count} batches for epoch {epoch+1}")
-                print(f"   Expected batches: {len(train_loader)}")
-                print(f"   Actual batches processed: {batch_count}")
+                # print(f"\n✅ Completed all {batch_count} batches for epoch {epoch+1}")
+                # print(f"   Expected batches: {len(train_loader)}")
+                # print(f"   Actual batches processed: {batch_count}")
                 
             except Exception as e:
                 print(f"❌ Error in training loop: {e}")
@@ -1402,7 +1402,7 @@ def train_iris_specialized():
             
             # Step scheduler after epoch completes
             scheduler.step()
-            print(f"📈 Learning rate updated to: {optimizer.param_groups[0]['lr']:.6f}")
+            # print(f"📈 Learning rate updated to: {optimizer.param_groups[0]['lr']:.6f}")
             
             # Validation every 5 epochs
             if epoch % 5 == 0:

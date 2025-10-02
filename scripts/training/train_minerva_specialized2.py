@@ -292,7 +292,7 @@ def train_minerva_specialized_v2():
             mept_components = create_minerva_mept_system()
             systems['replay_buffer'] = mept_components['replay_buffer']
             systems['pattern_bank'] = mept_components['pattern_bank']
-            systems['loss_fn'] = mept_components['loss_function']
+            systems['loss_fn'] = mept_components['loss_fn']
             print("✅ MINERVA-specific MEPT system initialized")
         else:
             mept_components = create_mept_system(

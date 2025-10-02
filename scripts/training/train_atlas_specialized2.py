@@ -242,7 +242,7 @@ def train_atlas_specialized_v2():
             )
             systems['spatial_memory'] = mept_components['spatial_memory']
             systems['pattern_bank'] = mept_components['pattern_bank']
-            systems['loss_fn'] = mept_components['loss_function']
+            systems['loss_fn'] = mept_components['loss_fn']
             print("✅ ATLAS-specific MEPT system initialized")
         else:
             mept_components = create_mept_system(

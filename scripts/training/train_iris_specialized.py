@@ -112,9 +112,9 @@ IRIS_CONFIG = {
 
 # 8-Stage Progressive Grid Size Curriculum for Color Learning
 STAGE_CONFIG = {
-    0: {'max_grid_size': 6,  'synthesis_ratio': 0.6, 'exact_injection': True,  'leap_complexity': 'basic'},
-    1: {'max_grid_size': 8,  'synthesis_ratio': 0.5, 'exact_injection': False, 'leap_complexity': 'basic'},
-    2: {'max_grid_size': 10, 'synthesis_ratio': 0.5, 'exact_injection': False, 'leap_complexity': 'simple'},
+    0: {'max_grid_size': 6,  'synthesis_ratio': 0.6, 'exact_injection': True,  'leap_complexity': 'minimal'},
+    1: {'max_grid_size': 8,  'synthesis_ratio': 0.5, 'exact_injection': False, 'leap_complexity': 'minimal'},
+    2: {'max_grid_size': 10, 'synthesis_ratio': 0.5, 'exact_injection': False, 'leap_complexity': 'basic'},
     3: {'max_grid_size': 13, 'synthesis_ratio': 0.4, 'exact_injection': False, 'leap_complexity': 'simple'},
     4: {'max_grid_size': 16, 'synthesis_ratio': 0.4, 'exact_injection': False, 'leap_complexity': 'medium'},
     5: {'max_grid_size': 20, 'synthesis_ratio': 0.3, 'exact_injection': False, 'leap_complexity': 'medium'},
@@ -445,7 +445,7 @@ def custom_collate_fn(batch, stage=0):
 
 
 # IRIS-specific injection modules for color pattern learning
-def iris_exact_match_injection(model, device, num_epochs=200, target_accuracy=90.0):
+def iris_exact_match_injection(model, device, num_epochs=75, target_accuracy=90.0):
     """IRIS-specific exact match injection for color pattern learning"""
     print("🎨 IRIS EXACT MATCH INJECTION - COLOR PATTERNS")
     print("=" * 50)
@@ -465,7 +465,7 @@ def iris_exact_match_injection(model, device, num_epochs=200, target_accuracy=90
     # Use Adam optimizer for color learning
     base_lr = IRIS_CONFIG['learning_rate'] * 3
     optimizer = optim.AdamW(model.parameters(), lr=base_lr, betas=(0.9, 0.999), weight_decay=0.0)
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=base_lr*0.01)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=base_lr*0.05)
     
     # Create color-focused exact match patterns
     patterns = []
@@ -510,6 +510,8 @@ def iris_exact_match_injection(model, device, num_epochs=200, target_accuracy=90
     
     # Training loop
     best_acc = 0
+    plateau_count = 0
+    patience = 15  # Stop if no improvement for 15 epochs
     
     for epoch in range(num_epochs):
         correct = 0
@@ -595,9 +597,15 @@ def iris_exact_match_injection(model, device, num_epochs=200, target_accuracy=90
         
         if acc > best_acc:
             best_acc = acc
+            plateau_count = 0
+        else:
+            plateau_count += 1
         
         if acc >= target_accuracy:
             print(f"🏆 TARGET REACHED: {acc:.1f}% >= {target_accuracy}%")
+            break
+        elif plateau_count >= patience:
+            print(f"⚠️ EARLY STOP: Plateaued for {patience} epochs at {acc:.1f}% (best: {best_acc:.1f}%)")
             break
         elif epoch == num_epochs - 1:
             print(f"⚠️ INJECTION COMPLETE: {acc:.1f}% (best: {best_acc:.1f}%, target: {target_accuracy}%)")
@@ -1404,8 +1412,8 @@ def train_iris_specialized():
             scheduler.step()
             # print(f"📈 Learning rate updated to: {optimizer.param_groups[0]['lr']:.6f}")
             
-            # Validation every 5 epochs
-            if epoch % 5 == 0:
+            # Validation every 10 epochs
+            if epoch % 10 == 0:
                 model.eval()
                 val_metrics = {'loss': 0, 'exact': 0, 'pixel_acc': 0, 'samples': 0}
                 

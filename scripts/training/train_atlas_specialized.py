@@ -95,13 +95,14 @@ from src.data.arc_data_synthesis import ARCDataSynthesizer, ARCDataAugmenter
 # ATLAS-Specific Configuration with 8-Stage Progressive Curriculum
 ATLAS_CONFIG = {
     'batch_size': 128,  # Reduced to prevent hanging
-    'learning_rate': 0.003,  # Reduced for stability
+    'learning_rate': 0.001,  # Further reduced for stability
     'num_epochs': 320,  # 8 stages x 40 epochs
     'hidden_dim': 128,
     'spatial_memory_size': 200,
     'gradient_accumulation': 3,  # Effective batch: 384
-    'transform_penalty': 0.1,  # Very low - ATLAS should do spatial transformations
-    'exact_match_bonus': 2.0,  # Moderate bonus to avoid negative losses
+    'transform_penalty': 0.5,  # Increased to match NexusReference.md requirement
+    'exact_match_bonus': 5.0,  # Higher bonus to encourage exact matches
+    'focal_gamma': 2.0,  # Focal loss gamma parameter
     'curriculum_stages': 8,  # Progressive 8-stage curriculum
     'epochs_per_stage': 40,  # Standard for better convergence
     'spatial_weight': 0.8,  # ATLAS-specific loss component
@@ -116,8 +117,8 @@ ATLAS_CONFIG = {
 
 # 8-Stage Progressive Grid Size Curriculum - OPTIMIZED FOR SPATIAL TRANSFORMATIONS
 STAGE_CONFIG = {
-    0: {'max_grid_size': 6,  'synthesis_ratio': 0.8, 'exact_injection': True,  'leap_complexity': 'basic', 'lr_mult': 1.0},
-    1: {'max_grid_size': 8,  'synthesis_ratio': 0.7, 'exact_injection': True,  'leap_complexity': 'basic', 'lr_mult': 0.9},
+    0: {'max_grid_size': 6,  'synthesis_ratio': 0.8, 'exact_injection': True,  'leap_complexity': 'basic', 'lr_mult': 2.0},
+    1: {'max_grid_size': 8,  'synthesis_ratio': 0.7, 'exact_injection': True,  'leap_complexity': 'basic', 'lr_mult': 1.5},
     2: {'max_grid_size': 10, 'synthesis_ratio': 0.7, 'exact_injection': False, 'leap_complexity': 'simple', 'lr_mult': 0.8},
     3: {'max_grid_size': 13, 'synthesis_ratio': 0.6, 'exact_injection': False, 'leap_complexity': 'simple', 'lr_mult': 0.7},
     4: {'max_grid_size': 16, 'synthesis_ratio': 0.6, 'exact_injection': False, 'leap_complexity': 'medium', 'lr_mult': 0.6},
@@ -244,17 +245,25 @@ class AtlasSpecializedLoss(nn.Module):
     
     def _spatial_consistency_loss(self, pred_indices, target_indices):
         """Ensure spatial patterns are preserved"""
-        # Simple local consistency check
+        # Always calculate some spatial loss to encourage learning
         diff = (pred_indices != target_indices).float()
         
-        # Penalize isolated incorrect pixels more
-        kernel = torch.ones(3, 3, device=pred_indices.device).unsqueeze(0).unsqueeze(0)
-        neighbor_errors = F.conv2d(diff.unsqueeze(1).float(), kernel, padding=1)
+        # Base spatial loss - mean squared difference
+        base_loss = diff.mean()
         
-        # Higher penalty for isolated errors (spatial inconsistency)
-        spatial_penalty = (diff * (neighbor_errors.squeeze(1) < 3).float()).mean()
+        # Additional penalty for isolated incorrect pixels
+        if base_loss > 0:
+            kernel = torch.ones(3, 3, device=pred_indices.device).unsqueeze(0).unsqueeze(0)
+            neighbor_errors = F.conv2d(diff.unsqueeze(1).float(), kernel, padding=1)
+            
+            # Higher penalty for isolated errors (spatial inconsistency)
+            spatial_penalty = (diff * (neighbor_errors.squeeze(1) < 3).float()).mean()
+            total_spatial = base_loss + spatial_penalty * 0.5
+        else:
+            # Even when perfect match, add small gradient to prevent stuck learning
+            total_spatial = base_loss + 0.01
         
-        return spatial_penalty * self.weights['spatial']
+        return total_spatial * self.weights['spatial']
 
 
 # ATLAS-specific injection functions

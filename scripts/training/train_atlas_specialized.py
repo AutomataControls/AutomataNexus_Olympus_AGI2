@@ -821,9 +821,14 @@ def train_atlas_specialized():
                 exact_match_bonus=ATLAS_CONFIG['exact_match_bonus']
             )
             print("✅ Generic MEPT system initialized")
-        systems['spatial_memory'] = mept_components['spatial_memory']
-        systems['pattern_bank'] = mept_components['pattern_bank']
-        systems['loss_fn'] = mept_components['loss_function']  # For ATLAS-specific loss
+        if ATLAS_MEPT_LEAP_AVAILABLE:
+            systems['spatial_memory'] = mept_components['spatial_memory']
+            systems['pattern_bank'] = mept_components['pattern_bank']
+            systems['loss_fn'] = mept_components['loss_function']
+        else:
+            systems['spatial_memory'] = mept_components['replay_buffer'] 
+            systems['pattern_bank'] = mept_components['pattern_bank']
+            systems['loss_fn'] = mept_components.get('loss_fn')
     
     # LEAP System - Use ATLAS-specific if available
     if USE_LEAP:
@@ -942,14 +947,13 @@ def train_atlas_specialized():
         
         # Add DSL-generated samples for ATLAS's spatial reasoning
         print(f"🔧 Generating ATLAS-specific DSL spatial patterns for stage {stage}...")
-        dsl_samples = ATLASDSLTraining.create_atlas_dsl_samples(curriculum_stage=stage)
-        print(f"✅ Created {len(dsl_samples)} ATLAS DSL spatial pattern samples")
+        dsl_trainer = ATLASDSLTraining(model, device)
+        print(f"✅ ATLAS DSL spatial pattern trainer initialized")
         
         # Create simple ARC dataset for this stage
         dataset_samples = []
         
-        # Add DSL samples
-        dataset_samples.extend(dsl_samples)
+        # DSL trainer ready for augmentation during training
         
         # Load ARC JSON files
         arc_files = [
@@ -1115,15 +1119,15 @@ def train_atlas_specialized():
                             'outputs': outputs
                         }
                         
-                        # Augment with ATLAS-specific DSL samples
-                        augmented_batch = ATLASDSLTraining.augment_batch_with_atlas_dsl(
-                            batch_dict,
-                            curriculum_stage=stage,
-                            dsl_ratio=0.3  # 30% DSL samples
+                        # Augment with ATLAS-specific DSL samples using trainer
+                        augmented_inputs, augmented_outputs = dsl_trainer.create_dsl_augmented_batch(
+                            inputs, outputs
                         )
+                        # Use augmented data if available, otherwise use original
+                        if augmented_inputs is not None:
+                            inputs = augmented_inputs
+                            outputs = augmented_outputs
                         
-                        inputs = augmented_batch['inputs']
-                        outputs = augmented_batch['outputs']
                         
                         # Ensure values are still in range
                         inputs = torch.clamp(inputs, 0, 9)

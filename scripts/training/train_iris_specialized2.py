@@ -421,19 +421,19 @@ def train_iris_specialized_v2():
         model = iris_exact_match_injection(model, device, num_epochs=120, target_accuracy=88.0)
         
         # Phase 2: MEPT
-        if USE_MEPT:
+        if USE_MEPT and 'replay_buffer' in systems:
             print("\n🎨 PHASE 2: Color Memory Enhancement (MEPT)")
-            model = iris_mept_injection(model, device, num_epochs=100, target_accuracy=90.0)
+            model = iris_mept_injection(model, device, systems, num_epochs=100, target_accuracy=90.0)
         
         # Phase 3: LEAP
-        if USE_LEAP:
+        if USE_LEAP and 'leap_trainer' in systems:
             print("\n🎨 PHASE 3: Adaptive Color Learning (LEAP)")
-            model = iris_leap_injection(model, device, num_epochs=100, target_accuracy=90.0)
+            model = iris_leap_injection(model, device, systems, num_epochs=100, target_accuracy=90.0)
         
         # Phase 4: PRISM
-        if USE_PRISM:
+        if USE_PRISM and 'prism_synthesizer' in systems:
             print("\n🎨 PHASE 4: Color Program Synthesis (PRISM)")
-            model = iris_prism_injection(model, device, num_epochs=100)
+            model = iris_prism_injection(model, device, systems, num_epochs=100)
         
         print("\n✅ 4-PHASE INJECTION COMPLETE")
         print("=" * 60)

@@ -268,16 +268,19 @@ def custom_collate_fn_v2(batch, stage):
         while output_grid.dim() < 2:
             output_grid = output_grid.unsqueeze(0)
         
-        # Resize to target size using interpolation
+        # Always resize to target size to ensure consistency
         h, w = input_grid.shape
-        if h != target_size or w != target_size:
-            # Use interpolation to resize to exact target size
-            input_grid = F.interpolate(input_grid.unsqueeze(0).unsqueeze(0).float(), 
-                                     size=(target_size, target_size), 
-                                     mode='nearest').squeeze().long()
-            output_grid = F.interpolate(output_grid.unsqueeze(0).unsqueeze(0).float(), 
-                                      size=(target_size, target_size), 
-                                      mode='nearest').squeeze().long()
+        # Use interpolation to resize to exact target size
+        input_grid = F.interpolate(input_grid.unsqueeze(0).unsqueeze(0).float(), 
+                                 size=(target_size, target_size), 
+                                 mode='nearest').squeeze().long()
+        output_grid = F.interpolate(output_grid.unsqueeze(0).unsqueeze(0).float(), 
+                                  size=(target_size, target_size), 
+                                  mode='nearest').squeeze().long()
+        
+        # Final validation to ensure correct size
+        assert input_grid.shape == (target_size, target_size), f"Input shape {input_grid.shape} != ({target_size}, {target_size})"
+        assert output_grid.shape == (target_size, target_size), f"Output shape {output_grid.shape} != ({target_size}, {target_size})"
         
         inputs.append(input_grid)
         outputs.append(output_grid)

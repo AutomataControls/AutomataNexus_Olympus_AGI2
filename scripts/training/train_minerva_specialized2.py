@@ -93,14 +93,14 @@ from train_minerva_specialized import (
 # Enhanced MINERVA Configuration V2 - CHRONOS-style
 MINERVA_CONFIG = MINERVA_CONFIG_V1.copy()
 MINERVA_CONFIG.update({
-    'batch_size': 256,  # CHRONOS-style batch size
-    'learning_rate': 0.002,  # CHRONOS-style learning rate
+    'batch_size': 64,  # Stable like successful IRIS/ATLAS
+    'learning_rate': 0.001,  # Stable like successful IRIS/ATLAS
     'num_epochs': 320,  # 8 stages x 40 epochs
-    'gradient_accumulation': 2,  # Effective batch: 512
+    'gradient_accumulation': 4,  # Effective batch: 256 (stable)
     'epochs_per_stage': 40,  # CHRONOS-style stage length
     'curriculum_stages': 8,  # CHRONOS-style progression
-    'transform_penalty': 0.3,  # Lower than V1
-    'exact_match_bonus': 3.0,  # Higher to encourage exact matches
+    'transform_penalty': 0.3,  # Same as successful IRIS/ATLAS
+    'exact_match_bonus': 3.0,  # Same as successful IRIS/ATLAS
     'relational_weight': 0.1,  # Higher for grid reasoning
     'pattern_memory_weight': 0.05,  # Higher for pattern recall
     

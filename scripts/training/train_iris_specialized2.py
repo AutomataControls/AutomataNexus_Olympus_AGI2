@@ -840,7 +840,8 @@ def train_iris_specialized_v2():
                         outputs = model(input_onehot)
                         if isinstance(outputs, dict):
                             outputs = outputs['predicted_output']
-                        loss = aggressive_loss(outputs, target_onehot, input_onehot)
+                        loss_dict = aggressive_loss(outputs, target_onehot, input_onehot)
+                        loss = loss_dict['total'] if isinstance(loss_dict, dict) else loss_dict
                     
                     exact_scaler.scale(loss).backward()
                     exact_scaler.step(exact_optimizer)

@@ -782,7 +782,7 @@ def train_minerva_specialized_v2():
                             outputs = model(F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float())
                             if isinstance(outputs, dict):
                                 outputs = outputs['predicted_output']
-                            loss = aggressive_loss(outputs, targets)
+                            loss = aggressive_loss(outputs, targets, F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float())
                         
                         scaler.scale(loss).backward()
                         scaler.step(exact_optimizer)

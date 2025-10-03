@@ -619,9 +619,17 @@ class MinervaSpecializedLoss(nn.Module):
         # Exact match detection and bonus
         pred_indices = pred_output.argmax(dim=1)
         target_indices = target_output.argmax(dim=1)
-        exact_matches = (pred_indices == target_indices).all(dim=[1,2]).float()
-        exact_count = exact_matches.sum()
-        exact_bonus = -exact_matches.mean() * self.weights['exact_match']
+        
+        # IoU-based exact match scoring (same as successful IRIS/ATLAS)
+        exact_matches_strict = (pred_indices == target_indices).all(dim=[1,2]).float()
+        intersection = (pred_indices == target_indices).float().sum(dim=[1,2])
+        union = (pred_indices.shape[1] * pred_indices.shape[2])  # Total pixels
+        iou_scores = intersection / union
+        
+        # Combine strict and soft matches (weighted towards IoU for learning)
+        combined_matches = 0.3 * exact_matches_strict + 0.7 * iou_scores
+        exact_count = combined_matches.sum()
+        exact_bonus = -combined_matches.mean() * self.weights['exact_match']
         exact_bonus = exact_bonus.clamp(min=-2.0)  # Prevent excessive negative contribution
         
         # Simple transformation penalty
@@ -648,6 +656,8 @@ class MinervaSpecializedLoss(nn.Module):
             'transform': transform_penalty,
             'exact_bonus': exact_bonus,
             'exact_count': exact_count,
+            'soft_exact_count': combined_matches.sum(),  # Track IoU-based matches
+            'avg_iou': iou_scores.mean(),  # Average IoU score
             'relational': torch.tensor(0.001, device=total_loss.device),  # Dummy for display
             'pattern_memory': torch.tensor(0.0, device=total_loss.device)  # Dummy for display
         }

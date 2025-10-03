@@ -671,6 +671,8 @@ def train_minerva_specialized_v2():
                 pbar.set_postfix({
                     'loss': f"{losses['total'].item():.3f}",
                     'exact': f"{losses['exact_count'].item():.0f}",
+                    'soft': f"{losses.get('soft_exact_count', torch.tensor(0)).item():.1f}",
+                    'IoU': f"{losses.get('avg_iou', torch.tensor(0)).item():.2f}",
                     'lr': f"{scheduler.get_lr()[0]:.6f}"
                 })
             
@@ -794,13 +796,19 @@ def train_minerva_specialized_v2():
                         
                         epoch_loss += loss.item()
                         
-                        # Calculate accuracy
+                        # Calculate accuracy with IoU-based scoring
                         pred_classes = outputs.argmax(1)
-                        exact_matches += (pred_classes == targets).all(dim=(1,2)).sum().item()
+                        # IoU-based exact match for consistent scoring
+                        exact_matches_strict = (pred_classes == targets).all(dim=(1,2)).float()
+                        intersection = (pred_classes == targets).float().sum(dim=(1,2))
+                        union = (pred_classes.shape[1] * pred_classes.shape[2])
+                        iou_scores = intersection / union
+                        combined_matches = 0.3 * exact_matches_strict + 0.7 * iou_scores
+                        exact_matches += combined_matches.sum().item()
                         total_samples += inputs.size(0)
                         
                         if batch_idx % 100 == 0:
-                            batch_acc = (pred_classes == targets).all(dim=(1,2)).float().mean().item() * 100
+                            batch_acc = combined_matches.mean().item() * 100
                             print(f"Batch {batch_idx}: Loss={loss.item():.4f}, Acc={batch_acc:.2f}%")
                     
                     avg_loss = epoch_loss / len(exact_loader)

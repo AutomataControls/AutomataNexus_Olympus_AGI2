@@ -752,7 +752,7 @@ def train_atlas_specialized_v2():
                         pbar.set_postfix({
                             'Exact': f'{current_acc:.1f}%',
                             'Loss': f'{loss.item():.3f}',
-                            'LR': f'{exact_scheduler.get_lr()[0]:.5f}'
+                            'LR': f'{exact_scheduler.get_last_lr()[0]:.5f}'
                         })
                         
                         # Early stopping if target reached
@@ -1038,7 +1038,7 @@ def train_atlas_specialized_v2():
                 pbar.set_postfix({
                     'loss': f"{losses['total'].item():.3f}",
                     'exact': f"{losses['exact_count'].item():.0f}",
-                    'lr': f"{scheduler.get_lr()[0]:.6f}"
+                    'lr': f"{scheduler.get_last_lr()[0]:.6f}"
                 })
             
             # Validation phase - check more frequently to catch improvements
@@ -1095,7 +1095,7 @@ def train_atlas_specialized_v2():
                 history['train_exact'].append(train_exact_pct)
                 history['val_loss'].append(val_loss)
                 history['val_exact'].append(val_exact_pct)
-                history['learning_rate'].append(scheduler.get_lr()[0])
+                history['learning_rate'].append(scheduler.get_last_lr()[0])
                 
                 # Save best model
                 if val_exact_pct > best_exact:

@@ -99,8 +99,8 @@ MINERVA_CONFIG.update({
     'gradient_accumulation': 4,  # Effective batch: 256 (stable)
     'epochs_per_stage': 40,  # CHRONOS-style stage length
     'curriculum_stages': 8,  # CHRONOS-style progression
-    'transform_penalty': 0.3,  # Same as successful IRIS/ATLAS
-    'exact_match_bonus': 3.0,  # Same as successful IRIS/ATLAS
+    'transform_penalty': 0.1,  # Lower than IRIS/ATLAS to encourage more transformation learning
+    'exact_match_bonus': 5.0,  # Higher than IRIS/ATLAS for more aggressive IoU learning
     'relational_weight': 0.1,  # Higher for grid reasoning
     'pattern_memory_weight': 0.05,  # Higher for pattern recall
     

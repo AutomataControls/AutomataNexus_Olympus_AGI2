@@ -496,8 +496,8 @@ MINERVA_CONFIG = {
     'hidden_dim': 256,
     'pattern_memory_size': 200,
     'gradient_accumulation': 2,  # Effective batch: 384
-    'transform_penalty': 0.5,  # Positive value to discourage identity copying
-    'exact_match_bonus': 2.0,  # Moderate bonus to avoid negative losses
+    'transform_penalty': 0.1,  # Lower to encourage more transformation learning
+    'exact_match_bonus': 5.0,  # Higher for more aggressive IoU learning
     'curriculum_stages': 8,  # Progressive 8-stage curriculum
     'epochs_per_stage': 50,  # Extended for better convergence
     'attention_heads': 8,
@@ -626,8 +626,8 @@ class MinervaSpecializedLoss(nn.Module):
         union = (pred_indices.shape[1] * pred_indices.shape[2])  # Total pixels
         iou_scores = intersection / union
         
-        # Combine strict and soft matches (weighted towards IoU for learning)
-        combined_matches = 0.3 * exact_matches_strict + 0.7 * iou_scores
+        # Combine strict and soft matches (heavily weighted towards IoU for MINERVA learning)
+        combined_matches = 0.1 * exact_matches_strict + 0.9 * iou_scores
         exact_count = combined_matches.sum()
         exact_bonus = -combined_matches.mean() * self.weights['exact_match']
         exact_bonus = exact_bonus.clamp(min=-2.0)  # Prevent excessive negative contribution

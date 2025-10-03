@@ -403,7 +403,7 @@ def train_prometheus_specialized():
     # Scheduler
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
     
-    scaler = GradScaler('cuda')
+    scaler = GradScaler()
     
     # Check for existing best model
     models_dir = '/content/AutomataNexus_Olympus_AGI2/arc_models_v4'
@@ -558,7 +558,7 @@ def train_prometheus_specialized():
             input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
             target_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
             
-            with autocast('cuda'):
+            with autocast(device_type='cuda', enabled=device.type == 'cuda'):
                 model_outputs = model(input_grids, target_grids, mode='inference')
                 losses = loss_fn(model_outputs, outputs, input_grids)
             

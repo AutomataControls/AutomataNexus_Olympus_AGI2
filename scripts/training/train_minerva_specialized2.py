@@ -90,13 +90,15 @@ from train_minerva_specialized import (
     STAGE_CONFIG as STAGE_CONFIG_V1
 )
 
-# Enhanced MINERVA Configuration V2 - Building on V1
+# Enhanced MINERVA Configuration V2 - CHRONOS-style
 MINERVA_CONFIG = MINERVA_CONFIG_V1.copy()
 MINERVA_CONFIG.update({
-    # Refined parameters based on V1 issues
-    'batch_size': 48,  # Smaller than V1 for better gradients
-    'learning_rate': 0.002,  # Lower than V1 for stability
-    'gradient_accumulation': 2,  # Effective batch: 96
+    'batch_size': 256,  # CHRONOS-style batch size
+    'learning_rate': 0.002,  # CHRONOS-style learning rate
+    'num_epochs': 320,  # 8 stages x 40 epochs
+    'gradient_accumulation': 2,  # Effective batch: 512
+    'epochs_per_stage': 40,  # CHRONOS-style stage length
+    'curriculum_stages': 8,  # CHRONOS-style progression
     'transform_penalty': 0.3,  # Lower than V1
     'exact_match_bonus': 3.0,  # Higher to encourage exact matches
     'relational_weight': 0.1,  # Higher for grid reasoning
@@ -113,11 +115,13 @@ MINERVA_CONFIG.update({
     'strategic_loss_weight': 0.2,  # New strategic reasoning loss
 })
 
-# Enhanced Stage Configuration V2
+# Enhanced Stage Configuration V2 - CHRONOS-style
 STAGE_CONFIG = STAGE_CONFIG_V1.copy()
-# Adjust learning rates more conservatively
 for stage in STAGE_CONFIG:
     STAGE_CONFIG[stage]['lr_mult'] = min(1.0, STAGE_CONFIG[stage]['lr_mult'] * 1.2)
+
+# CHRONOS-style exact injection for stage 0
+STAGE_CONFIG[0]['exact_injection'] = True
 
 # Device setup
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -320,15 +324,17 @@ class WarmupCosineSchedule(optim.lr_scheduler._LRScheduler):
 
 def train_minerva_specialized_v2():
     """Enhanced MINERVA training building on V1"""
-    print("🧠 Starting MINERVA Specialized Training V2")
+    print("🧠 Starting MINERVA Specialized Training V2 - CHRONOS-Style")
     print("=" * 60)
-    print("📊 Enhancements over V1:")
-    print("  • Grid mixup augmentation")
+    print("📊 CHRONOS-style Enhancements:")
+    print("  • Massive dataset generation (40,000+ samples)")
+    print("  • CHRONOS-style batch size (256) and learning rate (0.002)")
+    print("  • 300K exact match injection for stage 0")
+    print("  • 10x data augmentation like CHRONOS")
+    print("  • Grid mixup and spatial augmentation")
     print("  • Strategic reasoning loss")
-    print("  • Grid-specific augmentation (rotations/flips)")
     print("  • Warmup + cosine annealing with restarts")
-    print("  • Label smoothing")
-    print("  • Better batch size and learning rate")
+    print("  • Program synthesis integration")
     print("=" * 60)
     
     # Initialize model with maximum grid size from final stage
@@ -432,8 +438,11 @@ def train_minerva_specialized_v2():
         try:
             checkpoint = torch.load(best_model_path, map_location=device)
             model.load_state_dict(checkpoint['model_state_dict'])
-            best_exact = checkpoint.get('best_exact', 0.0)
-            print(f"✅ Loaded best model with {best_exact:.2f}% exact match")
+            loaded_exact = checkpoint.get('best_exact', 0.0)
+            # For incremental training: reset threshold to allow improvements
+            best_exact = 0.0  # Reset to allow stage validation to save improvements
+            print(f"✅ Loaded best model with {loaded_exact:.2f}% exact match")
+            print(f"🔄 Reset threshold to {best_exact:.2f}% for incremental training")
         except Exception as e:
             print(f"⚠️ Failed to load best model: {e}")
             print("🆕 Starting fresh training")
@@ -703,8 +712,8 @@ def train_minerva_specialized_v2():
                 val_pixel_acc = val_metrics['pixel_acc'] / len(val_loader) * 100
                 
                 print(f"\n🧠 MINERVA Epoch {epoch+1} (Stage {stage}, {grid_size}x{grid_size}):")
-                print(f"   🎯 Train: {train_exact_pct:.2f}% exact, Loss: {train_loss:.3f}")
-                print(f"   🎯 Val: {val_exact_pct:.2f}% exact, Loss: {val_loss:.3f}, Pixel: {val_pixel_acc:.1f}%")
+                print(f"   \033[96m🎯 Train: {train_exact_pct:.2f}% exact, Loss: {train_loss:.3f}\033[0m")
+                print(f"   \033[96m🎯 Val: {val_exact_pct:.2f}% exact, Loss: {val_loss:.3f}, Pixel: {val_pixel_acc:.1f}%\033[0m")
                 
                 # Save history
                 history['train_loss'].append(train_loss)
@@ -724,7 +733,7 @@ def train_minerva_specialized_v2():
                         'best_exact': best_exact,
                         'val_loss': val_loss
                     }, f'/content/AutomataNexus_Olympus_AGI2/arc_models_v4/minerva_best.pt')
-                    print(f"   🏆 New best model! Exact: {best_exact:.2f}%")
+                    print(f"   \033[96m🏆 New best model! Exact: {best_exact:.2f}%\033[0m")
         
         # Stage complete
         stage_exact = train_exact_pct
@@ -734,7 +743,81 @@ def train_minerva_specialized_v2():
             'final_exact': stage_exact
         })
         
-        print(f"\n✅ Stage {stage} complete! Final exact: {stage_exact:.2f}%")
+        print(f"\n\033[96m✅ Stage {stage} complete! Final exact: {stage_exact:.2f}%\033[0m")
+        
+        # CHRONOS-style exact match injection for stage 0
+        if stage == 0 and STAGE_CONFIG[0].get('exact_injection'):
+            print(f"\033[96m🎯 CHRONOS-style exact match injection training for stage 0...\033[0m")
+            
+            try:
+                from stage0_exact_match_boost import ExactMatchBoostDataset, AggressiveLoss
+                
+                # Generate massive exact match dataset
+                exact_samples = []
+                for _ in range(300_000):  # 300K samples like CHRONOS
+                    # Use smaller grid for stage 0
+                    grid_size_s0 = STAGE_CONFIG[0]['max_grid_size']
+                    input_grid = torch.randint(0, 10, (grid_size_s0, grid_size_s0))
+                    exact_samples.append({
+                        'input': input_grid.numpy(),
+                        'output': input_grid.numpy()  # Exact match
+                    })
+                
+                # Create exact match dataset
+                exact_dataset = ExactMatchBoostDataset(exact_samples)
+                exact_loader = DataLoader(
+                    exact_dataset, 
+                    batch_size=MINERVA_CONFIG['batch_size'], 
+                    shuffle=True,
+                    num_workers=2
+                )
+                
+                # Train with exact matches
+                model.train()
+                exact_optimizer = optim.AdamW(model.parameters(), lr=0.0001)  # Very conservative
+                aggressive_loss = AggressiveLoss()
+                
+                exact_epochs = 5  # Short burst
+                for epoch in range(exact_epochs):
+                    epoch_loss = 0
+                    exact_matches = 0
+                    total_samples = 0
+                    
+                    for batch_idx, batch in enumerate(tqdm(exact_loader, desc=f"Exact Match Epoch {epoch+1}")):
+                        exact_optimizer.zero_grad()
+                        
+                        inputs = batch['input'].to(device).long()
+                        targets = batch['output'].to(device).long()
+                        
+                        with autocast():
+                            outputs = model(F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float())
+                            if isinstance(outputs, dict):
+                                outputs = outputs['predicted_output']
+                            loss = aggressive_loss(outputs, targets)
+                        
+                        scaler.scale(loss).backward()
+                        scaler.step(exact_optimizer)
+                        scaler.update()
+                        
+                        epoch_loss += loss.item()
+                        
+                        # Calculate accuracy
+                        pred_classes = outputs.argmax(1)
+                        exact_matches += (pred_classes == targets).all(dim=(1,2)).sum().item()
+                        total_samples += inputs.size(0)
+                        
+                        if batch_idx % 100 == 0:
+                            batch_acc = (pred_classes == targets).all(dim=(1,2)).float().mean().item() * 100
+                            print(f"Batch {batch_idx}: Loss={loss.item():.4f}, Acc={batch_acc:.2f}%")
+                    
+                    avg_loss = epoch_loss / len(exact_loader)
+                    exact_acc = exact_matches / total_samples * 100
+                    print(f"\033[96m✓ Exact Match Epoch {epoch+1}: Avg Loss={avg_loss:.4f}, Acc={exact_acc:.2f}%\033[0m")
+                
+                print(f"\033[96m🎯 CHRONOS-style exact match injection complete!\033[0m")
+                
+            except ImportError:
+                print("⚠️ Exact match boost not available for injection")
         
         # Clear memory
         del train_loader, val_loader, dataset
@@ -743,10 +826,10 @@ def train_minerva_specialized_v2():
     
     # Training complete
     print("\n" + "=" * 60)
-    print("🎉 MINERVA V2 8-Stage Training Complete!")
-    print(f"   🏆 Best exact match: {best_exact:.2f}%")
-    print(f"   📏 Stages completed: 8 (6x6 → 30x30 grids)")
-    print(f"   📊 Total epochs: {global_epoch}")
+    print("\033[96m🎉 MINERVA V2 8-Stage CHRONOS-Style Training Complete!\033[0m")
+    print(f"   \033[96m🏆 Best exact match: {best_exact:.2f}%\033[0m")
+    print(f"   \033[96m📏 Stages completed: 8 (6x6 → 30x30 grids)\033[0m")
+    print(f"   \033[96m📊 Total epochs: {global_epoch}\033[0m")
     
     print(f"\n📏 Stage-by-stage Grid Learning Progression:")
     for metrics in stage_metrics:
@@ -761,6 +844,14 @@ USE_MEPT = True and (MINERVA_MEPT_LEAP_AVAILABLE or MEPT_LEAP_AVAILABLE)
 USE_LEAP = True and (MINERVA_MEPT_LEAP_AVAILABLE or MEPT_LEAP_AVAILABLE)
 USE_PRISM = True and (MINERVA_PRISM_AVAILABLE or PRISM_AVAILABLE)
 USE_EXACT_BOOST = True
+try:
+    from stage0_exact_match_boost import ExactMatchBoostDataset, AggressiveLoss, inject_exact_match_training
+    EXACT_BOOST_AVAILABLE = True
+except ImportError:
+    EXACT_BOOST_AVAILABLE = False
+    print("⚠️ Exact match boost not available")
+
+USE_EXACT_BOOST = USE_EXACT_BOOST and EXACT_BOOST_AVAILABLE
 USE_LEAP_PRISM_BRIDGE = True and LEAP_PRISM_BRIDGE_AVAILABLE
 
 

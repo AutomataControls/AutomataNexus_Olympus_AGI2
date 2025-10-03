@@ -106,13 +106,15 @@ from train_iris_specialized import (
     STAGE_CONFIG as STAGE_CONFIG_V1
 )
 
-# Enhanced IRIS Configuration V2 - Building on V1
+# Enhanced IRIS Configuration V2 - CHRONOS-style
 IRIS_CONFIG = IRIS_CONFIG_V1.copy()
 IRIS_CONFIG.update({
-    # Refined parameters based on V1 issues
-    'batch_size': 128,  # Smaller than V1 for better gradients
-    'learning_rate': 0.001,  # More conservative than V1
-    'gradient_accumulation': 2,  # Effective batch: 256
+    'batch_size': 256,  # CHRONOS-style batch size
+    'learning_rate': 0.002,  # CHRONOS-style learning rate
+    'num_epochs': 320,  # 8 stages x 40 epochs
+    'gradient_accumulation': 2,  # Effective batch: 512
+    'epochs_per_stage': 40,  # CHRONOS-style stage length
+    'curriculum_stages': 8,  # CHRONOS-style progression
     'transform_penalty': 0.2,  # Lower for color transformations
     'exact_match_bonus': 2.5,  # Balanced bonus
     'color_mapping_weight': 0.15,  # More conservative
@@ -131,11 +133,13 @@ IRIS_CONFIG.update({
     'perceptual_loss_weight': 0.1,  # New perceptual color loss
 })
 
-# Enhanced Stage Configuration V2
+# Enhanced Stage Configuration V2 - CHRONOS-style
 STAGE_CONFIG = STAGE_CONFIG_V1.copy()
-# Adjust learning rates more conservatively
 for stage in STAGE_CONFIG:
     STAGE_CONFIG[stage]['lr_mult'] = 1.0 - (stage * 0.1)  # More gradual decay
+
+# CHRONOS-style exact injection for stage 0
+STAGE_CONFIG[0]['exact_injection'] = True
 
 # Device setup
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -450,16 +454,73 @@ def train_iris_specialized_v2():
         print(f"   📏 Grid Size: {grid_size}x{grid_size} | Synthesis: {int(stage_config['synthesis_ratio']*100)}%")
         print("=" * 60)
         
-        # Create dataset using V1 approach but with enhancements
-        print(f"🔧 Generating IRIS-specific DSL color patterns for stage {stage}...")
+        # CHRONOS-style massive dataset generation
+        print(f"🔧 Generating CHRONOS-style massive color dataset for stage {stage}...")
         
-        # Initialize DSL trainer
+        # Initialize DSL trainer with massive samples
         dsl_samples = IRISDSLTraining.create_iris_dsl_samples(curriculum_stage=stage)
-        print(f"✅ Created {len(dsl_samples)} IRIS DSL color pattern samples")
         
-        # Create dataset
+        # Generate massive augmented data (40,000+ samples like CHRONOS)
+        augmenter = ARCDataAugmenter()
+        
+        # Start with base DSL samples
         dataset_samples = []
-        dataset_samples.extend(dsl_samples)
+        
+        # 10x augmentation of DSL samples
+        for sample in dsl_samples:
+            dataset_samples.append(sample)
+            for _ in range(10):
+                aug_sample = augmenter.augment_sample_color_shift(sample)
+                dataset_samples.append(aug_sample)
+        
+        # Add identity tasks for stage 0 (like CHRONOS)
+        if stage == 0:
+            for _ in range(2000):
+                size = random.randint(3, 6)
+                grid = np.random.randint(0, 10, (size, size))
+                dataset_samples.append({'inputs': grid, 'outputs': grid.copy()})
+        
+        # Generate more DSL color pattern samples per stage
+        num_extra_dsl = 500 + stage * 700  # 500-5400 samples per stage
+        for _ in range(num_extra_dsl):
+            # Color-specific transformations
+            size = min(random.randint(3, 8), STAGE_CONFIG[stage]['max_grid_size'])
+            input_grid = np.random.randint(0, 8, (size, size))
+            
+            transform_type = random.choice([
+                'gradient', 'blocks', 'stripes', 'rainbow', 'palette_mapping'
+            ])
+            
+            if transform_type == 'gradient':
+                output_grid = np.zeros_like(input_grid)
+                for row in range(size):
+                    output_grid[row, :] = (row * 7) // size + 1
+            elif transform_type == 'blocks':
+                output_grid = np.zeros_like(input_grid)
+                block_size = max(1, size // 2)
+                for bi in range(2):
+                    for bj in range(2):
+                        if bi * block_size < size and bj * block_size < size:
+                            color = bi * 2 + bj + 1
+                            end_i = min((bi+1)*block_size, size)
+                            end_j = min((bj+1)*block_size, size)
+                            output_grid[bi*block_size:end_i, bj*block_size:end_j] = color
+            elif transform_type == 'stripes':
+                output_grid = np.zeros_like(input_grid)
+                for col in range(size):
+                    output_grid[:, col] = (col % 4) + 1
+            elif transform_type == 'rainbow':
+                output_grid = np.zeros_like(input_grid)
+                for i in range(size):
+                    for j in range(size):
+                        output_grid[i, j] = (i + j) % 8 + 1
+            else:  # palette_mapping
+                color_map = {i: (i + 3) % 8 for i in range(8)}
+                output_grid = np.array([[color_map.get(val, val) for val in row] for row in input_grid])
+            
+            dataset_samples.append({'inputs': input_grid, 'outputs': output_grid})
+        
+        print(f"✅ Created {len(dataset_samples)} IRIS CHRONOS-style color samples")
         
         # Load ARC JSON files
         arc_files = ['arc-agi_training_challenges.json', 'arc-agi_evaluation_challenges.json']
@@ -476,32 +537,63 @@ def train_iris_specialized_v2():
                             if input_grid.shape[0] <= grid_size and input_grid.shape[1] <= grid_size:
                                 dataset_samples.append({'inputs': input_grid, 'outputs': output_grid})
         
-        # Add synthetic color patterns
-        for i in range(300):  # More synthetic data for color learning
-            size = min(random.choice([4, 5, 6]), grid_size)
-            input_grid = np.random.randint(0, 8, (size, size))  # Use fewer colors initially
-            
-            # Color transformations
-            transform = random.choice(['gradient', 'blocks', 'stripes', 'shift'])
-            if transform == 'gradient':
-                output_grid = np.zeros_like(input_grid)
-                for row in range(size):
-                    output_grid[row, :] = (row * 7) // size + 1
-            elif transform == 'blocks':
-                output_grid = np.zeros_like(input_grid)
-                block_size = size // 2
-                for bi in range(2):
-                    for bj in range(2):
-                        color = bi * 2 + bj + 1
-                        output_grid[bi*block_size:(bi+1)*block_size, bj*block_size:(bj+1)*block_size] = color
-            elif transform == 'stripes':
-                output_grid = np.zeros_like(input_grid)
-                for col in range(size):
-                    output_grid[:, col] = (col % 4) + 1
-            else:  # shift
-                output_grid = (input_grid + 2) % 8
-            
-            dataset_samples.append({'inputs': input_grid, 'outputs': output_grid})
+        # Add program synthesis samples (like CHRONOS)
+        if IRIS_SYNTHESIS_AVAILABLE:
+            for _ in range(200 + stage * 100):
+                # Color operations
+                operations = ['copy', 'invert', 'add_one', 'complement']
+                op = random.choice(operations)
+                size = min(random.randint(3, 8), grid_size)
+                input_grid = np.random.randint(0, 8, (size, size))
+                
+                if op == 'copy':
+                    output_grid = input_grid.copy()
+                elif op == 'invert':
+                    output_grid = 7 - input_grid
+                elif op == 'add_one':
+                    output_grid = (input_grid + 1) % 8
+                else:  # complement
+                    output_grid = (8 - input_grid) % 8
+                
+                dataset_samples.append({'inputs': input_grid, 'outputs': output_grid})
+        
+        # Add synthetic color samples (50% synthetic like CHRONOS)
+        if len(dataset_samples) < 40000:
+            remaining = 40000 - len(dataset_samples)
+            for i in range(min(remaining, int(len(dataset_samples) * 0.5))):
+                size = min(random.randint(4, 10), grid_size)
+                
+                # Create diverse color patterns
+                pattern_type = random.choice(['palette_map', 'fill', 'mosaic', 'transformation'])
+                
+                if pattern_type == 'palette_map':
+                    input_grid = np.random.randint(0, 6, (size, size))
+                    # Create palette mapping
+                    palette = list(range(10))
+                    random.shuffle(palette)
+                    output_grid = np.array([[palette[val] for val in row] for row in input_grid])
+                elif pattern_type == 'fill':
+                    input_grid = np.random.randint(0, 8, (size, size))
+                    fill_color = random.randint(1, 9)
+                    output_grid = np.full_like(input_grid, fill_color)
+                elif pattern_type == 'mosaic':
+                    input_grid = np.random.randint(0, 4, (size, size))
+                    output_grid = np.zeros_like(input_grid)
+                    for i in range(size):
+                        for j in range(size):
+                            output_grid[i, j] = (input_grid[i, j] + (i % 2) + (j % 2)) % 8 + 1
+                else:  # transformation
+                    input_grid = np.random.randint(0, 8, (size, size))
+                    # Apply color transformation based on position
+                    output_grid = np.zeros_like(input_grid)
+                    for i in range(size):
+                        for j in range(size):
+                            if i < size // 2:
+                                output_grid[i, j] = (input_grid[i, j] + 1) % 8
+                            else:
+                                output_grid[i, j] = (input_grid[i, j] + 2) % 8
+                
+                dataset_samples.append({'inputs': input_grid, 'outputs': output_grid})
         
         # Create dataset
         class SimpleARCDataset(Dataset):
@@ -673,8 +765,8 @@ def train_iris_specialized_v2():
                 val_pixel_acc = val_metrics['pixel_acc'] / len(val_loader) * 100
                 
                 print(f"\n🎨 IRIS Epoch {epoch+1} (Stage {stage}, {grid_size}x{grid_size}):")
-                print(f"   🎯 Train: {train_exact_pct:.2f}% exact, Loss: {train_loss:.3f}")
-                print(f"   🎯 Val: {val_exact_pct:.2f}% exact, Loss: {val_loss:.3f}, Pixel: {val_pixel_acc:.1f}%")
+                print(f"   \033[96m🎯 Train: {train_exact_pct:.2f}% exact, Loss: {train_loss:.3f}\033[0m")
+                print(f"   \033[96m🎯 Val: {val_exact_pct:.2f}% exact, Loss: {val_loss:.3f}, Pixel: {val_pixel_acc:.1f}%\033[0m")
                 
                 # Save history
                 history['train_loss'].append(train_loss)
@@ -694,11 +786,11 @@ def train_iris_specialized_v2():
                         'best_exact': best_exact,
                         'val_loss': val_loss
                     }, f'/content/AutomataNexus_Olympus_AGI2/arc_models_v4/iris_best.pt')
-                    print(f"   🏆 New best model! Exact: {best_exact:.2f}%")
+                    print(f"   \033[96m🏆 New best model! Exact: {best_exact:.2f}%\033[0m")
                 
                 # Early stopping if good exact match achieved for this stage
                 if val_exact_pct > 5.0 and epoch > 20:  # If >5% exact match after epoch 20
-                    print(f"   ⚡ Early stop: {val_exact_pct:.2f}% exact match achieved!")
+                    print(f"   \033[96m⚡ Early stop: {val_exact_pct:.2f}% exact match achieved!\033[0m")
                     break
         
         # Stage complete
@@ -709,7 +801,75 @@ def train_iris_specialized_v2():
             'final_exact': stage_exact
         })
         
-        print(f"\n✅ Stage {stage} complete! Final exact: {stage_exact:.2f}%")
+        print(f"\n\033[96m✅ Stage {stage} complete! Final exact: {stage_exact:.2f}%\033[0m")
+        
+        # CHRONOS-style exact match injection for stage 0
+        if stage == 0 and EXACT_BOOST_AVAILABLE and STAGE_CONFIG[0].get('exact_injection'):
+            print(f"\033[96m🎯 CHRONOS-style exact match injection training for stage 0...\033[0m")
+            
+            # Generate massive exact match dataset
+            exact_samples = []
+            for _ in range(300_000):  # 300K samples like CHRONOS
+                # Use smaller grid for stage 0
+                grid_size = STAGE_CONFIG[0]['max_grid_size']
+                input_grid = torch.randint(0, 10, (grid_size, grid_size))
+                exact_samples.append({
+                    'input': input_grid.numpy(),
+                    'output': input_grid.numpy()  # Exact match
+                })
+            
+            # Create exact match dataset
+            exact_dataset = ExactMatchBoostDataset(exact_samples)
+            exact_loader = DataLoader(
+                exact_dataset, 
+                batch_size=IRIS_CONFIG['batch_size'], 
+                shuffle=True,
+                num_workers=2
+            )
+            
+            # Train with exact matches
+            model.train()
+            exact_optimizer = optim.AdamW(model.parameters(), lr=0.0001)  # Very conservative
+            aggressive_loss = AggressiveLoss()
+            
+            exact_epochs = 5  # Short burst
+            for epoch in range(exact_epochs):
+                epoch_loss = 0
+                exact_matches = 0
+                total_samples = 0
+                
+                for batch_idx, batch in enumerate(tqdm(exact_loader, desc=f"Exact Match Epoch {epoch+1}")):
+                    exact_optimizer.zero_grad()
+                    
+                    inputs = batch['input'].to(device).long()
+                    targets = batch['output'].to(device).long()
+                    
+                    with autocast():
+                        outputs = model(F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float())
+                        if isinstance(outputs, dict):
+                            outputs = outputs['predicted_output']
+                        loss = aggressive_loss(outputs, targets)
+                    
+                    scaler.scale(loss).backward()
+                    scaler.step(exact_optimizer)
+                    scaler.update()
+                    
+                    epoch_loss += loss.item()
+                    
+                    # Calculate accuracy
+                    pred_classes = outputs.argmax(1)
+                    exact_matches += (pred_classes == targets).all(dim=(1,2)).sum().item()
+                    total_samples += inputs.size(0)
+                    
+                    if batch_idx % 100 == 0:
+                        batch_acc = (pred_classes == targets).all(dim=(1,2)).float().mean().item() * 100
+                        print(f"Batch {batch_idx}: Loss={loss.item():.4f}, Acc={batch_acc:.2f}%")
+                
+                avg_loss = epoch_loss / len(exact_loader)
+                exact_acc = exact_matches / total_samples * 100
+                print(f"\033[96m✓ Exact Match Epoch {epoch+1}: Avg Loss={avg_loss:.4f}, Acc={exact_acc:.2f}%\033[0m")
+            
+            print(f"\033[96m🎯 CHRONOS-style exact match injection complete!\033[0m")
         
         # Clear memory
         del train_loader, val_loader, dataset
@@ -718,10 +878,10 @@ def train_iris_specialized_v2():
     
     # Training complete
     print("\n" + "=" * 60)
-    print("🎉 IRIS V2 8-Stage Training Complete!")
-    print(f"   🏆 Best exact match: {best_exact:.2f}%")
-    print(f"   📏 Stages completed: 8 (6x6 → 30x30 grids)")
-    print(f"   📊 Total epochs: {global_epoch}")
+    print("\033[96m🎉 IRIS V2 8-Stage CHRONOS-Style Training Complete!\033[0m")
+    print(f"   \033[96m🏆 Best exact match: {best_exact:.2f}%\033[0m")
+    print(f"   \033[96m📏 Stages completed: 8 (6x6 → 30x30 grids)\033[0m")
+    print(f"   \033[96m📊 Total epochs: {global_epoch}\033[0m")
     
     print(f"\n📏 Stage-by-stage Color Learning Progression:")
     for metrics in stage_metrics:

@@ -88,7 +88,9 @@ class EnhancedPrometheusNet(nn.Module):
         return mu, log_var
     
     def reparameterize(self, mu: torch.Tensor, log_var: torch.Tensor) -> torch.Tensor:
-        """Reparameterization trick"""
+        """Reparameterization trick with numerical stability"""
+        # Clamp log_var to prevent explosion
+        log_var = torch.clamp(log_var, min=-10.0, max=10.0)
         std = torch.exp(0.5 * log_var)
         eps = torch.randn_like(std)
         return mu + eps * std

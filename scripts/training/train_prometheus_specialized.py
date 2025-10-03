@@ -103,8 +103,14 @@ class PrometheusVAELoss(nn.Module):
         # Reconstruction loss
         recon_loss = F.cross_entropy(pred_output, targets)
         
-        # KL divergence loss
+        # KL divergence loss with numerical stability
+        log_var = torch.clamp(log_var, min=-10.0, max=10.0)
+        mu = torch.clamp(mu, min=-10.0, max=10.0)
         kl_loss = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp()) / targets.size(0)
+        
+        # Additional safety check for NaN/Inf
+        if torch.isnan(kl_loss) or torch.isinf(kl_loss):
+            kl_loss = torch.tensor(0.0, device=kl_loss.device)
         
         # Creativity loss - encourage diverse patterns
         creativity_loss = torch.tensor(0.0, device=pred_output.device)
@@ -117,6 +123,10 @@ class PrometheusVAELoss(nn.Module):
         total_loss = (self.base_weight * recon_loss + 
                      self.kl_weight * kl_loss + 
                      self.creativity_weight * creativity_loss)
+        
+        # Final safety check for total loss
+        if torch.isnan(total_loss) or torch.isinf(total_loss):
+            total_loss = recon_loss  # Fall back to just reconstruction loss
         
         # Calculate exact matches
         pred_classes = pred_output.argmax(dim=1)
@@ -133,111 +143,84 @@ class PrometheusVAELoss(nn.Module):
 
 
 def custom_collate_fn(batch, stage):
-    """Custom collate function for PROMETHEUS training"""
+    """PROMETHEUS-optimized collate function using CHRONOS's proven approach"""
     inputs = []
     outputs = []
-    
     target_sizes = {0: 6, 1: 8, 2: 10, 3: 12, 4: 15, 5: 19, 6: 25, 7: 30}
-    target_size = target_sizes.get(stage, 12)  # PROMETHEUS max_grid_size is 12
+    target_size = min(target_sizes.get(stage, 12), 12)  # PROMETHEUS max is 12x12
     
-    # Force target size to be reasonable for PROMETHEUS
-    actual_target = min(target_size, 12)  # PROMETHEUS model can't handle grids larger than 12x12
-    
-    for item in batch:
-        if isinstance(item, dict):
-            input_grid = item['inputs']
-            output_grid = item['outputs']
-        else:
-            if len(item) >= 2:
-                input_grid, output_grid = item[0], item[1]
+    for i, item in enumerate(batch):
+        try:
+            if isinstance(item, dict):
+                input_grid = item['inputs']
+                output_grid = item['outputs']
             else:
-                continue
-        
-        # Convert to tensors
-        if isinstance(input_grid, np.ndarray):
-            input_grid = torch.from_numpy(input_grid.copy()).long()
-        elif not isinstance(input_grid, torch.Tensor):
-            input_grid = torch.tensor(input_grid, dtype=torch.long)
+                if len(item) >= 2:
+                    input_grid, output_grid = item[0], item[1]
+                else:
+                    continue
             
-        if isinstance(output_grid, np.ndarray):
-            output_grid = torch.from_numpy(output_grid.copy()).long()
-        elif not isinstance(output_grid, torch.Tensor):
-            output_grid = torch.tensor(output_grid, dtype=torch.long)
-        
-        # Ensure 2D
-        while input_grid.dim() > 2:
-            input_grid = input_grid.squeeze(0)
-        while output_grid.dim() > 2:
-            output_grid = output_grid.squeeze(0)
-        if input_grid.dim() < 2:
-            input_grid = input_grid.unsqueeze(0)
-        if output_grid.dim() < 2:
-            output_grid = output_grid.unsqueeze(0)
-        
-        # Resize to target size - all grids must be exactly actual_target size
-        h, w = input_grid.shape
-        if h != actual_target or w != actual_target:
-            if h < actual_target or w < actual_target:
-                pad_h = max(0, actual_target - h)
-                pad_w = max(0, actual_target - w)
-                input_grid = F.pad(input_grid, (0, pad_w, 0, pad_h), value=0)
-                output_grid = F.pad(output_grid, (0, pad_w, 0, pad_h), value=0)
-            elif h > actual_target or w > actual_target:
-                input_grid = input_grid[:actual_target, :actual_target]
-                output_grid = output_grid[:actual_target, :actual_target]
-        
-        inputs.append(input_grid)
-        outputs.append(output_grid)
+            # Convert to tensor if needed
+            if not isinstance(input_grid, torch.Tensor):
+                input_grid = torch.tensor(input_grid, dtype=torch.long)
+            if not isinstance(output_grid, torch.Tensor):
+                output_grid = torch.tensor(output_grid, dtype=torch.long)
+            
+            # Force to 2D by squeezing all extra dimensions
+            while input_grid.dim() > 2:
+                input_grid = input_grid.squeeze(0)
+            while output_grid.dim() > 2:
+                output_grid = output_grid.squeeze(0)
+            
+            # Handle 1D tensors by reshaping
+            if input_grid.dim() == 1:
+                size = int(input_grid.numel() ** 0.5)
+                if size * size == input_grid.numel():
+                    input_grid = input_grid.view(size, size)
+                else:
+                    input_grid = input_grid.view(1, -1)
+            
+            if output_grid.dim() == 1:
+                size = int(output_grid.numel() ** 0.5)
+                if size * size == output_grid.numel():
+                    output_grid = output_grid.view(size, size)
+                else:
+                    output_grid = output_grid.view(1, -1)
+            
+            # ALWAYS create new tensors of exact target size (CHRONOS approach)
+            new_input = torch.zeros(target_size, target_size, dtype=torch.long)
+            new_output = torch.zeros(target_size, target_size, dtype=torch.long)
+            
+            # Get actual dimensions
+            input_h, input_w = input_grid.shape
+            output_h, output_w = output_grid.shape
+            
+            # Copy what fits
+            copy_h_in = min(input_h, target_size)
+            copy_w_in = min(input_w, target_size)
+            copy_h_out = min(output_h, target_size)  
+            copy_w_out = min(output_w, target_size)
+            
+            new_input[:copy_h_in, :copy_w_in] = input_grid[:copy_h_in, :copy_w_in]
+            new_output[:copy_h_out, :copy_w_out] = output_grid[:copy_h_out, :copy_w_out]
+            
+            inputs.append(new_input)
+            outputs.append(new_output)
+            
+        except Exception as e:
+            print(f"⚠️ Error processing PROMETHEUS batch item {i}: {e}")
+            # Create dummy tensors as fallback
+            inputs.append(torch.zeros(target_size, target_size, dtype=torch.long))
+            outputs.append(torch.zeros(target_size, target_size, dtype=torch.long))
     
     if not inputs:
-        empty_tensor = torch.zeros((1, actual_target, actual_target), dtype=torch.long)
+        empty_tensor = torch.zeros((1, target_size, target_size), dtype=torch.long)
         return {'inputs': empty_tensor, 'outputs': empty_tensor}
     
-    # Ensure all tensors are exactly the same size before stacking
-    final_inputs = []
-    final_outputs = []
-    
-    for inp, out in zip(inputs, outputs):
-        # Force exact size - be very aggressive about this
-        # First crop if too large
-        if inp.shape[0] > actual_target:
-            inp = inp[:actual_target, :]
-        if inp.shape[1] > actual_target:
-            inp = inp[:, :actual_target]
-        if out.shape[0] > actual_target:
-            out = out[:actual_target, :]
-        if out.shape[1] > actual_target:
-            out = out[:, :actual_target]
-            
-        # Then pad if too small
-        if inp.shape[0] < actual_target or inp.shape[1] < actual_target:
-            pad_h = max(0, actual_target - inp.shape[0])
-            pad_w = max(0, actual_target - inp.shape[1])
-            inp = F.pad(inp, (0, pad_w, 0, pad_h), value=0)
-        if out.shape[0] < actual_target or out.shape[1] < actual_target:
-            pad_h = max(0, actual_target - out.shape[0])
-            pad_w = max(0, actual_target - out.shape[1])
-            out = F.pad(out, (0, pad_w, 0, pad_h), value=0)
-        
-        # Final verification - if still wrong size, create new tensor of correct size
-        if inp.shape != (actual_target, actual_target):
-            new_inp = torch.zeros((actual_target, actual_target), dtype=inp.dtype, device=inp.device)
-            copy_h = min(inp.shape[0], actual_target)
-            copy_w = min(inp.shape[1], actual_target)
-            new_inp[:copy_h, :copy_w] = inp[:copy_h, :copy_w]
-            inp = new_inp
-            
-        if out.shape != (actual_target, actual_target):
-            new_out = torch.zeros((actual_target, actual_target), dtype=out.dtype, device=out.device)
-            copy_h = min(out.shape[0], actual_target)
-            copy_w = min(out.shape[1], actual_target)
-            new_out[:copy_h, :copy_w] = out[:copy_h, :copy_w]
-            out = new_out
-        
-        final_inputs.append(inp)
-        final_outputs.append(out)
-    
-    return {'inputs': torch.stack(final_inputs), 'outputs': torch.stack(final_outputs)}
+    return {
+        'inputs': torch.stack(inputs),
+        'outputs': torch.stack(outputs)
+    }
 
 
 def prometheus_exact_match_injection(model, device, num_epochs=100, target_accuracy=85.0):

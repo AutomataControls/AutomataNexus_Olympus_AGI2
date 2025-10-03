@@ -752,19 +752,8 @@ def train_minerva_specialized_v2():
             try:
                 from stage0_exact_match_boost import ExactMatchBoostDataset, AggressiveLoss
                 
-                # Generate massive exact match dataset
-                exact_samples = []
-                for _ in range(300_000):  # 300K samples like CHRONOS
-                    # Use smaller grid for stage 0
-                    grid_size_s0 = STAGE_CONFIG[0]['max_grid_size']
-                    input_grid = torch.randint(0, 10, (grid_size_s0, grid_size_s0))
-                    exact_samples.append({
-                        'input': input_grid.numpy(),
-                        'output': input_grid.numpy()  # Exact match
-                    })
-                
-                # Create exact match dataset
-                exact_dataset = ExactMatchBoostDataset(exact_samples)
+                # Create exact match dataset with 300K samples
+                exact_dataset = ExactMatchBoostDataset(300_000)  # Pass number, not list
                 exact_loader = DataLoader(
                     exact_dataset, 
                     batch_size=MINERVA_CONFIG['batch_size'], 

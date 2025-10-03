@@ -807,19 +807,8 @@ def train_iris_specialized_v2():
         if stage == 0 and EXACT_BOOST_AVAILABLE and STAGE_CONFIG[0].get('exact_injection'):
             print(f"\033[96m🎯 CHRONOS-style exact match injection training for stage 0...\033[0m")
             
-            # Generate massive exact match dataset
-            exact_samples = []
-            for _ in range(300_000):  # 300K samples like CHRONOS
-                # Use smaller grid for stage 0
-                grid_size = STAGE_CONFIG[0]['max_grid_size']
-                input_grid = torch.randint(0, 10, (grid_size, grid_size))
-                exact_samples.append({
-                    'input': input_grid.numpy(),
-                    'output': input_grid.numpy()  # Exact match
-                })
-            
-            # Create exact match dataset
-            exact_dataset = ExactMatchBoostDataset(exact_samples)
+            # Create exact match dataset with 300K samples
+            exact_dataset = ExactMatchBoostDataset(300_000)  # Pass number, not list
             exact_loader = DataLoader(
                 exact_dataset, 
                 batch_size=IRIS_CONFIG['batch_size'], 

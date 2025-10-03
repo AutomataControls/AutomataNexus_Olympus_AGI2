@@ -478,7 +478,7 @@ def train_minerva_specialized_v2():
         # Phase 4: PRISM
         if USE_PRISM and 'prism_synthesizer' in systems:
             print("\n🎯 PHASE 4: Grid Program Synthesis (PRISM)")
-            model = minerva_prism_injection(model, device, systems, num_epochs=100, target_accuracy=90.0)
+            model = minerva_prism_injection(model, device, systems, num_epochs=200, target_accuracy=90.0)
         
         print("\n✅ 4-PHASE INJECTION COMPLETE")
         print("=" * 60)
@@ -778,7 +778,7 @@ def train_minerva_specialized_v2():
                         inputs = batch['input'].to(device).long()
                         targets = batch['output'].to(device).long()
                         
-                        with autocast():
+                        with autocast('cuda'):
                             outputs = model(F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float())
                             if isinstance(outputs, dict):
                                 outputs = outputs['predicted_output']

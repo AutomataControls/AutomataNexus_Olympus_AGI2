@@ -764,6 +764,7 @@ def train_minerva_specialized_v2():
                 # Train with exact matches
                 model.train()
                 exact_optimizer = optim.AdamW(model.parameters(), lr=0.0001)  # Very conservative
+                exact_scaler = GradScaler('cuda')  # Fresh scaler for exact match training
                 aggressive_loss = AggressiveLoss()
                 
                 exact_epochs = 5  # Short burst
@@ -786,9 +787,9 @@ def train_minerva_specialized_v2():
                                 outputs = outputs['predicted_output']
                             loss = aggressive_loss(outputs, target_onehot, input_onehot)
                         
-                        scaler.scale(loss).backward()
-                        scaler.step(exact_optimizer)
-                        scaler.update()
+                        exact_scaler.scale(loss).backward()
+                        exact_scaler.step(exact_optimizer)
+                        exact_scaler.update()
                         
                         epoch_loss += loss.item()
                         

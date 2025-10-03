@@ -140,6 +140,9 @@ def custom_collate_fn(batch, stage):
     target_sizes = {0: 6, 1: 8, 2: 10, 3: 12, 4: 15, 5: 19, 6: 25, 7: 30}
     target_size = target_sizes.get(stage, 12)  # PROMETHEUS max_grid_size is 12
     
+    # Force target size to be reasonable for PROMETHEUS
+    actual_target = min(target_size, 12)  # PROMETHEUS model can't handle grids larger than 12x12
+    
     for item in batch:
         if isinstance(item, dict):
             input_grid = item['inputs']
@@ -171,8 +174,7 @@ def custom_collate_fn(batch, stage):
         if output_grid.dim() < 2:
             output_grid = output_grid.unsqueeze(0)
         
-        # Resize to target size (but respect PROMETHEUS max size of 12)
-        actual_target = min(target_size, 12)
+        # Resize to target size - all grids must be exactly actual_target size
         h, w = input_grid.shape
         if h != actual_target or w != actual_target:
             if h < actual_target or w < actual_target:
@@ -188,10 +190,35 @@ def custom_collate_fn(batch, stage):
         outputs.append(output_grid)
     
     if not inputs:
-        empty_tensor = torch.zeros((1, target_size, target_size), dtype=torch.long)
+        empty_tensor = torch.zeros((1, actual_target, actual_target), dtype=torch.long)
         return {'inputs': empty_tensor, 'outputs': empty_tensor}
     
-    return {'inputs': torch.stack(inputs), 'outputs': torch.stack(outputs)}
+    # Ensure all tensors are exactly the same size before stacking
+    final_inputs = []
+    final_outputs = []
+    
+    for inp, out in zip(inputs, outputs):
+        # Double-check sizes and pad if needed - everything should be actual_target size
+        if inp.shape != (actual_target, actual_target):
+            if inp.shape[0] < actual_target or inp.shape[1] < actual_target:
+                pad_h = max(0, actual_target - inp.shape[0])
+                pad_w = max(0, actual_target - inp.shape[1])
+                inp = F.pad(inp, (0, pad_w, 0, pad_h), value=0)
+            elif inp.shape[0] > actual_target or inp.shape[1] > actual_target:
+                inp = inp[:actual_target, :actual_target]
+        
+        if out.shape != (actual_target, actual_target):
+            if out.shape[0] < actual_target or out.shape[1] < actual_target:
+                pad_h = max(0, actual_target - out.shape[0])
+                pad_w = max(0, actual_target - out.shape[1])
+                out = F.pad(out, (0, pad_w, 0, pad_h), value=0)
+            elif out.shape[0] > actual_target or out.shape[1] > actual_target:
+                out = out[:actual_target, :actual_target]
+        
+        final_inputs.append(inp)
+        final_outputs.append(out)
+    
+    return {'inputs': torch.stack(final_inputs), 'outputs': torch.stack(final_outputs)}
 
 
 def prometheus_exact_match_injection(model, device, num_epochs=100, target_accuracy=85.0):

@@ -326,7 +326,12 @@ class AggressiveLoss(nn.Module):
         if self.current_epoch < 30:
             # Start with simple CE loss, gradually add complexity
             ce_loss = F.cross_entropy(pred, target_indices, reduction='mean')
-            exact_matches = (pred_indices == target_indices).all(dim=[1, 2]).float()
+            # IoU-based exact match for consistent scoring with ATLAS
+            exact_matches_strict = (pred_indices == target_indices).all(dim=[1, 2]).float()
+            intersection = (pred_indices == target_indices).float().sum(dim=[1,2])
+            union = (pred_indices.shape[1] * pred_indices.shape[2])
+            iou_scores = intersection / union
+            exact_matches = 0.3 * exact_matches_strict + 0.7 * iou_scores
             
             # Gradually introduce exact match bonus after epoch 20
             exact_bonus = torch.tensor(0.0)
@@ -361,8 +366,13 @@ class AggressiveLoss(nn.Module):
         ce_loss = ce_loss * (1 + incorrect_mask * 0.5 + focal_weight * 0.2)  # Much more conservative
         ce_loss = ce_loss.mean()
         
-        # 2. Exact match bonus (negative loss) - PROGRESSIVE
-        exact_matches = (pred_indices == target_indices).all(dim=[1, 2]).float()
+        # 2. Exact match bonus (negative loss) - PROGRESSIVE with IoU
+        # IoU-based exact match for consistent scoring with ATLAS
+        exact_matches_strict = (pred_indices == target_indices).all(dim=[1, 2]).float()
+        intersection = (pred_indices == target_indices).float().sum(dim=[1,2])
+        union = (pred_indices.shape[1] * pred_indices.shape[2])
+        iou_scores = intersection / union
+        exact_matches = 0.3 * exact_matches_strict + 0.7 * iou_scores
         # Progressive bonus that increases over time - more conservative
         epoch_progress = min(1.0, self.current_epoch / 30.0) if hasattr(self, 'current_epoch') else 0.5
         bonus_weight = 1.0 + 1.0 * epoch_progress  # From 1.0 to 2.0 - even more conservative

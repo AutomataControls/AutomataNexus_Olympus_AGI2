@@ -396,8 +396,11 @@ def train_iris_specialized_v2():
         try:
             checkpoint = torch.load(best_model_path, map_location=device)
             model.load_state_dict(checkpoint['model_state_dict'])
-            best_exact = checkpoint.get('best_exact', 0.0)
-            print(f"✅ Loaded best model with {best_exact:.2f}% exact match")
+            loaded_exact = checkpoint.get('best_exact', 0.0)
+            # For incremental training: reset threshold to allow improvements
+            best_exact = 0.0  # Reset to allow stage validation to save improvements
+            print(f"✅ Loaded best model with {loaded_exact:.2f}% exact match")
+            print(f"🔄 Reset threshold to {best_exact:.2f}% for incremental training")
         except Exception as e:
             print(f"⚠️ Failed to load best model: {e}")
             print("🆕 Starting fresh training")
@@ -542,10 +545,14 @@ def train_iris_specialized_v2():
             drop_last=False
         )
         
-        # Adjust learning rate for stage
+        # Adjust learning rate for stage - boost for harder grids
         stage_lr = IRIS_CONFIG['learning_rate'] * stage_config['lr_mult']
+        # Increase LR for stages with 0% exact match to help convergence
+        if stage >= 1:  # For 8x8+ grids, use higher learning rate
+            stage_lr *= 2.0  # Double learning rate for harder grids
         for param_group in optimizer.param_groups:
             param_group['lr'] = stage_lr
+        print(f"📈 Stage {stage} learning rate: {stage_lr:.6f}")
         
         # Stage training loop
         print(f"\n🔄 Training Stage {stage} for {IRIS_CONFIG['epochs_per_stage']} epochs...")
@@ -594,7 +601,12 @@ def train_iris_specialized_v2():
                         pred_output = model_outputs['predicted_output']
                         losses = loss_fn(pred_output, output_grids, input_grids, model_outputs)
                 
+                # Add exact match bonus for harder stages
                 loss = losses['total'] / IRIS_CONFIG['gradient_accumulation']
+                if stage >= 1 and losses.get('exact_count', 0) > 0:
+                    # Bonus reward for exact matches on harder grids
+                    exact_bonus = losses['exact_count'] * 0.1 
+                    loss = loss - exact_bonus  # Negative loss = reward
                 
                 # Backward pass
                 scaler.scale(loss).backward()
@@ -623,8 +635,8 @@ def train_iris_specialized_v2():
                     'lr': f"{scheduler.get_lr()[0]:.6f}"
                 })
             
-            # Validation phase
-            if epoch % 5 == 0 or epoch == IRIS_CONFIG['epochs_per_stage'] - 1:
+            # Validation phase - check more frequently to catch improvements
+            if epoch % 3 == 0 or epoch == IRIS_CONFIG['epochs_per_stage'] - 1:
                 model.eval()
                 val_metrics = defaultdict(float)
                 
@@ -683,6 +695,11 @@ def train_iris_specialized_v2():
                         'val_loss': val_loss
                     }, f'/content/AutomataNexus_Olympus_AGI2/arc_models_v4/iris_best.pt')
                     print(f"   🏆 New best model! Exact: {best_exact:.2f}%")
+                
+                # Early stopping if good exact match achieved for this stage
+                if val_exact_pct > 5.0 and epoch > 20:  # If >5% exact match after epoch 20
+                    print(f"   ⚡ Early stop: {val_exact_pct:.2f}% exact match achieved!")
+                    break
         
         # Stage complete
         stage_exact = train_exact_pct

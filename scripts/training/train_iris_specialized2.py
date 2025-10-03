@@ -834,10 +834,12 @@ def train_iris_specialized_v2():
                     targets = batch['output'].to(device).long()
                     
                     with autocast('cuda'):
-                        outputs = model(F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float())
+                        input_onehot = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+                        target_onehot = F.one_hot(targets, num_classes=10).permute(0, 3, 1, 2).float()
+                        outputs = model(input_onehot)
                         if isinstance(outputs, dict):
                             outputs = outputs['predicted_output']
-                        loss = aggressive_loss(outputs, targets, F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float())
+                        loss = aggressive_loss(outputs, target_onehot, input_onehot)
                     
                     scaler.scale(loss).backward()
                     scaler.step(exact_optimizer)

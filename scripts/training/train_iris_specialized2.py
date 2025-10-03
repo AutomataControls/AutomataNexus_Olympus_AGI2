@@ -466,11 +466,17 @@ def train_iris_specialized_v2():
         # Start with base DSL samples
         dataset_samples = []
         
-        # 10x augmentation of DSL samples
+        # 10x augmentation of DSL samples  
         for sample in dsl_samples:
             dataset_samples.append(sample)
             for _ in range(10):
-                aug_sample = augmenter.augment_sample_color_shift(sample)
+                # Simple color augmentation
+                aug_sample = sample.copy()
+                if 'inputs' in aug_sample and 'outputs' in aug_sample:
+                    # Apply color shift
+                    shift = random.randint(1, 9)
+                    aug_sample['inputs'] = (np.array(aug_sample['inputs']) + shift) % 10
+                    aug_sample['outputs'] = (np.array(aug_sample['outputs']) + shift) % 10
                 dataset_samples.append(aug_sample)
         
         # Add identity tasks for stage 0 (like CHRONOS)

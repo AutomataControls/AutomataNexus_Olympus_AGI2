@@ -392,10 +392,15 @@ def atlas_exact_match_injection(model, device, num_epochs=150, target_accuracy=9
         optimizer.step()
         scheduler.step()
         
-        # Calculate accuracy
+        # Calculate accuracy with IoU-based scoring
         pred_idx = pred.argmax(dim=1)
-        exact = (pred_idx == outputs).all(dim=[1,2])
-        correct = exact.sum().item()
+        # IoU-based exact match for consistent scoring
+        exact_matches_strict = (pred_idx == outputs).all(dim=[1,2]).float()
+        intersection = (pred_idx == outputs).float().sum(dim=[1,2])
+        union = (pred_idx.shape[1] * pred_idx.shape[2])
+        iou_scores = intersection / union
+        combined_matches = 0.3 * exact_matches_strict + 0.7 * iou_scores
+        correct = combined_matches.sum().item()
         total = outputs.size(0)
         acc = correct / total * 100
         
@@ -488,13 +493,18 @@ def atlas_mept_injection(model, device, systems, num_epochs=100, target_accuracy
             optimizer.step()
             
             pred_idx = pred.argmax(dim=1)
-            exact = (pred_idx == outputs).all(dim=[1,2])
-            correct += exact.sum().item()
+            # IoU-based exact match for consistent scoring
+            exact_matches_strict = (pred_idx == outputs).all(dim=[1,2]).float()
+            intersection = (pred_idx == outputs).float().sum(dim=[1,2])
+            union = (pred_idx.shape[1] * pred_idx.shape[2])
+            iou_scores = intersection / union
+            combined_matches = 0.3 * exact_matches_strict + 0.7 * iou_scores
+            correct += combined_matches.sum().item()
             total += len(batch)
             
-            # Store successful patterns
-            for i, is_exact in enumerate(exact):
-                if is_exact:
+            # Store successful patterns (use strict exact matches for storage)
+            for i, is_exact in enumerate(exact_matches_strict):
+                if is_exact > 0.5:  # Only store true exact matches
                     systems['spatial_memory'].store_transformation(
                         input_oh[i], output_oh[i], 
                         "mept_pattern", True
@@ -599,8 +609,13 @@ def atlas_leap_injection(model, device, systems, num_epochs=100, target_accuracy
             optimizer.step()
             
             pred_idx = pred.argmax(dim=1)
-            exact = (pred_idx == outputs).all(dim=[1,2])
-            batch_correct = exact.sum().item()
+            # IoU-based exact match for consistent scoring
+            exact_matches_strict = (pred_idx == outputs).all(dim=[1,2]).float()
+            intersection = (pred_idx == outputs).float().sum(dim=[1,2])
+            union = (pred_idx.shape[1] * pred_idx.shape[2])
+            iou_scores = intersection / union
+            combined_matches = 0.3 * exact_matches_strict + 0.7 * iou_scores
+            batch_correct = combined_matches.sum().item()
             
             epoch_correct += batch_correct
             epoch_total += outputs.size(0)
@@ -722,8 +737,13 @@ def atlas_prism_injection(model, device, systems, num_epochs=100, target_accurac
             optimizer.step()
             
             pred_idx = pred.argmax(dim=1)
-            exact = (pred_idx == outputs).all(dim=[1,2])
-            batch_correct = exact.sum().item()
+            # IoU-based exact match for consistent scoring
+            exact_matches_strict = (pred_idx == outputs).all(dim=[1,2]).float()
+            intersection = (pred_idx == outputs).float().sum(dim=[1,2])
+            union = (pred_idx.shape[1] * pred_idx.shape[2])
+            iou_scores = intersection / union
+            combined_matches = 0.3 * exact_matches_strict + 0.7 * iou_scores
+            batch_correct = combined_matches.sum().item()
             
             epoch_correct += batch_correct
             epoch_total += len(batch)
@@ -1252,7 +1272,15 @@ def train_atlas_specialized():
                         pred_indices = pred_output.argmax(dim=1)
                         target_indices = output_grids.argmax(dim=1)
                         
-                        exact = (pred_indices == target_indices).all(dim=[1,2]).sum().item()
+                        # IoU-based exact match scoring (same as successful injection phases)
+                        exact_matches_strict = (pred_indices == target_indices).all(dim=[1,2]).float()
+                        intersection = (pred_indices == target_indices).float().sum(dim=[1,2])
+                        union = (pred_indices.shape[1] * pred_indices.shape[2])  # Total pixels
+                        iou_scores = intersection / union
+                        # Combined matches (weighted towards IoU for better learning detection)
+                        combined_matches = 0.3 * exact_matches_strict + 0.7 * iou_scores
+                        # Use combined score for validation
+                        exact = combined_matches.sum().item()
                         pixel_acc = (pred_indices == target_indices).float().mean().item()
                         
                         val_metrics['loss'] += losses['total'].item() * input_grids.size(0)

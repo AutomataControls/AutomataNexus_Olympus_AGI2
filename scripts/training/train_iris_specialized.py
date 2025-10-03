@@ -1269,7 +1269,16 @@ def train_iris_specialized():
                     # print(f"\n🔍 DEBUG: Processing batch {batch_idx+1}/{len(train_loader)}", flush=True)
                     # Update progress manually
                     progress = (batch_idx + 1) / len(train_loader) * 100
-                    print(f"\rIRIS Stage {stage}, Epoch {epoch+1}: {progress:.0f}% {batch_idx+1}/{len(train_loader)}", end='', flush=True)
+                    
+                    # Show detailed progress more frequently for better monitoring
+                    if batch_idx % 2 == 0 or batch_idx == len(train_loader) - 1:
+                        # Include current batch loss in progress
+                        current_loss = losses['total'].item()
+                        current_exact = losses['exact_count'].item()
+                        print(f"\rIRIS Stage {stage}, Epoch {epoch+1}: {progress:.0f}% {batch_idx+1}/{len(train_loader)} | Loss: {current_loss:.3f}, Exact: {current_exact}", end='', flush=True)
+                    
+                    if batch_idx == len(train_loader) - 1:
+                        print()  # New line at end of epoch
                     # print(f"\n🔍 DEBUG: Starting batch {batch_idx+1}/{len(train_loader)}")
                     current_time = time.time()
                     # Check if we're stuck (more than 60 seconds on a batch)
@@ -1384,8 +1393,10 @@ def train_iris_specialized():
                     train_metrics['exact'] += losses['exact_count'].item()
                     train_metrics['samples'] += input_grids.size(0)
                     
-                    # Print metrics instead of using pbar
-                    # print(f"   Batch metrics - loss: {losses['total'].item():.3f}, exact: {losses['exact_count'].item():.0f}, color_map: {losses['color_mapping'].item():.3f}, color_bal: {losses['color_balance'].item():.3f}")
+                    # Show batch metrics every 5 batches for debugging
+                    if batch_idx % 5 == 0:
+                        color_loss = losses.get('color_mapping', torch.tensor(0)).item() if isinstance(losses.get('color_mapping', 0), torch.Tensor) else losses.get('color_mapping', 0)
+                        print(f" | Loss: {losses['total'].item():.3f}, Exact: {losses['exact_count'].item():.0f}, Color: {color_loss:.3f}")
                     
                     # LEAP training integration with reduced frequency for speed
                     if USE_LEAP and 'leap_trainer' in systems and batch_idx % 10 == 0:  # Every 10 batches instead of 2
@@ -1444,10 +1455,17 @@ def train_iris_specialized():
                                 )
             
                 
-                # End of batch processing loop
-                # print(f"\n✅ Completed all {batch_count} batches for epoch {epoch+1}")
-                # print(f"   Expected batches: {len(train_loader)}")
-                # print(f"   Actual batches processed: {batch_count}")
+                # End of batch processing loop - always show completion with summary
+                train_loss = train_metrics['loss'] / max(train_metrics['samples'], 1)
+                train_exact_pct = train_metrics['exact'] / max(train_metrics['samples'], 1) * 100
+                
+                print(f"\n✅ Completed all {batch_count} batches for epoch {epoch+1}")
+                print(f"   📊 Epoch Summary: {train_exact_pct:.2f}% exact match, {train_loss:.3f} avg loss")
+                
+                if batch_count != len(train_loader):
+                    print(f"   ⚠️ Expected {len(train_loader)} batches, processed {batch_count}")
+                else:
+                    print(f"   ✅ All {len(train_loader)} batches processed successfully")
                 
             except Exception as e:
                 print(f"❌ Error in training loop: {e}")
@@ -1459,8 +1477,8 @@ def train_iris_specialized():
             scheduler.step()
             # print(f"📈 Learning rate updated to: {optimizer.param_groups[0]['lr']:.6f}")
             
-            # Validation every 10 epochs
-            if epoch % 10 == 0:
+            # Validation every epoch for better monitoring
+            if epoch % 1 == 0:
                 model.eval()
                 val_metrics = {'loss': 0, 'exact': 0, 'pixel_acc': 0, 'samples': 0}
                 
@@ -1593,9 +1611,15 @@ def train_iris_specialized():
                     }, best_model_path)
                     print(f"   💾 NEW BEST: {val_exact_pct:.2f}% color exact match saved!")
             
-            # End of epoch
-            print(f"\n✅ Epoch {epoch+1}/{IRIS_CONFIG['epochs_per_stage']} complete for stage {stage}")
-            print(f"   Moving to next epoch...\n")
+            # Always show basic epoch summary even without validation
+            if epoch % 1 != 0:  # If we didn't do validation this epoch
+                train_loss = train_metrics['loss'] / max(train_metrics['samples'], 1)
+                train_exact_pct = train_metrics['exact'] / max(train_metrics['samples'], 1) * 100
+                print(f"\n🎨 IRIS Epoch {global_epoch} (Stage {stage}, {grid_size}x{grid_size}):")
+                print(f"   🎯 Train: {train_exact_pct:.2f}% exact, Loss: {train_loss:.3f}")
+            
+            print(f"✅ Epoch {epoch+1}/{IRIS_CONFIG['epochs_per_stage']} complete for stage {stage}")
+            print(f"   Moving to next epoch...")
         
         # End of stage
         print(f"\n✅ Stage {stage} complete! Moving to next stage...\n")

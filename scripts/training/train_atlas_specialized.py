@@ -95,13 +95,13 @@ from src.data.arc_data_synthesis import ARCDataSynthesizer, ARCDataAugmenter
 # ATLAS-Specific Configuration with 8-Stage Progressive Curriculum
 ATLAS_CONFIG = {
     'batch_size': 64,  # Further reduced for better gradient quality
-    'learning_rate': 0.005,  # Increased for better learning
+    'learning_rate': 0.001,  # Reduced for better ATLAS convergence
     'num_epochs': 320,  # 8 stages x 40 epochs
     'hidden_dim': 128,
     'spatial_memory_size': 200,
     'gradient_accumulation': 4,  # Effective batch: 256
-    'transform_penalty': 0.5,  # Increased to match NexusReference.md requirement
-    'exact_match_bonus': 5.0,  # Higher bonus to encourage exact matches
+    'transform_penalty': 0.3,  # Reduced to allow more transformation learning
+    'exact_match_bonus': 3.0,  # Reduced to better balance with other losses
     'focal_gamma': 2.0,  # Focal loss gamma parameter
     'curriculum_stages': 8,  # Progressive 8-stage curriculum
     'epochs_per_stage': 40,  # Standard for better convergence
@@ -196,12 +196,22 @@ class AtlasSpecializedLoss(nn.Module):
         # Simple focal loss like IRIS
         focal_loss = self._focal_loss(pred_output, target_output, gamma=ATLAS_CONFIG['focal_gamma'])
         
-        # Exact match detection and bonus
+        # IoU-based exact match scoring (ATLAS improvement - same as IRIS)
         pred_indices = pred_output.argmax(dim=1)
         target_indices = target_output.argmax(dim=1)
-        exact_matches = (pred_indices == target_indices).all(dim=[1,2]).float()
-        exact_count = exact_matches.sum()
-        exact_bonus = -exact_matches.mean() * self.weights['exact_match']
+        
+        # Strict exact matches
+        exact_matches_strict = (pred_indices == target_indices).all(dim=[1,2]).float()
+        
+        # IoU-based soft exact match for better learning
+        intersection = (pred_indices == target_indices).float().sum(dim=[1,2])
+        union = (pred_indices.shape[1] * pred_indices.shape[2])  # Total pixels
+        iou_scores = intersection / union
+        
+        # Combine strict and soft matches (weighted towards IoU for learning)
+        combined_matches = 0.3 * exact_matches_strict + 0.7 * iou_scores
+        exact_count = exact_matches_strict.sum()
+        exact_bonus = -combined_matches.mean() * self.weights['exact_match']
         exact_bonus = exact_bonus.clamp(min=-2.0)  # Prevent excessive negative contribution
         
         # Simple transformation penalty (very low for ATLAS)
@@ -231,6 +241,8 @@ class AtlasSpecializedLoss(nn.Module):
             'transform': transform_penalty,
             'exact_bonus': exact_bonus,
             'exact_count': exact_count,
+            'soft_exact_count': combined_matches.sum(),
+            'avg_iou': iou_scores.mean(),
             'spatial': spatial_loss,
             'affine': torch.tensor(0.001, device=total_loss.device)  # Dummy for display
         }
@@ -283,20 +295,16 @@ def atlas_exact_match_injection(model, device, num_epochs=150, target_accuracy=9
         if isinstance(module, nn.Dropout) or isinstance(module, nn.Dropout2d):
             module.p = 0.0  # Disable all dropout
     
-    # Use Adam with learning rate warmup for spatial learning
-    optimizer = optim.Adam(model.parameters(), lr=0.008, betas=(0.9, 0.999), weight_decay=1e-5)
+    # Use stable Adam optimizer like IRIS fixes
+    optimizer = optim.Adam(model.parameters(), lr=0.003, betas=(0.9, 0.999), weight_decay=1e-5)
     
-    # Learning rate scheduler with warmup
+    # Stable learning rate with gentle warmup
     def lr_lambda(epoch):
         if epoch < 10:
-            return (epoch + 1) / 10.0  # Warmup
+            return (epoch + 1) / 10.0  # Gentle warmup
         else:
-            # Gradually increase then decrease
-            progress = (epoch - 10) / (num_epochs - 10)
-            if progress < 0.3:
-                return 1.0 + 2.0 * progress  # Increase to 3x
-            else:
-                return 3.0 - 2.5 * (progress - 0.3) / 0.7  # Decrease to 0.5x
+            # Much more stable schedule based on IRIS success
+            return 1.0  # Keep stable after warmup
     
     scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
     
@@ -1187,8 +1195,10 @@ def train_atlas_specialized():
                 train_metrics['exact'] += losses['exact_count'].item()
                 train_metrics['samples'] += input_grids.size(0)
                 
-                # Print metrics
-                print(f"   Batch metrics - loss: {losses['total'].item():.3f}, exact: {losses['exact_count'].item():.0f}, spatial: {losses['spatial'].item():.3f}, affine: {losses['affine'].item():.3f}")
+                # Print metrics with IoU info like IRIS
+                soft_exact = losses.get('soft_exact_count', torch.tensor(0)).item()
+                avg_iou = losses.get('avg_iou', torch.tensor(0)).item()
+                print(f"   Batch metrics - loss: {losses['total'].item():.3f}, exact: {losses['exact_count'].item():.0f}, soft: {soft_exact:.1f}, IoU: {avg_iou:.2f}, spatial: {losses['spatial'].item():.3f}")
                 
                 # LEAP training integration disabled - AtlasLEAPTrainer doesn't have generate_leap_batch method
                 

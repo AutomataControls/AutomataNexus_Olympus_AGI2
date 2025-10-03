@@ -26,7 +26,7 @@ import json
 sys.path.append('/content/AutomataNexus_Olympus_AGI2/src')
 
 # Model imports
-from models.prometheus_model import EnhancedPrometheusNet
+from models.prometheus_model_simplified import SimplifiedPrometheusNet
 
 # Try to import training systems (use generic ones that exist)
 try:
@@ -45,19 +45,18 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"🔥 PROMETHEUS Training on {device}")
 print(f"Using device: {device}")
 
-# PROMETHEUS Configuration
+# PROMETHEUS Simplified Configuration - Based on successful IRIS/ATLAS
 PROMETHEUS_CONFIG = {
-    'learning_rate': 0.001,
+    'learning_rate': 0.001,  # Stable like IRIS/ATLAS
     'batch_size': 32,
     'num_epochs': 50,
     'epochs_per_stage': 25,
     'gradient_accumulation': 4,
     'gradient_clip': 1.0,
     'weight_decay': 1e-4,
-    'transform_penalty': 0.5,
-    'exact_match_bonus': 2.0,
-    'vae_beta': 1.0,  # VAE loss weight
-    'kl_weight': 0.1   # KL divergence weight
+    'transform_penalty': 0.3,  # Reduced like IRIS/ATLAS
+    'exact_match_bonus': 3.0,  # Reduced like IRIS/ATLAS 
+    'creativity_weight': 0.1   # New: PROMETHEUS creativity factor
 }
 
 # 8-Stage Progressive Curriculum
@@ -85,61 +84,74 @@ print("VAE-based Pattern Synthesis & Creative Generation")
 print("=" * 80)
 
 
-class PrometheusVAELoss(nn.Module):
-    """PROMETHEUS-specific VAE loss function"""
+class PrometheusSimplifiedLoss(nn.Module):
+    """PROMETHEUS simplified loss - Based on successful IRIS/ATLAS approach"""
     
-    def __init__(self, base_weight=1.0, kl_weight=0.1, creativity_weight=0.2):
+    def __init__(self, transformation_penalty=0.3, exact_match_bonus=3.0):
         super().__init__()
-        self.base_weight = base_weight
-        self.kl_weight = kl_weight
-        self.creativity_weight = creativity_weight
+        self.transformation_penalty = transformation_penalty
+        self.exact_match_bonus = exact_match_bonus
         
     def forward(self, model_outputs, targets, inputs):
-        
         pred_output = model_outputs['predicted_output']
-        mu = model_outputs['mu']
-        log_var = model_outputs['log_var']
+        B, C, H, W = pred_output.shape
         
-        # Reconstruction loss
-        recon_loss = F.cross_entropy(pred_output, targets)
+        # Simple focal loss like IRIS/ATLAS
+        focal_loss = self._focal_loss(pred_output, targets, gamma=2.0)
         
-        # KL divergence loss with numerical stability
-        log_var = torch.clamp(log_var, min=-10.0, max=10.0)
-        mu = torch.clamp(mu, min=-10.0, max=10.0)
-        kl_loss = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp()) / targets.size(0)
+        # IoU-based exact match scoring (same as successful IRIS/ATLAS)
+        pred_indices = pred_output.argmax(dim=1)
+        target_indices = targets
         
-        # Additional safety check for NaN/Inf
-        if torch.isnan(kl_loss) or torch.isinf(kl_loss):
-            kl_loss = torch.tensor(0.0, device=kl_loss.device)
+        # Strict exact matches
+        exact_matches_strict = (pred_indices == target_indices).all(dim=[1,2]).float()
         
-        # Creativity loss - encourage diverse patterns
-        creativity_loss = torch.tensor(0.0, device=pred_output.device)
-        if 'raw_output' in model_outputs:
-            raw_output = model_outputs['raw_output']
-            # Penalize too much similarity to input
-            input_similarity = F.mse_loss(pred_output.softmax(dim=1), inputs)
-            creativity_loss = -input_similarity  # Encourage dissimilarity for creativity
+        # IoU-based soft exact match for better learning
+        intersection = (pred_indices == target_indices).float().sum(dim=[1,2])
+        union = (pred_indices.shape[1] * pred_indices.shape[2])  # Total pixels
+        iou_scores = intersection / union
         
-        total_loss = (self.base_weight * recon_loss + 
-                     self.kl_weight * kl_loss + 
-                     self.creativity_weight * creativity_loss)
+        # Combine strict and soft matches (weighted towards IoU for learning)
+        combined_matches = 0.3 * exact_matches_strict + 0.7 * iou_scores
+        exact_count = exact_matches_strict.sum()
+        exact_bonus = -combined_matches.mean() * self.exact_match_bonus
+        exact_bonus = exact_bonus.clamp(min=-2.0)  # Prevent excessive negative contribution
         
-        # Final safety check for total loss
+        # Simple transformation penalty
+        input_indices = inputs.argmax(dim=1)
+        copy_penalty = (pred_indices == input_indices).all(dim=[1,2]).float()
+        transform_penalty = copy_penalty.mean() * self.transformation_penalty
+        
+        # PROMETHEUS creativity bonus
+        creativity_bonus = 0.0
+        if 'creativity_factor' in model_outputs:
+            creativity_bonus = model_outputs['creativity_factor'] * 0.1
+        
+        # Simple total loss - only 4 components like successful IRIS/ATLAS
+        total_loss = focal_loss + transform_penalty + exact_bonus - creativity_bonus
+        
+        # Stability check
         if torch.isnan(total_loss) or torch.isinf(total_loss):
-            total_loss = recon_loss  # Fall back to just reconstruction loss
-        
-        # Calculate exact matches
-        pred_classes = pred_output.argmax(dim=1)
-        exact_matches = (pred_classes == targets).all(dim=[-2, -1]).float()
+            print(f"⚠️ NaN/Inf loss, using focal only")
+            total_loss = focal_loss.clamp(max=10.0)
         
         return {
             'total': total_loss,
-            'recon_loss': recon_loss,
-            'kl_loss': kl_loss,
-            'creativity_loss': creativity_loss,
-            'exact_count': exact_matches.sum(),
-            'total_samples': targets.size(0)
+            'focal': focal_loss,
+            'transform': transform_penalty,
+            'exact_bonus': exact_bonus,
+            'exact_count': exact_count,
+            'soft_exact_count': combined_matches.sum(),
+            'avg_iou': iou_scores.mean(),
+            'creativity_bonus': creativity_bonus
         }
+    
+    def _focal_loss(self, pred, target, gamma=2.0):
+        """Focal loss for hard pixel classification"""
+        ce_loss = F.cross_entropy(pred, target, reduction='none')
+        pt = torch.exp(-ce_loss)
+        focal = (1 - pt) ** gamma * ce_loss
+        return focal.mean()
 
 
 def custom_collate_fn(batch, stage):
@@ -232,7 +244,8 @@ def prometheus_exact_match_injection(model, device, num_epochs=100, target_accur
     print("  Focus: Creative pattern generation")
     
     model.train()
-    optimizer = optim.Adam(model.parameters(), lr=0.01)
+    # Use stable learning rate like successful IRIS/ATLAS
+    optimizer = optim.Adam(model.parameters(), lr=0.003, betas=(0.9, 0.999), weight_decay=1e-5)
     
     # Generate creative patterns
     patterns = []
@@ -330,13 +343,8 @@ def prometheus_exact_match_injection(model, device, num_epochs=100, target_accur
             model_output = model(input_oh, target_oh, mode='inference')
             pred = model_output['predicted_output']
             
-            # VAE Loss
+            # Simple stable loss like IRIS/ATLAS
             loss = F.cross_entropy(pred, outputs)
-            if 'mu' in model_output and 'log_var' in model_output:
-                mu = model_output['mu']
-                log_var = model_output['log_var']
-                kl_loss = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp()) / inputs.size(0)
-                loss = loss + 0.1 * kl_loss
             
             # Check exact matches
             pred_idx = pred.argmax(dim=1)
@@ -378,8 +386,8 @@ def train_prometheus_specialized():
     print("  • Creative pattern synthesis")
     print("=" * 70)
     
-    # Initialize model with your actual parameters
-    model = EnhancedPrometheusNet(max_grid_size=12, latent_dim=128).to(device)
+    # Initialize simplified stable model
+    model = SimplifiedPrometheusNet(max_grid_size=12).to(device)
     
     print(f"🎨 PROMETHEUS Model: {sum(p.numel() for p in model.parameters()):,} parameters")
     
@@ -418,11 +426,10 @@ def train_prometheus_specialized():
         except:
             print("⚠️ PRISM system failed to initialize")
     
-    # Enhanced VAE loss function
-    loss_fn = PrometheusVAELoss(
-        base_weight=1.0,
-        kl_weight=PROMETHEUS_CONFIG['kl_weight'],
-        creativity_weight=0.2
+    # Simplified stable loss function (same approach as successful IRIS/ATLAS)
+    loss_fn = PrometheusSimplifiedLoss(
+        transformation_penalty=PROMETHEUS_CONFIG['transform_penalty'],
+        exact_match_bonus=PROMETHEUS_CONFIG['exact_match_bonus']
     )
     
     # Optimizer
@@ -446,7 +453,13 @@ def train_prometheus_specialized():
     best_model_path = f'{models_dir}/prometheus_best.pt'
     
     best_exact = 0.0
-    if os.path.exists(best_model_path):
+    # FORCE FRESH START - Old checkpoints use broken VAE architecture
+    FORCE_FRESH_START = True
+    
+    if FORCE_FRESH_START:
+        print("🔄 FORCED FRESH START - Ignoring old broken VAE checkpoints")
+        print("🆕 Starting fresh training with simplified stable architecture")
+    elif os.path.exists(best_model_path):
         print(f"🔄 Loading best model from {best_model_path}")
         try:
             checkpoint = torch.load(best_model_path, map_location=device)
@@ -631,7 +644,15 @@ def train_prometheus_specialized():
                 if batch_idx % 10 == 0:
                     current_exact = train_metrics['exact'] / max(1, train_metrics['samples']) * 100
                     current_loss = train_metrics['loss'] / max(1, batch_idx + 1)
-                    pbar.set_postfix({'loss': f"{current_loss:.3f}", 'exact': f"{current_exact:.1f}%"})
+                    # Add IoU metrics like successful IRIS/ATLAS
+                    soft_exact = losses.get('soft_exact_count', torch.tensor(0)).item()
+                    avg_iou = losses.get('avg_iou', torch.tensor(0)).item()
+                    pbar.set_postfix({
+                        'loss': f"{current_loss:.3f}", 
+                        'exact': f"{current_exact:.1f}%",
+                        'soft': f"{soft_exact:.1f}",
+                        'IoU': f"{avg_iou:.2f}"
+                    })
             
             # Validation
             if epoch % 5 == 0:

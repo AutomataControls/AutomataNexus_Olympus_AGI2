@@ -198,22 +198,41 @@ def custom_collate_fn(batch, stage):
     final_outputs = []
     
     for inp, out in zip(inputs, outputs):
-        # Double-check sizes and pad if needed - everything should be actual_target size
-        if inp.shape != (actual_target, actual_target):
-            if inp.shape[0] < actual_target or inp.shape[1] < actual_target:
-                pad_h = max(0, actual_target - inp.shape[0])
-                pad_w = max(0, actual_target - inp.shape[1])
-                inp = F.pad(inp, (0, pad_w, 0, pad_h), value=0)
-            elif inp.shape[0] > actual_target or inp.shape[1] > actual_target:
-                inp = inp[:actual_target, :actual_target]
+        # Force exact size - be very aggressive about this
+        # First crop if too large
+        if inp.shape[0] > actual_target:
+            inp = inp[:actual_target, :]
+        if inp.shape[1] > actual_target:
+            inp = inp[:, :actual_target]
+        if out.shape[0] > actual_target:
+            out = out[:actual_target, :]
+        if out.shape[1] > actual_target:
+            out = out[:, :actual_target]
+            
+        # Then pad if too small
+        if inp.shape[0] < actual_target or inp.shape[1] < actual_target:
+            pad_h = max(0, actual_target - inp.shape[0])
+            pad_w = max(0, actual_target - inp.shape[1])
+            inp = F.pad(inp, (0, pad_w, 0, pad_h), value=0)
+        if out.shape[0] < actual_target or out.shape[1] < actual_target:
+            pad_h = max(0, actual_target - out.shape[0])
+            pad_w = max(0, actual_target - out.shape[1])
+            out = F.pad(out, (0, pad_w, 0, pad_h), value=0)
         
+        # Final verification - if still wrong size, create new tensor of correct size
+        if inp.shape != (actual_target, actual_target):
+            new_inp = torch.zeros((actual_target, actual_target), dtype=inp.dtype, device=inp.device)
+            copy_h = min(inp.shape[0], actual_target)
+            copy_w = min(inp.shape[1], actual_target)
+            new_inp[:copy_h, :copy_w] = inp[:copy_h, :copy_w]
+            inp = new_inp
+            
         if out.shape != (actual_target, actual_target):
-            if out.shape[0] < actual_target or out.shape[1] < actual_target:
-                pad_h = max(0, actual_target - out.shape[0])
-                pad_w = max(0, actual_target - out.shape[1])
-                out = F.pad(out, (0, pad_w, 0, pad_h), value=0)
-            elif out.shape[0] > actual_target or out.shape[1] > actual_target:
-                out = out[:actual_target, :actual_target]
+            new_out = torch.zeros((actual_target, actual_target), dtype=out.dtype, device=out.device)
+            copy_h = min(out.shape[0], actual_target)
+            copy_w = min(out.shape[1], actual_target)
+            new_out[:copy_h, :copy_w] = out[:copy_h, :copy_w]
+            out = new_out
         
         final_inputs.append(inp)
         final_outputs.append(out)

@@ -13,7 +13,11 @@ import torch.optim as optim
 import numpy as np
 import random
 from torch.utils.data import Dataset, DataLoader, random_split
-from torch.cuda.amp import GradScaler, autocast
+from torch.cuda.amp import GradScaler
+try:
+    from torch.amp import autocast
+except ImportError:
+    from torch.cuda.amp import autocast
 from collections import defaultdict
 from tqdm import tqdm
 import json
@@ -403,7 +407,10 @@ def train_prometheus_specialized():
     # Scheduler
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
     
-    scaler = GradScaler(enabled=device.type == 'cuda')
+    if device.type == 'cuda':
+        scaler = GradScaler()
+    else:
+        scaler = GradScaler(enabled=False)
     
     # Check for existing best model
     models_dir = '/content/AutomataNexus_Olympus_AGI2/arc_models_v4'
@@ -480,164 +487,177 @@ def train_prometheus_specialized():
         print("\n✅ 4-PHASE CREATIVE INJECTION COMPLETE")
         print("=" * 70)
     
-    # Training loop - simplified for PROMETHEUS
-    print(f"\n🎨 PROMETHEUS Creative Pattern Training")
-    print("=" * 50)
+    # Data directory and proper dataset like other models
+    DATA_DIR = '/content/AutomataNexus_Olympus_AGI2/data'
     
-    # Generate creative dataset
-    dataset_samples = []
-    for i in range(1000):
-        size = random.choice([6, 8, 10, 12])
+    # Import proper dataset and exact match injection like CHRONOS
+    sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
+    from colab_training_v4_megascale_curriculum import CurriculumMegaScaleDataset, ExactMatchBoostDataset, inject_exact_match_training
+    
+    print(f"\n🎨 PROMETHEUS 8-Stage Progressive Curriculum Training")
+    print("=" * 70)
+    
+    # 8-Stage Progressive Training (like CHRONOS)
+    for stage in range(min(3, len(STAGE_CONFIG))):  # Start with first 3 stages
+        stage_config = STAGE_CONFIG[stage]
+        grid_size = stage_config['max_grid_size']
         
-        # Creative pattern generation
-        if i % 3 == 0:  # Color patterns
-            input_grid = torch.randint(1, 6, (size, size))
-            output_grid = (input_grid + random.randint(1, 4)) % 6 + 1
-        elif i % 3 == 1:  # Spatial patterns
-            input_grid = torch.randint(1, 4, (size, size))
-            output_grid = torch.rot90(input_grid, k=random.randint(1, 3))
-        else:  # Creative generation
-            input_grid = torch.randint(0, 4, (size, size))
-            output_grid = torch.randint(1, 5, (size, size))
+        print(f"\n🎨 PROMETHEUS Stage {stage}: {grid_size}x{grid_size} Creative Pattern Generation")
+        print(f"   📏 Grid Size: {grid_size}x{grid_size}")
+        print("=" * 60)
         
-        dataset_samples.append({
-            'inputs': input_grid.numpy(),
-            'outputs': output_grid.numpy()
-        })
-    
-    # Create dataset
-    class SimpleARCDataset(Dataset):
-        def __init__(self, samples):
-            self.samples = samples
-        def __len__(self):
-            return len(self.samples)
-        def __getitem__(self, idx):
-            return self.samples[idx]
-    
-    dataset = SimpleARCDataset(dataset_samples)
-    train_size = int(0.9 * len(dataset))
-    val_size = len(dataset) - train_size
-    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
-    
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=PROMETHEUS_CONFIG['batch_size'],
-        shuffle=True,
-        num_workers=0,
-        pin_memory=False,
-        collate_fn=lambda batch: custom_collate_fn(batch, 0),
-        drop_last=True
-    )
-    
-    val_loader = DataLoader(
-        val_dataset,
-        batch_size=PROMETHEUS_CONFIG['batch_size'],
-        shuffle=False,
-        num_workers=0,
-        pin_memory=False,
-        collate_fn=lambda batch: custom_collate_fn(batch, 0),
-        drop_last=False
-    )
-    
-    print(f"📚 Training samples: {len(train_dataset)}, Validation: {len(val_dataset)}")
-    
-    # Training loop
-    for epoch in range(PROMETHEUS_CONFIG['num_epochs']):
-        model.train()
-        train_metrics = defaultdict(float)
+        # Create curriculum dataset with stage-specific grid size
+        dataset = CurriculumMegaScaleDataset(
+            DATA_DIR,
+            curriculum_stage=min(stage, 2),  # Cap at stage 2 for compatibility
+            use_arc_synthesis=True,
+            synthesis_ratio=0.7  # High synthesis for creativity
+        )
         
-        pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}")
+        # Split dataset
+        train_size = int(0.9 * len(dataset))
+        val_size = len(dataset) - train_size
+        train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
         
-        for batch_idx, batch in enumerate(pbar):
-            inputs = batch['inputs'].to(device, non_blocking=True)
-            outputs = batch['outputs'].to(device, non_blocking=True)
+        train_loader = DataLoader(
+            train_dataset,
+            batch_size=PROMETHEUS_CONFIG['batch_size'],
+            shuffle=True,
+            num_workers=0,
+            pin_memory=False,
+            collate_fn=lambda batch: custom_collate_fn(batch, stage),
+            drop_last=True
+        )
+        
+        val_loader = DataLoader(
+            val_dataset,
+            batch_size=PROMETHEUS_CONFIG['batch_size'],
+            shuffle=False,
+            num_workers=0,
+            pin_memory=False,
+            collate_fn=lambda batch: custom_collate_fn(batch, stage),
+            drop_last=False
+        )
+        
+        print(f"📚 Stage {stage} ({grid_size}x{grid_size}) - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}")
+        
+        # Exact match injection for Stage 0 only
+        exact_dataset = None
+        if stage == 0 and USE_EXACT_BOOST:
+            try:
+                exact_dataset = ExactMatchBoostDataset(1300, fixed_size=grid_size)
+                print(f"✅ Stage {stage} PROMETHEUS exact match injection dataset created ({grid_size}x{grid_size})")
+            except Exception as e:
+                print(f"⚠️ Could not create exact match dataset: {e}")
+        
+        # Stage training loop
+        stage_epochs = PROMETHEUS_CONFIG['epochs_per_stage']
+        for epoch in range(stage_epochs):
             
-            inputs = torch.clamp(inputs, 0, 9)
-            outputs = torch.clamp(outputs, 0, 9)
+            # Exact match injection training (Stage 0 only, FIRST EPOCH ONLY)
+            if exact_dataset and stage == 0 and epoch == 0:
+                model = inject_exact_match_training(
+                    model, device=device,
+                    num_epochs=1,
+                    target_accuracy=90.0  # High target for PROMETHEUS creative patterns
+                )
+                print(f"🎨 PROMETHEUS injection completed - Stage {stage}, Epoch {epoch+1}")
+            model.train()
+            train_metrics = defaultdict(float)
             
-            input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
-            target_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
+            pbar = tqdm(train_loader, desc=f"PROMETHEUS Stage {stage}, Epoch {epoch+1}")
             
-            with autocast(enabled=device.type == 'cuda'):
-                model_outputs = model(input_grids, target_grids, mode='inference')
-                losses = loss_fn(model_outputs, outputs, input_grids)
-            
-            loss = losses['total'] / PROMETHEUS_CONFIG['gradient_accumulation']
-            
-            scaler.scale(loss).backward()
-            
-            if (batch_idx + 1) % PROMETHEUS_CONFIG['gradient_accumulation'] == 0:
-                scaler.unscale_(optimizer)
-                torch.nn.utils.clip_grad_norm_(model.parameters(), PROMETHEUS_CONFIG['gradient_clip'])
+            for batch_idx, batch in enumerate(pbar):
+                inputs = batch['inputs'].to(device, non_blocking=True)
+                outputs = batch['outputs'].to(device, non_blocking=True)
                 
-                scaler.step(optimizer)
-                scaler.update()
-                optimizer.zero_grad()
+                inputs = torch.clamp(inputs, 0, 9)
+                outputs = torch.clamp(outputs, 0, 9)
                 
-                scheduler.step()
-            
-            train_metrics['loss'] += losses['total'].item()
-            train_metrics['exact'] += losses['exact_count'].item()
-            train_metrics['samples'] += inputs.size(0)
-            
-            if batch_idx % 10 == 0:
-                current_exact = train_metrics['exact'] / max(1, train_metrics['samples']) * 100
-                current_loss = train_metrics['loss'] / max(1, batch_idx + 1)
-                pbar.set_postfix({'loss': f"{current_loss:.3f}", 'exact': f"{current_exact:.1f}%"})
-        
-        # Validation
-        if epoch % 5 == 0:
-            model.eval()
-            val_metrics = defaultdict(float)
-            
-            with torch.no_grad():
-                for batch in tqdm(val_loader, desc="Validation"):
-                    inputs = batch['inputs'].to(device)
-                    outputs = batch['outputs'].to(device)
-                    
-                    inputs = torch.clamp(inputs, 0, 9)
-                    outputs = torch.clamp(outputs, 0, 9)
-                    
-                    input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
-                    target_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
-                    
+                input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+                target_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
+                
+                with autocast('cuda' if device.type == 'cuda' else 'cpu'):
                     model_outputs = model(input_grids, target_grids, mode='inference')
-                    pred_output = model_outputs['predicted_output']
-                    
-                    val_loss = F.cross_entropy(pred_output, outputs)
-                    pred_classes = pred_output.argmax(dim=1)
-                    exact_matches = (pred_classes == outputs).all(dim=[1,2]).sum()
-                    pixel_matches = (pred_classes == outputs).float().mean()
-                    
-                    val_metrics['loss'] += val_loss.item()
-                    val_metrics['exact'] += exact_matches.item()
-                    val_metrics['pixel'] += pixel_matches.item()
-                    val_metrics['samples'] += inputs.size(0)
-            
-            train_exact = train_metrics['exact'] / train_metrics['samples'] * 100
-            train_loss = train_metrics['loss'] / len(train_loader)
-            val_exact = val_metrics['exact'] / val_metrics['samples'] * 100
-            val_loss = val_metrics['loss'] / len(val_loader)
-            val_pixel = val_metrics['pixel'] / len(val_loader) * 100
-            
-            print(f"\n🎨 PROMETHEUS Epoch {epoch+1}:")
-            print(f"   🎯 Train: {train_exact:.2f}% exact, Loss: {train_loss:.3f}")
-            print(f"   🎯 Val: {val_exact:.2f}% exact, Loss: {val_loss:.3f}, Pixel: {val_pixel:.1f}%")
-            
-            # Save best model
-            if val_exact > best_exact:
-                best_exact = val_exact
+                    losses = loss_fn(model_outputs, outputs, input_grids)
                 
-                os.makedirs(models_dir, exist_ok=True)
-                torch.save({
-                    'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict(),
-                    'scheduler_state_dict': scheduler.state_dict(),
-                    'best_exact': best_exact,
-                    'epoch': epoch,
-                    'config': PROMETHEUS_CONFIG
-                }, best_model_path)
-                print(f"💾 New best model saved: {best_exact:.2f}% exact match")
+                loss = losses['total'] / PROMETHEUS_CONFIG['gradient_accumulation']
+                
+                scaler.scale(loss).backward()
+                
+                if (batch_idx + 1) % PROMETHEUS_CONFIG['gradient_accumulation'] == 0:
+                    scaler.unscale_(optimizer)
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), PROMETHEUS_CONFIG['gradient_clip'])
+                    
+                    scaler.step(optimizer)
+                    scaler.update()
+                    optimizer.zero_grad()
+                    
+                    scheduler.step()
+                
+                train_metrics['loss'] += losses['total'].item()
+                train_metrics['exact'] += losses['exact_count'].item()
+                train_metrics['samples'] += inputs.size(0)
+                
+                if batch_idx % 10 == 0:
+                    current_exact = train_metrics['exact'] / max(1, train_metrics['samples']) * 100
+                    current_loss = train_metrics['loss'] / max(1, batch_idx + 1)
+                    pbar.set_postfix({'loss': f"{current_loss:.3f}", 'exact': f"{current_exact:.1f}%"})
+            
+            # Validation
+            if epoch % 5 == 0:
+                model.eval()
+                val_metrics = defaultdict(float)
+                
+                with torch.no_grad():
+                    for batch in tqdm(val_loader, desc="Validation"):
+                        inputs = batch['inputs'].to(device)
+                        outputs = batch['outputs'].to(device)
+                        
+                        inputs = torch.clamp(inputs, 0, 9)
+                        outputs = torch.clamp(outputs, 0, 9)
+                        
+                        input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+                        target_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
+                        
+                        model_outputs = model(input_grids, target_grids, mode='inference')
+                        pred_output = model_outputs['predicted_output']
+                        
+                        val_loss = F.cross_entropy(pred_output, outputs)
+                        pred_classes = pred_output.argmax(dim=1)
+                        exact_matches = (pred_classes == outputs).all(dim=[1,2]).sum()
+                        pixel_matches = (pred_classes == outputs).float().mean()
+                        
+                        val_metrics['loss'] += val_loss.item()
+                        val_metrics['exact'] += exact_matches.item()
+                        val_metrics['pixel'] += pixel_matches.item()
+                        val_metrics['samples'] += inputs.size(0)
+                
+                train_exact = train_metrics['exact'] / train_metrics['samples'] * 100
+                train_loss = train_metrics['loss'] / len(train_loader)
+                val_exact = val_metrics['exact'] / val_metrics['samples'] * 100
+                val_loss = val_metrics['loss'] / len(val_loader)
+                val_pixel = val_metrics['pixel'] / len(val_loader) * 100
+                
+                print(f"\n🎨 PROMETHEUS Stage {stage}, Epoch {epoch+1}:")
+                print(f"   🎯 Train: {train_exact:.2f}% exact, Loss: {train_loss:.3f}")
+                print(f"   🎯 Val: {val_exact:.2f}% exact, Loss: {val_loss:.3f}, Pixel: {val_pixel:.1f}%")
+                
+                # Save best model
+                if val_exact > best_exact:
+                    best_exact = val_exact
+                    
+                    os.makedirs(models_dir, exist_ok=True)
+                    torch.save({
+                        'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict(),
+                        'scheduler_state_dict': scheduler.state_dict(),
+                        'best_exact': best_exact,
+                        'stage': stage,
+                        'epoch': epoch,
+                        'config': PROMETHEUS_CONFIG
+                    }, best_model_path)
+                    print(f"💾 New best model saved: {best_exact:.2f}% exact match")
     
     print("\n🎉 PROMETHEUS Specialized Training Complete!")
     print(f"🏆 Best Performance: {best_exact:.2f}% exact match")

@@ -205,9 +205,17 @@ class MEPTLoss(nn.Module):
             focal_loss = alpha * ((1 - pt) ** gamma) * ce_loss
             reconstruction_loss = focal_loss.reshape(B, H, W).mean(dim=[1,2])
             
-            # 2. Exact match bonus with progressive scaling
-            exact_matches = (pred_indices == target_indices).all(dim=[1,2]).float()
-            exact_bonus = -exact_matches * self.weights['exact_match']
+            # 2. Softer exact match with IoU-based scoring (IRIS improvement)
+            exact_matches_strict = (pred_indices == target_indices).all(dim=[1,2]).float()
+            
+            # IoU-based soft exact match for better learning
+            intersection = (pred_indices == target_indices).float().sum(dim=[1,2])
+            union = (pred_indices.shape[1] * pred_indices.shape[2]) # Total pixels
+            iou_scores = intersection / union
+            
+            # Combine strict and soft matches (weighted towards IoU for learning)
+            combined_matches = 0.3 * exact_matches_strict + 0.7 * iou_scores
+            exact_bonus = -combined_matches * self.weights['exact_match']
             
             # 3. Diversity loss - encourage diverse predictions
             pred_entropy = -(pred.softmax(dim=1) * pred.log_softmax(dim=1)).sum(dim=1).mean(dim=[1,2])
@@ -216,10 +224,13 @@ class MEPTLoss(nn.Module):
             # 4. Memory alignment loss - align with successful past examples
             memory_loss = self._calculate_memory_loss(pred, input_indices, target_indices)
             
-            # 5. Transformation penalty - prevent copying
+            # 5. Smart transformation penalty - task-aware (IRIS improvement)
             is_identity_task = (input_indices == target_indices).all(dim=[1,2]).float()
             same_as_input = (pred_indices == input_indices).float().mean(dim=[1,2])
-            transformation_penalty = same_as_input * (1 - is_identity_task) * self.transformation_penalty
+            
+            # Reduce penalty when making progress towards target
+            progress_factor = 1.0 - iou_scores  # Less penalty when IoU is high
+            transformation_penalty = same_as_input * (1 - is_identity_task) * self.transformation_penalty * progress_factor
             
             # Combine losses with dynamic weighting
             total_loss = (
@@ -237,9 +248,9 @@ class MEPTLoss(nn.Module):
                     total_loss[i].item(), exact_matches[i].item() > 0.5
                 )
             
-            # Update pattern bank with exact matches
+            # Update pattern bank with high-quality matches (strict + soft)
             for i in range(B):
-                if exact_matches[i] > 0.5:
+                if exact_matches_strict[i] > 0.5 or combined_matches[i] > 0.8:
                     self.pattern_bank.add_pattern(
                         input_indices[i].cpu().numpy(),
                         target_indices[i].cpu().numpy()
@@ -256,7 +267,9 @@ class MEPTLoss(nn.Module):
                 'transformation': transformation_penalty.mean(),
                 'diversity': diversity_loss.mean(),
                 'memory': memory_loss.mean(),
-                'exact_count': exact_matches.sum()
+                'exact_count': exact_matches_strict.sum(),
+                'soft_exact_count': combined_matches.sum(),
+                'avg_iou': iou_scores.mean()
             }
         else:
             # Fall back to regular loss behavior

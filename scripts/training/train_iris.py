@@ -108,7 +108,7 @@ from colab_training_v4_megascale_curriculum import (
 
 BATCH_SIZE = 512
 GRADIENT_ACCUMULATION_STEPS = 4
-LEARNING_RATE = 0.005
+LEARNING_RATE = 0.001  # Reduced for better IRIS convergence
 NUM_EPOCHS = 300
 MAX_GRID_SIZE = 25
 NUM_COLORS = 10
@@ -130,8 +130,8 @@ RECONSTRUCTION_WEIGHT = 1.0
 EDGE_WEIGHT = 0.3
 COLOR_BALANCE_WEIGHT = 0.2
 STRUCTURE_WEIGHT = 0.3
-TRANSFORMATION_PENALTY = 0.5
-EXACT_MATCH_BONUS = 5.0
+TRANSFORMATION_PENALTY = 0.3  # Reduced to allow more transformation learning
+EXACT_MATCH_BONUS = 3.0  # Reduced to better balance with other losses
 
 CURRICULUM_STAGES = 3
 EPOCHS_PER_STAGE = 100
@@ -448,7 +448,17 @@ def train_iris():
                 with autocast('cuda'):
                     model_outputs = model(input_grids, output_grids, mode='train')
                     pred_output = model_outputs['predicted_output']
+                    # Integrate IRIS color mapping into loss calculation
+                    mapped_output = model_outputs.get('mapped_output', pred_output)
+                    
                     losses = loss_fn(pred_output, output_grids, input_grids)
+                    
+                    # Add color mapping consistency loss for IRIS
+                    if 'color_map' in model_outputs:
+                        color_map_loss = F.mse_loss(mapped_output, output_grids) * 0.5
+                        losses['total'] = losses['total'] + color_map_loss
+                        losses['color_mapping'] = color_map_loss
+                    
                     loss = losses['total'] / GRADIENT_ACCUMULATION_STEPS
                 
                 scaler.scale(loss).backward()
@@ -468,7 +478,8 @@ def train_iris():
                 pbar.set_postfix({
                     'loss': f"{losses['total'].item():.3f}",
                     'exact': f"{losses['exact_count'].item():.0f}",
-                    'trans': f"{losses.get('transformation', torch.tensor(0)).item():.2f}"
+                    'soft': f"{losses.get('soft_exact_count', torch.tensor(0)).item():.1f}",
+                    'iou': f"{losses.get('avg_iou', torch.tensor(0)).item():.2f}"
                 })
                 
                 # LEAP training for Stage 0

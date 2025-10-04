@@ -114,11 +114,11 @@ STAGE_CONFIG = [
 # Device setup
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-print(f"\\033[96m{'=' * 120}\\033[0m")
-print(f"\\033[96mMINERVA V6 Ultimate Strategic Intelligence Training - Complete Grid Mastery for ARC-AGI-2\\033[0m")
-print(f"\\033[96mDeep Strategic Architecture + Mega Pattern Memory + Program Synthesis + OLYMPUS Preparation\\033[0m")
-print(f"\\033[96mTarget: 90%+ Performance with Ultimate Strategic Intelligence Mastery\\033[0m")
-print(f"\\033[96m{'=' * 120}\\033[0m")
+print(f"\033[96m{'=' * 120}\033[0m")
+print(f"\033[96mMINERVA V6 Ultimate Strategic Intelligence Training - Complete Grid Mastery for ARC-AGI-2\033[0m")
+print(f"\033[96mDeep Strategic Architecture + Mega Pattern Memory + Program Synthesis + OLYMPUS Preparation\033[0m") 
+print(f"\033[96mTarget: 90%+ Performance with Ultimate Strategic Intelligence Mastery\033[0m")
+print(f"\033[96m{'=' * 120}\033[0m")
 
 
 class MinervaV6UltimateStrategicLoss(nn.Module):
@@ -317,7 +317,7 @@ class UltimateStrategicDataset(Dataset):
         if augmentation_factor > 1:
             self._augment_strategic_data()
         
-        print(f"\\033[96mLoaded {len(self.samples)} ultimate strategic samples for MINERVA V6 training\\033[0m")
+        print(f"Loaded {len(self.samples)} ultimate strategic samples for MINERVA V6 training")
     
     def _load_ultimate_strategic_data(self):
         """Load data with ultimate strategic complexity focus - PROVEN V5 APPROACH"""
@@ -490,7 +490,7 @@ class UltimateStrategicDataset(Dataset):
                     augmented_samples.append(augmented)
         
         self.samples.extend(augmented_samples)
-        print(f"\\033[96mAugmented from {original_count} to {len(self.samples)} samples ({self.augmentation_factor}x)\\033[0m")
+        print(f"Augmented from {original_count} to {len(self.samples)} samples ({self.augmentation_factor}x)")
     
     def _augment_single_sample(self, sample: Dict) -> Optional[Dict]:
         """Augment single sample with strategic transformations"""
@@ -588,7 +588,7 @@ def ultimate_strategic_collate_fn(batch: List) -> Tuple[torch.Tensor, torch.Tens
 
 def train_minerva_specialized_v6():
     """Main training function for MINERVA V6"""
-    print(f"\\033[96mInitializing MINERVA V6 Ultimate Strategic Intelligence Training...\\033[0m")
+    print(f"\033[96mInitializing MINERVA V6 Ultimate Strategic Intelligence Training...\033[0m")
     
     # Initialize ultimate enhanced model
     model = MinervaV6Enhanced(
@@ -597,7 +597,7 @@ def train_minerva_specialized_v6():
         preserve_weights=True
     ).to(device)
     
-    print(f"\\033[96mModel initialized with {sum(p.numel() for p in model.parameters())} parameters\\033[0m")
+    print(f"\033[96mModel initialized with {sum(p.numel() for p in model.parameters())} parameters\033[0m")
     
     # Load existing weights from minerva_best.pt
     model_paths = [
@@ -611,11 +611,11 @@ def train_minerva_specialized_v6():
         if os.path.exists(model_path):
             weights_loaded = model.load_compatible_weights(model_path)
             if weights_loaded:
-                print(f"\\033[96mSuccessfully loaded weights from {model_path}\\033[0m")
+                print(f"\033[96mSuccessfully loaded weights from {model_path}\033[0m")
                 break
     
     if not weights_loaded:
-        print(f"\\033[96mStarting fresh MINERVA V6 training\\033[0m")
+        print(f"\033[96mStarting fresh MINERVA V6 training\033[0m")
     
     # Initialize ultimate loss function
     criterion = MinervaV6UltimateStrategicLoss(MINERVA_V6_CONFIG)
@@ -644,14 +644,14 @@ def train_minerva_specialized_v6():
     best_performance = 0.0
     training_stats = defaultdict(list)
     
-    print(f"\\033[96mStarting Ultimate Progressive Strategic Training - 20 Complete Grid Mastery Stages\\033[0m")
+    print(f"\033[96mStarting Ultimate Progressive Strategic Training - 20 Complete Grid Mastery Stages\033[0m")
     
     # Progressive training through ultimate strategic stages
     for stage_idx, stage_config in enumerate(STAGE_CONFIG):
-        print(f"\\n\\033[96m{'=' * 110}\\033[0m")
-        print(f"\\033[38;2;255;215;0mStage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
-              f"Strategic: {stage_config['strategic_complexity']} | Focus: {stage_config['focus']}\\033[0m")
-        print(f"\\033[96m{'=' * 110}\\033[0m")
+        print(f"\n\033[96m{'=' * 110}\033[0m")
+        print(f"\033[38;2;255;215;0mStage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
+              f"Strategic: {stage_config['strategic_complexity']} | Focus: {stage_config['focus']}\033[0m")
+        print(f"\033[96m{'=' * 110}\033[0m")
         
         # Create ultimate strategic dataset for this stage
         dataset = UltimateStrategicDataset(
@@ -728,7 +728,7 @@ def train_ultimate_strategic_stage(model, dataloader, criterion, optimizer, sche
         ultimate_strategic_count = 0
         
         # Progress bar
-        pbar = tqdm(dataloader, desc=f"\\033[38;2;255;204;153mUltimate Strategic Stage {stage_idx} Epoch {epoch}\\033[0m")
+        pbar = tqdm(dataloader, desc=f"Ultimate Strategic Stage {stage_idx} Epoch {epoch}")
         
         for batch_idx, (inputs, targets, metadata) in enumerate(pbar):
             inputs = inputs.to(device)

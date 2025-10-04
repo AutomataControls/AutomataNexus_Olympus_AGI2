@@ -393,9 +393,10 @@ class MinervaV6Enhanced(nn.Module):
         # Separate parameter for ensemble weights (can't go in ModuleDict)
         self.ensemble_weights = nn.Parameter(torch.ones(5) / 5)  # Equal initial weighting
         
-        # Enhanced V6 decoder with multi-scale processing
+        # Enhanced V6 decoder with multi-scale processing (928 total input channels)
+        # 256 (base) + 256 (enhanced) + 256 (coord) + 64 (pattern) + 96 (synthesis) = 928
         self.v6_decoder = nn.Sequential(
-            nn.ConvTranspose2d(hidden_dim * 4, hidden_dim * 2, 3, padding=1),  # More channels
+            nn.ConvTranspose2d(928, hidden_dim * 2, 3, padding=1),  # Correct input channels
             nn.BatchNorm2d(hidden_dim * 2),
             nn.GELU(),
             nn.Dropout2d(0.05),

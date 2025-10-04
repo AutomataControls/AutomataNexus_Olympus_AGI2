@@ -32,6 +32,7 @@ from src.models.iris_model import EnhancedIrisNet
 # Enhanced IRIS Configuration V3 - Advanced Color Mastery
 IRIS_CONFIG = {
     # Core Training Parameters - Enhanced for V3
+    'max_grid_size': 30,  # Maximum grid size
     'batch_size': 48,  # Optimal for color pattern complexity
     'learning_rate': 0.00025,  # Careful learning for color precision
     'num_epochs': 500,  # Extended training: 10 stages x 50 epochs
@@ -484,7 +485,7 @@ def train_iris_specialized_v3():
                 'best_performance': best_performance,
                 'stage': stage_idx,
                 'config': IRIS_CONFIG
-            }, '/content/AutomataNexus_Olympus_AGI2/models/iris_v3_best.pt')
+            }, '/content/AutomataNexus_Olympus_AGI2/models/iris_best.pt')
             print(f"\033[96mNew best color performance: {best_performance:.2%} - Model saved!\033[0m")
         
         # Memory cleanup

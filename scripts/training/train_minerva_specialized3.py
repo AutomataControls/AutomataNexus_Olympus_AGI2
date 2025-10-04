@@ -23,9 +23,9 @@ from collections import defaultdict
 import math
 
 # Add project paths
-sys.path.append('/mnt/d/opt/AutomataNexus_Olympus_AGI2')
-sys.path.append('/mnt/d/opt/AutomataNexus_Olympus_AGI2/src')
-sys.path.append('/mnt/d/opt/AutomataNexus_Olympus_AGI2/scripts/training')
+sys.path.append('/content/AutomataNexus_Olympus_AGI2')
+sys.path.append('/content/AutomataNexus_Olympus_AGI2/src')
+sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
 
 # Import MINERVA model
 from src.models.minerva_model import EnhancedMinervaNet
@@ -435,10 +435,10 @@ def train_minerva_specialized_v3():
         print("🆕 No existing model found - starting fresh V3 training")
     
     # Data directory
-    DATA_DIR = '/mnt/d/opt/AutomataNexus_Olympus_AGI2/data'
+    DATA_DIR = '/content/AutomataNexus_Olympus_AGI2/data'
     
     # Import dataset components
-    sys.path.append('/mnt/d/opt/AutomataNexus_Olympus_AGI2/scripts/training')
+    sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
     try:
         from colab_training_v4_megascale_curriculum import CurriculumMegaScaleDataset
         dataset_available = True

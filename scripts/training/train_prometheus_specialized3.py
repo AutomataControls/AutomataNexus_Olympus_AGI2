@@ -294,10 +294,6 @@ class PrometheusUltimateCreativeLoss(PrometheusEnhancedLossV2):
         iou_scores = intersection / union
         
         # ULTRA TEAL: 85% IoU weighting + 15% strict (maximum soft matching)
-        if self.ultra_iou_weighting:
-            combined_matches = 0.15 * exact_matches_strict + 0.85 * iou_scores
-        else:
-            # ULTRA TEAL: 85% IoU + 15% strict (maximum soft matching)
         combined_matches = 0.15 * exact_matches_strict + 0.85 * iou_scores
         
         exact_count = combined_matches.sum()

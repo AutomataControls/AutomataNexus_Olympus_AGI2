@@ -502,16 +502,16 @@ class UltimateStrategicDataset(Dataset):
         
         if aug_type == 'rotate':
             k = random.choice([1, 2, 3])
-            input_grid = np.rot90(input_grid, k)
-            output_grid = np.rot90(output_grid, k)
+            input_grid = np.rot90(input_grid, k).copy()
+            output_grid = np.rot90(output_grid, k).copy()
         elif aug_type == 'flip':
             axis = random.choice([0, 1])
-            input_grid = np.flip(input_grid, axis)
-            output_grid = np.flip(output_grid, axis)
+            input_grid = np.flip(input_grid, axis).copy()
+            output_grid = np.flip(output_grid, axis).copy()
         elif aug_type == 'transpose':
             if input_grid.shape[0] == input_grid.shape[1] and output_grid.shape[0] == output_grid.shape[1]:
-                input_grid = input_grid.T
-                output_grid = output_grid.T
+                input_grid = input_grid.T.copy()
+                output_grid = output_grid.T.copy()
         elif aug_type == 'noise':
             # Add strategic noise (color permutation)
             if random.random() < 0.3:
@@ -539,9 +539,9 @@ class UltimateStrategicDataset(Dataset):
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, Dict]:
         sample = self.samples[idx]
         
-        # Convert to tensors
-        input_tensor = torch.tensor(sample['input'], dtype=torch.long)
-        output_tensor = torch.tensor(sample['output'], dtype=torch.long)
+        # Convert to tensors (copy to avoid negative stride issues)
+        input_tensor = torch.tensor(sample['input'].copy(), dtype=torch.long)
+        output_tensor = torch.tensor(sample['output'].copy(), dtype=torch.long)
         
         # Pad to consistent size
         target_h = min(self.max_grid_size, max(input_tensor.shape[0], output_tensor.shape[0]))

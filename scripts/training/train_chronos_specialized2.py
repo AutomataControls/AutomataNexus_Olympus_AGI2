@@ -164,12 +164,12 @@ class ChronosEnhancedLoss(nn.Module):
         pred_output = model_outputs['predicted_output']
         B, C, H, W = pred_output.shape
         
-        # Apply label smoothing for better generalization
-        if self.label_smoothing > 0:
-            targets = self._apply_label_smoothing(targets, self.label_smoothing)
-        
-        # Enhanced focal loss with temporal focus
+        # Enhanced focal loss with temporal focus (before label smoothing to avoid tuple issues)
         focal_loss = self._temporal_focal_loss(pred_output, targets, gamma=2.0)
+        
+        # Apply label smoothing for better generalization (after focal loss calculation)
+        if self.label_smoothing > 0 and not isinstance(targets, tuple):
+            targets = self._apply_label_smoothing(targets, self.label_smoothing)
         
         # Enhanced IoU-based exact match scoring (PROMETHEUS-style 80% weighting)
         pred_indices = pred_output.argmax(dim=1)
@@ -277,20 +277,19 @@ class ChronosEnhancedLoss(nn.Module):
     
     def _temporal_focal_loss(self, pred, target, gamma=2.0):
         """Focal loss optimized for temporal sequence analysis"""
+        # Handle mixup tuples
+        if isinstance(target, tuple):
+            target_a, target_b = target
+            loss_a = self._temporal_focal_loss(pred, target_a, gamma)
+            loss_b = self._temporal_focal_loss(pred, target_b, gamma)
+            return (loss_a + loss_b) / 2  # Average the losses
+        
         target_idx = target.argmax(dim=1) if target.dim() > 3 else target
         ce_loss = F.cross_entropy(pred, target_idx, reduction='none')
         
-        # Temporal weighting - focus more on sequence transitions
+        # Simplified temporal weighting to avoid issues
         pt = torch.exp(-ce_loss)
-        temporal_weights = torch.ones_like(ce_loss)
-        
-        # Weight based on temporal complexity (edge pixels get higher weight)
-        for b in range(pred.shape[0]):
-            # Edge detection for temporal transitions
-            target_edges = self._detect_temporal_edges(target_idx[b])
-            temporal_weights[b] += target_edges * 0.5
-        
-        focal = (1 - pt) ** gamma * ce_loss * temporal_weights
+        focal = (1 - pt) ** gamma * ce_loss
         return focal.mean()
     
     def _detect_temporal_edges(self, grid):

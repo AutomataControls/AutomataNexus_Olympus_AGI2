@@ -521,9 +521,22 @@ class AtlasV4Enhanced(nn.Module):
         spatial_confidence = torch.sigmoid(self.geometric_confidence) * ensemble_output['spatial_consensus']
         spatial_weight = torch.sigmoid(self.spatial_mix) * spatial_confidence
         
+        # Ensure predictions have matching dimensions
+        if enhanced_prediction.shape != base_prediction.shape:
+            # Resize base prediction to match enhanced prediction
+            base_prediction = F.interpolate(
+                base_prediction, 
+                size=(enhanced_prediction.shape[2], enhanced_prediction.shape[3]),
+                mode='bilinear', 
+                align_corners=False
+            )
+        
+        # Expand spatial_weight to match prediction dimensions
+        spatial_weight_expanded = spatial_weight.unsqueeze(-1).unsqueeze(-1).expand_as(enhanced_prediction)
+        
         final_prediction = (
-            spatial_weight * enhanced_prediction + 
-            (1 - spatial_weight) * base_prediction
+            spatial_weight_expanded * enhanced_prediction + 
+            (1 - spatial_weight_expanded) * base_prediction
         )
         
         # Comprehensive output for ensemble coordination

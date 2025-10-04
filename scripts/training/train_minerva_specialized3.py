@@ -126,174 +126,53 @@ class EnhancedMinervaLoss(nn.Module):
         return self._calculate_single_loss(model_outputs, targets, inputs)
     
     def _calculate_single_loss(self, model_outputs, targets, inputs):
-        """Calculate enhanced loss with program synthesis and strategic reasoning"""
+        """Simplified stable loss based on PROMETHEUS success"""
         pred_output = model_outputs['predicted_output']
         B, C, H, W = pred_output.shape
         
-        # Apply label smoothing for better generalization
-        if MINERVA_CONFIG.get('label_smoothing', 0) > 0:
-            targets = self._apply_label_smoothing(targets, MINERVA_CONFIG['label_smoothing'])
-        
-        # Enhanced focal loss with strategic pattern weighting
-        focal_loss = self._enhanced_focal_loss(pred_output, targets, gamma=2.5)
+        # Basic cross entropy loss
+        target_indices = targets.argmax(dim=1) if targets.dim() > 3 else targets
+        ce_loss = F.cross_entropy(pred_output, target_indices)
         
         # ULTRA TEAL exact match scoring (85% IoU + 15% strict)
         pred_indices = pred_output.argmax(dim=1)
-        target_indices = targets.argmax(dim=1) if targets.dim() > 3 else targets
         
         # Strict exact matches
         exact_matches_strict = (pred_indices == target_indices).all(dim=[1,2]).float()
         
         # IoU-based soft exact match
         intersection = (pred_indices == target_indices).float().sum(dim=[1,2])
-        union = torch.full_like(intersection, H * W)
+        union = torch.clamp(torch.full_like(intersection, H * W), min=1.0)  # Avoid division by zero
         iou_scores = intersection / union
         
-        # ULTRA TEAL: 85% IoU + 15% strict matching for maximum soft matching
+        # ULTRA TEAL: 85% IoU + 15% strict matching
         combined_matches = self.strict_match_weight * exact_matches_strict + self.ultra_teal_iou_weight * iou_scores
         exact_count = combined_matches.sum()
         exact_bonus = -combined_matches.mean() * self.exact_match_bonus
-        exact_bonus = exact_bonus.clamp(min=-4.0)  # More aggressive than standard
+        exact_bonus = torch.clamp(exact_bonus, min=-3.0, max=0.0)  # Stable clamping
         
-        # Enhanced transformation penalty with strategic logic focus
+        # Simple transformation penalty
         input_indices = inputs.argmax(dim=1) if inputs.dim() > 3 else inputs
         copy_penalty = (pred_indices == input_indices).all(dim=[1,2]).float()
         transform_penalty = copy_penalty.mean() * self.transformation_penalty
         
-        # Strategic planning bonus
-        strategic_planning_bonus = 0.0
-        if 'features' in model_outputs and MINERVA_CONFIG.get('strategic_planning_weight', 0) > 0:
-            features = model_outputs['features']
-            # Reward complex feature representations - handle tensor shapes safely
-            if features.numel() > 0:
-                flattened = features.reshape(B, -1)
-                if flattened.shape[1] > 0:
-                    feature_complexity = torch.std(flattened, dim=1).mean()
-                    strategic_planning_bonus = feature_complexity * MINERVA_CONFIG['strategic_planning_weight'] * 0.01
+        # Total loss - keep it simple and stable
+        total_loss = ce_loss + transform_penalty + exact_bonus
         
-        # Multi-step reasoning bonus
-        multi_step_bonus = 0.0
-        if 'transform_params' in model_outputs and MINERVA_CONFIG.get('multi_step_reasoning_weight', 0) > 0:
-            transform_params = model_outputs['transform_params']
-            # Reward diverse transformation parameters - handle tensor shapes safely
-            if transform_params.numel() > 0:
-                flattened = transform_params.reshape(B, -1)
-                if flattened.shape[1] > 0:
-                    transform_diversity = torch.std(flattened, dim=1).mean()
-                    multi_step_bonus = transform_diversity * MINERVA_CONFIG['multi_step_reasoning_weight'] * 0.01
-        
-        # Pattern diversity bonus
-        diversity_bonus = 0.0
-        if MINERVA_CONFIG.get('pattern_diversity_bonus'):
-            diversity_bonus = self._calculate_pattern_diversity(pred_indices)
-        
-        # Abstract reasoning complexity bonus for larger grids
-        complexity_bonus = 0.0
-        if H > 15:  # Reward performance on complex grids
-            grid_complexity_factor = min((H * W) / 1225.0, 1.0)  # Normalize by 35x35
-            complexity_bonus = combined_matches.mean() * grid_complexity_factor * 0.08
-        
-        # Enhanced creativity bonus
-        creativity_bonus = 0.0
-        if MINERVA_CONFIG.get('creativity_weight', 0) > 0:
-            # Reward predictions that are different from input but match target
-            input_output_diff = (pred_indices != input_indices).float().mean()
-            target_match = combined_matches.mean()
-            creativity_bonus = input_output_diff * target_match * MINERVA_CONFIG['creativity_weight']
-        
-        # Total enhanced loss
-        total_loss = (focal_loss + transform_penalty + exact_bonus - 
-                     strategic_planning_bonus - multi_step_bonus - diversity_bonus - 
-                     complexity_bonus - creativity_bonus)
-        
-        # Stability check
+        # Stability check with safer fallback
         if torch.isnan(total_loss) or torch.isinf(total_loss):
-            print(f"⚠️ NaN/Inf loss in MINERVA V3, using focal only")
-            total_loss = focal_loss.clamp(max=10.0)
+            total_loss = ce_loss.clamp(max=10.0)
         
         return {
             'total': total_loss,
-            'focal': focal_loss,
+            'focal': ce_loss,
             'transform': transform_penalty,
             'exact_bonus': exact_bonus,
             'exact_count': exact_count,
             'ultra_teal_count': combined_matches.sum(),
             'avg_iou': iou_scores.mean(),
-            'strategic_bonus': strategic_planning_bonus,
-            'multi_step_bonus': multi_step_bonus,
-            'diversity_bonus': diversity_bonus,
-            'complexity_bonus': complexity_bonus,
-            'creativity_bonus': creativity_bonus,
         }
     
-    def _apply_label_smoothing(self, targets, smoothing):
-        """Apply label smoothing for better generalization"""
-        if targets.dim() == 3:  # Convert indices to one-hot if needed
-            targets = F.one_hot(targets, num_classes=10).permute(0, 3, 1, 2).float()
-        
-        C = targets.shape[1]
-        smooth_targets = targets * (1 - smoothing) + smoothing / C
-        return smooth_targets
-    
-    def _enhanced_focal_loss(self, pred, target, gamma=2.5):
-        """Enhanced focal loss with strategic pattern emphasis"""
-        target_idx = target.argmax(dim=1) if target.dim() > 3 else target
-        ce_loss = F.cross_entropy(pred, target_idx, reduction='none')
-        
-        # Enhanced strategic weighting
-        pt = torch.exp(-ce_loss)
-        strategic_weights = torch.ones_like(ce_loss)
-        
-        # Weight based on pattern complexity and strategic elements
-        for b in range(pred.shape[0]):
-            grid = target_idx[b]
-            H, W = grid.shape
-            
-            # Complex pattern bonus (more unique colors)
-            unique_colors = torch.unique(grid).numel()
-            if unique_colors > 3:
-                strategic_weights[b] *= 1.3
-            
-            # Spatial complexity bonus (more varied local patterns)
-            if H >= 8 and W >= 8:
-                local_variance = 0
-                for i in range(0, H-2, 2):
-                    for j in range(0, W-2, 2):
-                        local_patch = grid[i:i+3, j:j+3]
-                        local_variance += torch.unique(local_patch).numel()
-                
-                avg_local_complexity = local_variance / ((H//2) * (W//2))
-                if avg_local_complexity > 2.5:
-                    strategic_weights[b] *= 1.2
-        
-        focal = (1 - pt) ** gamma * ce_loss * strategic_weights
-        return focal.mean()
-    
-    def _calculate_pattern_diversity(self, pred_indices):
-        """Calculate pattern diversity bonus for enhanced strategic reasoning"""
-        diversity_scores = []
-        B = pred_indices.shape[0]
-        
-        for b in range(B):
-            grid = pred_indices[b]
-            H, W = grid.shape
-            
-            # Count unique local patterns (3x3 neighborhoods)
-            patterns = set()
-            for i in range(H-2):
-                for j in range(W-2):
-                    pattern = tuple(grid[i:i+3, j:j+3].flatten().tolist())
-                    patterns.add(pattern)
-            
-            # Normalize by possible positions
-            max_patterns = (H-2) * (W-2)
-            if max_patterns > 0:
-                diversity_score = len(patterns) / max_patterns
-                diversity_scores.append(torch.tensor(diversity_score, device=pred_indices.device))
-        
-        if diversity_scores:
-            return torch.stack(diversity_scores).mean() * 0.03
-        return torch.tensor(0.0, device=pred_indices.device)
 
 
 def mixup_data(x, y, alpha=0.3):
@@ -447,9 +326,9 @@ def train_minerva_specialized_v3():
     scaler = GradScaler('cuda' if device.type == 'cuda' else 'cpu')
     
     # Model directory
-    models_dir = '/mnt/d/opt/AutomataNexus_Olympus_AGI2/arc_models_v4'
+    models_dir = '/content/AutomataNexus_Olympus_AGI2/arc_models_v4'
     os.makedirs(models_dir, exist_ok=True)
-    best_model_path = f'{models_dir}/minerva_v3_enhanced_best.pt'
+    best_model_path = f'{models_dir}/minerva_best.pt'
     
     best_exact = 0.0
     global_epoch = 0
@@ -687,8 +566,7 @@ def train_minerva_specialized_v3():
                     'loss': f"{losses['total'].item():.3f}",
                     'exact': f"{losses['exact_count'].item():.0f}",
                     'teal': f"{losses['ultra_teal_count'].item():.1f}",
-                    'IoU': f"{losses.get('avg_iou', torch.tensor(0)).item():.2f}",
-                    'strategic': f"{losses.get('strategic_bonus', torch.tensor(0)).item():.3f}",
+                    'IoU': f"{losses['avg_iou'].item():.2f}",
                     'lr': f"{scheduler.get_last_lr()[0]:.6f}"
                 })
             

@@ -960,10 +960,9 @@ def train_prometheus_specialized_v3():
                 val_exact_pct = val_metrics['exact'] / val_metrics['samples'] * 100
                 val_loss = val_metrics['loss'] / len(val_loader)
                 
-                print(f"\n🎨 PROMETHEUS V3 Stage {stage}, Epoch {epoch+1} (Global: {global_epoch}):")
-                print(f"   🎯 Train: {train_exact_pct:.2f}% exact, Loss: {train_loss:.3f}")
-                print(f"   🎯 Val: {val_exact_pct:.2f}% exact, Loss: {val_loss:.3f}")
-                print(f"   📊 LR: {scheduler.get_last_lr()[0]:.6f} | Grid: {grid_size}x{grid_size} | ULTRA TEAL: 85%")
+                print(f"\n🎨 PROMETHEUS Epoch {epoch+1} (Stage {stage}, {grid_size}x{grid_size}):")
+                print(f"   \033[96m🎯 Train: {train_exact_pct:.2f}% exact, Loss: {train_loss:.3f}\033[0m")
+                print(f"   \033[96m🎯 Val: {val_exact_pct:.2f}% exact, Loss: {val_loss:.3f}\033[0m")
                 
                 # Track stage best
                 if val_exact_pct > stage_best_exact:
@@ -982,7 +981,7 @@ def train_prometheus_specialized_v3():
                         'config': PROMETHEUS_CONFIG_V3,
                         'stage_config': STAGE_CONFIG_V3
                     }, best_model_path)
-                    print(f"   💾 NEW V3 ULTIMATE BEST: {val_exact_pct:.2f}% exact match saved!")
+                    print(f"   \033[96m🏆 New best model! Exact: {val_exact_pct:.2f}%\033[0m")
         
         # Store stage results
         stage_results[stage] = {
@@ -991,7 +990,7 @@ def train_prometheus_specialized_v3():
             'final_epoch': global_epoch
         }
         
-        print(f"\n🎨 Stage {stage} complete! Final exact: {stage_best_exact:.2f}%")
+        print(f"\n\033[96m✅ Stage {stage} complete! Final exact: {stage_best_exact:.2f}%\033[0m")
     
     # Ultimate final results summary
     print(f"\n🎉 PROMETHEUS V3 Ultimate Creative Training Complete!")

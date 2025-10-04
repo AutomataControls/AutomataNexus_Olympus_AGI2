@@ -623,10 +623,9 @@ def train_minerva_specialized_v3():
                 val_ultra_teal_pct = val_metrics['ultra_teal'] / val_metrics['samples'] * 100
                 val_loss = val_metrics['loss'] / len(val_loader)
                 
-                print(f"\n🧠 MINERVA V3 Stage {stage}, Epoch {epoch+1} (Global: {global_epoch}):")
-                print(f"   🎯 Train: {train_exact_pct:.2f}% exact | {train_ultra_teal_pct:.2f}% ULTRA TEAL | Loss: {train_loss:.3f}")
-                print(f"   🎯 Val: {val_exact_pct:.2f}% exact | {val_ultra_teal_pct:.2f}% ULTRA TEAL | Loss: {val_loss:.3f}")
-                print(f"   📊 LR: {scheduler.get_last_lr()[0]:.6f} | Grid: {grid_size}x{grid_size} | Complexity: {pattern_complexity}")
+                print(f"\n🧠 MINERVA Epoch {epoch+1} (Stage {stage}, {grid_size}x{grid_size}):")
+                print(f"   \033[96m🎯 Train: {train_exact_pct:.2f}% exact, Loss: {train_loss:.3f}\033[0m")
+                print(f"   \033[96m🎯 Val: {val_exact_pct:.2f}% exact, Loss: {val_loss:.3f}, IoU: {train_ultra_teal_pct:.1f}%\033[0m")
                 
                 # Track stage best
                 if val_exact_pct > stage_best_exact:
@@ -645,7 +644,7 @@ def train_minerva_specialized_v3():
                         'config': MINERVA_CONFIG,
                         'stage_config': STAGE_CONFIG
                     }, best_model_path)
-                    print(f"   💾 NEW V3 BEST: {val_exact_pct:.2f}% exact match saved!")
+                    print(f"   \033[96m🏆 New best model! Exact: {val_exact_pct:.2f}%\033[0m")
         
         # Store stage results
         stage_results[stage] = {
@@ -655,7 +654,7 @@ def train_minerva_specialized_v3():
             'final_epoch': global_epoch
         }
         
-        print(f"\n🧠 Stage {stage} complete! Best: {stage_best_exact:.2f}% | Complexity: {pattern_complexity}")
+        print(f"\n\033[96m✅ Stage {stage} complete! Final exact: {stage_best_exact:.2f}%\033[0m")
     
     # Final results summary
     print(f"\n🎉 MINERVA V3 Enhanced Strategic Training Complete!")

@@ -183,8 +183,8 @@ class ChronosEnhancedLoss(nn.Module):
         union = (pred_indices.shape[1] * pred_indices.shape[2])
         iou_scores = intersection / union
         
-        # PROMETHEUS-style aggressive IoU weighting (20% strict + 80% IoU)
-        combined_matches = 0.2 * exact_matches_strict + 0.8 * iou_scores
+        # ULTRA TEAL: 85% IoU + 15% strict (same as successful PROMETHEUS/MINERVA/IRIS)
+        combined_matches = 0.15 * exact_matches_strict + 0.85 * iou_scores
         exact_count = combined_matches.sum()
         exact_bonus = -combined_matches.mean() * self.exact_match_bonus
         exact_bonus = exact_bonus.clamp(min=-3.0)  # Allow more negative like PROMETHEUS
@@ -709,13 +709,13 @@ def train_chronos_specialized_v2():
                     
                     injection_accuracy = injection_exact / injection_total * 100
                     if epoch % 10 == 0:
-                        print(f"Temporal Injection Epoch {epoch+1}/30: {injection_accuracy:.1f}% temporal accuracy")
+                        print(f"\033[96mTemporal Injection Epoch {epoch+1}/30: {injection_accuracy:.1f}% temporal accuracy\033[0m")
                     
                     if injection_accuracy >= 85.0:
-                        print(f"✅ Temporal injection target reached: {injection_accuracy:.1f}%")
+                        print(f"\033[96m✅ Temporal injection target reached: {injection_accuracy:.1f}%\033[0m")
                         break
                 
-                print(f"✅ Enhanced temporal injection completed for Stage {stage}")
+                print(f"\033[96m✅ Enhanced temporal injection completed for Stage {stage}\033[0m")
             except Exception as e:
                 print(f"⚠️ Temporal injection failed: {e}")
         
@@ -839,9 +839,9 @@ def train_chronos_specialized_v2():
                 val_loss = val_metrics['loss'] / len(val_loader)
                 
                 print(f"\n⏰ CHRONOS V2 Stage {stage}, Epoch {epoch+1} (Global: {global_epoch}):")
-                print(f"   🎯 Train: {train_exact_pct:.2f}% exact, Loss: {train_loss:.3f}")
-                print(f"   🎯 Val: {val_exact_pct:.2f}% exact, Loss: {val_loss:.3f}")
-                print(f"   📊 LR: {scheduler.get_last_lr()[0]:.6f} | Grid: {grid_size}x{grid_size}")
+                print(f"   \033[96m🎯 Train: {train_exact_pct:.2f}% exact, Loss: {train_loss:.3f}\033[0m")
+                print(f"   \033[96m🎯 Val: {val_exact_pct:.2f}% exact, Loss: {val_loss:.3f}\033[0m")
+                print(f"   \033[96m📊 LR: {scheduler.get_last_lr()[0]:.6f} | Grid: {grid_size}x{grid_size}\033[0m")
                 
                 # Track stage best
                 if val_exact_pct > stage_best_exact:
@@ -860,7 +860,7 @@ def train_chronos_specialized_v2():
                         'config': CHRONOS_CONFIG,
                         'stage_config': STAGE_CONFIG
                     }, best_model_path)
-                    print(f"   💾 NEW V2 BEST: {val_exact_pct:.2f}% exact match saved!")
+                    print(f"   \033[96m🏆 NEW V2 BEST: {val_exact_pct:.2f}% exact match saved!\033[0m")
         
         # Store stage results
         stage_results[stage] = {
@@ -869,7 +869,7 @@ def train_chronos_specialized_v2():
             'final_epoch': global_epoch
         }
         
-        print(f"\n⏰ Stage {stage} complete! Final exact: {stage_best_exact:.2f}%")
+        print(f"\n\033[96m✅ Stage {stage} complete! Final exact: {stage_best_exact:.2f}%\033[0m")
     
     # Final results summary
     print(f"\n🎉 CHRONOS V2 Enhanced Temporal Training Complete!")

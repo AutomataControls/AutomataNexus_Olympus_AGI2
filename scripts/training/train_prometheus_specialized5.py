@@ -30,15 +30,15 @@ sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
 # Import enhanced PROMETHEUS V4 model
 from src.models.prometheus_v4_enhanced import PrometheusV4Enhanced
 
-# Enhanced PROMETHEUS V5 Configuration - Extended Creative Intelligence Focus
+# Enhanced PROMETHEUS V5 Configuration - Massive Multi-Dimensional Intelligence Focus
 PROMETHEUS_V5_CONFIG = {
-    # Core Training Parameters - Enhanced for V5 Extended Training
-    'batch_size': 22,  # Slightly smaller for more complex computations
-    'learning_rate': 0.00018,  # Lower for fine-tuning from V4
-    'num_epochs': 850,  # Extended training: 17 stages x 50 epochs
-    'gradient_accumulation': 11,  # Effective batch: 242
+    # Core Training Parameters - Enhanced for V5 Massive Training
+    'batch_size': 20,  # Smaller for massive scale computations
+    'learning_rate': 0.00012,  # Lower for massive fine-tuning from V4
+    'num_epochs': 500,  # Extended training: 10 stages x 50 epochs
+    'gradient_accumulation': 12,  # Effective batch: 240
     'epochs_per_stage': 50,  # Extended epochs per stage
-    'curriculum_stages': 17,  # Extended 17-stage creative progression
+    'curriculum_stages': 10,  # Focused 10-stage progression
     
     # Enhanced Loss Configuration
     'transform_penalty': 0.015,  # Even lower - max creative exploration
@@ -78,39 +78,32 @@ PROMETHEUS_V5_CONFIG = {
     'plateau_patience': 22,
 }
 
-# Enhanced 17-Stage Progressive Configuration - Extended Creative Intelligence Focus
+# Enhanced 10-Stage Progressive Configuration - Focused Creative Intelligence
 STAGE_CONFIG = [
-    # Foundation Creative Understanding (6x6 - 10x10)
-    {'stage': 0, 'max_grid_size': 6,  'synthesis_ratio': 0.95, 'creativity_complexity': 'micro_patterns', 'focus': 'micro_pattern_recognition'},
-    {'stage': 1, 'max_grid_size': 7,  'synthesis_ratio': 0.9, 'creativity_complexity': 'basic_patterns', 'focus': 'basic_pattern_recognition'},
-    {'stage': 2, 'max_grid_size': 8,  'synthesis_ratio': 0.85, 'creativity_complexity': 'simple_synthesis', 'focus': 'simple_pattern_generation'},
-    {'stage': 3, 'max_grid_size': 9,  'synthesis_ratio': 0.8, 'creativity_complexity': 'pattern_variation', 'focus': 'pattern_variation_learning'},
-    {'stage': 4, 'max_grid_size': 10, 'synthesis_ratio': 0.75, 'creativity_complexity': 'creative_combination', 'focus': 'creative_pattern_combination'},
+    # Foundation Creative Understanding (6x6 - 12x12)
+    {'stage': 0, 'max_grid_size': 6,  'synthesis_ratio': 0.9, 'creativity_complexity': 'basic_patterns', 'focus': 'basic_pattern_recognition'},
+    {'stage': 1, 'max_grid_size': 8,  'synthesis_ratio': 0.8, 'creativity_complexity': 'simple_synthesis', 'focus': 'simple_pattern_generation'},
+    {'stage': 2, 'max_grid_size': 10, 'synthesis_ratio': 0.7, 'creativity_complexity': 'pattern_variation', 'focus': 'pattern_variation_learning'},
+    {'stage': 3, 'max_grid_size': 12, 'synthesis_ratio': 0.65, 'creativity_complexity': 'creative_combination', 'focus': 'creative_pattern_combination'},
     
-    # Intermediate Creative Reasoning (12x12 - 18x18)
-    {'stage': 5, 'max_grid_size': 12, 'synthesis_ratio': 0.7, 'creativity_complexity': 'innovation_basic', 'focus': 'basic_innovation'},
-    {'stage': 6, 'max_grid_size': 14, 'synthesis_ratio': 0.65, 'creativity_complexity': 'novelty_detection', 'focus': 'novelty_pattern_detection'},
-    {'stage': 7, 'max_grid_size': 15, 'synthesis_ratio': 0.6, 'creativity_complexity': 'creative_rules', 'focus': 'creative_rule_learning'},
-    {'stage': 8, 'max_grid_size': 16, 'synthesis_ratio': 0.55, 'creativity_complexity': 'pattern_synthesis', 'focus': 'advanced_pattern_synthesis'},
-    {'stage': 9, 'max_grid_size': 18, 'synthesis_ratio': 0.5, 'creativity_complexity': 'arc_creative_basic', 'focus': 'arc_creative_patterns'},
+    # Intermediate Creative Reasoning (14x14 - 20x20)
+    {'stage': 4, 'max_grid_size': 14, 'synthesis_ratio': 0.6, 'creativity_complexity': 'innovation_basic', 'focus': 'basic_innovation'},
+    {'stage': 5, 'max_grid_size': 16, 'synthesis_ratio': 0.55, 'creativity_complexity': 'novelty_detection', 'focus': 'novelty_pattern_detection'},
+    {'stage': 6, 'max_grid_size': 18, 'synthesis_ratio': 0.5, 'creativity_complexity': 'creative_rules', 'focus': 'creative_rule_learning'},
+    {'stage': 7, 'max_grid_size': 20, 'synthesis_ratio': 0.45, 'creativity_complexity': 'pattern_synthesis', 'focus': 'advanced_pattern_synthesis'},
     
-    # Advanced Creative Mastery (20x20 - 30x30)
-    {'stage': 10, 'max_grid_size': 20, 'synthesis_ratio': 0.45, 'creativity_complexity': 'ensemble_creative', 'focus': 'ensemble_creative_coordination'},
-    {'stage': 11, 'max_grid_size': 22, 'synthesis_ratio': 0.4, 'creativity_complexity': 'arc_creative_intermediate', 'focus': 'arc_intermediate_creativity'},
-    {'stage': 12, 'max_grid_size': 24, 'synthesis_ratio': 0.35, 'creativity_complexity': 'expert_creative', 'focus': 'expert_creative_generation'},
-    {'stage': 13, 'max_grid_size': 26, 'synthesis_ratio': 0.3, 'creativity_complexity': 'arc_creative_advanced', 'focus': 'arc_advanced_creativity'},
-    {'stage': 14, 'max_grid_size': 28, 'synthesis_ratio': 0.25, 'creativity_complexity': 'creative_mastery', 'focus': 'creative_pattern_mastery'},
-    {'stage': 15, 'max_grid_size': 30, 'synthesis_ratio': 0.2, 'creativity_complexity': 'arc_creative_mastery', 'focus': 'arc_creative_mastery'},
-    {'stage': 16, 'max_grid_size': 30, 'synthesis_ratio': 0.15, 'creativity_complexity': 'creative_genius', 'focus': 'creative_intelligence_genius'}
+    # Advanced Creative Mastery (24x24 - 30x30)
+    {'stage': 8, 'max_grid_size': 24, 'synthesis_ratio': 0.35, 'creativity_complexity': 'expert_creative', 'focus': 'expert_creative_generation'},
+    {'stage': 9, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'creativity_complexity': 'creative_mastery', 'focus': 'creative_intelligence_mastery'}
 ]
 
 # Device setup
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 print(f"\033[96m{'=' * 120}\033[0m")
-print(f"\033[96mPROMETHEUS V5 Enhanced Training - Extended Creative Pattern Generation Expert for ARC-AGI-2\033[0m")
-print(f"\033[96mBuilds on V4 with Extended Training: 17 Stages + ARC-Specific Creative Intelligence\033[0m")
-print(f"\033[96mTarget: 78%+ Performance with Extended Creative Intelligence Mastery\033[0m")
+print(f"\033[96mPROMETHEUS V5 Enhanced Training - Advanced Creative Pattern Generation Expert for ARC-AGI-2\033[0m")
+print(f"\033[96mBuilds on V4 with Focused Training: 10 Stages + Advanced Creative Intelligence\033[0m")
+print(f"\033[96mTarget: 80%+ Performance with Creative Intelligence Mastery\033[0m")
 print(f"\033[96m{'=' * 120}\033[0m")
 
 
@@ -557,7 +550,7 @@ def train_prometheus_specialized_v5():
     best_performance = 0.0
     training_stats = defaultdict(list)
     
-    print(f"\033[96mStarting Extended Progressive Creative Training - 17 Enhanced Creative Intelligence Stages\033[0m")
+    print(f"\033[96mStarting Focused Progressive Creative Training - 10 Advanced Creative Intelligence Stages\033[0m")
     
     # Extended progressive training through creative stages
     for stage_idx, stage_config in enumerate(STAGE_CONFIG):

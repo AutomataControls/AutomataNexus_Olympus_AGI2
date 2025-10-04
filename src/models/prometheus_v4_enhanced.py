@@ -397,7 +397,6 @@ class PrometheusV4Enhanced(nn.Module):
         
         # ENHANCE: Advanced creative reasoning
         self.advanced_creative_reasoning = nn.ModuleDict({
-            'pattern_memory': nn.Parameter(torch.randn(200, d_model) * 0.02),  # Creative pattern memory
             'innovation_engine': nn.Sequential(
                 nn.Linear(d_model, d_model // 2),
                 nn.GELU(),
@@ -411,6 +410,9 @@ class PrometheusV4Enhanced(nn.Module):
                 nn.Linear(d_model // 2, 150)  # Creative transformation parameters
             )
         })
+        
+        # Separate parameter for pattern memory (can't go in ModuleDict)
+        self.pattern_memory = nn.Parameter(torch.randn(200, d_model) * 0.02)
         
         # ENHANCE: Multi-creative processing (different creative modes)
         self.multicreative_processor = nn.ModuleList([
@@ -526,7 +528,7 @@ class PrometheusV4Enhanced(nn.Module):
         # Creative pattern memory matching
         memory_similarity = F.cosine_similarity(
             global_features.unsqueeze(1), 
-            self.advanced_creative_reasoning['pattern_memory'].unsqueeze(0), 
+            self.pattern_memory.unsqueeze(0), 
             dim=2
         )  # B, 200
         top_creative_patterns = memory_similarity.topk(12, dim=1)[0].mean(dim=1, keepdim=True)  # B, 1

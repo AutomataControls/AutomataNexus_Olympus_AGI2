@@ -87,6 +87,94 @@ def mixup_data(x, y, alpha=0.2):
     
     return mixed_x, (y_a, y_b), lam
 
+
+def custom_collate_fn(batch, stage):
+    """Custom collate function to handle different grid sizes in PROMETHEUS V3"""
+    MAX_GRID_SIZE = 35  # PROMETHEUS V3 supports up to 35x35
+    
+    inputs = []
+    outputs = []
+    
+    for item in batch:
+        inp = item['inputs']
+        out = item['outputs']
+        
+        # Handle case where tensors might already have batch dimension
+        if inp.dim() == 3:
+            inp = inp.squeeze(0)
+        if out.dim() == 3:
+            out = out.squeeze(0)
+        
+        # Ensure 2D tensors and proper device placement
+        if inp.dim() != 2 or out.dim() != 2:
+            continue
+            
+        # Move tensors to CPU first to avoid device mismatch
+        inp = inp.cpu()
+        out = out.cpu()
+        
+        inputs.append(inp)
+        outputs.append(out)
+    
+    if not inputs:
+        # Return dummy batch if all items were skipped
+        return {
+            'inputs': torch.zeros(1, MAX_GRID_SIZE, MAX_GRID_SIZE, dtype=torch.long),
+            'outputs': torch.zeros(1, MAX_GRID_SIZE, MAX_GRID_SIZE, dtype=torch.long)
+        }
+    
+    # Find max dimensions
+    max_h_in = max(inp.shape[0] for inp in inputs)
+    max_w_in = max(inp.shape[1] for inp in inputs)
+    max_h_out = max(out.shape[0] for out in outputs)
+    max_w_out = max(out.shape[1] for out in outputs)
+    max_h = min(max(max_h_in, max_h_out), MAX_GRID_SIZE)
+    max_w = min(max(max_w_in, max_w_out), MAX_GRID_SIZE)
+    
+    # Pad all grids to max size
+    padded_inputs = []
+    padded_outputs = []
+    
+    for inp, out in zip(inputs, outputs):
+        # Pad inputs
+        h_in, w_in = inp.shape
+        padded_inp = torch.zeros(max_h, max_w, dtype=torch.long)
+        padded_inp[:min(h_in, max_h), :min(w_in, max_w)] = inp[:min(h_in, max_h), :min(w_in, max_w)]
+        padded_inputs.append(padded_inp)
+        
+        # Pad outputs
+        h_out, w_out = out.shape
+        padded_out = torch.zeros(max_h, max_w, dtype=torch.long)
+        padded_out[:min(h_out, max_h), :min(w_out, max_w)] = out[:min(h_out, max_h), :min(w_out, max_w)]
+        padded_outputs.append(padded_out)
+    
+    # Stack into batches
+    batch_inputs = torch.stack(padded_inputs)
+    batch_outputs = torch.stack(padded_outputs)
+    
+    return {
+        'inputs': batch_inputs,
+        'outputs': batch_outputs
+    }
+
+
+def ultimate_creative_augmentation(inputs, outputs):
+    """Ultimate creative augmentation for PROMETHEUS V3"""
+    if random.random() < 0.4:  # Creative rotation
+        k = random.choice([1, 2, 3])  # 90, 180, 270 degrees
+        inputs = torch.rot90(inputs, k, dims=[-2, -1])
+        outputs = torch.rot90(outputs, k, dims=[-2, -1])
+    
+    if random.random() < 0.3:  # Creative flip
+        if random.random() < 0.5:
+            inputs = torch.flip(inputs, dims=[-1])  # Horizontal
+            outputs = torch.flip(outputs, dims=[-1])
+        else:
+            inputs = torch.flip(inputs, dims=[-2])  # Vertical
+            outputs = torch.flip(outputs, dims=[-2])
+    
+    return inputs, outputs
+
 # Enhanced PROMETHEUS Configuration V3 - Maximum Performance
 PROMETHEUS_CONFIG_V3 = {
     'batch_size': 48,  # Optimized for maximum learning efficiency
@@ -632,7 +720,7 @@ def train_prometheus_specialized_v3():
             shuffle=True,
             num_workers=0,
             pin_memory=True,
-            # Use V2's collate function if available
+            collate_fn=lambda batch: custom_collate_fn(batch, stage),
             drop_last=True
         )
         
@@ -783,7 +871,7 @@ def train_prometheus_specialized_v3():
                 # Apply ultimate creative mixup augmentation
                 mixup_lambda = None
                 if random.random() < 0.4:  # 40% chance of ultimate mixup
-                    input_grids, output_targets, mixup_lambda = ultra_creative_mixup_data(
+                    input_grids, output_targets, mixup_lambda = mixup_data(
                         input_grids, output_grids, 
                         alpha=PROMETHEUS_CONFIG_V3['mixup_alpha']
                     )

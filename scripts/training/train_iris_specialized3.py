@@ -293,9 +293,10 @@ class IrisDatasetV3(Dataset):
         # Color complexity analysis
         color_analysis = self._analyze_color_complexity(input_grid, output_grid)
         
-        # Filter for color relevance if enabled
+        # Filter for color relevance if enabled (more permissive for early stages)
         if self.color_focus and color_analysis['unique_colors'] < 2:
-            return None  # Skip single-color samples
+            if random.random() > 0.3:  # Keep 30% of single-color samples
+                return None
         
         return {
             'input': input_grid,

@@ -598,18 +598,47 @@ def train_chronos_specialized_v2():
         val_size = len(dataset) - train_size
         train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
         
-        # Simple collate function for CHRONOS V2
+        # Enhanced collate function for CHRONOS V2 with padding support
         def simple_collate_fn(batch):
+            # Extract inputs and outputs
             if isinstance(batch[0], tuple):
-                inputs = torch.stack([item[0] for item in batch])
-                outputs = torch.stack([item[1] for item in batch])
+                inputs_list = [item[0] for item in batch]
+                outputs_list = [item[1] for item in batch]
             elif isinstance(batch[0], dict):
-                inputs = torch.stack([item['inputs'] for item in batch])
-                outputs = torch.stack([item['outputs'] for item in batch])
+                inputs_list = [item['inputs'] for item in batch]
+                outputs_list = [item['outputs'] for item in batch]
             else:
                 # Fallback - assume it's a list of (input, output) pairs
-                inputs = torch.stack([item[0] if isinstance(item, (list, tuple)) else item for item in batch])
-                outputs = torch.stack([item[1] if isinstance(item, (list, tuple)) else item for item in batch])
+                inputs_list = [item[0] if isinstance(item, (list, tuple)) else item for item in batch]
+                outputs_list = [item[1] if isinstance(item, (list, tuple)) else item for item in batch]
+            
+            # Find maximum dimensions for padding
+            max_h = max(t.shape[-2] for t in inputs_list + outputs_list)
+            max_w = max(t.shape[-1] for t in inputs_list + outputs_list)
+            
+            # Pad all tensors to same size
+            def pad_tensor(tensor, target_h, target_w):
+                if tensor.dim() == 2:  # H, W
+                    h, w = tensor.shape
+                    padded = F.pad(tensor, (0, target_w - w, 0, target_h - h), value=0)
+                elif tensor.dim() == 3:  # C, H, W or H, W, C
+                    if tensor.shape[0] <= 10:  # Likely C, H, W
+                        c, h, w = tensor.shape
+                        padded = F.pad(tensor, (0, target_w - w, 0, target_h - h), value=0)
+                    else:  # Likely H, W, C
+                        h, w, c = tensor.shape
+                        padded = F.pad(tensor, (0, 0, 0, target_w - w, 0, target_h - h), value=0)
+                else:
+                    padded = tensor  # Keep as-is for other dimensions
+                return padded
+            
+            # Pad and stack
+            inputs_padded = [pad_tensor(t, max_h, max_w) for t in inputs_list]
+            outputs_padded = [pad_tensor(t, max_h, max_w) for t in outputs_list]
+            
+            inputs = torch.stack(inputs_padded)
+            outputs = torch.stack(outputs_padded)
+            
             return {'inputs': inputs, 'outputs': outputs}
         
         train_loader = DataLoader(
@@ -654,24 +683,24 @@ def train_chronos_specialized_v2():
                             sequence = []
                             pos_x, pos_y = size//4, size//4
                             for t in range(sequence_length):
-                                grid = torch.zeros(size, size, dtype=torch.long)
+                                grid = torch.zeros(size, size, dtype=torch.long).to(device)
                                 new_x = min(max(pos_x + random.randint(-1, 1), 0), size-1)
                                 new_y = min(max(pos_y + random.randint(-1, 1), 0), size-1)
                                 grid[new_x, new_y] = random.randint(1, 3)
                                 sequence.append(grid)
                                 pos_x, pos_y = new_x, new_y
                             
-                            input_grid = sequence[0]
-                            output_grid = sequence[-1]
-                            temporal_data = sequence[1:-1] if len(sequence) > 2 else None
+                            input_grid = sequence[0].to(device)
+                            output_grid = sequence[-1].to(device)
+                            temporal_data = [s.to(device) for s in sequence[1:-1]] if len(sequence) > 2 else None
                         
                         elif random.random() < 0.4:
                             # Pattern growth sequence
-                            input_grid = torch.zeros(size, size, dtype=torch.long)
+                            input_grid = torch.zeros(size, size, dtype=torch.long).to(device)
                             center = size // 2
                             input_grid[center, center] = 1
                             
-                            output_grid = torch.zeros(size, size, dtype=torch.long)
+                            output_grid = torch.zeros(size, size, dtype=torch.long).to(device)
                             for i in range(max(1, center)):
                                 for j in range(max(1, center)):
                                     if abs(i - center) + abs(j - center) <= 1:
@@ -680,11 +709,11 @@ def train_chronos_specialized_v2():
                         
                         else:
                             # Pattern rotation sequence
-                            input_grid = torch.zeros(size, size, dtype=torch.long)
+                            input_grid = torch.zeros(size, size, dtype=torch.long).to(device)
                             input_grid[0, 0] = 1
                             input_grid[0, 1] = 2
                             
-                            output_grid = torch.rot90(input_grid, k=1)
+                            output_grid = torch.rot90(input_grid, k=1).to(device)
                             temporal_data = None
                         
                         injection_patterns.append((input_grid, output_grid, temporal_data))

@@ -201,7 +201,7 @@ class IrisSpecializedLossV3(nn.Module):
             
             # Reward similar color diversity
             color_diversity_match = abs(len(pred_colors) - len(target_colors))
-            harmony_score += torch.exp(-color_diversity_match * 0.5)
+            harmony_score += torch.exp(torch.tensor(-color_diversity_match * 0.5, device=pred_indices.device))
         
         harmony_score = harmony_score / B
         return -harmony_score * 0.05

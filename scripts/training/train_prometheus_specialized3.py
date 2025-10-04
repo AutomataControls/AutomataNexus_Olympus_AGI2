@@ -29,15 +29,63 @@ sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
 # Import PROMETHEUS model
 from src.models.prometheus_model_simplified import SimplifiedPrometheusNet
 
-# Import base training components and enhance them
-from train_prometheus_specialized2 import (
-    PrometheusEnhancedLoss as PrometheusEnhancedLossV2,
-    mixup_data,
-    color_augmentation,
-    train_prometheus_specialized_v2 as train_prometheus_specialized_v2,
-    PROMETHEUS_CONFIG_V2,
-    STAGE_CONFIG_V2
-)
+# Base loss class
+class PrometheusEnhancedLossV2(nn.Module):
+    def __init__(self, transformation_penalty=0.2, exact_match_bonus=5.0, creativity_weight=0.15):
+        super().__init__()
+        self.transformation_penalty = transformation_penalty
+        self.exact_match_bonus = exact_match_bonus
+        self.creativity_weight = creativity_weight
+        
+    def forward(self, model_outputs, targets, inputs, mixup_lambda=None):
+        pred_output = model_outputs['predicted_output']
+        B, C, H, W = pred_output.shape
+        
+        focal_loss = F.cross_entropy(pred_output, targets.argmax(dim=1) if targets.dim() > 3 else targets)
+        
+        pred_indices = pred_output.argmax(dim=1)
+        target_indices = targets.argmax(dim=1) if targets.dim() > 3 else targets
+        
+        exact_matches_strict = (pred_indices == target_indices).all(dim=[1,2]).float()
+        intersection = (pred_indices == target_indices).float().sum(dim=[1,2])
+        union = (pred_indices.shape[1] * pred_indices.shape[2])
+        iou_scores = intersection / union
+        
+        combined_matches = 0.2 * exact_matches_strict + 0.8 * iou_scores
+        exact_count = combined_matches.sum()
+        exact_bonus = -combined_matches.mean() * self.exact_match_bonus
+        exact_bonus = exact_bonus.clamp(min=-3.0)
+        
+        input_indices = inputs.argmax(dim=1) if inputs.dim() > 3 else inputs
+        copy_penalty = (pred_indices == input_indices).all(dim=[1,2]).float()
+        transform_penalty = copy_penalty.mean() * self.transformation_penalty
+        
+        total_loss = focal_loss + transform_penalty + exact_bonus
+        
+        return {
+            'total': total_loss,
+            'focal': focal_loss,
+            'transform': transform_penalty,
+            'exact_bonus': exact_bonus,
+            'exact_count': exact_count,
+            'soft_exact_count': combined_matches.sum(),
+            'avg_iou': iou_scores.mean(),
+        }
+
+
+def mixup_data(x, y, alpha=0.2):
+    if alpha > 0:
+        lam = np.random.beta(alpha, alpha)
+    else:
+        lam = 1
+    
+    batch_size = x.size()[0]
+    index = torch.randperm(batch_size).to(x.device)
+    
+    mixed_x = lam * x + (1 - lam) * x[index]
+    y_a, y_b = y, y[index]
+    
+    return mixed_x, (y_a, y_b), lam
 
 # Enhanced PROMETHEUS Configuration V3 - Maximum Performance
 PROMETHEUS_CONFIG_V3 = {

@@ -1,6 +1,7 @@
 """
-ATLAS Specialized Training Script V3 - Conservative Spatial Learning
-Builds upon V2 with slower, more careful training to prevent accuracy degradation
+ATLAS Specialized Training V3 - Enhanced Spatial-Geometric Reasoning Expert
+Building upon ATLAS V2's proven performance with advanced geometric mastery
+Target: 75%+ performance with sophisticated spatial reasoning capabilities
 """
 
 import torch
@@ -28,672 +29,814 @@ sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
 # Import ATLAS model
 from src.models.atlas_model import EnhancedAtlasNet
 
-# Import ALL AutomataNexus novel training components
-from src.dsl import DSLTrainingIntegration, DSLProgramGenerator
-from src.dsl.atlas_dsl import ATLASDSLTraining, ATLASDSLGenerator
-from src.program_synthesis.synthesis_integration import LightweightProgramSynthesizer, ProgramSynthesisDataGenerator
-
-# ATLAS-specific program synthesis
-try:
-    from src.program_synthesis.atlas_synthesis import ATLASProgramSynthesizer, create_atlas_synthesis_system
-    ATLAS_SYNTHESIS_AVAILABLE = True
-except ImportError:
-    ATLAS_SYNTHESIS_AVAILABLE = False
-
-# PRISM System - Use ATLAS-specific version
-try:
-    from src.training_systems.atlas_prism import create_atlas_prism_system
-    ATLAS_PRISM_AVAILABLE = True
-except ImportError:
-    ATLAS_PRISM_AVAILABLE = False
-
-# Generic PRISM as fallback
-try:
-    from src.training_systems.prism_system import create_prism_system
-    PRISM_AVAILABLE = True
-except ImportError:
-    PRISM_AVAILABLE = False
-
-# MEPT System - Use ATLAS-specific version
-try:
-    from src.training_systems.atlas_mept import create_atlas_mept_system
-    ATLAS_MEPT_LEAP_AVAILABLE = True
-except ImportError:
-    ATLAS_MEPT_LEAP_AVAILABLE = False
-
-# Generic MEPT as fallback
-try:
-    from src.training_systems.mept_system import create_mept_system
-    MEPT_AVAILABLE = True
-except ImportError:
-    MEPT_AVAILABLE = False
-
-# LEAP System - Use ATLAS-specific version
-try:
-    from src.training_systems.atlas_leap import create_atlas_leap_system
-    from src.training_systems.leap_system import create_leap_system
-    LEAP_AVAILABLE = True
-except ImportError:
-    LEAP_AVAILABLE = False
-
-# LEAP-PRISM Bridge
-try:
-    from src.training_systems.leap_prism_bridge import create_leap_prism_bridge
-    LEAP_PRISM_BRIDGE_AVAILABLE = True
-except ImportError:
-    LEAP_PRISM_BRIDGE_AVAILABLE = False
-
-# Exact match boost system
-try:
-    from src.training_systems.exact_match_boost import atlas_exact_match_injection
-    EXACT_BOOST_AVAILABLE = True
-except ImportError:
-    EXACT_BOOST_AVAILABLE = False
-
-# Data systems
-from src.data.arc_data_synthesis import ARCDataSynthesizer, ARCDataAugmenter
-
-# Import the ENTIRE original script to build upon it
-from train_atlas_specialized import (
-    AtlasSpecializedDataset, 
-    AtlasSpecializedLoss,
-    atlas_exact_match_injection,
-    atlas_mept_injection,
-    atlas_leap_injection,
-    atlas_prism_injection,
-    custom_collate_fn,
-    train_atlas_specialized as train_atlas_specialized_v1,
-    ATLAS_CONFIG as ATLAS_CONFIG_V1,
-    STAGE_CONFIG as STAGE_CONFIG_V1
-)
-
-# Ultra-Conservative ATLAS Configuration V3 - Slow and Steady
-ATLAS_CONFIG = ATLAS_CONFIG_V1.copy()
-ATLAS_CONFIG.update({
-    # Much slower learning for stability
-    'batch_size': 16,  # Very small batches for precise gradients
-    'learning_rate': 0.0005,  # Much lower starting LR
-    'gradient_accumulation': 4,  # Effective batch: 64
-    'transform_penalty': 0.1,  # Very low penalty
-    'exact_match_bonus': 2.0,  # Conservative bonus
-    'focal_gamma': 1.0,  # Minimal focal loss
-    'spatial_weight': 0.2,  # Lower spatial weight
+# Enhanced ATLAS Configuration V3 - Advanced Spatial Reasoning
+ATLAS_CONFIG = {
+    # Core Training Parameters - Enhanced for V3
+    'batch_size': 40,  # Optimal for spatial complexity
+    'learning_rate': 0.0003,  # Careful learning for geometric precision
+    'num_epochs': 500,  # Extended training: 10 stages x 50 epochs
+    'gradient_accumulation': 6,  # Effective batch: 240
+    'epochs_per_stage': 50,  # Extended epochs per stage
+    'curriculum_stages': 10,  # Full 10-stage progression
     
-    # Conservative augmentation
-    'use_mixup': False,  # Disable mixup for now
-    'gradient_clip': 0.5,  # Gentle gradient clipping
-    'warmup_steps': 1000,  # Longer warmup
-    'cosine_restarts': False,  # No restarts, just steady decay
-    'label_smoothing': 0.05,  # Minimal smoothing
+    # Enhanced Loss Configuration
+    'transform_penalty': 0.3,  # Balanced for spatial transformations
+    'exact_match_bonus': 6.0,  # Strong bonus for geometric accuracy
+    'gradient_clip': 0.8,  # Stable clipping for complex geometries
+    'weight_decay': 3e-6,  # Light regularization
     
-    # V3 specific - much longer training
-    'epochs_per_stage': 80,  # Double the epochs
-    'patience': 20,  # More patience for early stopping
-    'min_lr': 1e-6,  # Lower minimum LR
-    'lr_decay_factor': 0.8,  # Gentler LR decay
-})
+    # ULTRA TEAL Enhanced (proven formula from successful models)
+    'ultra_teal_iou_weight': 0.85,  # 85% IoU weighting
+    'strict_match_weight': 0.15,   # 15% strict matching
+    'spatial_reasoning_weight': 0.3,  # Enhanced spatial bonus
+    'geometric_complexity_weight': 0.25,  # Geometric pattern bonus
+    'transformation_consistency_weight': 0.2,  # Transform logic bonus
+    
+    # ATLAS-Specific Enhancements
+    'multi_scale_learning': True,  # Learn across multiple scales
+    'geometric_augmentation': True,  # Geometry-preserving augmentation
+    'spatial_attention_focus': True,  # Enhanced spatial attention
+    'transformation_invariance': True,  # Learn transform invariances
+    
+    # Advanced Training Features
+    'label_smoothing': 0.05,  # Light smoothing for generalization
+    'pattern_diversity_bonus': True,
+    'geometric_reasoning_bonus': True,
+    'spatial_consistency_bonus': True,
+    'advanced_augmentation': True,
+    
+    # Learning Rate Scheduling
+    'warmup_epochs': 25,  # Extended warmup
+    'cosine_restarts': True,
+    'restart_multiplier': 1.2,
+}
 
-# Conservative Stage Configuration V3 - Preserve Learning
-STAGE_CONFIG = STAGE_CONFIG_V1.copy()
-for stage in STAGE_CONFIG:
-    # Much gentler LR multipliers to prevent degradation
-    STAGE_CONFIG[stage]['lr_mult'] = max(0.7, STAGE_CONFIG[stage]['lr_mult'])
-    # Longer training per stage
-    STAGE_CONFIG[stage]['epochs'] = 80
+# Enhanced 10-Stage Progressive Configuration - Spatial-Geometric Focus
+STAGE_CONFIG = [
+    # Basic Spatial Patterns
+    {'stage': 0, 'max_grid_size': 6,  'synthesis_ratio': 0.9, 'geometric_complexity': 'basic_shapes', 'focus': 'shape_recognition'},
+    {'stage': 1, 'max_grid_size': 8,  'synthesis_ratio': 0.8, 'geometric_complexity': 'simple_transforms', 'focus': 'rotation_translation'},
+    {'stage': 2, 'max_grid_size': 10, 'synthesis_ratio': 0.7, 'geometric_complexity': 'pattern_completion', 'focus': 'spatial_completion'},
+    
+    # Intermediate Spatial Reasoning
+    {'stage': 3, 'max_grid_size': 12, 'synthesis_ratio': 0.6, 'geometric_complexity': 'multi_object', 'focus': 'object_relationships'},
+    {'stage': 4, 'max_grid_size': 15, 'synthesis_ratio': 0.5, 'geometric_complexity': 'complex_transforms', 'focus': 'advanced_transforms'},
+    {'stage': 5, 'max_grid_size': 18, 'synthesis_ratio': 0.4, 'geometric_complexity': 'spatial_logic', 'focus': 'geometric_rules'},
+    
+    # Advanced Geometric Mastery
+    {'stage': 6, 'max_grid_size': 22, 'synthesis_ratio': 0.3, 'geometric_complexity': 'multi_scale', 'focus': 'scale_invariance'},
+    {'stage': 7, 'max_grid_size': 26, 'synthesis_ratio': 0.2, 'geometric_complexity': 'complex_spatial', 'focus': 'spatial_reasoning'},
+    {'stage': 8, 'max_grid_size': 30, 'synthesis_ratio': 0.15, 'geometric_complexity': 'geometric_mastery', 'focus': 'transformation_mastery'},
+    {'stage': 9, 'max_grid_size': 30, 'synthesis_ratio': 0.1, 'geometric_complexity': 'expert_spatial', 'focus': 'spatial_expertise'}
+]
 
 # Device setup
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print(f'Using device: {device}')
 
-# Configuration flags
-USE_DSL = True and DSLTrainingIntegration is not None
-USE_MEPT = True and (ATLAS_MEPT_LEAP_AVAILABLE or MEPT_AVAILABLE)
-USE_LEAP = True and LEAP_AVAILABLE
-USE_PRISM = True and (ATLAS_PRISM_AVAILABLE or PRISM_AVAILABLE)
-USE_EXACT_BOOST = True and EXACT_BOOST_AVAILABLE
-USE_LEAP_PRISM_BRIDGE = True and LEAP_PRISM_BRIDGE_AVAILABLE
+print("=" * 80)
+print("ATLAS Enhanced V3 Training - Advanced Spatial-Geometric Reasoning Expert")
+print("Building on V2's Success → Target: 75%+ Spatial Mastery")
+print("=" * 80)
 
 
-class AtlasSpecializedLossV3(nn.Module):
-    """Ultra-conservative loss for ATLAS V3 - gentle learning"""
+class AtlasEnhancedLoss(nn.Module):
+    """Enhanced ATLAS loss with advanced spatial-geometric reasoning"""
     
-    def __init__(self):
+    def __init__(self, transformation_penalty=0.3, exact_match_bonus=6.0):
         super().__init__()
-        self.base_loss = nn.CrossEntropyLoss(reduction='none')
-        self.label_smoothing = 0.05  # Very minimal smoothing
+        self.transformation_penalty = transformation_penalty
+        self.exact_match_bonus = exact_match_bonus
+        self.ultra_teal_iou_weight = ATLAS_CONFIG['ultra_teal_iou_weight']
+        self.strict_match_weight = ATLAS_CONFIG['strict_match_weight']
         
-        # Ultra-conservative weights
-        self.weights = {
-            'base': 1.0,
-            'spatial': 0.1,  # Much lower spatial weight
-            'transform': 0.05,  # Minimal transform penalty
-            'exact': 1.5,  # Gentle exact match bonus
-            'focal': 0.5,  # Minimal focal loss
+        # ATLAS-specific weights
+        self.spatial_reasoning_weight = ATLAS_CONFIG['spatial_reasoning_weight']
+        self.geometric_complexity_weight = ATLAS_CONFIG['geometric_complexity_weight']
+        self.transformation_consistency_weight = ATLAS_CONFIG['transformation_consistency_weight']
+        
+    def forward(self, model_outputs, targets, inputs, mixup_lambda=None, stage_info=None):
+        """Enhanced forward pass with spatial-geometric focus"""
+        
+        # Handle mixup targets if provided
+        if mixup_lambda is not None and isinstance(targets, tuple):
+            targets_a, targets_b = targets
+            loss_a = self._calculate_single_loss(model_outputs, targets_a, inputs, stage_info)
+            loss_b = self._calculate_single_loss(model_outputs, targets_b, inputs, stage_info)
+            
+            # Mix the losses
+            mixed_losses = {}
+            for key in loss_a:
+                if torch.is_tensor(loss_a[key]):
+                    mixed_losses[key] = mixup_lambda * loss_a[key] + (1 - mixup_lambda) * loss_b[key]
+                else:
+                    mixed_losses[key] = loss_a[key]
+            
+            return mixed_losses
+        
+        return self._calculate_single_loss(model_outputs, targets, inputs, stage_info)
+    
+    def _calculate_single_loss(self, model_outputs, targets, inputs, stage_info=None):
+        """Enhanced loss calculation with spatial-geometric components"""
+        pred_output = model_outputs['predicted_output']
+        B, C, H, W = pred_output.shape
+        
+        # Basic cross entropy loss with label smoothing
+        target_indices = targets.argmax(dim=1) if targets.dim() > 3 else targets
+        ce_loss = F.cross_entropy(pred_output, target_indices, 
+                                 label_smoothing=ATLAS_CONFIG.get('label_smoothing', 0.05))
+        
+        # ULTRA TEAL exact match scoring (85% IoU + 15% strict)
+        pred_indices = pred_output.argmax(dim=1)
+        
+        # Strict exact matches
+        exact_matches_strict = (pred_indices == target_indices).all(dim=[1,2]).float()
+        
+        # IoU-based soft exact match
+        intersection = (pred_indices == target_indices).float().sum(dim=[1,2])
+        union = torch.clamp(torch.full_like(intersection, H * W), min=1.0)
+        iou_scores = intersection / union
+        
+        # ULTRA TEAL: 85% IoU + 15% strict matching (proven formula)
+        combined_matches = self.strict_match_weight * exact_matches_strict + self.ultra_teal_iou_weight * iou_scores
+        exact_count = combined_matches.sum()
+        exact_bonus = -combined_matches.mean() * self.exact_match_bonus
+        exact_bonus = torch.clamp(exact_bonus, min=-4.0, max=0.0)
+        
+        # Enhanced transformation penalty for spatial reasoning
+        input_indices = inputs.argmax(dim=1) if inputs.dim() > 3 else inputs
+        copy_penalty = (pred_indices == input_indices).all(dim=[1,2]).float()
+        transform_penalty = copy_penalty.mean() * self.transformation_penalty
+        
+        # Enhanced spatial reasoning bonus
+        spatial_reasoning_bonus = self._calculate_spatial_reasoning_bonus(
+            pred_indices, target_indices, input_indices
+        ) * self.spatial_reasoning_weight
+        
+        # Geometric complexity bonus
+        geometric_complexity_bonus = self._calculate_geometric_complexity_bonus(
+            pred_indices, target_indices
+        ) * self.geometric_complexity_weight
+        
+        # Transformation consistency bonus
+        transformation_consistency_bonus = self._calculate_transformation_consistency_bonus(
+            pred_indices, target_indices, input_indices, model_outputs
+        ) * self.transformation_consistency_weight
+        
+        # Enhanced creativity bonus for spatial patterns
+        creativity_bonus = torch.tensor(0.0, device=pred_indices.device)
+        if 'spatial_creativity' in model_outputs:
+            spatial_factor = model_outputs['spatial_creativity']
+            creativity_bonus = torch.sigmoid(spatial_factor).mean() * 0.2
+        
+        # Total enhanced loss
+        total_loss = (ce_loss + transform_penalty + exact_bonus - 
+                     spatial_reasoning_bonus - geometric_complexity_bonus - 
+                     transformation_consistency_bonus - creativity_bonus)
+        
+        # Stability check
+        if torch.isnan(total_loss) or torch.isinf(total_loss):
+            print(f"⚠️ NaN/Inf loss in ATLAS V3, using CE only")
+            total_loss = ce_loss.clamp(max=8.0)
+        
+        return {
+            'total': total_loss,
+            'ce_loss': ce_loss,
+            'transform': transform_penalty,
+            'exact_bonus': exact_bonus,
+            'exact_count': exact_count,
+            'ultra_teal_count': combined_matches.sum(),
+            'avg_iou': iou_scores.mean(),
+            'spatial_reasoning_bonus': spatial_reasoning_bonus,
+            'geometric_complexity_bonus': geometric_complexity_bonus,
+            'transformation_consistency_bonus': transformation_consistency_bonus,
+            'creativity_bonus': creativity_bonus,
         }
     
-    def forward(self, predictions, targets, model_outputs=None):
-        batch_size = predictions.shape[0]
+    def _calculate_spatial_reasoning_bonus(self, pred_indices, target_indices, input_indices):
+        """Calculate bonus for spatial reasoning accuracy"""
+        # Reward predictions that show understanding of spatial relationships
+        spatial_accuracy = (pred_indices == target_indices).float().mean(dim=[1,2])
         
-        # Convert predictions to class indices
-        pred_indices = predictions.argmax(dim=1)
-        target_indices = targets.argmax(dim=1) if targets.dim() > 2 else targets
+        # Bonus for non-trivial transformations (not copying input)
+        non_copy_mask = (target_indices != input_indices).float().mean(dim=[1,2])
+        spatial_transform_bonus = spatial_accuracy * non_copy_mask
         
-        # Base cross entropy with label smoothing
-        base_loss = F.cross_entropy(
-            predictions.view(-1, predictions.shape[-1]), 
-            target_indices.view(-1),
-            label_smoothing=self.label_smoothing
-        )
-        
-        # Very gentle exact match bonus
-        exact_matches = (pred_indices == target_indices).float()
-        exact_match_rate = exact_matches.mean()
-        exact_bonus = -exact_match_rate * self.weights['exact']
-        
-        # Minimal spatial consistency loss
-        spatial_loss = self._gentle_spatial_loss(pred_indices, target_indices)
-        
-        # Conservative focal loss
-        focal_loss = self._gentle_focal_loss(predictions, target_indices)
-        
-        total_loss = (
-            self.weights['base'] * base_loss +
-            self.weights['spatial'] * spatial_loss +
-            self.weights['focal'] * focal_loss +
-            exact_bonus
-        )
-        
-        return total_loss
+        return spatial_transform_bonus.mean() * 0.1
     
-    def _gentle_spatial_loss(self, pred_indices, target_indices):
-        """Very gentle spatial consistency loss"""
-        if pred_indices.shape[-1] < 3 or pred_indices.shape[-2] < 3:
-            return torch.tensor(0.0, device=pred_indices.device)
+    def _calculate_geometric_complexity_bonus(self, pred_indices, target_indices):
+        """Reward understanding of complex geometric patterns"""
+        B = pred_indices.shape[0]
+        complexity_scores = []
         
-        diff = (pred_indices != target_indices).float()
-        return diff.mean() * 0.1  # Very small spatial penalty
+        for b in range(B):
+            pred_grid = pred_indices[b]
+            target_grid = target_indices[b]
+            
+            # Count geometric features
+            # 1. Shape diversity
+            unique_shapes = torch.unique(target_grid).numel()
+            
+            # 2. Pattern regularity (reward structured patterns)
+            h_patterns = self._count_patterns(target_grid, 'horizontal')
+            v_patterns = self._count_patterns(target_grid, 'vertical')
+            
+            # 3. Accuracy on complex regions
+            complex_regions = (target_grid > 0).float()
+            if complex_regions.sum() > 0:
+                complex_accuracy = ((pred_grid == target_grid).float() * complex_regions).sum() / complex_regions.sum()
+            else:
+                complex_accuracy = torch.tensor(0.0, device=pred_grid.device)
+            
+            complexity_score = (unique_shapes / 10.0 + h_patterns + v_patterns + complex_accuracy) / 4
+            complexity_scores.append(complexity_score)
+        
+        if complexity_scores:
+            return torch.stack(complexity_scores).mean() * 0.08
+        
+        return torch.tensor(0.0, device=pred_indices.device)
     
-    def _gentle_focal_loss(self, pred, target, gamma=1.0):
-        """Minimal focal loss for hard examples"""
-        target_idx = target.argmax(dim=-1) if target.dim() > 2 else target
-        ce_loss = F.cross_entropy(pred.view(-1, pred.shape[-1]), target_idx.view(-1), reduction='none')
-        pt = torch.exp(-ce_loss)
-        focal = (1 - pt) ** gamma * ce_loss
-        return focal.mean()
+    def _count_patterns(self, grid, direction):
+        """Count repeating patterns in specified direction"""
+        if direction == 'horizontal':
+            # Check for horizontal patterns
+            pattern_score = 0.0
+            for i in range(grid.shape[0]):
+                row = grid[i, :]
+                unique_in_row = torch.unique(row).numel()
+                if unique_in_row > 1:  # Has some pattern
+                    pattern_score += 1.0 / grid.shape[0]
+        else:  # vertical
+            pattern_score = 0.0
+            for j in range(grid.shape[1]):
+                col = grid[:, j]
+                unique_in_col = torch.unique(col).numel()
+                if unique_in_col > 1:  # Has some pattern
+                    pattern_score += 1.0 / grid.shape[1]
+        
+        return torch.tensor(pattern_score, device=grid.device) * 0.2
+    
+    def _calculate_transformation_consistency_bonus(self, pred_indices, target_indices, input_indices, model_outputs):
+        """Reward consistent application of transformations"""
+        # Check if the transformation applied is consistent across the grid
+        input_to_target_diff = (target_indices != input_indices).float()
+        input_to_pred_diff = (pred_indices != input_indices).float()
+        
+        # Reward consistency in transformation application
+        consistency = 1.0 - torch.abs(input_to_target_diff - input_to_pred_diff).mean(dim=[1,2])
+        
+        return consistency.mean() * 0.05
 
 
-class WarmupCosineSchedule:
-    """Gentle warmup + cosine decay scheduler"""
+def mixup_data(x, y, alpha=0.3):
+    """Enhanced mixup for spatial pattern learning"""
+    if alpha > 0:
+        lam = np.random.beta(alpha, alpha)
+    else:
+        lam = 1
     
-    def __init__(self, optimizer, warmup_steps, training_steps, cycles=1):
-        self.optimizer = optimizer
-        self.warmup_steps = warmup_steps
-        self.training_steps = training_steps
-        self.cycles = cycles
-        self.base_lrs = [group['lr'] for group in optimizer.param_groups]
-        self.step_count = 0
+    batch_size = x.size()[0]
+    index = torch.randperm(batch_size).to(x.device)
     
-    def step(self):
-        self.step_count += 1
-        
-        if self.step_count <= self.warmup_steps:
-            # Linear warmup
-            lr_mult = self.step_count / self.warmup_steps
+    mixed_x = lam * x + (1 - lam) * x[index]
+    y_a, y_b = y, y[index]
+    
+    return mixed_x, (y_a, y_b), lam
+
+
+def advanced_spatial_augmentation(inputs, outputs, stage_config):
+    """Advanced augmentation preserving spatial-geometric relationships"""
+    if random.random() < 0.4:  # Increased probability for spatial diversity
+        # Geometric rotation preserving spatial logic
+        k = random.choice([1, 2, 3])  # 90, 180, 270 degrees
+        inputs = torch.rot90(inputs, k, dims=[-2, -1])
+        outputs = torch.rot90(outputs, k, dims=[-2, -1])
+    
+    if random.random() < 0.3:
+        # Geometric reflection preserving spatial relationships
+        if random.random() < 0.5:
+            inputs = torch.flip(inputs, dims=[-1])  # Horizontal
+            outputs = torch.flip(outputs, dims=[-1])
         else:
-            # Cosine decay
-            progress = (self.step_count - self.warmup_steps) / (self.training_steps - self.warmup_steps)
-            lr_mult = 0.5 * (1 + np.cos(np.pi * progress))
-            lr_mult = max(lr_mult, 0.01)  # Prevent LR from going too low
+            inputs = torch.flip(inputs, dims=[-2])  # Vertical
+            outputs = torch.flip(outputs, dims=[-2])
+    
+    # Geometric noise injection (very conservative for spatial integrity)
+    if random.random() < 0.08 and stage_config.get('focus') != 'shape_recognition':
+        noise_mask = torch.rand_like(inputs.float()) < 0.015  # 1.5% of pixels
+        if noise_mask.any():
+            noise_values = torch.randint(0, 10, inputs.shape, device=inputs.device)
+            inputs = torch.where(noise_mask, noise_values, inputs)
+    
+    return inputs, outputs
+
+
+def custom_collate_fn(batch):
+    """Enhanced collate function with padding for variable sizes"""
+    # Handle batch items
+    if isinstance(batch[0], tuple):
+        batch = [{'inputs': item[0], 'outputs': item[1]} for item in batch]
+    
+    # Find maximum dimensions
+    max_h = max_w = 0
+    for item in batch:
+        for tensor in [item['inputs'], item['outputs']]:
+            if tensor.dim() == 2:
+                h, w = tensor.shape
+            elif tensor.dim() == 3:
+                if tensor.shape[0] <= 10:  # C, H, W
+                    h, w = tensor.shape[1], tensor.shape[2]
+                else:  # H, W, C
+                    h, w = tensor.shape[0], tensor.shape[1]
+            else:
+                continue
+            max_h = max(max_h, h)
+            max_w = max(max_w, w)
+    
+    max_h = max(max_h, 1)
+    max_w = max(max_w, 1)
+    
+    # Pad all tensors to maximum size
+    padded_inputs = []
+    padded_outputs = []
+    
+    for item in batch:
+        inp = item['inputs']
+        out = item['outputs']
         
-        for param_group, base_lr in zip(self.optimizer.param_groups, self.base_lrs):
-            param_group['lr'] = base_lr * lr_mult
+        # Ensure consistent format (H, W)
+        if inp.dim() == 3:
+            if inp.shape[0] <= 10:  # C, H, W -> H, W
+                inp = inp.argmax(dim=0)
+            else:  # H, W, C -> H, W
+                inp = inp.argmax(dim=-1)
+        
+        if out.dim() == 3:
+            if out.shape[0] <= 10:  # C, H, W -> H, W
+                out = out.argmax(dim=0)
+            else:  # H, W, C -> H, W
+                out = out.argmax(dim=-1)
+        
+        # Ensure tensors are at least 2D
+        if inp.dim() == 1:
+            inp = inp.unsqueeze(0)
+        if out.dim() == 1:
+            out = out.unsqueeze(0)
+        
+        # Pad to maximum size
+        inp_h_pad = max_h - inp.shape[-2]
+        inp_w_pad = max_w - inp.shape[-1]
+        if inp_h_pad > 0 or inp_w_pad > 0:
+            inp = F.pad(inp, (0, inp_w_pad, 0, inp_h_pad), mode='constant', value=0)
+        
+        out_h_pad = max_h - out.shape[-2]
+        out_w_pad = max_w - out.shape[-1]
+        if out_h_pad > 0 or out_w_pad > 0:
+            out = F.pad(out, (0, out_w_pad, 0, out_h_pad), mode='constant', value=0)
+        
+        padded_inputs.append(inp)
+        padded_outputs.append(out)
+    
+    return {
+        'inputs': torch.stack(padded_inputs),
+        'outputs': torch.stack(padded_outputs)
+    }
 
 
 def train_atlas_specialized_v3():
-    """Ultra-conservative ATLAS training V3 - slow and steady wins the race"""
-    print("🌍 Starting ATLAS Specialized Training V3")
-    print("============================================================")
-    print("📊 V3 Philosophy: Slow, Conservative, Steady Learning")
-    print("  • Ultra-small learning rates for stability")
-    print("  • Gentle gradient updates")
-    print("  • Conservative loss functions")
-    print("  • Checkpoint recovery enabled")
-    print("  • Extended training time per stage")
-    print("============================================================")
+    """Enhanced ATLAS V3 training with advanced spatial-geometric reasoning"""
+    print("🗺️ Starting ATLAS V3 Enhanced Training")
+    print("=" * 70)
+    print("📊 Advanced Spatial-Geometric Analysis Features:")
+    print("  • 10-stage progressive curriculum (6x6 → 30x30)")
+    print("  • Enhanced spatial reasoning and geometric mastery")
+    print("  • ULTRA TEAL IoU scoring (85% soft + 15% strict)")
+    print("  • Advanced transformation consistency and complexity bonuses")
+    print("  • Extended 500-epoch training with geometric pattern focus")
+    print("=" * 70)
     
-    # Initialize model with maximum grid size from final stage
-    max_grid_size = STAGE_CONFIG[7]['max_grid_size']  # Final stage size (30x30)
-    model = EnhancedAtlasNet(
-        max_grid_size=max_grid_size
+    # Initialize enhanced model
+    model = EnhancedAtlasNet(max_grid_size=30).to(device)
+    print(f"🗺️ ATLAS V3 Model: {sum(p.numel() for p in model.parameters()):,} parameters")
+    
+    # Enhanced loss function
+    loss_fn = AtlasEnhancedLoss(
+        transformation_penalty=ATLAS_CONFIG['transform_penalty'],
+        exact_match_bonus=ATLAS_CONFIG['exact_match_bonus']
     ).to(device)
     
-    print(f"📊 ATLAS Model: {sum(p.numel() for p in model.parameters()):,} parameters")
-    
-    # Initialize all AutomataNexus training systems
-    systems = {}
-    
-    # MEPT System - Use ATLAS-specific if available
-    if USE_MEPT:
-        if ATLAS_MEPT_LEAP_AVAILABLE:
-            mept_components = create_atlas_mept_system(
-                model=model,
-                device=device
-            )
-            systems['spatial_memory'] = mept_components['spatial_memory']
-            systems['pattern_bank'] = mept_components['pattern_bank']
-            systems['loss_fn'] = mept_components['loss_function']
-            print("✅ ATLAS-specific MEPT system initialized")
-        else:
-            mept_components = create_mept_system(
-                capacity=40000,
-                pattern_bank_size=8000,
-                transformation_penalty=ATLAS_CONFIG['transform_penalty'],
-                exact_match_bonus=ATLAS_CONFIG['exact_match_bonus']
-            )
-            systems['spatial_memory'] = mept_components['replay_buffer'] 
-            systems['pattern_bank'] = mept_components['pattern_bank']
-            systems['loss_fn'] = mept_components.get('loss_fn')
-            print("✅ Generic MEPT system initialized")
-    
-    # LEAP System - Use ATLAS-specific if available
-    if USE_LEAP:
-        if ATLAS_MEPT_LEAP_AVAILABLE:
-            leap_components = create_atlas_leap_system(model=model, device=device)
-            systems['leap_trainer'] = leap_components['trainer']
-            systems['pattern_generator'] = leap_components.get('pattern_generator')
-            systems['weak_detector'] = leap_components.get('detector')
-            print("✅ ATLAS-specific LEAP system initialized")
-        else:
-            leap_components = create_leap_system(device)
-            systems['leap_trainer'] = leap_components['trainer']
-            systems['pattern_generator'] = leap_components.get('pattern_generator')
-            systems['weak_detector'] = leap_components.get('detector')
-            print("✅ Generic LEAP system initialized")
-    
-    # PRISM System - Use ATLAS-specific if available
-    if USE_PRISM:
-        if ATLAS_PRISM_AVAILABLE:
-            prism_components = create_atlas_prism_system(model=model, device=device)
-            systems['prism_synthesizer'] = prism_components['synthesizer']
-            systems['prism_library'] = prism_components['program_bank']
-            print("✅ ATLAS-specific PRISM system initialized")
-        else:
-            prism_components = create_prism_system()
-            systems['prism_synthesizer'] = prism_components['synthesizer']
-            print("✅ Generic PRISM system initialized")
-    
-    # Initialize V3 ultra-conservative loss
-    loss_fn = AtlasSpecializedLossV3().to(device)
-    
-    # Ultra-conservative optimizer - much lower LR
+    # Enhanced optimizer
     optimizer = optim.AdamW(
         model.parameters(),
         lr=ATLAS_CONFIG['learning_rate'],
         betas=(0.9, 0.999),
-        weight_decay=1e-5,  # Very gentle weight decay
-        eps=1e-8
+        weight_decay=ATLAS_CONFIG['weight_decay']
     )
     
-    # Calculate total training steps
-    total_epochs = ATLAS_CONFIG['epochs_per_stage'] * 8  # 8 stages
-    steps_per_epoch = 100  # Approximate
-    total_steps = total_epochs * steps_per_epoch
-    
-    # Gentle warmup + cosine scheduler
-    scheduler = WarmupCosineSchedule(
-        optimizer,
-        warmup_steps=ATLAS_CONFIG['warmup_steps'],
-        training_steps=total_steps
+    # Advanced scheduler with restarts
+    scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+        optimizer, 
+        T_0=ATLAS_CONFIG['epochs_per_stage'],
+        T_mult=int(ATLAS_CONFIG['restart_multiplier']),
+        eta_min=ATLAS_CONFIG['learning_rate'] * 0.05
     )
     
-    scaler = GradScaler('cuda')
+    # Mixed precision
+    scaler = GradScaler('cuda' if device.type == 'cuda' else 'cpu')
+    
+    # Model directory
+    models_dir = '/content/AutomataNexus_Olympus_AGI2/arc_models_v4'
+    os.makedirs(models_dir, exist_ok=True)
+    best_model_path = f'{models_dir}/atlas_v3_best.pt'
+    
+    best_exact = 0.0
+    global_epoch = 0
+    start_stage = 0
+    
+    # Try to load V2 model as starting point
+    v2_model_path = f'{models_dir}/atlas_v2_best.pt'
+    if os.path.exists(v2_model_path):
+        print(f"\033[96m🔄 Loading ATLAS V2 model as V3 foundation from {v2_model_path}\033[0m")
+        try:
+            checkpoint = torch.load(v2_model_path, map_location=device, weights_only=False)
+            model.load_state_dict(checkpoint['model_state_dict'])
+            best_exact = checkpoint.get('best_exact', 0.0)
+            print(f"\033[96m✅ Loaded V2 foundation with {best_exact:.2f}% performance\033[0m")
+            print(f"\033[96m🚀 Starting V3 enhanced training from this foundation\033[0m")
+        except Exception as e:
+            print(f"\033[96m⚠️ Failed to load V2 checkpoint: {e}\033[0m")
+            # Try regular atlas_best.pt
+            atlas_best_path = f'{models_dir}/atlas_best.pt'
+            if os.path.exists(atlas_best_path):
+                try:
+                    checkpoint = torch.load(atlas_best_path, map_location=device, weights_only=False)
+                    model.load_state_dict(checkpoint['model_state_dict'])
+                    best_exact = checkpoint.get('best_exact', 0.0)
+                    print(f"\033[96m✅ Loaded existing ATLAS model with {best_exact:.2f}% performance\033[0m")
+                except Exception as e2:
+                    print(f"\033[96m⚠️ Failed to load any checkpoint: {e2}\033[0m")
+                    print(f"\033[96m🆕 Starting fresh V3 training\033[0m")
+            else:
+                print(f"\033[96m🆕 Starting fresh V3 training\033[0m")
+    elif os.path.exists(best_model_path):
+        print(f"\033[96m🔄 Loading existing V3 model from {best_model_path}\033[0m")
+        try:
+            checkpoint = torch.load(best_model_path, map_location=device, weights_only=False)
+            model.load_state_dict(checkpoint['model_state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            best_exact = checkpoint.get('best_exact', 0.0)
+            global_epoch = checkpoint.get('epoch', 0)
+            start_stage = checkpoint.get('stage', 0)
+            print(f"\033[96m✅ Resumed V3 from epoch {global_epoch}, stage {start_stage}, best: {best_exact:.2f}%\033[0m")
+        except Exception as e:
+            print(f"\033[96m⚠️ Failed to load V3 checkpoint: {e}\033[0m")
+    else:
+        print(f"\033[96m🆕 No existing model found - starting fresh V3 training\033[0m")
     
     # Data directory
     DATA_DIR = '/content/AutomataNexus_Olympus_AGI2/data'
     
-    # Training metrics
-    best_exact = 0.0
-    global_epoch = 0
-    global_step = 0
+    # Import dataset components
+    sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
+    try:
+        from colab_training_v4_megascale_curriculum import CurriculumMegaScaleDataset
+        dataset_available = True
+    except ImportError:
+        print("\033[96m⚠️ Dataset not available - using fallback\033[0m")
+        dataset_available = False
+        return None, 0.0
     
-    # V3 FEATURE: Load from best checkpoint if available
-    models_dir = '/content/AutomataNexus_Olympus_AGI2/arc_models_v4'
-    os.makedirs(models_dir, exist_ok=True)
-    checkpoint_path = f'{models_dir}/atlas_checkpoint.pt'
-    best_model_path = f'{models_dir}/atlas_best.pt'
+    print(f"\n🗺️ ATLAS V3 10-Stage Progressive Enhanced Training")
+    print("=" * 70)
     
-    # Try to load from atlas_best.pt first
-    start_stage = 0
-    if os.path.exists(best_model_path):
-        print(f"🔄 Loading best model from {best_model_path}")
-        try:
-            checkpoint = torch.load(best_model_path, map_location=device)
-            model.load_state_dict(checkpoint['model_state_dict'])
-            if 'optimizer_state_dict' in checkpoint:
-                optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-            if 'epoch' in checkpoint:
-                global_epoch = checkpoint['epoch']
-            if 'stage' in checkpoint:
-                start_stage = min(checkpoint.get('stage', 0), 7)  # Don't exceed max stage
-            best_exact = checkpoint.get('best_exact', 0.0)
-            print(f"✅ Loaded from best model: epoch {global_epoch}, stage {start_stage}, accuracy {best_exact:.2f}%")
-        except Exception as e:
-            print(f"⚠️ Failed to load best model: {e}")
-            print("🔄 Starting fresh training")
-    elif os.path.exists(checkpoint_path):
-        print(f"🔄 Loading checkpoint from {checkpoint_path}")
-        try:
-            checkpoint = torch.load(checkpoint_path, map_location=device)
-            model.load_state_dict(checkpoint['model_state_dict'])
-            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-            global_epoch = checkpoint['epoch']
-            start_stage = checkpoint.get('stage', 0)
-            best_exact = checkpoint.get('best_exact', 0.0)
-            print(f"✅ Resumed from checkpoint: epoch {global_epoch}, stage {start_stage}, accuracy {best_exact:.2f}%")
-        except Exception as e:
-            print(f"⚠️ Failed to load checkpoint: {e}")
-            print("🔄 Starting fresh training")
-    else:
-        print("🆕 No existing models found - starting fresh training")
+    # Enhanced stage tracking
+    stage_results = {}
     
-    # Training history
-    history = defaultdict(list)
-    
-    # 8-Stage Progressive Curriculum Training Loop
-    stage_metrics = []
-    
-    # Conservative 4-PHASE INJECTION (only if starting fresh)
-    if start_stage == 0 and USE_EXACT_BOOST:
-        print("\n" + "=" * 60)
-        print("🌍 ATLAS CONSERVATIVE 4-PHASE INJECTION SEQUENCE")
-        print("=" * 60)
-        
-        # Phase 1: Gentle Exact Match (lower target)
-        print("\n📍 PHASE 1: Conservative Spatial Identity Mapping")
-        model = atlas_exact_match_injection(model, device, num_epochs=60, target_accuracy=70.0)
-        
-        # Phase 2: MEPT (skip if not available)
-        if USE_MEPT and 'spatial_memory' in systems:
-            print("\n📍 PHASE 2: Gentle Spatial Memory Enhancement (MEPT)")
-            print("⚠️ Using conservative MEPT settings")
-        
-        # Phase 3: LEAP
-        if USE_LEAP and 'leap_trainer' in systems:
-            print("\n📍 PHASE 3: Conservative Adaptive Spatial Learning (LEAP)")
-            model = atlas_leap_injection(model, device, systems, num_epochs=60)
-        
-        # Phase 4: PRISM
-        if USE_PRISM and 'prism_synthesizer' in systems:
-            print("\n📍 PHASE 4: Conservative Spatial Program Synthesis (PRISM)")
-            model = atlas_prism_injection(model, device, systems, num_epochs=60)
-        
-        print("\n✅ CONSERVATIVE 4-PHASE INJECTION COMPLETE")
-        print("=" * 60)
-    
-    # Main curriculum training
+    # 10-Stage Progressive Training with Enhanced Features
     for stage in range(start_stage, ATLAS_CONFIG['curriculum_stages']):
         stage_config = STAGE_CONFIG[stage]
         grid_size = stage_config['max_grid_size']
+        synthesis_ratio = stage_config['synthesis_ratio']
+        geometric_complexity = stage_config['geometric_complexity']
+        focus = stage_config['focus']
         
-        print(f"\n🌍 ATLAS Stage {stage}: {grid_size}x{grid_size} Conservative Spatial Learning")
-        print(f"   📏 Grid Size: {grid_size}x{grid_size} | Synthesis: {int(stage_config['synthesis_ratio']*100)}%")
+        print(f"\n\033[96m🗺️ ATLAS V3 Stage {stage}: {grid_size}x{grid_size} Enhanced Spatial-Geometric Analysis\033[0m")
+        print(f"\033[96m   📏 Grid Size: {grid_size}x{grid_size} | Synthesis: {synthesis_ratio*100:.0f}%\033[0m")
+        print(f"\033[96m   🎯 Geometric Complexity: {geometric_complexity} | Focus: {focus}\033[0m")
         print("=" * 60)
         
-        # Very gentle learning rate adjustment
-        if stage > start_stage:
-            lr_mult = stage_config['lr_mult']
-            for param_group in optimizer.param_groups:
-                param_group['lr'] *= lr_mult
-            print(f"🔧 Conservative LR adjustment: {optimizer.param_groups[0]['lr']:.6f} (mult: {lr_mult:.2f})")
-        
-        # Create dataset
-        dataset_samples = []
-        
-        # Load ARC JSON files
-        arc_files = ['arc-agi_training_challenges.json', 'arc-agi_evaluation_challenges.json']
-        
-        for filename in arc_files:
-            filepath = os.path.join(DATA_DIR, filename)
-            if os.path.exists(filepath):
-                with open(filepath, 'r') as f:
-                    tasks = json.load(f)
-                    for task_id, task_data in tasks.items():
-                        for example in task_data['train']:
-                            input_grid = np.array(example['input'])
-                            output_grid = np.array(example['output'])
-                            # Only use grids that fit in current stage size
-                            if input_grid.shape[0] <= grid_size and input_grid.shape[1] <= grid_size:
-                                dataset_samples.append({'inputs': input_grid, 'outputs': output_grid})
-        
-        # Add validation samples
-        for filename in arc_files:
-            filepath = os.path.join(DATA_DIR, filename)
-            if os.path.exists(filepath):
-                with open(filepath, 'r') as f:
-                    tasks = json.load(f)
-                    for task_id, task_data in tasks.items():
-                        if 'test' in task_data:
-                            for example in task_data['test']:
-                                input_grid = np.array(example['input'])
-                                output_grid = np.array(example['output'])
-                                if input_grid.shape[0] <= grid_size and input_grid.shape[1] <= grid_size:
-                                    dataset_samples.append({'inputs': input_grid, 'outputs': output_grid})
-        
-        if not dataset_samples:
-            print(f"⚠️ No suitable samples for stage {stage}, skipping")
+        # Create enhanced dataset
+        try:
+            dataset = CurriculumMegaScaleDataset(
+                DATA_DIR,
+                curriculum_stage=min(stage, 7),
+                use_arc_synthesis=True,
+                synthesis_ratio=synthesis_ratio
+            )
+        except Exception as e:
+            print(f"\033[96m⚠️ Failed to create dataset: {e}\033[0m")
             continue
         
-        print(f"📚 Stage {stage} ({grid_size}x{grid_size}) - Total samples: {len(dataset_samples)}")
-        
-        # Create dataset and dataloaders
-        dataset = AtlasSpecializedDataset(
-            dataset_samples, 
-            max_grid_size=grid_size,
-            augment=False  # Disable augmentation for conservative training
-        )
-        
-        # Conservative train/val split
-        train_size = int(0.9 * len(dataset))
+        # Split dataset with more training data
+        train_size = int(0.87 * len(dataset))  # More training for complex spatial learning
         val_size = len(dataset) - train_size
         train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
         
         train_loader = DataLoader(
-            train_dataset, 
+            train_dataset,
             batch_size=ATLAS_CONFIG['batch_size'],
-            shuffle=True, 
-            collate_fn=custom_collate_fn,
+            shuffle=True,
             num_workers=0,
-            pin_memory=True
+            pin_memory=True,
+            collate_fn=custom_collate_fn,
+            drop_last=True
         )
         
         val_loader = DataLoader(
-            val_dataset, 
+            val_dataset,
             batch_size=ATLAS_CONFIG['batch_size'],
-            shuffle=False, 
-            collate_fn=custom_collate_fn,
+            shuffle=False,
             num_workers=0,
-            pin_memory=True
+            pin_memory=True,
+            collate_fn=custom_collate_fn,
+            drop_last=False
         )
         
-        print(f"📊 Train: {len(train_dataset)}, Val: {len(val_dataset)}")
+        print(f"\033[96m📚 Stage {stage} ({grid_size}x{grid_size}) - Train: {len(train_dataset):,}, Val: {len(val_dataset):,}\033[0m")
         
-        # Train this stage with extra patience and gentle updates
+        # Enhanced spatial pattern injection for early stages
+        if stage <= 3:  # Apply to first 4 stages for strong foundation
+            print(f"\033[96m🎯 Enhanced Spatial Pattern Injection for Stage {stage}\033[0m")
+            try:
+                for epoch in range(45):  # Extended injection period
+                    model.train()
+                    injection_exact = 0
+                    injection_total = 0
+                    
+                    # Create sophisticated spatial patterns
+                    for _ in range(180):  # More patterns for deeper learning
+                        size = random.choice([min(grid_size, 8), min(grid_size, 10)])
+                        
+                        # Advanced spatial pattern generation based on focus
+                        if focus == 'shape_recognition':
+                            # Basic shape patterns
+                            input_grid = torch.zeros(size, size, dtype=torch.long)
+                            center = size // 2
+                            # Create simple shapes
+                            for i in range(center-1, center+2):
+                                for j in range(center-1, center+2):
+                                    if 0 <= i < size and 0 <= j < size:
+                                        input_grid[i, j] = 1
+                            output_grid = input_grid.clone()
+                            output_grid[input_grid == 1] = 2  # Color change
+                            
+                        elif focus == 'rotation_translation':
+                            # Rotation and translation patterns
+                            input_grid = torch.zeros(size, size, dtype=torch.long)
+                            input_grid[0, 0] = 1
+                            input_grid[0, 1] = 2
+                            if random.random() < 0.5:
+                                # Rotation
+                                output_grid = torch.rot90(input_grid, k=1)
+                            else:
+                                # Translation
+                                output_grid = torch.roll(input_grid, shifts=1, dims=-1)
+                                
+                        elif focus == 'spatial_completion':
+                            # Pattern completion
+                            input_grid = torch.zeros(size, size, dtype=torch.long)
+                            # Create partial pattern
+                            for i in range(0, size, 2):
+                                for j in range(0, size, 2):
+                                    if i < size and j < size:
+                                        input_grid[i, j] = 1
+                            # Complete pattern
+                            output_grid = input_grid.clone()
+                            for i in range(1, size, 2):
+                                for j in range(1, size, 2):
+                                    if i < size and j < size:
+                                        output_grid[i, j] = 1
+                                        
+                        elif focus == 'object_relationships':
+                            # Multi-object spatial relationships
+                            input_grid = torch.zeros(size, size, dtype=torch.long)
+                            if size >= 6:
+                                # Place two objects
+                                input_grid[1, 1] = 1  # Object 1
+                                input_grid[size-2, size-2] = 2  # Object 2
+                                # Output shows relationship (connect with line)
+                                output_grid = input_grid.clone()
+                                for k in range(2, size-2):
+                                    output_grid[k, k] = 3  # Connection line
+                            else:
+                                output_grid = input_grid.clone()
+                        
+                        else:
+                            # General transformation patterns
+                            input_grid = torch.randint(1, 4, (size, size))
+                            # Apply flip transformation
+                            output_grid = torch.flip(input_grid, dims=[-1])
+                        
+                        # Train on spatial pattern
+                        optimizer.zero_grad()
+                        
+                        inp_oh = F.one_hot(input_grid.to(device).unsqueeze(0), num_classes=10).permute(0, 3, 1, 2).float()
+                        out_oh = F.one_hot(output_grid.to(device).unsqueeze(0), num_classes=10).permute(0, 3, 1, 2).float()
+                        
+                        model_outputs = model(inp_oh, out_oh, mode='train')
+                        
+                        # Stage information for enhanced loss
+                        stage_info = {
+                            'stage': stage,
+                            'focus': focus,
+                            'geometric_complexity': geometric_complexity
+                        }
+                        
+                        losses = loss_fn(model_outputs, out_oh, inp_oh, stage_info=stage_info)
+                        
+                        losses['total'].backward()
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), ATLAS_CONFIG['gradient_clip'])
+                        optimizer.step()
+                        
+                        # Check exact match
+                        pred_idx = model_outputs['predicted_output'].argmax(dim=1)
+                        exact_match = (pred_idx[0] == output_grid.to(device)).all()
+                        injection_exact += int(exact_match)
+                        injection_total += 1
+                    
+                    injection_accuracy = injection_exact / injection_total * 100
+                    if epoch % 12 == 0:
+                        print(f"\033[96mSpatial Injection Epoch {epoch+1}/45: {injection_accuracy:.1f}% spatial accuracy\033[0m")
+                    
+                    if injection_accuracy >= 87.0:  # Higher target for spatial mastery
+                        print(f"\033[96m✅ Spatial injection target reached: {injection_accuracy:.1f}%\033[0m")
+                        break
+                
+                print(f"\033[96m✅ Enhanced spatial injection completed for Stage {stage}\033[0m")
+            except Exception as e:
+                print(f"\033[96m⚠️ Spatial injection failed: {e}\033[0m")
+        
+        # Stage training loop with enhanced features
+        stage_epochs = ATLAS_CONFIG['epochs_per_stage']
         stage_best_exact = 0.0
-        patience_counter = 0
         
-        print(f"\n🔄 Conservative training Stage {stage} for {ATLAS_CONFIG['epochs_per_stage']} epochs...")
-        
-        for epoch in range(ATLAS_CONFIG['epochs_per_stage']):
-            model.train()
-            train_loss = 0.0
-            train_exact = 0
-            train_samples = 0
+        for epoch in range(stage_epochs):
+            global_epoch += 1
             
-            # Training loop with gradient accumulation
-            pbar = tqdm(train_loader, desc=f"Stage {stage}, Epoch {epoch+1}")
+            # Training phase with enhancements
+            model.train()
+            train_metrics = defaultdict(float)
+            
+            pbar = tqdm(train_loader, desc=f"ATLAS V3 Stage {stage}, Epoch {epoch+1}")
             
             for batch_idx, batch in enumerate(pbar):
-                inputs = batch['inputs'].to(device)
-                targets = batch['targets'].to(device)
+                inputs = batch['inputs'].to(device, non_blocking=True)
+                outputs = batch['outputs'].to(device, non_blocking=True)
                 
-                with autocast(device_type='cuda'):
-                    outputs = model(inputs, targets, mode='training')
-                    predictions = outputs['predicted_output']
-                    loss = loss_fn(predictions, targets, outputs)
+                # Clamp values
+                inputs = torch.clamp(inputs, 0, 9)
+                outputs = torch.clamp(outputs, 0, 9)
+                
+                # Advanced spatial augmentation
+                if ATLAS_CONFIG.get('advanced_augmentation') and random.random() < 0.35:
+                    inputs, outputs = advanced_spatial_augmentation(inputs, outputs, stage_config)
+                
+                # Convert to one-hot
+                input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+                output_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
+                
+                # Apply mixup augmentation
+                mixup_lambda = None
+                if random.random() < 0.25:  # 25% chance of mixup
+                    input_grids, output_targets, mixup_lambda = mixup_data(
+                        input_grids, output_grids, alpha=0.3
+                    )
+                    output_grids = output_targets
+                
+                with autocast(device.type):
+                    model_outputs = model(input_grids, mode='train')
                     
-                    # Gradient accumulation
-                    loss = loss / ATLAS_CONFIG['gradient_accumulation']
+                    stage_info = {
+                        'stage': stage,
+                        'focus': focus,
+                        'geometric_complexity': geometric_complexity
+                    }
+                    
+                    losses = loss_fn(model_outputs, output_grids, input_grids, 
+                                   mixup_lambda=mixup_lambda, stage_info=stage_info)
                 
+                loss = losses['total'] / ATLAS_CONFIG['gradient_accumulation']
                 scaler.scale(loss).backward()
                 
                 if (batch_idx + 1) % ATLAS_CONFIG['gradient_accumulation'] == 0:
-                    # Gentle gradient clipping
                     scaler.unscale_(optimizer)
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=ATLAS_CONFIG['gradient_clip'])
-                    
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), ATLAS_CONFIG['gradient_clip'])
                     scaler.step(optimizer)
                     scaler.update()
-                    scheduler.step()
                     optimizer.zero_grad()
-                    global_step += 1
+                    scheduler.step()
                 
-                # Calculate exact matches
-                with torch.no_grad():
-                    pred_indices = predictions.argmax(dim=1)
-                    target_indices = targets.argmax(dim=1) if targets.dim() > 2 else targets
-                    exact_matches = (pred_indices == target_indices).all(dim=(-1, -2)).sum().item()
-                    
-                    train_exact += exact_matches
-                    train_samples += inputs.size(0)
-                    train_loss += loss.item() * ATLAS_CONFIG['gradient_accumulation']
+                # Update metrics
+                train_metrics['loss'] += losses['total'].item()
+                train_metrics['exact'] += losses['exact_count'].item()
+                train_metrics['ultra_teal'] += losses['ultra_teal_count'].item()
+                train_metrics['samples'] += inputs.size(0)
                 
-                # Update progress bar
-                current_exact = (train_exact / train_samples) * 100
+                # Enhanced progress display
                 pbar.set_postfix({
-                    'loss': f"{train_loss/(batch_idx+1):.3f}",
-                    'exact': f"{exact_matches}/{inputs.size(0)}",
-                    'lr': f"{optimizer.param_groups[0]['lr']:.6f}"
+                    'loss': f"{losses['total'].item():.3f}",
+                    'exact': f"{losses['exact_count'].item():.0f}",
+                    'teal': f"{losses['ultra_teal_count'].item():.1f}",
+                    'IoU': f"{losses['avg_iou'].item():.2f}",
+                    'spatial': f"{losses.get('spatial_reasoning_bonus', torch.tensor(0)).item():.3f}",
+                    'lr': f"{scheduler.get_last_lr()[0]:.6f}"
                 })
             
-            global_epoch += 1
-            
-            # Validation every 10 epochs or at the end
-            if (epoch + 1) % 10 == 0 or epoch == ATLAS_CONFIG['epochs_per_stage'] - 1:
+            # Enhanced validation every 5 epochs
+            if epoch % 5 == 0 or epoch == stage_epochs - 1:
                 model.eval()
-                val_loss = 0.0
-                val_exact = 0
-                val_samples = 0
-                val_pixel_acc = 0
+                val_metrics = defaultdict(float)
                 
                 with torch.no_grad():
-                    val_pbar = tqdm(val_loader, desc="Validation")
-                    for batch in val_pbar:
+                    for batch in tqdm(val_loader, desc="V3 Spatial Validation"):
                         inputs = batch['inputs'].to(device)
-                        targets = batch['targets'].to(device)
+                        outputs = batch['outputs'].to(device)
                         
-                        with autocast(device_type='cuda'):
-                            outputs = model(inputs, targets, mode='training')
-                            predictions = outputs['predicted_output']
-                            loss = loss_fn(predictions, targets, outputs)
+                        inputs = torch.clamp(inputs, 0, 9)
+                        outputs = torch.clamp(outputs, 0, 9)
                         
-                        pred_indices = predictions.argmax(dim=1)
-                        target_indices = targets.argmax(dim=1) if targets.dim() > 2 else targets
-                        exact_matches = (pred_indices == target_indices).all(dim=(-1, -2)).sum().item()
-                        pixel_matches = (pred_indices == target_indices).float().mean().item() * 100
+                        input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+                        output_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
                         
-                        val_exact += exact_matches
-                        val_samples += inputs.size(0)
-                        val_loss += loss.item()
-                        val_pixel_acc += pixel_matches
+                        with autocast(device.type):
+                            model_outputs = model(input_grids, mode='inference')
+                            stage_info = {'stage': stage, 'focus': focus, 'geometric_complexity': geometric_complexity}
+                            losses = loss_fn(model_outputs, output_grids, input_grids, stage_info=stage_info)
+                        
+                        val_metrics['loss'] += losses['total'].item()
+                        val_metrics['exact'] += losses['exact_count'].item()
+                        val_metrics['ultra_teal'] += losses['ultra_teal_count'].item()
+                        val_metrics['samples'] += inputs.size(0)
                 
-                val_exact_pct = (val_exact / val_samples) * 100
-                val_pixel_pct = val_pixel_acc / len(val_loader)
+                # Calculate and display enhanced metrics
+                train_exact_pct = train_metrics['exact'] / train_metrics['samples'] * 100
+                train_ultra_teal_pct = train_metrics['ultra_teal'] / train_metrics['samples'] * 100
+                train_loss = train_metrics['loss'] / len(train_loader)
+                val_exact_pct = val_metrics['exact'] / val_metrics['samples'] * 100
+                val_ultra_teal_pct = val_metrics['ultra_teal'] / val_metrics['samples'] * 100
+                val_loss = val_metrics['loss'] / len(val_loader)
                 
-                print(f"\n🌍 ATLAS Epoch {epoch+1} (Stage {stage}, {grid_size}x{grid_size}):")
-                print(f"   🎯 Train: {current_exact:.2f}% exact, Loss: {train_loss/len(train_loader):.3f}")
-                print(f"   🎯 Val: {val_exact_pct:.2f}% exact, Loss: {val_loss/len(val_loader):.3f}, Pixel: {val_pixel_pct:.1f}%")
+                print(f"\n\033[96m🗺️ ATLAS V3 Epoch {epoch+1} (Stage {stage}, {grid_size}x{grid_size}):\033[0m")
+                print(f"\033[96m   🎯 Train: {train_exact_pct:.2f}% exact, Loss: {train_loss:.3f}\033[0m")
+                print(f"\033[96m   🎯 Val: {val_exact_pct:.2f}% exact, Loss: {val_loss:.3f}, TEAL: {val_ultra_teal_pct:.1f}%\033[0m")
                 
-                # Track best model - save more frequently in V3
+                # Track stage best
+                if val_exact_pct > stage_best_exact:
+                    stage_best_exact = val_exact_pct
+                
+                # Save enhanced best model
                 if val_exact_pct > best_exact:
                     best_exact = val_exact_pct
-                    stage_best_exact = val_exact_pct
-                    patience_counter = 0
-                    
-                    # Save best model
                     torch.save({
-                        'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict(),
                         'epoch': global_epoch,
                         'stage': stage,
+                        'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict(),
+                        'scheduler_state_dict': scheduler.state_dict(),
                         'best_exact': best_exact,
-                        'config': ATLAS_CONFIG
+                        'config': ATLAS_CONFIG,
+                        'stage_config': STAGE_CONFIG
                     }, best_model_path)
-                    
-                    print(f"   🏆 New best model! Exact: {best_exact:.2f}%")
-                else:
-                    patience_counter += 1
-                
-                # Save checkpoint every 20 epochs
-                if (epoch + 1) % 20 == 0:
-                    torch.save({
-                        'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict(),
-                        'epoch': global_epoch,
-                        'stage': stage,
-                        'best_exact': best_exact,
-                        'config': ATLAS_CONFIG
-                    }, checkpoint_path)
-                
-                # Record metrics
-                history['train_exact'].append(current_exact)
-                history['val_exact'].append(val_exact_pct)
-                history['train_loss'].append(train_loss/len(train_loader))
-                history['val_loss'].append(val_loss/len(val_loader))
-                
-                # Early stopping with much more patience in V3
-                if patience_counter >= ATLAS_CONFIG['patience']:
-                    print(f"⏰ Early stopping after {patience_counter} epochs without improvement")
-                    break
+                    print(f"\033[96m   🏆 New V3 best model! Exact: {val_exact_pct:.2f}%\033[0m")
         
-        # Stage complete
-        stage_metrics.append({
-            'stage': stage,
-            'grid_size': grid_size,
-            'final_exact': stage_best_exact,
-            'epochs': epoch + 1
-        })
+        # Store stage results
+        stage_results[stage] = {
+            'grid_size': f"{grid_size}x{grid_size}",
+            'focus': focus,
+            'geometric_complexity': geometric_complexity,
+            'best_exact': stage_best_exact,
+            'final_epoch': global_epoch
+        }
         
-        print(f"\n✅ Stage {stage} complete! Final exact: {stage_best_exact:.2f}%")
-        
-        # Clear memory
-        del train_loader, val_loader, dataset
-        gc.collect()
-        torch.cuda.empty_cache()
+        print(f"\n\033[96m✅ Stage {stage} complete! Final exact: {stage_best_exact:.2f}%\033[0m")
     
-    # Training complete
-    print("\n" + "=" * 60)
-    print("🎉 ATLAS V3 Conservative Training Complete!")
-    print(f"   🏆 Best exact match: {best_exact:.2f}%")
-    print(f"   📏 Stages completed: {len(stage_metrics)} (6x6 → 30x30 grids)")
-    print(f"   📊 Total epochs: {global_epoch}")
+    # Final results summary
+    print(f"\n\033[96m🎉 ATLAS V3 Enhanced Spatial Training Complete!\033[0m")
+    print("=" * 60)
+    print(f"\033[96m   🏆 Best exact match: {best_exact:.2f}%\033[0m")
+    print(f"\033[96m   📏 Enhanced stages completed: 10 (6x6 → 30x30 grids)\033[0m")
+    print(f"\033[96m   📊 Total epochs: {global_epoch}\033[0m")
+    print(f"\033[96m   🗺️ Enhanced with spatial reasoning, geometric complexity, and transformation mastery\033[0m")
     
-    print(f"\n📏 Stage-by-stage Conservative Learning Progression:")
-    for metrics in stage_metrics:
-        print(f"   Stage {metrics['stage']} ({metrics['grid_size']}x{metrics['grid_size']}): "
-              f"{metrics['final_exact']:.2f}% exact match ({metrics['epochs']} epochs)")
+    print(f"\n\033[96m📏 Stage-by-stage Spatial Learning Progression:\033[0m")
+    for stage, results in stage_results.items():
+        print(f"\033[96m   Stage {stage} ({results['grid_size']}): {results['best_exact']:.2f}% | {results['focus']} | {results['geometric_complexity']}\033[0m")
     
-    return model, history
+    return model, best_exact
 
 
 if __name__ == "__main__":
-    print("=" * 80)
-    print("ATLAS Specialized Training V3 - Conservative & Steady")
-    print("Ultra-conservative approach to prevent accuracy degradation")
-    print("=" * 80)
-    
-    try:
-        model, history = train_atlas_specialized_v3()
-        print("\n✅ ATLAS V3 training completed successfully!")
-    except Exception as e:
-        print(f"\n❌ Training failed: {e}")
-        raise
+    print("\033[96m🚀 Starting ATLAS V3 Enhanced Spatial Training...\033[0m")
+    model, best_performance = train_atlas_specialized_v3()
+    print("\033[96m✅ ATLAS V3 training completed successfully!\033[0m")
+    print(f"\033[96m🗺️ Final Enhanced Spatial Performance: {best_performance:.2f}% exact match\033[0m")

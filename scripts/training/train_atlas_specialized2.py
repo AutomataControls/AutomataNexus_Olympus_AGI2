@@ -328,6 +328,7 @@ def train_atlas_specialized_v2():
     best_exact = 0.0
     global_epoch = 0
     global_step = 0
+    loaded_exact = 0.0  # Initialize to 0.0 for fresh training
     
     # Check for existing best model
     models_dir = '/content/AutomataNexus_Olympus_AGI2/arc_models_v4'
@@ -336,7 +337,7 @@ def train_atlas_specialized_v2():
     if os.path.exists(best_model_path):
         print(f"🔄 Loading best model from {best_model_path}")
         try:
-            checkpoint = torch.load(best_model_path, map_location=device)
+            checkpoint = torch.load(best_model_path, map_location=device, weights_only=False)
             model.load_state_dict(checkpoint['model_state_dict'])
             loaded_exact = checkpoint.get('best_exact', 0.0)
             # For incremental training: reset threshold to allow improvements
@@ -346,8 +347,10 @@ def train_atlas_specialized_v2():
         except Exception as e:
             print(f"⚠️ Failed to load best model: {e}")
             print("🆕 Starting fresh training")
+            loaded_exact = 0.0  # Ensure it's set for fresh training
     else:
         print("🆕 No existing model found - starting fresh training")
+        loaded_exact = 0.0  # Ensure it's set for fresh training
     
     # Training history
     history = defaultdict(list)

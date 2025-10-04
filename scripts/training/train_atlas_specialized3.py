@@ -452,31 +452,19 @@ def train_atlas_specialized_v3():
     global_epoch = 0
     start_stage = 0
     
-    # Try to load V2 model as starting point
-    v2_model_path = f'{models_dir}/atlas_v2_best.pt'
-    if os.path.exists(v2_model_path):
-        print(f"\033[96m🔄 Loading ATLAS V2 model as V3 foundation from {v2_model_path}\033[0m")
+    # Try to load existing model as starting point
+    atlas_model_path = f'{models_dir}/atlas_best.pt'
+    if os.path.exists(atlas_model_path):
+        print(f"\033[96m🔄 Loading ATLAS model as V3 foundation from {atlas_model_path}\033[0m")
         try:
-            checkpoint = torch.load(v2_model_path, map_location=device, weights_only=False)
+            checkpoint = torch.load(atlas_model_path, map_location=device, weights_only=False)
             model.load_state_dict(checkpoint['model_state_dict'])
             best_exact = checkpoint.get('best_exact', 0.0)
-            print(f"\033[96m✅ Loaded V2 foundation with {best_exact:.2f}% performance\033[0m")
+            print(f"\033[96m✅ Loaded ATLAS foundation with {best_exact:.2f}% performance\033[0m")
             print(f"\033[96m🚀 Starting V3 enhanced training from this foundation\033[0m")
         except Exception as e:
-            print(f"\033[96m⚠️ Failed to load V2 checkpoint: {e}\033[0m")
-            # Try regular atlas_best.pt
-            atlas_best_path = f'{models_dir}/atlas_best.pt'
-            if os.path.exists(atlas_best_path):
-                try:
-                    checkpoint = torch.load(atlas_best_path, map_location=device, weights_only=False)
-                    model.load_state_dict(checkpoint['model_state_dict'])
-                    best_exact = checkpoint.get('best_exact', 0.0)
-                    print(f"\033[96m✅ Loaded existing ATLAS model with {best_exact:.2f}% performance\033[0m")
-                except Exception as e2:
-                    print(f"\033[96m⚠️ Failed to load any checkpoint: {e2}\033[0m")
-                    print(f"\033[96m🆕 Starting fresh V3 training\033[0m")
-            else:
-                print(f"\033[96m🆕 Starting fresh V3 training\033[0m")
+            print(f"\033[96m⚠️ Failed to load ATLAS checkpoint: {e}\033[0m")
+            print(f"\033[96m🆕 Starting fresh V3 training\033[0m")
     elif os.path.exists(best_model_path):
         print(f"\033[96m🔄 Loading existing V3 model from {best_model_path}\033[0m")
         try:

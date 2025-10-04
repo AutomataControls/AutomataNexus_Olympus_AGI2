@@ -213,12 +213,11 @@ class IrisSpecializedLossV3(nn.Module):
         # Analyze color transitions from input to target vs input to prediction
         B, H, W = pred_indices.shape
         
-        transition_accuracy = 0
+        transition_accuracy = torch.tensor(0.0, device=pred_indices.device)
         for b in range(B):
             # Check color mapping consistency
             input_colors = torch.unique(input_indices[b])
-            target_mapping = {}
-            pred_mapping = {}
+            batch_accuracy = torch.tensor(0.0, device=pred_indices.device)
             
             for color in input_colors:
                 input_mask = (input_indices[b] == color)
@@ -231,11 +230,14 @@ class IrisSpecializedLossV3(nn.Module):
                         target_mode = torch.mode(target_colors_for_input).values
                         pred_mode = torch.mode(pred_colors_for_input).values
                         
-                        transition_accuracy += (target_mode == pred_mode).float()
+                        batch_accuracy += (target_mode == pred_mode).float()
             
-            transition_accuracy = transition_accuracy / max(len(input_colors), 1)
+            if len(input_colors) > 0:
+                batch_accuracy = batch_accuracy / len(input_colors)
+            transition_accuracy += batch_accuracy
         
-        transition_accuracy = transition_accuracy / B
+        if B > 0:
+            transition_accuracy = transition_accuracy / B
         return -transition_accuracy * 0.08
 
 

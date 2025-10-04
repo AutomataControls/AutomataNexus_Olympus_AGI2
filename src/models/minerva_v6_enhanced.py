@@ -611,7 +611,7 @@ class MinervaV6Enhanced(nn.Module):
             torch.nn.utils.clip_grad_norm_(adaptable_params, max_norm=0.5)
             optimizer.step()
         
-        print(f"\033[96mMINERVA V6 ultimate adaptation complete!\\033[0m")
+        print(f"\033[96mMINERVA V6 ultimate adaptation complete!\033[0m")
 
 
 # Compatibility alias for easy integration

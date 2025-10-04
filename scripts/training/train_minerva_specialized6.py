@@ -649,7 +649,7 @@ def train_minerva_specialized_v6():
     # Progressive training through ultimate strategic stages
     for stage_idx, stage_config in enumerate(STAGE_CONFIG):
         print(f"\n\033[96m{'=' * 110}\033[0m")
-        print(f"\033[38;2;255;215;0mStage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
+        print(f"\033[38;2;255;204;153mStage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
               f"Strategic: {stage_config['strategic_complexity']} | Focus: {stage_config['focus']}\033[0m")
         print(f"\033[96m{'=' * 110}\033[0m")
         
@@ -694,19 +694,19 @@ def train_minerva_specialized_v6():
                     'ensemble_state': model.get_ensemble_state()
                 }, f'{save_dir}/minerva_v6_best.pt')
             
-            print(f"\\033[96mNew best V6 ultimate performance: {best_performance:.2%} - Models saved to BOTH locations!\\033[0m")
+            print(f"\033[96mNew best V6 ultimate performance: {best_performance:.2%} - Models saved to BOTH locations!\033[0m")
         
         # Memory cleanup
         torch.cuda.empty_cache()
         gc.collect()
     
-    print(f"\\n\\033[96m{'=' * 120}\\033[0m")
-    print(f"\\033[96mMINERVA V6 Ultimate Strategic Intelligence Training Complete!\\033[0m")
-    print(f"\\033[96mBest Ultimate Performance: {best_performance:.2%}\\033[0m")
-    print(f"\\033[96mOLYMPUS Integration Ready: {model.get_ensemble_state()['coordination_ready']}\\033[0m")
-    print(f"\\033[96mComplete Grid Mastery: {model.get_ensemble_state()['grid_mastery']}\\033[0m")
-    print(f"\\033[96mProgram Synthesis: {model.get_ensemble_state()['program_synthesis']}\\033[0m")
-    print(f"\\033[96m{'=' * 120}\\033[0m")
+    print(f"\n\033[96m{'=' * 120}\033[0m")
+    print(f"\033[96mMINERVA V6 Ultimate Strategic Intelligence Training Complete!\033[0m")
+    print(f"\033[96mBest Ultimate Performance: {best_performance:.2%}\033[0m")
+    print(f"\033[96mOLYMPUS Integration Ready: {model.get_ensemble_state()['coordination_ready']}\033[0m")
+    print(f"\033[96mComplete Grid Mastery: {model.get_ensemble_state()['grid_mastery']}\033[0m")
+    print(f"\033[96mProgram Synthesis: {model.get_ensemble_state()['program_synthesis']}\033[0m")
+    print(f"\033[96m{'=' * 120}\033[0m")
     
     return model, best_performance
 
@@ -790,12 +790,12 @@ def train_ultimate_strategic_stage(model, dataloader, criterion, optimizer, sche
             current_lr = scheduler.get_last_lr()[0]
             
             global_epoch = stage_idx * MINERVA_V6_CONFIG['epochs_per_stage'] + epoch + 1
-            print(f"\\033[96m⏰ MINERVA V6 Stage {stage_idx}, Epoch {epoch} (Global: {global_epoch}):\\033[0m")
-            print(f"\\033[96m   🎯 Train: {epoch_performance:.2%} exact, Loss: {avg_loss:.3f}\\033[0m")
-            print(f"\\033[96m   📊 LR: {current_lr:.6f} | Grid: {stage_config['max_grid_size']}x{stage_config['max_grid_size']} | "
-                  f"Strategic: {strategic_ratio:.1%} | ARC: {arc_ratio:.1%}\\033[0m")
+            print(f"\033[96m⏰ MINERVA V6 Stage {stage_idx}, Epoch {epoch} (Global: {global_epoch}):\033[0m")
+            print(f"\033[96m   🎯 Train: {epoch_performance:.2%} exact, Loss: {avg_loss:.3f}\033[0m")
+            print(f"\033[96m   📊 LR: {current_lr:.6f} | Grid: {stage_config['max_grid_size']}x{stage_config['max_grid_size']} | "
+                  f"Strategic: {strategic_ratio:.1%} | ARC: {arc_ratio:.1%}\033[0m")
             if epoch == epochs_for_stage - 1:
-                print(f"\\033[96m✅ Stage {stage_idx} complete! Final exact: {epoch_performance:.2%}\\033[0m")
+                print(f"\033[96m✅ Stage {stage_idx} complete! Final exact: {epoch_performance:.2%}\033[0m")
         
         # Memory cleanup
         torch.cuda.empty_cache()

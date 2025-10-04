@@ -476,7 +476,7 @@ class ExtendedStrategicDataset(Dataset):
     
     def __len__(self) -> int:
         # Artificially increase dataset size through augmentation
-        return len(self.samples) * 3  # 3x larger effective dataset
+        return len(self.samples) * 5  # 5x larger effective dataset for more training
     
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, Dict]:
         # Map augmented indices back to real samples

@@ -369,21 +369,22 @@ class AtlasV4Enhanced(nn.Module):
         self.ensemble_interface = SpatialEnsembleInterface(d_model, num_specialists=5)
         
         # ENHANCE: Advanced geometric reasoning
-        self.advanced_geometric_reasoning = nn.ModuleDict({
-            'pattern_matcher': nn.Sequential(
-                nn.Linear(d_model, d_model // 2),
-                nn.GELU(),
-                nn.Linear(d_model // 2, 64)  # Pattern encoding
-            ),
-            'spatial_memory': nn.Parameter(torch.randn(100, d_model) * 0.02),  # Spatial pattern memory
-            'transformation_composer': nn.Sequential(
-                nn.Linear(d_model + 64, d_model),
-                nn.GELU(),
-                nn.Linear(d_model, d_model // 2),
-                nn.GELU(),
-                nn.Linear(d_model // 2, 128)  # Composite transformation parameters
-            )
-        })
+        self.pattern_matcher = nn.Sequential(
+            nn.Linear(d_model, d_model // 2),
+            nn.GELU(),
+            nn.Linear(d_model // 2, 64)  # Pattern encoding
+        )
+        
+        self.transformation_composer = nn.Sequential(
+            nn.Linear(d_model + 64, d_model),
+            nn.GELU(),
+            nn.Linear(d_model, d_model // 2),
+            nn.GELU(),
+            nn.Linear(d_model // 2, 128)  # Composite transformation parameters
+        )
+        
+        # Separate parameter for spatial memory (can't go in ModuleDict)
+        self.spatial_memory = nn.Parameter(torch.randn(100, d_model) * 0.02)
         
         # ENHANCE: Multi-scale spatial processing
         self.multiscale_processor = nn.ModuleList([
@@ -491,19 +492,19 @@ class AtlasV4Enhanced(nn.Module):
         
         # Advanced geometric reasoning
         global_features = enhanced_features.mean(dim=[1, 2])  # B, d_model
-        pattern_encoding = self.advanced_geometric_reasoning['pattern_matcher'](global_features)
+        pattern_encoding = self.pattern_matcher(global_features)
         
         # Spatial memory matching
         memory_similarity = F.cosine_similarity(
             global_features.unsqueeze(1), 
-            self.advanced_geometric_reasoning['spatial_memory'].unsqueeze(0), 
+            self.spatial_memory.unsqueeze(0), 
             dim=2
         )  # B, 100
         top_patterns = memory_similarity.topk(5, dim=1)[0].mean(dim=1, keepdim=True)  # B, 1
         
         # Compose transformations
         composition_input = torch.cat([global_features, pattern_encoding], dim=1)
-        transformation_params = self.advanced_geometric_reasoning['transformation_composer'](composition_input)
+        transformation_params = self.transformation_composer(composition_input)
         
         # Ensemble coordination
         ensemble_output = self.ensemble_interface(enhanced_features)

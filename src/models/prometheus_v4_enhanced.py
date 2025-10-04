@@ -165,8 +165,16 @@ class PatternCreativityAttention(nn.Module):
         for b in range(B):
             for i in range(min(seq_len, 64)):
                 for j in range(min(seq_len, 64)):
-                    # Add creativity encouragement
-                    creativity_score = diversity_bonus[b, i, j] if i < 64 and j < 64 else 0.5
+                    # Add creativity encouragement - handle tensor dimensions properly
+                    if i < diversity_bonus.shape[-2] and j < diversity_bonus.shape[-1]:
+                        if diversity_bonus.dim() == 3 and b < diversity_bonus.shape[0]:
+                            creativity_score = diversity_bonus[b, i, j]
+                        elif diversity_bonus.dim() == 2:
+                            creativity_score = diversity_bonus[i, j]
+                        else:
+                            creativity_score = 0.5
+                    else:
+                        creativity_score = 0.5
                     bias[b, :, i, j] = creativity_score * 0.1
         
         return bias

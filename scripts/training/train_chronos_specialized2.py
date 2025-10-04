@@ -541,7 +541,7 @@ def train_chronos_specialized_v2():
     # Model directory
     models_dir = '/content/AutomataNexus_Olympus_AGI2/arc_models_v4'
     os.makedirs(models_dir, exist_ok=True)
-    best_model_path = f'{models_dir}/chronos_v2_best.pt'
+    best_model_path = f'{models_dir}/chronos_best.pt'
     
     best_exact = 0.0
     global_epoch = 0
@@ -549,7 +549,7 @@ def train_chronos_specialized_v2():
     
     # Load existing best model if available
     if os.path.exists(best_model_path):
-        print(f"🔄 Loading best CHRONOS V2 model from {best_model_path}")
+        print(f"🔄 Loading best CHRONOS model from {best_model_path}")
         try:
             checkpoint = torch.load(best_model_path, map_location=device)
             model.load_state_dict(checkpoint['model_state_dict'])
@@ -565,7 +565,7 @@ def train_chronos_specialized_v2():
             print(f"⚠️ Failed to load checkpoint: {e}")
             print("🆕 Starting fresh training")
     else:
-        print("🆕 No existing model found - starting fresh V2 training")
+        print("🆕 No existing CHRONOS model found - starting fresh V2 training")
     
     # Data directory
     DATA_DIR = '/content/AutomataNexus_Olympus_AGI2/data'

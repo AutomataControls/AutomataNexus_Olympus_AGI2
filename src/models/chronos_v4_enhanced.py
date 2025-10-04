@@ -23,41 +23,52 @@ class TemporalPositionalEncoding(nn.Module):
         self.max_sequence_length = max_sequence_length
         self.max_grid_size = max_grid_size
         
-        # Temporal positional encoding (time dimension)
-        self.temporal_pe = nn.Parameter(torch.zeros(max_sequence_length, d_model // 3))
+        # Temporal positional encoding (time dimension) - adjust dimensions to sum to d_model
+        temporal_dim = d_model // 3
+        spatial_dim = d_model // 3  
+        sequence_dim = d_model - temporal_dim - spatial_dim  # Remainder to ensure exact sum
+        
+        self.temporal_pe = nn.Parameter(torch.zeros(max_sequence_length, temporal_dim))
         
         # Spatial positional encoding (2D space)
-        self.spatial_pe = nn.Parameter(torch.zeros(max_grid_size, max_grid_size, d_model // 3))
+        self.spatial_pe = nn.Parameter(torch.zeros(max_grid_size, max_grid_size, spatial_dim))
         
         # Sequence pattern encoding
-        self.sequence_pe = nn.Parameter(torch.zeros(64, d_model // 3))  # 64 sequence patterns
+        self.sequence_pe = nn.Parameter(torch.zeros(64, sequence_dim))  # 64 sequence patterns
         
         # Initialize with temporal sinusoidal patterns
         self._init_temporal_encodings()
         
     def _init_temporal_encodings(self):
         """Initialize with temporal sinusoidal patterns"""
+        temporal_dim = self.d_model // 3
+        spatial_dim = self.d_model // 3  
+        sequence_dim = self.d_model - temporal_dim - spatial_dim
+        
         # Temporal encoding (time steps)
         for t in range(self.max_sequence_length):
-            for i in range(0, self.d_model // 6, 2):
-                freq = 1.0 / (10000 ** (i / (self.d_model // 3)))
+            for i in range(0, temporal_dim - 1, 2):
+                freq = 1.0 / (10000 ** (i / temporal_dim))
                 self.temporal_pe.data[t, i] = math.sin(t * freq)
-                self.temporal_pe.data[t, i + 1] = math.cos(t * freq)
+                if i + 1 < temporal_dim:
+                    self.temporal_pe.data[t, i + 1] = math.cos(t * freq)
         
         # Spatial encoding
         for h in range(self.max_grid_size):
             for w in range(self.max_grid_size):
-                for i in range(0, self.d_model // 6, 2):
-                    freq = 1.0 / (10000 ** (i / (self.d_model // 3)))
+                for i in range(0, spatial_dim - 1, 2):
+                    freq = 1.0 / (10000 ** (i / spatial_dim))
                     self.spatial_pe.data[h, w, i] = math.sin(h * freq)
-                    self.spatial_pe.data[h, w, i + 1] = math.cos(w * freq)
+                    if i + 1 < spatial_dim:
+                        self.spatial_pe.data[h, w, i + 1] = math.cos(w * freq)
         
         # Sequence pattern encoding
         for p in range(64):
-            for i in range(0, self.d_model // 6, 2):
-                freq = 1.0 / (10000 ** (i / (self.d_model // 3)))
+            for i in range(0, sequence_dim - 1, 2):
+                freq = 1.0 / (10000 ** (i / sequence_dim))
                 self.sequence_pe.data[p, i] = math.sin(p * freq * 0.1)
-                self.sequence_pe.data[p, i + 1] = math.cos(p * freq * 0.1)
+                if i + 1 < sequence_dim:
+                    self.sequence_pe.data[p, i + 1] = math.cos(p * freq * 0.1)
     
     def forward(self, x: torch.Tensor, temporal_step: int, sequence_pattern: torch.Tensor) -> torch.Tensor:
         """Apply temporal, spatial, and sequence positional encoding"""
@@ -71,7 +82,8 @@ class TemporalPositionalEncoding(nn.Module):
         spatial_enc = self.spatial_pe[:H, :W, :].unsqueeze(0).expand(B, -1, -1, -1)
         
         # Get sequence pattern encoding
-        seq_enc = torch.zeros(B, H, W, self.d_model // 3).to(x.device)
+        sequence_dim = self.d_model - (self.d_model // 3) - (self.d_model // 3)
+        seq_enc = torch.zeros(B, H, W, sequence_dim).to(x.device)
         for b in range(B):
             pattern_idx = sequence_pattern[b].long() % 64
             seq_enc[b] = self.sequence_pe[pattern_idx].unsqueeze(0).unsqueeze(0).expand(H, W, -1)

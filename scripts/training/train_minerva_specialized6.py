@@ -728,7 +728,7 @@ def train_ultimate_strategic_stage(model, dataloader, criterion, optimizer, sche
         ultimate_strategic_count = 0
         
         # Progress bar
-        pbar = tqdm(dataloader, desc=f"Ultimate Strategic Stage {stage_idx} Epoch {epoch}")
+        pbar = tqdm(dataloader, desc=f"\033[38;2;255;204;153mUltimate Strategic Stage {stage_idx} Epoch {epoch}\033[0m")
         
         for batch_idx, (inputs, targets, metadata) in enumerate(pbar):
             inputs = inputs.to(device)

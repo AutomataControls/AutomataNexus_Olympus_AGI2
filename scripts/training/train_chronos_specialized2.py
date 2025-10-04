@@ -598,13 +598,27 @@ def train_chronos_specialized_v2():
         val_size = len(dataset) - train_size
         train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
         
+        # Simple collate function for CHRONOS V2
+        def simple_collate_fn(batch):
+            if isinstance(batch[0], tuple):
+                inputs = torch.stack([item[0] for item in batch])
+                outputs = torch.stack([item[1] for item in batch])
+            elif isinstance(batch[0], dict):
+                inputs = torch.stack([item['inputs'] for item in batch])
+                outputs = torch.stack([item['outputs'] for item in batch])
+            else:
+                # Fallback - assume it's a list of (input, output) pairs
+                inputs = torch.stack([item[0] if isinstance(item, (list, tuple)) else item for item in batch])
+                outputs = torch.stack([item[1] if isinstance(item, (list, tuple)) else item for item in batch])
+            return {'inputs': inputs, 'outputs': outputs}
+        
         train_loader = DataLoader(
             train_dataset,
             batch_size=CHRONOS_CONFIG['batch_size'],
             shuffle=True,
             num_workers=0,
             pin_memory=True,
-            collate_fn=lambda batch: custom_collate_fn(batch, stage) if CHRONOS_V1_AVAILABLE else batch,
+            collate_fn=simple_collate_fn,
             drop_last=True
         )
         
@@ -614,7 +628,7 @@ def train_chronos_specialized_v2():
             shuffle=False,
             num_workers=0,
             pin_memory=True,
-            collate_fn=lambda batch: custom_collate_fn(batch, stage) if CHRONOS_V1_AVAILABLE else batch,
+            collate_fn=simple_collate_fn,
             drop_last=False
         )
         
@@ -682,15 +696,18 @@ def train_chronos_specialized_v2():
                     for inp, out, temp_data in injection_patterns:
                         optimizer.zero_grad()
                         
-                        inp_oh = F.one_hot(inp.unsqueeze(0), num_classes=10).permute(0, 3, 1, 2).float().to(device)
-                        out_oh = F.one_hot(out.unsqueeze(0), num_classes=10).permute(0, 3, 1, 2).float().to(device)
+                        # Convert to proper tensor types and one-hot encode
+                        inp_tensor = inp.unsqueeze(0).long().to(device)
+                        out_tensor = out.unsqueeze(0).long().to(device)
+                        inp_oh = F.one_hot(inp_tensor, num_classes=10).permute(0, 3, 1, 2).float()
+                        out_oh = F.one_hot(out_tensor, num_classes=10).permute(0, 3, 1, 2).float()
                         
                         # Prepare temporal sequence if available
                         if temp_data is not None and isinstance(temp_data, list):
                             temporal_sequence = []
                             for t_step in temp_data:
                                 if isinstance(t_step, torch.Tensor):
-                                    temporal_sequence.append(t_step.unsqueeze(0).to(device))
+                                    temporal_sequence.append(t_step.unsqueeze(0).long().to(device))
                             temp_data = temporal_sequence if temporal_sequence else None
                         
                         # CHRONOS model expects sequence input

@@ -632,7 +632,7 @@ def train_advanced_temporal_stage(model, dataloader, criterion, optimizer, sched
             targets = targets.to(device)
             
             # Forward pass with mixed precision
-            with autocast():
+            with autocast(device_type='cuda'):
                 # CHRONOS expects sequence input, convert single frame to sequence
                 outputs = model([inputs], targets, mode='train')
                 loss_dict = criterion(outputs, targets, inputs)

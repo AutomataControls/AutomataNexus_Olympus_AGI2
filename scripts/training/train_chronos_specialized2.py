@@ -850,10 +850,10 @@ def train_chronos_specialized_v2():
                     sequence_input.extend(temporal_float)
                 
                 model_outputs = model(sequence_input, target=output_grids)
-                    losses = loss_fn(
-                        model_outputs, output_grids, input_grids, 
-                        mixup_lambda=mixup_lambda, temporal_sequence=temporal_data
-                    )
+                losses = loss_fn(
+                    model_outputs, output_grids, input_grids, 
+                    mixup_lambda=mixup_lambda, temporal_sequence=temporal_data
+                )
                 
                 loss = losses['total'] / CHRONOS_CONFIG['gradient_accumulation']
                 scaler.scale(loss).backward()
@@ -906,7 +906,7 @@ def train_chronos_specialized_v2():
                         
                         sequence_input = [input_grids]
                         model_outputs = model(sequence_input, target=output_grids)
-                            losses = loss_fn(model_outputs, output_grids, input_grids)
+                        losses = loss_fn(model_outputs, output_grids, input_grids)
                         
                         val_metrics['loss'] += losses['total'].item()
                         val_metrics['exact'] += losses['exact_count'].item()

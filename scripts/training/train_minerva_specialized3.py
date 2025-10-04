@@ -164,17 +164,23 @@ class EnhancedMinervaLoss(nn.Module):
         strategic_planning_bonus = 0.0
         if 'features' in model_outputs and MINERVA_CONFIG.get('strategic_planning_weight', 0) > 0:
             features = model_outputs['features']
-            # Reward complex feature representations
-            feature_complexity = torch.std(features.view(B, -1), dim=1).mean()
-            strategic_planning_bonus = feature_complexity * MINERVA_CONFIG['strategic_planning_weight'] * 0.01
+            # Reward complex feature representations - handle tensor shapes safely
+            if features.numel() > 0:
+                flattened = features.reshape(B, -1)
+                if flattened.shape[1] > 0:
+                    feature_complexity = torch.std(flattened, dim=1).mean()
+                    strategic_planning_bonus = feature_complexity * MINERVA_CONFIG['strategic_planning_weight'] * 0.01
         
         # Multi-step reasoning bonus
         multi_step_bonus = 0.0
         if 'transform_params' in model_outputs and MINERVA_CONFIG.get('multi_step_reasoning_weight', 0) > 0:
             transform_params = model_outputs['transform_params']
-            # Reward diverse transformation parameters
-            transform_diversity = torch.std(transform_params.view(B, -1), dim=1).mean()
-            multi_step_bonus = transform_diversity * MINERVA_CONFIG['multi_step_reasoning_weight'] * 0.01
+            # Reward diverse transformation parameters - handle tensor shapes safely
+            if transform_params.numel() > 0:
+                flattened = transform_params.reshape(B, -1)
+                if flattened.shape[1] > 0:
+                    transform_diversity = torch.std(flattened, dim=1).mean()
+                    multi_step_bonus = transform_diversity * MINERVA_CONFIG['multi_step_reasoning_weight'] * 0.01
         
         # Pattern diversity bonus
         diversity_bonus = 0.0
@@ -335,9 +341,30 @@ def advanced_strategic_augmentation(inputs, outputs):
 
 def custom_collate_fn(batch):
     """Enhanced collate function with padding for variable sizes"""
-    # Find maximum dimensions
-    max_h = max(item['inputs'].shape[1] for item in batch)
-    max_w = max(item['inputs'].shape[2] for item in batch)
+    # Handle batch items that might be tuples or dicts
+    if isinstance(batch[0], tuple):
+        # Convert tuples to dicts
+        batch = [{'inputs': item[0], 'outputs': item[1]} for item in batch]
+    
+    # Find maximum dimensions - handle different tensor shapes
+    max_h = 0
+    max_w = 0
+    
+    for item in batch:
+        inp = item['inputs']
+        # Handle different tensor shapes
+        if inp.dim() == 2:  # H, W
+            h, w = inp.shape
+        elif inp.dim() == 3:  # C, H, W or H, W, C
+            if inp.shape[0] <= 10:  # Likely C, H, W
+                h, w = inp.shape[1], inp.shape[2]
+            else:  # Likely H, W, C
+                h, w = inp.shape[0], inp.shape[1]
+        else:
+            continue
+        
+        max_h = max(max_h, h)
+        max_w = max(max_w, w)
     
     # Pad all tensors to maximum size
     padded_inputs = []
@@ -347,9 +374,22 @@ def custom_collate_fn(batch):
         inp = item['inputs']
         out = item['outputs']
         
-        # Pad with zeros (background color)
-        h_pad = max_h - inp.shape[1]
-        w_pad = max_w - inp.shape[2]
+        # Ensure consistent format (H, W)
+        if inp.dim() == 3:
+            if inp.shape[0] <= 10:  # C, H, W -> H, W
+                inp = inp.argmax(dim=0)
+            else:  # H, W, C -> H, W
+                inp = inp.argmax(dim=-1)
+        
+        if out.dim() == 3:
+            if out.shape[0] <= 10:  # C, H, W -> H, W
+                out = out.argmax(dim=0)
+            else:  # H, W, C -> H, W
+                out = out.argmax(dim=-1)
+        
+        # Pad to maximum size
+        h_pad = max_h - inp.shape[0]
+        w_pad = max_w - inp.shape[1]
         
         if h_pad > 0 or w_pad > 0:
             inp = F.pad(inp, (0, w_pad, 0, h_pad), mode='constant', value=0)

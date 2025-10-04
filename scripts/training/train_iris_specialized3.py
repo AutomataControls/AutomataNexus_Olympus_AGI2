@@ -478,7 +478,7 @@ def train_iris_specialized_v3():
     # Progressive training through stages
     for stage_idx, stage_config in enumerate(STAGE_CONFIG):
         print(f"\n\033[96m{'=' * 80}\033[0m")
-        print(f"\033[96mStage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
+        print(f"\033[38;2;255;222;173mStage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
               f"Color Complexity: {stage_config['color_complexity']} | Focus: {stage_config['focus']}\033[0m")
         print(f"\033[96m{'=' * 80}\033[0m")
         
@@ -547,7 +547,7 @@ def train_color_stage(model, dataloader, criterion, optimizer, scaler, stage_idx
         color_transform_count = 0
         
         # Progress bar
-        pbar = tqdm(dataloader, desc=f"\033[96mColor Stage {stage_idx} Epoch {epoch}\033[0m")
+        pbar = tqdm(dataloader, desc=f"\033[38;2;255;204;153mColor Stage {stage_idx} Epoch {epoch}\033[0m")
         
         for batch_idx, (inputs, targets, metadata) in enumerate(pbar):
             inputs = inputs.to(device)

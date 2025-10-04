@@ -533,7 +533,7 @@ def train_chronos_specialized_v4():
     # Progressive training through temporal stages
     for stage_idx, stage_config in enumerate(STAGE_CONFIG):
         print(f"\n\033[96m{'=' * 100}\033[0m")
-        print(f"\033[96mStage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
+        print(f"\033[38;2;255;222;173mStage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
               f"Temporal: {stage_config['temporal_complexity']} | Focus: {stage_config['focus']}\033[0m")
         print(f"\033[96m{'=' * 100}\033[0m")
         
@@ -606,7 +606,7 @@ def train_advanced_temporal_stage(model, dataloader, criterion, optimizer, sched
         advanced_temporal_count = 0
         
         # Progress bar
-        pbar = tqdm(dataloader, desc=f"\033[96mAdvanced Temporal Stage {stage_idx} Epoch {epoch}\033[0m")
+        pbar = tqdm(dataloader, desc=f"\033[38;2;255;204;153mAdvanced Temporal Stage {stage_idx} Epoch {epoch}\033[0m")
         
         for batch_idx, (inputs, targets, metadata) in enumerate(pbar):
             inputs = inputs.to(device)
@@ -663,10 +663,13 @@ def train_advanced_temporal_stage(model, dataloader, criterion, optimizer, sched
         # Log detailed progress
         if epoch % 5 == 0 or epoch == epochs_for_stage - 1:
             temporal_ratio = advanced_temporal_count / max(total_samples, 1)
-            print(f"\033[96mAdvanced Temporal Stage {stage_idx} Epoch {epoch}: "
-                  f"Performance = {epoch_performance:.1%}, "
-                  f"Advanced Temporal = {temporal_ratio:.1%}, "
-                  f"Loss = {epoch_losses['total']/len(dataloader):.4f}\033[0m")
+            avg_loss = epoch_losses['total']/len(dataloader)
+            current_lr = scheduler.get_last_lr()[0]
+            print(f"\033[96m⏰ CHRONOS V4 Stage {stage_idx}, Epoch {epoch} (Global: {stage_idx * CHRONOS_V4_CONFIG['epochs_per_stage'] + epoch + 1}):\033[0m")
+            print(f"\033[96m   🎯 Train: {epoch_performance:.2%} exact, Loss: {avg_loss:.3f}\033[0m")
+            print(f"\033[96m   📊 LR: {current_lr:.6f} | Grid: {stage_config['max_grid_size']}x{stage_config['max_grid_size']} | Temporal: {temporal_ratio:.1%}\033[0m")
+            if epoch == epochs_for_stage - 1:
+                print(f"\033[96m✅ Stage {stage_idx} complete! Final exact: {epoch_performance:.2%}\033[0m")
         
         # Memory cleanup
         torch.cuda.empty_cache()

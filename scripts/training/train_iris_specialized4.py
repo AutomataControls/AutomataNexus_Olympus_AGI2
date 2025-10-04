@@ -527,7 +527,7 @@ def train_iris_specialized_v4():
     # Progressive training through chromatic stages
     for stage_idx, stage_config in enumerate(STAGE_CONFIG):
         print(f"\n\033[96m{'=' * 100}\033[0m")
-        print(f"\033[96mStage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
+        print(f"\033[38;2;255;222;173mStage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
               f"Color: {stage_config['color_complexity']} | Focus: {stage_config['focus']}\033[0m")
         print(f"\033[96m{'=' * 100}\033[0m")
         
@@ -600,7 +600,7 @@ def train_advanced_chromatic_stage(model, dataloader, criterion, optimizer, sche
         advanced_color_count = 0
         
         # Progress bar
-        pbar = tqdm(dataloader, desc=f"\033[96mAdvanced Chromatic Stage {stage_idx} Epoch {epoch}\033[0m")
+        pbar = tqdm(dataloader, desc=f"\033[38;2;255;204;153mAdvanced Chromatic Stage {stage_idx} Epoch {epoch}\033[0m")
         
         for batch_idx, (inputs, targets, metadata) in enumerate(pbar):
             inputs = inputs.to(device)
@@ -656,10 +656,13 @@ def train_advanced_chromatic_stage(model, dataloader, criterion, optimizer, sche
         # Log detailed progress
         if epoch % 5 == 0 or epoch == epochs_for_stage - 1:
             color_ratio = advanced_color_count / max(total_samples, 1)
-            print(f"\033[96mAdvanced Chromatic Stage {stage_idx} Epoch {epoch}: "
-                  f"Performance = {epoch_performance:.1%}, "
-                  f"Advanced Color = {color_ratio:.1%}, "
-                  f"Loss = {epoch_losses['total']/len(dataloader):.4f}\033[0m")
+            avg_loss = epoch_losses['total']/len(dataloader)
+            current_lr = scheduler.get_last_lr()[0]
+            print(f"\033[96m⏰ IRIS V4 Stage {stage_idx}, Epoch {epoch} (Global: {stage_idx * IRIS_V4_CONFIG['epochs_per_stage'] + epoch + 1}):\033[0m")
+            print(f"\033[96m   🎯 Train: {epoch_performance:.2%} exact, Loss: {avg_loss:.3f}\033[0m")
+            print(f"\033[96m   📊 LR: {current_lr:.6f} | Grid: {stage_config['max_grid_size']}x{stage_config['max_grid_size']} | Color: {color_ratio:.1%}\033[0m")
+            if epoch == epochs_for_stage - 1:
+                print(f"\033[96m✅ Stage {stage_idx} complete! Final exact: {epoch_performance:.2%}\033[0m")
         
         # Memory cleanup
         torch.cuda.empty_cache()

@@ -29,15 +29,15 @@ sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
 # Import enhanced ATLAS V4 model
 from src.models.atlas_v4_enhanced import AtlasV4Enhanced
 
-# Enhanced ATLAS V4 Configuration - 2D Spatial Reasoning Focus
+# Enhanced ATLAS V4 Configuration - 2D Spatial Reasoning Focus (OPTIMIZED FOR SPEED)
 ATLAS_V4_CONFIG = {
-    # Core Training Parameters - Enhanced for V4 Spatial Intelligence
-    'batch_size': 28,  # Optimal for complex spatial computations
-    'learning_rate': 0.00012,  # Lower for spatial transformer stability
-    'num_epochs': 700,  # Extended training: 14 stages x 50 epochs
-    'gradient_accumulation': 9,  # Effective batch: 252
-    'epochs_per_stage': 50,  # Extended epochs per stage
-    'curriculum_stages': 14,  # Fine-grained 14-stage progression
+    # Core Training Parameters - OPTIMIZED for V4 Speed + Performance
+    'batch_size': 48,  # Larger batch for efficiency
+    'learning_rate': 0.0002,  # Higher for faster convergence
+    'num_epochs': 360,  # Reduced: 12 stages x 30 epochs
+    'gradient_accumulation': 5,  # Reduced accumulation: effective batch 240
+    'epochs_per_stage': 30,  # Reduced epochs per stage for speed
+    'curriculum_stages': 12,  # Reduced stages for efficiency
     
     # Enhanced Loss Configuration
     'transform_penalty': 0.03,  # Very low - encourage spatial transformations
@@ -68,33 +68,31 @@ ATLAS_V4_CONFIG = {
     'transformation_composition_bonus': True,
     
     # Learning Rate Scheduling
-    'warmup_epochs': 40,  # Extended warmup for spatial transformers
+    'warmup_epochs': 20,  # Reduced warmup for faster training
     'cosine_restarts': True,
     'restart_multiplier': 1.5,
     'plateau_patience': 20,
 }
 
-# Enhanced 14-Stage Progressive Configuration - Fine-Grained Spatial Learning
+# Optimized 12-Stage Progressive Configuration - Efficient Spatial Learning
 STAGE_CONFIG = [
-    # Foundation Spatial Understanding (6x6 - 9x9)
-    {'stage': 0, 'max_grid_size': 6,  'synthesis_ratio': 0.85, 'spatial_complexity': 'basic_shapes', 'focus': 'shape_recognition'},
-    {'stage': 1, 'max_grid_size': 7,  'synthesis_ratio': 0.8, 'spatial_complexity': 'simple_rotation', 'focus': 'rotation_detection'},
-    {'stage': 2, 'max_grid_size': 8,  'synthesis_ratio': 0.75, 'spatial_complexity': 'reflection_basic', 'focus': 'reflection_learning'},
-    {'stage': 3, 'max_grid_size': 9,  'spatial_complexity': 'translation_basic', 'focus': 'translation_understanding'},
+    # Foundation Spatial Understanding (6x6 - 10x10)
+    {'stage': 0, 'max_grid_size': 6,  'synthesis_ratio': 0.8, 'spatial_complexity': 'basic_shapes', 'focus': 'shape_recognition'},
+    {'stage': 1, 'max_grid_size': 8,  'synthesis_ratio': 0.75, 'spatial_complexity': 'simple_rotation', 'focus': 'rotation_detection'},
+    {'stage': 2, 'max_grid_size': 10, 'synthesis_ratio': 0.7, 'spatial_complexity': 'reflection_basic', 'focus': 'reflection_learning'},
     
-    # Intermediate Spatial Transformations (10x10 - 16x16)
-    {'stage': 4, 'max_grid_size': 10, 'synthesis_ratio': 0.65, 'spatial_complexity': 'affine_basic', 'focus': 'affine_transformations'},
-    {'stage': 5, 'max_grid_size': 11, 'synthesis_ratio': 0.6, 'spatial_complexity': 'composite_simple', 'focus': 'composite_transforms'},
-    {'stage': 6, 'max_grid_size': 12, 'synthesis_ratio': 0.55, 'spatial_complexity': 'scaling_rotation', 'focus': 'scaling_with_rotation'},
-    {'stage': 7, 'max_grid_size': 14, 'synthesis_ratio': 0.5, 'spatial_complexity': 'complex_geometric', 'focus': 'complex_geometry'},
-    {'stage': 8, 'max_grid_size': 16, 'synthesis_ratio': 0.45, 'spatial_complexity': 'pattern_spatial', 'focus': 'spatial_patterns'},
+    # Intermediate Spatial Transformations (12x12 - 18x18)
+    {'stage': 3, 'max_grid_size': 12, 'synthesis_ratio': 0.65, 'spatial_complexity': 'translation_basic', 'focus': 'translation_understanding'},
+    {'stage': 4, 'max_grid_size': 14, 'synthesis_ratio': 0.6, 'spatial_complexity': 'affine_basic', 'focus': 'affine_transformations'},
+    {'stage': 5, 'max_grid_size': 16, 'synthesis_ratio': 0.55, 'spatial_complexity': 'composite_simple', 'focus': 'composite_transforms'},
+    {'stage': 6, 'max_grid_size': 18, 'synthesis_ratio': 0.5, 'spatial_complexity': 'scaling_rotation', 'focus': 'scaling_with_rotation'},
     
-    # Advanced Spatial Mastery (18x18 - 30x30)
-    {'stage': 9, 'max_grid_size': 18, 'synthesis_ratio': 0.4, 'spatial_complexity': 'multiscale_basic', 'focus': 'multiscale_reasoning'},
-    {'stage': 10, 'max_grid_size': 21, 'synthesis_ratio': 0.35, 'spatial_complexity': 'ensemble_spatial', 'focus': 'ensemble_coordination'},
-    {'stage': 11, 'max_grid_size': 24, 'synthesis_ratio': 0.3, 'spatial_complexity': 'advanced_geometric', 'focus': 'advanced_geometry'},
-    {'stage': 12, 'max_grid_size': 27, 'synthesis_ratio': 0.25, 'spatial_complexity': 'expert_spatial', 'focus': 'spatial_expertise'},
-    {'stage': 13, 'max_grid_size': 30, 'synthesis_ratio': 0.2, 'spatial_complexity': 'spatial_genius', 'focus': 'spatial_intelligence'}
+    # Advanced Spatial Mastery (20x20 - 30x30)
+    {'stage': 7, 'max_grid_size': 20, 'synthesis_ratio': 0.45, 'spatial_complexity': 'complex_geometric', 'focus': 'complex_geometry'},
+    {'stage': 8, 'max_grid_size': 22, 'synthesis_ratio': 0.4, 'spatial_complexity': 'pattern_spatial', 'focus': 'spatial_patterns'},
+    {'stage': 9, 'max_grid_size': 25, 'synthesis_ratio': 0.35, 'spatial_complexity': 'multiscale_basic', 'focus': 'multiscale_reasoning'},
+    {'stage': 10, 'max_grid_size': 28, 'synthesis_ratio': 0.3, 'spatial_complexity': 'ensemble_spatial', 'focus': 'ensemble_coordination'},
+    {'stage': 11, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'spatial_complexity': 'spatial_genius', 'focus': 'spatial_intelligence'}
 ]
 
 # Device setup

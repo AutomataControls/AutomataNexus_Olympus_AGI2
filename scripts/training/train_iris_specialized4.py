@@ -626,7 +626,7 @@ def train_advanced_chromatic_stage(model, dataloader, criterion, optimizer, sche
             targets = targets.to(device)
             
             # Forward pass with mixed precision
-            with autocast():
+            with autocast(device_type='cuda'):
                 outputs = model(inputs, targets, mode='train')
                 loss_dict = criterion(outputs, targets, inputs)
                 loss = loss_dict['total'] / accumulation_steps

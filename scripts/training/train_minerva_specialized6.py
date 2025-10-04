@@ -1,6 +1,6 @@
 """
 MINERVA Specialized Training V6 - Ultimate Strategic Intelligence Master for ARC-AGI-2
-Complete grid mastery (2x2 to 30x30) with deep strategic architecture and program synthesis
+Complete grid mastery (5x5 to 30x30) with deep strategic architecture and program synthesis
 Builds upon V5 with revolutionary strategic intelligence capabilities and massive data pipeline
 Target: 90%+ performance with ultimate strategic intelligence mastery
 """
@@ -80,37 +80,35 @@ MINERVA_V6_CONFIG = {
     'plateau_patience': 30,
 }
 
-# Enhanced 20-Stage Progressive Configuration - Complete Grid Mastery 2x2 to 30x30
+# Enhanced 20-Stage Progressive Configuration - Complete Grid Mastery starting with normal ARC sizes
 STAGE_CONFIG = [
-    # Micro Strategic Understanding (2x2 - 5x5)
-    {'stage': 0, 'max_grid_size': 2,  'synthesis_ratio': 0.98, 'strategic_complexity': 'micro_basic', 'focus': 'micro_pattern_recognition'},
-    {'stage': 1, 'max_grid_size': 3,  'synthesis_ratio': 0.96, 'strategic_complexity': 'micro_strategic', 'focus': 'micro_strategic_patterns'},
-    {'stage': 2, 'max_grid_size': 4,  'synthesis_ratio': 0.94, 'strategic_complexity': 'basic_strategy', 'focus': 'basic_pattern_recognition'},
-    {'stage': 3, 'max_grid_size': 5,  'synthesis_ratio': 0.92, 'strategic_complexity': 'simple_reasoning', 'focus': 'simple_logical_inference'},
+    # Foundation Strategic Understanding (5x5 - 9x9) - START WITH NORMAL ARC SIZES
+    {'stage': 0, 'max_grid_size': 5,  'synthesis_ratio': 0.92, 'strategic_complexity': 'micro_strategic', 'focus': 'micro_strategic_patterns'},
+    {'stage': 1, 'max_grid_size': 6,  'synthesis_ratio': 0.9, 'strategic_complexity': 'basic_strategy', 'focus': 'basic_pattern_recognition'},
+    {'stage': 2, 'max_grid_size': 7,  'synthesis_ratio': 0.85, 'strategic_complexity': 'simple_reasoning', 'focus': 'simple_logical_inference'},
+    {'stage': 3, 'max_grid_size': 8,  'synthesis_ratio': 0.8, 'strategic_complexity': 'rule_detection', 'focus': 'rule_identification'},
+    {'stage': 4, 'max_grid_size': 9,  'synthesis_ratio': 0.75, 'strategic_complexity': 'pattern_analysis', 'focus': 'pattern_analysis'},
     
-    # Foundation Strategic Understanding (6x6 - 9x9)
-    {'stage': 4, 'max_grid_size': 6,  'synthesis_ratio': 0.9, 'strategic_complexity': 'rule_detection', 'focus': 'rule_identification'},
-    {'stage': 5, 'max_grid_size': 7,  'synthesis_ratio': 0.85, 'strategic_complexity': 'pattern_analysis', 'focus': 'pattern_analysis'},
-    {'stage': 6, 'max_grid_size': 8,  'synthesis_ratio': 0.8, 'strategic_complexity': 'multi_step', 'focus': 'multi_step_reasoning'},
-    {'stage': 7, 'max_grid_size': 9,  'synthesis_ratio': 0.75, 'strategic_complexity': 'complex_rules', 'focus': 'complex_rule_learning'},
-    
-    # Intermediate Strategic Reasoning (10x10 - 15x15)
-    {'stage': 8, 'max_grid_size': 10, 'synthesis_ratio': 0.7, 'strategic_complexity': 'strategic_planning', 'focus': 'strategic_planning'},
-    {'stage': 9, 'max_grid_size': 11, 'synthesis_ratio': 0.65, 'strategic_complexity': 'ensemble_prep_basic', 'focus': 'basic_ensemble_coordination'},
-    {'stage': 10, 'max_grid_size': 12, 'synthesis_ratio': 0.6, 'strategic_complexity': 'arc_strategic_basic', 'focus': 'arc_strategic_patterns'},
-    {'stage': 11, 'max_grid_size': 13, 'synthesis_ratio': 0.55, 'strategic_complexity': 'meta_reasoning', 'focus': 'meta_cognitive_reasoning'},
-    {'stage': 12, 'max_grid_size': 14, 'synthesis_ratio': 0.5, 'strategic_complexity': 'program_synthesis_basic', 'focus': 'basic_program_synthesis'},
-    {'stage': 13, 'max_grid_size': 15, 'synthesis_ratio': 0.45, 'strategic_complexity': 'deep_strategic_basic', 'focus': 'basic_deep_strategic'},
+    # Intermediate Strategic Reasoning (10x10 - 15x15) 
+    {'stage': 5, 'max_grid_size': 10, 'synthesis_ratio': 0.7, 'strategic_complexity': 'multi_step', 'focus': 'multi_step_reasoning'},
+    {'stage': 6, 'max_grid_size': 11, 'synthesis_ratio': 0.65, 'strategic_complexity': 'complex_rules', 'focus': 'complex_rule_learning'},
+    {'stage': 7, 'max_grid_size': 12, 'synthesis_ratio': 0.6, 'strategic_complexity': 'strategic_planning', 'focus': 'strategic_planning'},
+    {'stage': 8, 'max_grid_size': 13, 'synthesis_ratio': 0.55, 'strategic_complexity': 'ensemble_prep_basic', 'focus': 'basic_ensemble_coordination'},
+    {'stage': 9, 'max_grid_size': 14, 'synthesis_ratio': 0.5, 'strategic_complexity': 'arc_strategic_basic', 'focus': 'arc_strategic_patterns'},
+    {'stage': 10, 'max_grid_size': 15, 'synthesis_ratio': 0.45, 'strategic_complexity': 'meta_reasoning', 'focus': 'meta_cognitive_reasoning'},
     
     # Advanced Strategic Mastery (16x16 - 22x22)
-    {'stage': 14, 'max_grid_size': 16, 'synthesis_ratio': 0.4, 'strategic_complexity': 'ensemble_prep_advanced', 'focus': 'advanced_ensemble_coordination'},
-    {'stage': 15, 'max_grid_size': 18, 'synthesis_ratio': 0.35, 'strategic_complexity': 'arc_strategic_advanced', 'focus': 'arc_advanced_strategy'},
-    {'stage': 16, 'max_grid_size': 20, 'synthesis_ratio': 0.3, 'strategic_complexity': 'program_synthesis_advanced', 'focus': 'advanced_program_synthesis'},
-    {'stage': 17, 'max_grid_size': 22, 'synthesis_ratio': 0.25, 'strategic_complexity': 'deep_strategic_advanced', 'focus': 'advanced_deep_strategic'},
+    {'stage': 11, 'max_grid_size': 16, 'synthesis_ratio': 0.4, 'strategic_complexity': 'program_synthesis_basic', 'focus': 'basic_program_synthesis'},
+    {'stage': 12, 'max_grid_size': 18, 'synthesis_ratio': 0.35, 'strategic_complexity': 'deep_strategic_basic', 'focus': 'basic_deep_strategic'},
+    {'stage': 13, 'max_grid_size': 20, 'synthesis_ratio': 0.3, 'strategic_complexity': 'ensemble_prep_advanced', 'focus': 'advanced_ensemble_coordination'},
+    {'stage': 14, 'max_grid_size': 22, 'synthesis_ratio': 0.25, 'strategic_complexity': 'arc_strategic_advanced', 'focus': 'arc_advanced_strategy'},
+    {'stage': 15, 'max_grid_size': 24, 'synthesis_ratio': 0.2, 'strategic_complexity': 'program_synthesis_advanced', 'focus': 'advanced_program_synthesis'},
     
-    # Ultimate Strategic Genius (24x24 - 30x30)
-    {'stage': 18, 'max_grid_size': 26, 'synthesis_ratio': 0.2, 'strategic_complexity': 'strategic_mastery', 'focus': 'strategic_expertise'},
-    {'stage': 19, 'max_grid_size': 30, 'synthesis_ratio': 0.15, 'strategic_complexity': 'ultimate_strategic_genius', 'focus': 'ultimate_strategic_intelligence_mastery'}
+    # Ultimate Strategic Genius (26x26 - 30x30)
+    {'stage': 16, 'max_grid_size': 26, 'synthesis_ratio': 0.18, 'strategic_complexity': 'deep_strategic_advanced', 'focus': 'advanced_deep_strategic'},
+    {'stage': 17, 'max_grid_size': 28, 'synthesis_ratio': 0.16, 'strategic_complexity': 'strategic_mastery', 'focus': 'strategic_expertise'},
+    {'stage': 18, 'max_grid_size': 29, 'synthesis_ratio': 0.14, 'strategic_complexity': 'ultimate_strategic_mastery', 'focus': 'ultimate_strategic_mastery'},
+    {'stage': 19, 'max_grid_size': 30, 'synthesis_ratio': 0.12, 'strategic_complexity': 'ultimate_strategic_genius', 'focus': 'ultimate_strategic_intelligence_mastery'}
 ]
 
 # Device setup
@@ -124,7 +122,7 @@ print(f"\\033[96m{'=' * 120}\\033[0m")
 
 
 class MinervaV6UltimateStrategicLoss(nn.Module):
-    \"\"\"Ultimate loss function for V6 strategic reasoning and complete intelligence mastery\"\"\"
+    """Ultimate loss function for V6 strategic reasoning and complete intelligence mastery"""
     def __init__(self, config):
         super().__init__()
         self.transform_penalty = config['transform_penalty']
@@ -199,7 +197,7 @@ class MinervaV6UltimateStrategicLoss(nn.Module):
     
     def _calculate_strategic_bonus(self, outputs: Dict, pred_indices: torch.Tensor, 
                                  target_indices: torch.Tensor, input_indices: torch.Tensor) -> torch.Tensor:
-        \"\"\"Calculate ultimate strategic reasoning bonus\"\"\"
+        """Calculate ultimate strategic reasoning bonus"""
         if 'strategic_info' not in outputs:
             return torch.tensor(0.0).to(pred_indices.device)
         
@@ -216,7 +214,7 @@ class MinervaV6UltimateStrategicLoss(nn.Module):
         return -strategic_score.mean() * self.strategic_weight * 0.15
     
     def _calculate_ensemble_bonus(self, outputs: Dict) -> torch.Tensor:
-        \"\"\"Calculate ensemble coordination bonus\"\"\"
+        """Calculate ensemble coordination bonus"""
         if 'ensemble_output' not in outputs:
             return torch.tensor(0.0).to(list(outputs.values())[0].device)
         
@@ -237,7 +235,7 @@ class MinervaV6UltimateStrategicLoss(nn.Module):
         return -ensemble_score * self.ensemble_weight * 0.12
     
     def _calculate_pattern_bonus(self, outputs: Dict) -> torch.Tensor:
-        \"\"\"Calculate pattern memory bonus\"\"\"
+        """Calculate pattern memory bonus"""
         if 'pattern_memory' not in outputs:
             return torch.tensor(0.0).to(list(outputs.values())[0].device)
         
@@ -252,7 +250,7 @@ class MinervaV6UltimateStrategicLoss(nn.Module):
         return -pattern_score * self.pattern_weight * 0.1
     
     def _calculate_decision_bonus(self, outputs: Dict) -> torch.Tensor:
-        \"\"\"Calculate decision confidence bonus\"\"\"
+        """Calculate decision confidence bonus"""
         if 'confidence' not in outputs:
             return torch.tensor(0.0).to(list(outputs.values())[0].device)
         
@@ -260,7 +258,7 @@ class MinervaV6UltimateStrategicLoss(nn.Module):
         return -confidence * self.decision_weight * 0.08
     
     def _calculate_program_bonus(self, outputs: Dict) -> torch.Tensor:
-        \"\"\"Calculate program synthesis bonus\"\"\"
+        """Calculate program synthesis bonus"""
         if 'program_synthesis' not in outputs:
             return torch.tensor(0.0).to(list(outputs.values())[0].device)
         
@@ -277,7 +275,7 @@ class MinervaV6UltimateStrategicLoss(nn.Module):
         return -program_score * self.program_weight * 0.06
     
     def _calculate_deep_strategic_bonus(self, outputs: Dict) -> torch.Tensor:
-        \"\"\"Calculate deep strategic transformer bonus\"\"\"
+        """Calculate deep strategic transformer bonus"""
         if 'strategic_info' not in outputs or 'strategic_analyses' not in outputs['strategic_info']:
             return torch.tensor(0.0).to(list(outputs.values())[0].device)
         
@@ -302,7 +300,7 @@ class MinervaV6UltimateStrategicLoss(nn.Module):
 
 
 class UltimateStrategicDataset(Dataset):
-    \"\"\"Dataset optimized for ultimate strategic intelligence training with complete grid coverage\"\"\"
+    """Dataset optimized for ultimate strategic intelligence training with complete grid coverage"""
     def __init__(self, data_dir: str, max_grid_size: int, stage_config: Dict, 
                  strategic_focus: bool = True, augmentation_factor: int = 8):
         self.data_dir = data_dir
@@ -322,7 +320,7 @@ class UltimateStrategicDataset(Dataset):
         print(f"\\033[96mLoaded {len(self.samples)} ultimate strategic samples for MINERVA V6 training\\033[0m")
     
     def _load_ultimate_strategic_data(self):
-        \"\"\"Load data with ultimate strategic complexity focus - PROVEN V5 APPROACH\"\"\"
+        """Load data with ultimate strategic complexity focus - PROVEN V5 APPROACH"""
         # Load training data (challenges + solutions) - DIRECT LOADING LIKE V5
         challenges_path = os.path.join(self.data_dir, 'arc-agi_training_challenges.json')
         solutions_path = os.path.join(self.data_dir, 'arc-agi_training_solutions.json')
@@ -365,7 +363,7 @@ class UltimateStrategicDataset(Dataset):
                         self.samples.append(sample)
     
     def _create_ultimate_strategic_sample(self, example: Dict, is_arc_task: bool) -> Optional[Dict]:
-        \"\"\"Create sample with ultimate strategic analysis\"\"\"
+        """Create sample with ultimate strategic analysis"""
         input_grid = np.array(example['input'])
         output_grid = np.array(example['output'])
         
@@ -388,7 +386,7 @@ class UltimateStrategicDataset(Dataset):
         }
     
     def _analyze_ultimate_strategic_complexity(self, input_grid: np.ndarray, output_grid: np.ndarray) -> Dict:
-        \"\"\"Analyze ultimate strategic complexity and intelligence requirements\"\"\"
+        """Analyze ultimate strategic complexity and intelligence requirements"""
         # Basic properties
         input_colors = set(input_grid.flatten())
         output_colors = set(output_grid.flatten())
@@ -481,7 +479,7 @@ class UltimateStrategicDataset(Dataset):
         }
     
     def _augment_strategic_data(self):
-        \"\"\"Massive strategic data augmentation\"\"\"
+        """Massive strategic data augmentation"""
         original_count = len(self.samples)
         augmented_samples = []
         
@@ -495,7 +493,7 @@ class UltimateStrategicDataset(Dataset):
         print(f"\\033[96mAugmented from {original_count} to {len(self.samples)} samples ({self.augmentation_factor}x)\\033[0m")
     
     def _augment_single_sample(self, sample: Dict) -> Optional[Dict]:
-        \"\"\"Augment single sample with strategic transformations\"\"\"
+        """Augment single sample with strategic transformations"""
         input_grid = sample['input'].copy()
         output_grid = sample['output'].copy()
         
@@ -567,7 +565,7 @@ class UltimateStrategicDataset(Dataset):
 
 
 def ultimate_strategic_collate_fn(batch: List) -> Tuple[torch.Tensor, torch.Tensor, List[Dict]]:
-    \"\"\"Enhanced collate function for ultimate strategic training\"\"\"
+    """Enhanced collate function for ultimate strategic training"""
     inputs, outputs, metadata = zip(*batch)
     
     # Find maximum dimensions for padding
@@ -589,7 +587,7 @@ def ultimate_strategic_collate_fn(batch: List) -> Tuple[torch.Tensor, torch.Tens
 
 
 def train_minerva_specialized_v6():
-    \"\"\"Main training function for MINERVA V6\"\"\"
+    """Main training function for MINERVA V6"""
     print(f"\\033[96mInitializing MINERVA V6 Ultimate Strategic Intelligence Training...\\033[0m")
     
     # Initialize ultimate enhanced model
@@ -714,7 +712,7 @@ def train_minerva_specialized_v6():
 
 def train_ultimate_strategic_stage(model, dataloader, criterion, optimizer, scheduler, scaler,
                                  stage_idx, stage_config, training_stats):
-    \"\"\"Train a single ultimate strategic curriculum stage\"\"\"
+    """Train a single ultimate strategic curriculum stage"""
     model.train()
     
     epochs_for_stage = MINERVA_V6_CONFIG['epochs_per_stage']

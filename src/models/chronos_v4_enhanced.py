@@ -565,9 +565,21 @@ class ChronosV4Enhanced(nn.Module):
         temporal_expertise = ensemble_output['temporal_expertise']
         sequence_weight = torch.sigmoid(self.temporal_mix) * temporal_expertise
         
+        # Ensure predictions have same spatial dimensions
+        if enhanced_prediction.shape != base_prediction.shape:
+            base_prediction = F.interpolate(
+                base_prediction, 
+                size=(enhanced_prediction.shape[2], enhanced_prediction.shape[3]),
+                mode='bilinear', 
+                align_corners=False
+            )
+        
+        # Expand weights to match spatial dimensions
+        sequence_weight_expanded = sequence_weight.unsqueeze(-1).unsqueeze(-1).expand_as(enhanced_prediction)
+        
         final_prediction = (
-            sequence_weight * enhanced_prediction + 
-            (1 - sequence_weight) * base_prediction
+            sequence_weight_expanded * enhanced_prediction + 
+            (1 - sequence_weight_expanded) * base_prediction
         )
         
         # Comprehensive output for ensemble coordination

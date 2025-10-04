@@ -771,7 +771,7 @@ def train_iris_specialized_v2():
                 pbar.set_postfix({
                     'loss': f"{losses['total'].item():.3f}",
                     'exact': f"{losses['exact_count'].item():.0f}",
-                    'lr': f"{scheduler.get_lr()[0]:.6f}"
+                    'lr': f"{scheduler.get_last_lr()[0]:.6f}"
                 })
             
             # Validation phase - check more frequently to catch improvements

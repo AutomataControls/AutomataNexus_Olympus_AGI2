@@ -522,7 +522,7 @@ def train_prometheus_specialized_v5():
     print(f"\033[96mModel initialized with {sum(p.numel() for p in model.parameters())} parameters\033[0m")
     
     # Load V4 weights
-    model_path = '/content/AutomataNexus_Olympus_AGI2/models/prometheus_v4_best.pt'
+    model_path = '/content/AutomataNexus_Olympus_AGI2/arc_models_v4/prometheus_v4_best.pt'
     weights_loaded = model.load_compatible_weights(model_path)
     
     if not weights_loaded:
@@ -562,7 +562,7 @@ def train_prometheus_specialized_v5():
     # Extended progressive training through creative stages
     for stage_idx, stage_config in enumerate(STAGE_CONFIG):
         print(f"\n\033[96m{'=' * 115}\033[0m")
-        print(f"\033[96mStage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
+        print(f"\033[38;2;255;222;173mStage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
               f"Creative: {stage_config['creativity_complexity']} | Focus: {stage_config['focus']}\033[0m")
         print(f"\033[96m{'=' * 115}\033[0m")
         
@@ -604,7 +604,7 @@ def train_prometheus_specialized_v5():
                 'config': PROMETHEUS_V5_CONFIG,
                 'ensemble_state': model.get_ensemble_state(),
                 'training_version': 'V5'
-            }, '/content/AutomataNexus_Olympus_AGI2/models/prometheus_v5_best.pt')
+            }, '/content/AutomataNexus_Olympus_AGI2/models/prometheus_best.pt')
             print(f"\033[96mNew best V5 creative performance: {best_performance:.2%} - Model saved!\033[0m")
         
         # Memory cleanup
@@ -638,14 +638,14 @@ def train_extended_creative_stage(model, dataloader, criterion, optimizer, sched
         arc_creative_count = 0
         
         # Progress bar
-        pbar = tqdm(dataloader, desc=f"\033[96mExtended Creative Stage {stage_idx} Epoch {epoch}\033[0m")
+        pbar = tqdm(dataloader, desc=f"\033[38;2;255;204;153mExtended Creative Stage {stage_idx} Epoch {epoch}\033[0m")
         
         for batch_idx, (inputs, targets, metadata) in enumerate(pbar):
             inputs = inputs.to(device)
             targets = targets.to(device)
             
             # Forward pass with mixed precision
-            with autocast():
+            with autocast(device_type='cuda'):
                 outputs = model(inputs, targets, mode='train')
                 loss_dict = criterion(outputs, targets, inputs)
                 loss = loss_dict['total'] / accumulation_steps
@@ -698,11 +698,13 @@ def train_extended_creative_stage(model, dataloader, criterion, optimizer, sched
         if epoch % 5 == 0 or epoch == epochs_for_stage - 1:
             creative_ratio = advanced_creative_count / max(total_samples, 1)
             arc_ratio = arc_creative_count / max(total_samples, 1)
-            print(f"\033[96mExtended Creative Stage {stage_idx} Epoch {epoch}: "
-                  f"Performance = {epoch_performance:.1%}, "
-                  f"Advanced Creative = {creative_ratio:.1%}, "
-                  f"ARC Creative = {arc_ratio:.1%}, "
-                  f"Loss = {epoch_losses['total']/len(dataloader):.4f}\033[0m")
+            avg_loss = epoch_losses['total']/len(dataloader)
+            current_lr = scheduler.get_last_lr()[0]
+            print(f"\033[96m⏰ PROMETHEUS V5 Stage {stage_idx}, Epoch {epoch} (Global: {stage_idx * PROMETHEUS_V5_CONFIG['epochs_per_stage'] + epoch + 1}):\033[0m")
+            print(f"\033[96m   🎯 Train: {epoch_performance:.2%} exact, Loss: {avg_loss:.3f}\033[0m")
+            print(f"\033[96m   📊 LR: {current_lr:.6f} | Grid: {stage_config['max_grid_size']}x{stage_config['max_grid_size']} | Creative: {creative_ratio:.1%}\033[0m")
+            if epoch == epochs_for_stage - 1:
+                print(f"\033[96m✅ Stage {stage_idx} complete! Final exact: {epoch_performance:.2%}\033[0m")
         
         # Memory cleanup
         torch.cuda.empty_cache()

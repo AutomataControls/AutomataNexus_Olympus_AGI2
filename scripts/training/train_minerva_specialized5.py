@@ -32,13 +32,13 @@ from src.models.minerva_v4_enhanced import MinervaV4Enhanced
 
 # Enhanced MINERVA V5 Configuration - Extended Strategic Intelligence Focus
 MINERVA_V5_CONFIG = {
-    # Core Training Parameters - Enhanced for V5 Extended Training
-    'batch_size': 28,  # Slightly smaller for more complex V5 computations
-    'learning_rate': 0.00012,  # Lower for fine-tuning from V4
-    'num_epochs': 600,  # Extended training: 12 stages x 50 epochs
-    'gradient_accumulation': 9,  # Effective batch: 252
-    'epochs_per_stage': 50,  # Extended epochs per stage
-    'curriculum_stages': 12,  # Focused 12-stage strategic progression
+    # Core Training Parameters - OPTIMIZED for V5 Speed + Performance
+    'batch_size': 48,  # Larger batch for efficiency
+    'learning_rate': 0.0002,  # Higher for faster convergence from V4 base
+    'num_epochs': 300,  # Reduced: 10 stages x 30 epochs
+    'gradient_accumulation': 5,  # Reduced accumulation: effective batch 240
+    'epochs_per_stage': 30,  # Reduced epochs per stage for speed
+    'curriculum_stages': 10,  # Reduced stages for efficiency
     
     # Enhanced Loss Configuration
     'transform_penalty': 0.06,  # Even lower - max strategic exploration
@@ -72,7 +72,7 @@ MINERVA_V5_CONFIG = {
     'arc_strategic_bonus': True,  # NEW: ARC-specific strategy bonus
     
     # Learning Rate Scheduling
-    'warmup_epochs': 28,  # Refined warmup for V5
+    'warmup_epochs': 15,  # Reduced warmup for faster training
     'cosine_restarts': True,
     'restart_multiplier': 1.25,
     'plateau_patience': 22,
@@ -311,6 +311,8 @@ class ExtendedStrategicDataset(Dataset):
         self._load_extended_strategic_data()
         
         print(f"\033[96mLoaded {len(self.samples)} extended strategic samples for MINERVA V5 training\033[0m")
+        if len(self.samples) < 1000:
+            print(f"\033[91mWARNING: Only {len(self.samples)} samples loaded - dataset may be too small for proper training\033[0m")
     
     def _load_extended_strategic_data(self):
         """Load data with extended strategic complexity focus using working pattern"""
@@ -325,18 +327,23 @@ class ExtendedStrategicDataset(Dataset):
                 solutions = json.load(f)
             
             for task_id, task_data in challenges.items():
+                # Process ALL training examples without solution requirement
+                for example in task_data['train']:
+                    sample = self._create_extended_strategic_sample(example, True)
+                    if sample:
+                        self.samples.append(sample)
+                
+                # Also process test examples if solutions exist
                 if task_id in solutions:
-                    combined_task = {
-                        'train': task_data['train'],
-                        'test': []
-                    }
                     for i, test_input in enumerate(task_data['test']):
                         if i < len(solutions[task_id]):
-                            combined_task['test'].append({
+                            test_example = {
                                 'input': test_input['input'],
                                 'output': solutions[task_id][i]
-                            })
-                    self._process_extended_strategic_task(combined_task, 'training')
+                            }
+                            sample = self._create_extended_strategic_sample(test_example, True)
+                            if sample:
+                                self.samples.append(sample)
         
         # Load evaluation data
         eval_path = os.path.join(self.data_dir, 'arc-agi_evaluation_challenges.json')
@@ -344,8 +351,11 @@ class ExtendedStrategicDataset(Dataset):
             with open(eval_path, 'r') as f:
                 eval_data = json.load(f)
             for task_id, task_data in eval_data.items():
-                eval_task = {'train': task_data['train'], 'test': []}
-                self._process_extended_strategic_task(eval_task, 'evaluation')
+                # Process ALL training examples from evaluation set
+                for example in task_data['train']:
+                    sample = self._create_extended_strategic_sample(example, True)
+                    if sample:
+                        self.samples.append(sample)
     
     def _process_extended_strategic_task(self, task: Dict, source_file: str):
         """Process task with extended strategic analysis"""
@@ -370,9 +380,9 @@ class ExtendedStrategicDataset(Dataset):
         # Extended strategic analysis
         strategic_analysis = self._analyze_extended_strategic_complexity(input_grid, output_grid, is_arc_task)
         
-        # Filter for extended strategic relevance (more permissive)
-        if self.strategic_focus and strategic_analysis['strategic_intelligence_level'] < 2:
-            if random.random() > 0.8:  # Keep 80% of simple cases
+        # Very permissive filtering to ensure adequate training data
+        if self.strategic_focus and strategic_analysis['strategic_intelligence_level'] < 0:
+            if random.random() > 0.95:  # Keep 95% of all cases, reject almost nothing
                 return None
         
         return {
@@ -532,14 +542,23 @@ def train_minerva_specialized_v5():
     
     print(f"\033[96mModel initialized with {sum(p.numel() for p in model.parameters())} parameters\033[0m")
     
-    # Load V4 weights
-    model_path = '/content/AutomataNexus_Olympus_AGI2/models/minerva_best.pt'
-    weights_loaded = model.load_compatible_weights(model_path)
+    # Load V4 weights - try multiple paths
+    v4_paths = [
+        '/content/AutomataNexus_Olympus_AGI2/models/minerva_v4_best.pt',
+        '/content/AutomataNexus_Olympus_AGI2/models/minerva_best.pt',
+        '/content/AutomataNexus_Olympus_AGI2/arc_models_v4/minerva_best.pt'
+    ]
+    
+    weights_loaded = False
+    for model_path in v4_paths:
+        if os.path.exists(model_path):
+            weights_loaded = model.load_compatible_weights(model_path)
+            if weights_loaded:
+                print(f"\033[96mSuccessfully loaded V4 weights from {model_path}\033[0m")
+                break
     
     if not weights_loaded:
-        print(f"\033[96mWarning: Could not load V4 weights, starting V5 training from scratch\033[0m")
-    else:
-        print(f"\033[96mSuccessfully loaded V4 weights for V5 extended training\033[0m")
+        print(f"\033[96mStarting V5 training from scratch - no compatible weights found\033[0m")
     
     # Initialize loss function
     criterion = MinervaV5StrategicLoss(MINERVA_V5_CONFIG)

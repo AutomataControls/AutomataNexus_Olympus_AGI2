@@ -296,7 +296,7 @@ class MinervaV4Enhanced(nn.Module):
             else:
                 state_dict = checkpoint
             
-            # Load compatible weights into original_minerva
+            # Try to load into original_minerva first
             model_dict = self.original_minerva.state_dict()
             compatible_params = {}
             
@@ -304,8 +304,19 @@ class MinervaV4Enhanced(nn.Module):
                 if k in model_dict and v.shape == model_dict[k].shape:
                     compatible_params[k] = v
             
-            model_dict.update(compatible_params)
-            self.original_minerva.load_state_dict(model_dict)
+            # Always try direct load first (for full model compatibility)
+            try:
+                if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
+                    self.load_state_dict(checkpoint['model_state_dict'], strict=False)
+                else:
+                    self.load_state_dict(checkpoint, strict=False)
+                compatible_params = state_dict
+                print(f"\033[96mMINERVA V4: Loaded full model state dict\033[0m")
+            except:
+                # Fallback to original_minerva loading
+                if len(compatible_params) > 0:
+                    model_dict.update(compatible_params)
+                    self.original_minerva.load_state_dict(model_dict)
             
             print(f"\033[96mMINERVA V4: Loaded {len(compatible_params)}/{len(state_dict)} compatible parameters\033[0m")
             return True

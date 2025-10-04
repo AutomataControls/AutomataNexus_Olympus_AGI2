@@ -173,7 +173,15 @@ class ChronosEnhancedLoss(nn.Module):
         
         # Enhanced IoU-based exact match scoring (PROMETHEUS-style 80% weighting)
         pred_indices = pred_output.argmax(dim=1)
-        target_indices = targets.argmax(dim=1) if targets.dim() > 3 else targets
+        
+        # Handle mixup tuples properly
+        if isinstance(targets, tuple):
+            # For mixup, use the first target for IoU calculation (simplified)
+            target_tensor = targets[0]
+        else:
+            target_tensor = targets
+            
+        target_indices = target_tensor.argmax(dim=1) if target_tensor.dim() > 3 else target_tensor
         
         # Strict exact matches
         exact_matches_strict = (pred_indices == target_indices).all(dim=[1,2]).float()
@@ -189,8 +197,12 @@ class ChronosEnhancedLoss(nn.Module):
         exact_bonus = -combined_matches.mean() * self.exact_match_bonus
         exact_bonus = exact_bonus.clamp(min=-3.0)  # Allow more negative like PROMETHEUS
         
-        # Enhanced transformation penalty with temporal awareness
-        input_indices = inputs.argmax(dim=1) if inputs.dim() > 3 else inputs
+        # Enhanced transformation penalty with temporal awareness  
+        if isinstance(inputs, tuple):
+            input_tensor = inputs[0]
+        else:
+            input_tensor = inputs
+        input_indices = input_tensor.argmax(dim=1) if input_tensor.dim() > 3 else input_tensor
         copy_penalty = (pred_indices == input_indices).all(dim=[1,2]).float()
         transform_penalty = copy_penalty.mean() * self.transformation_penalty
         
@@ -648,7 +660,8 @@ def train_chronos_specialized_v2():
             inputs = torch.stack(inputs_padded)
             outputs = torch.stack(outputs_padded)
             
-            print(f"DEBUG COLLATE: inputs shape: {inputs.shape}, outputs shape: {outputs.shape}")
+            # Remove debug print
+            # print(f"DEBUG COLLATE: inputs shape: {inputs.shape}, outputs shape: {outputs.shape}")
             return {'inputs': inputs, 'outputs': outputs}
         
         train_loader = DataLoader(
@@ -842,9 +855,9 @@ def train_chronos_specialized_v2():
                     output_grids = output_targets
                     temporal_data = mixed_temporal
                 
-                # Debug tensor shapes
-                print(f"DEBUG: input_grids shape: {input_grids.shape}")
-                print(f"DEBUG: input_grids channels: {input_grids.shape[1] if len(input_grids.shape) > 1 else 'Unknown'}")
+                # Remove debug prints
+                # print(f"DEBUG: input_grids shape: {input_grids.shape}")
+                # print(f"DEBUG: input_grids channels: {input_grids.shape[1] if len(input_grids.shape) > 1 else 'Unknown'}")
                 
                 # CHRONOS expects sequence input - ensure proper format
                 sequence_input = [input_grids]

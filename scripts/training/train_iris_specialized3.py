@@ -256,22 +256,46 @@ class IrisDatasetV3(Dataset):
     
     def _load_color_data(self):
         """Load data with color complexity focus"""
-        data_files = [
-            'arc-agi_training_challenges.json',
-            'arc-agi_evaluation_challenges.json'
-        ]
+        # Load training data (challenges + solutions)
+        challenges_path = os.path.join(self.data_dir, 'arc-agi_training_challenges.json')
+        solutions_path = os.path.join(self.data_dir, 'arc-agi_training_solutions.json')
         
-        for file in data_files:
-            file_path = os.path.join(self.data_dir, file)
-            if os.path.exists(file_path):
-                print(f"\033[96mLoading {file} for IRIS training\033[0m")
-                with open(file_path, 'r') as f:
-                    data = json.load(f)
-                    print(f"\033[96mFound {len(data)} tasks in {file}\033[0m")
-                    for task_id, task_data in data.items():
-                        self._process_color_task(task_data, file)
-            else:
-                print(f"\033[96mWarning: {file} not found in {self.data_dir}\033[0m")
+        if os.path.exists(challenges_path) and os.path.exists(solutions_path):
+            print(f"\033[96mLoading training data for IRIS training\033[0m")
+            with open(challenges_path, 'r') as f:
+                challenges = json.load(f)
+            with open(solutions_path, 'r') as f:
+                solutions = json.load(f)
+            
+            print(f"\033[96mFound {len(challenges)} training tasks\033[0m")
+            for task_id, task_data in challenges.items():
+                if task_id in solutions:
+                    # Combine challenges and solutions
+                    combined_task = {
+                        'train': task_data['train'],
+                        'test': []
+                    }
+                    # Add solutions to test examples
+                    for i, test_input in enumerate(task_data['test']):
+                        if i < len(solutions[task_id]):
+                            combined_task['test'].append({
+                                'input': test_input['input'],
+                                'output': solutions[task_id][i]
+                            })
+                    
+                    self._process_color_task(combined_task, 'training')
+        
+        # Load evaluation data if available
+        eval_challenges_path = os.path.join(self.data_dir, 'arc-agi_evaluation_challenges.json')
+        if os.path.exists(eval_challenges_path):
+            print(f"\033[96mLoading evaluation data for IRIS training\033[0m")
+            with open(eval_challenges_path, 'r') as f:
+                eval_data = json.load(f)
+            print(f"\033[96mFound {len(eval_data)} evaluation tasks\033[0m")
+            for task_id, task_data in eval_data.items():
+                # Only use training examples from eval set (no solutions for test)
+                eval_task = {'train': task_data['train'], 'test': []}
+                self._process_color_task(eval_task, 'evaluation')
     
     def _process_color_task(self, task: Dict, source_file: str):
         """Process task with color complexity analysis"""

@@ -284,19 +284,38 @@ class AdvancedColorDataset(Dataset):
     
     def _load_advanced_color_data(self):
         """Load data with advanced color complexity focus"""
-        data_files = [
-            'arc_training_padded.json',
-            'arc_evaluation_padded.json',
-            'synthetic_data_mega_v4.json'
-        ]
+        # Load training data (challenges + solutions)
+        challenges_path = os.path.join(self.data_dir, 'arc-agi_training_challenges.json')
+        solutions_path = os.path.join(self.data_dir, 'arc-agi_training_solutions.json')
         
-        for file in data_files:
-            file_path = os.path.join(self.data_dir, file)
-            if os.path.exists(file_path):
-                with open(file_path, 'r') as f:
-                    data = json.load(f)
-                    for task in data:
-                        self._process_advanced_color_task(task, file)
+        if os.path.exists(challenges_path) and os.path.exists(solutions_path):
+            with open(challenges_path, 'r') as f:
+                challenges = json.load(f)
+            with open(solutions_path, 'r') as f:
+                solutions = json.load(f)
+            
+            for task_id, task_data in challenges.items():
+                if task_id in solutions:
+                    combined_task = {
+                        'train': task_data['train'],
+                        'test': []
+                    }
+                    for i, test_input in enumerate(task_data['test']):
+                        if i < len(solutions[task_id]):
+                            combined_task['test'].append({
+                                'input': test_input['input'],
+                                'output': solutions[task_id][i]
+                            })
+                    self._process_advanced_color_task(combined_task, 'training')
+        
+        # Load evaluation data
+        eval_path = os.path.join(self.data_dir, 'arc-agi_evaluation_challenges.json')
+        if os.path.exists(eval_path):
+            with open(eval_path, 'r') as f:
+                eval_data = json.load(f)
+            for task_id, task_data in eval_data.items():
+                eval_task = {'train': task_data['train'], 'test': []}
+                self._process_advanced_color_task(eval_task, 'evaluation')
     
     def _process_advanced_color_task(self, task: Dict, source_file: str):
         """Process task with advanced color analysis"""
@@ -321,9 +340,9 @@ class AdvancedColorDataset(Dataset):
         # Advanced color analysis
         color_analysis = self._analyze_advanced_color_complexity(input_grid, output_grid)
         
-        # Filter for advanced color relevance
+        # Filter for advanced color relevance (more permissive)
         if self.color_focus and color_analysis['color_intelligence_level'] < 2:
-            if random.random() > 0.3:  # Keep 30% of simple cases
+            if random.random() > 0.8:  # Keep 80% of simple cases
                 return None
         
         return {

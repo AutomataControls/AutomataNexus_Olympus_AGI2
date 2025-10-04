@@ -802,9 +802,9 @@ def train_chronos_specialized_v2():
                 inputs = batch['inputs'].to(device, non_blocking=True)
                 outputs = batch['outputs'].to(device, non_blocking=True)
                 
-                # Clamp values
-                inputs = torch.clamp(inputs, 0, 9)
-                outputs = torch.clamp(outputs, 0, 9)
+                # Clamp values and ensure proper tensor types
+                inputs = torch.clamp(inputs, 0, 9).long()
+                outputs = torch.clamp(outputs, 0, 9).long()
                 
                 # Generate temporal sequence data (simplified)
                 temporal_data = None
@@ -826,7 +826,7 @@ def train_chronos_specialized_v2():
                         inputs, outputs, temporal_data
                     )
                 
-                # Convert to one-hot
+                # Convert to one-hot with explicit float conversion
                 input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
                 output_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
                 
@@ -841,13 +841,15 @@ def train_chronos_specialized_v2():
                     output_grids = output_targets
                     temporal_data = mixed_temporal
                 
-                with autocast(device.type):
-                    # CHRONOS expects sequence input, not single tensor
-                    sequence_input = [input_grids]
-                    if temporal_data and isinstance(temporal_data, list):
-                        sequence_input.extend(temporal_data)
-                    
-                    model_outputs = model(sequence_input, target=output_grids)
+                # Disable autocast for CHRONOS to avoid type conversion issues
+                # CHRONOS expects sequence input, not single tensor - ensure all are float
+                sequence_input = [input_grids]
+                if temporal_data and isinstance(temporal_data, list):
+                    # Convert temporal data to float if needed
+                    temporal_float = [t.float() if isinstance(t, torch.Tensor) else t for t in temporal_data]
+                    sequence_input.extend(temporal_float)
+                
+                model_outputs = model(sequence_input, target=output_grids)
                     losses = loss_fn(
                         model_outputs, output_grids, input_grids, 
                         mixup_lambda=mixup_lambda, temporal_sequence=temporal_data
@@ -889,16 +891,21 @@ def train_chronos_specialized_v2():
                         inputs = batch['inputs'].to(device)
                         outputs = batch['outputs'].to(device)
                         
-                        inputs = torch.clamp(inputs, 0, 9)
-                        outputs = torch.clamp(outputs, 0, 9)
+                        # Inputs/outputs already clamped above
                         
                         input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
                         output_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
                         
-                        with autocast(device.type):
-                            # CHRONOS expects sequence input for inference too
-                            sequence_input = [input_grids]
-                            model_outputs = model(sequence_input, target=output_grids)
+                        # Disable autocast for CHRONOS validation as well
+                        # CHRONOS expects sequence input for inference too - ensure float type
+                        inputs = torch.clamp(inputs, 0, 9).long()
+                        outputs = torch.clamp(outputs, 0, 9).long()
+                        
+                        input_grids = F.one_hot(inputs, num_classes=10).permute(0, 3, 1, 2).float()
+                        output_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
+                        
+                        sequence_input = [input_grids]
+                        model_outputs = model(sequence_input, target=output_grids)
                             losses = loss_fn(model_outputs, output_grids, input_grids)
                         
                         val_metrics['loss'] += losses['total'].item()

@@ -261,9 +261,11 @@ class MinervaV4Enhanced(nn.Module):
         # OLYMPUS preparation: Ensemble integration points
         self.olympus_interface = nn.ModuleDict({
             'feature_broadcaster': nn.Linear(hidden_dim, hidden_dim),
-            'consensus_aggregator': nn.MultiheadAttention(hidden_dim, num_heads=4, batch_first=True),
-            'ensemble_weights': nn.Parameter(torch.ones(5) / 5)  # Equal initial weighting
+            'consensus_aggregator': nn.MultiheadAttention(hidden_dim, num_heads=4, batch_first=True)
         })
+        
+        # Separate parameter for ensemble weights (can't go in ModuleDict)
+        self.ensemble_weights = nn.Parameter(torch.ones(5) / 5)  # Equal initial weighting
         
         # Enhanced output decoder that can integrate ensemble features
         self.v4_decoder = nn.Sequential(
@@ -374,7 +376,7 @@ class MinervaV4Enhanced(nn.Module):
             'strategic_info': strategic_info,
             'coordination_output': coordination_output,
             'olympus_features': broadcast_features,  # For future ensemble integration
-            'ensemble_weights': self.olympus_interface['ensemble_weights']
+            'ensemble_weights': self.ensemble_weights
         }
         
         # Add original outputs for compatibility
@@ -390,7 +392,7 @@ class MinervaV4Enhanced(nn.Module):
         """Get state for OLYMPUS ensemble coordination"""
         return {
             'model_type': 'MINERVA_V4',
-            'strategic_weights': self.olympus_interface['ensemble_weights'].detach(),
+            'strategic_weights': self.ensemble_weights.detach(),
             'confidence_threshold': 0.7,
             'specialization': 'strategic_coordination',
             'coordination_ready': True

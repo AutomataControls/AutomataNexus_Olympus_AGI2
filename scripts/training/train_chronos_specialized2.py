@@ -648,6 +648,7 @@ def train_chronos_specialized_v2():
             inputs = torch.stack(inputs_padded)
             outputs = torch.stack(outputs_padded)
             
+            print(f"DEBUG COLLATE: inputs shape: {inputs.shape}, outputs shape: {outputs.shape}")
             return {'inputs': inputs, 'outputs': outputs}
         
         train_loader = DataLoader(
@@ -841,13 +842,12 @@ def train_chronos_specialized_v2():
                     output_grids = output_targets
                     temporal_data = mixed_temporal
                 
-                # Disable autocast for CHRONOS to avoid type conversion issues
-                # CHRONOS expects sequence input, not single tensor - ensure all are float
+                # Debug tensor shapes
+                print(f"DEBUG: input_grids shape: {input_grids.shape}")
+                print(f"DEBUG: input_grids channels: {input_grids.shape[1] if len(input_grids.shape) > 1 else 'Unknown'}")
+                
+                # CHRONOS expects sequence input - ensure proper format
                 sequence_input = [input_grids]
-                if temporal_data and isinstance(temporal_data, list):
-                    # Convert temporal data to float if needed
-                    temporal_float = [t.float() if isinstance(t, torch.Tensor) else t for t in temporal_data]
-                    sequence_input.extend(temporal_float)
                 
                 model_outputs = model(sequence_input, target=output_grids)
                 losses = loss_fn(

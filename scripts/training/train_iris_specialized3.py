@@ -257,18 +257,21 @@ class IrisDatasetV3(Dataset):
     def _load_color_data(self):
         """Load data with color complexity focus"""
         data_files = [
-            'arc_training_padded.json',
-            'arc_evaluation_padded.json',
-            'synthetic_data_mega_v4.json'
+            'arc-agi_training_challenges.json',
+            'arc-agi_evaluation_challenges.json'
         ]
         
         for file in data_files:
             file_path = os.path.join(self.data_dir, file)
             if os.path.exists(file_path):
+                print(f"\033[96mLoading {file} for IRIS training\033[0m")
                 with open(file_path, 'r') as f:
                     data = json.load(f)
+                    print(f"\033[96mFound {len(data)} tasks in {file}\033[0m")
                     for task in data:
                         self._process_color_task(task, file)
+            else:
+                print(f"\033[96mWarning: {file} not found in {self.data_dir}\033[0m")
     
     def _process_color_task(self, task: Dict, source_file: str):
         """Process task with color complexity analysis"""
@@ -293,9 +296,10 @@ class IrisDatasetV3(Dataset):
         # Color complexity analysis
         color_analysis = self._analyze_color_complexity(input_grid, output_grid)
         
-        # Filter for color relevance if enabled (more permissive for early stages)
+        # Very permissive filtering for IRIS V3 to ensure we get samples
+        # Only filter out completely trivial cases
         if self.color_focus and color_analysis['unique_colors'] < 2:
-            if random.random() > 0.3:  # Keep 30% of single-color samples
+            if random.random() > 0.8:  # Keep 80% of single-color samples
                 return None
         
         return {

@@ -394,9 +394,10 @@ class ChronosV4Enhanced(nn.Module):
         # ENHANCE: Ensemble coordination interface
         self.ensemble_interface = TemporalEnsembleInterface(d_model, num_specialists=5)
         
-        # ENHANCE: Advanced temporal reasoning
+        # ENHANCE: Advanced temporal reasoning (Parameters separate from ModuleDict)
+        self.sequence_memory = nn.Parameter(torch.randn(150, d_model) * 0.02)  # Temporal pattern memory
+        
         self.advanced_temporal_reasoning = nn.ModuleDict({
-            'sequence_memory': nn.Parameter(torch.randn(150, d_model) * 0.02),  # Temporal pattern memory
             'temporal_rule_extractor': nn.Sequential(
                 nn.Linear(d_model, d_model // 2),
                 nn.GELU(),
@@ -528,7 +529,7 @@ class ChronosV4Enhanced(nn.Module):
         # Temporal sequence memory matching
         memory_similarity = F.cosine_similarity(
             global_features.unsqueeze(1), 
-            self.advanced_temporal_reasoning['sequence_memory'].unsqueeze(0), 
+            self.sequence_memory.unsqueeze(0), 
             dim=2
         )  # B, 150
         top_temporal_patterns = memory_similarity.topk(10, dim=1)[0].mean(dim=1, keepdim=True)  # B, 1

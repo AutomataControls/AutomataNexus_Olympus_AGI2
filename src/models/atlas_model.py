@@ -132,10 +132,15 @@ class EnhancedAtlasNet(nn.Module):
         output = features.clone()
         
         for i in range(B):
-            # Apply rotation
+            # Apply rotation (handle non-square grids)
             rot = rotation_idx[i].item()
             if rot > 0:
-                output[i] = torch.rot90(output[i], k=rot, dims=[1, 2])
+                # Check if this would create dimension mismatch in the batch
+                h, w = output[i].shape[1], output[i].shape[2]
+                if h != w:  # Skip all rotations for non-square grids
+                    pass
+                else:
+                    output[i] = torch.rot90(output[i], k=rot, dims=[1, 2])
             
             # Apply reflection
             ref = reflection_idx[i].item()

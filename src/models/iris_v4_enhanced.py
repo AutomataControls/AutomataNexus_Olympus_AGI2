@@ -388,21 +388,22 @@ class IrisV4Enhanced(nn.Module):
         self.ensemble_interface = ColorEnsembleInterface(d_model, num_specialists=5)
         
         # ENHANCE: Advanced color reasoning
-        self.advanced_color_reasoning = nn.ModuleDict({
-            'color_pattern_memory': nn.Parameter(torch.randn(128, d_model) * 0.02),  # Color pattern memory
-            'color_rule_extractor': nn.Sequential(
-                nn.Linear(d_model, d_model // 2),
-                nn.GELU(),
-                nn.Linear(d_model // 2, 64)  # Color rule encoding
-            ),
-            'color_transformation_composer': nn.Sequential(
-                nn.Linear(d_model + 64, d_model),
-                nn.GELU(),
-                nn.Linear(d_model, d_model // 2),
-                nn.GELU(),
-                nn.Linear(d_model // 2, 100)  # Color transformation parameters
-            )
-        })
+        self.color_rule_extractor = nn.Sequential(
+            nn.Linear(d_model, d_model // 2),
+            nn.GELU(),
+            nn.Linear(d_model // 2, 64)  # Color rule encoding
+        )
+        
+        self.color_transformation_composer = nn.Sequential(
+            nn.Linear(d_model + 64, d_model),
+            nn.GELU(),
+            nn.Linear(d_model, d_model // 2),
+            nn.GELU(),
+            nn.Linear(d_model // 2, 100)  # Color transformation parameters
+        )
+        
+        # Separate parameter for color pattern memory (can't go in ModuleDict)
+        self.color_pattern_memory = nn.Parameter(torch.randn(128, d_model) * 0.02)
         
         # ENHANCE: Multi-chromatic processing
         self.multichromatic_processor = nn.ModuleList([
@@ -508,19 +509,19 @@ class IrisV4Enhanced(nn.Module):
         
         # Advanced color reasoning
         global_features = x.mean(dim=[1, 2])  # B, d_model
-        color_rule_encoding = self.advanced_color_reasoning['color_rule_extractor'](global_features)
+        color_rule_encoding = self.color_rule_extractor(global_features)
         
         # Color memory matching
         memory_similarity = F.cosine_similarity(
             global_features.unsqueeze(1), 
-            self.advanced_color_reasoning['color_pattern_memory'].unsqueeze(0), 
+            self.color_pattern_memory.unsqueeze(0), 
             dim=2
         )  # B, 128
         top_color_patterns = memory_similarity.topk(8, dim=1)[0].mean(dim=1, keepdim=True)  # B, 1
         
         # Compose color transformations
         composition_input = torch.cat([global_features, color_rule_encoding], dim=1)
-        color_transform_params = self.advanced_color_reasoning['color_transformation_composer'](composition_input)
+        color_transform_params = self.color_transformation_composer(composition_input)
         
         # Ensemble coordination
         ensemble_output = self.ensemble_interface(x)
@@ -537,9 +538,24 @@ class IrisV4Enhanced(nn.Module):
         color_expertise = ensemble_output['color_expertise']
         chromatic_weight = torch.sigmoid(self.chromatic_mix) * color_expertise
         
+        # Ensure predictions have same spatial dimensions
+        if enhanced_prediction.shape != base_prediction.shape:
+            # Resize base prediction to match enhanced prediction
+            base_prediction_resized = F.interpolate(
+                base_prediction, 
+                size=(enhanced_prediction.shape[2], enhanced_prediction.shape[3]),
+                mode='bilinear', 
+                align_corners=False
+            )
+        else:
+            base_prediction_resized = base_prediction
+        
+        # Expand chromatic_weight to match spatial dimensions
+        chromatic_weight_expanded = chromatic_weight.unsqueeze(-1).unsqueeze(-1).expand_as(enhanced_prediction)
+        
         final_prediction = (
-            chromatic_weight * enhanced_prediction + 
-            (1 - chromatic_weight) * base_prediction
+            chromatic_weight_expanded * enhanced_prediction + 
+            (1 - chromatic_weight_expanded) * base_prediction_resized
         )
         
         # Comprehensive output for ensemble coordination

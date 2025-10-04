@@ -380,10 +380,8 @@ class ExtendedStrategicDataset(Dataset):
         # Extended strategic analysis
         strategic_analysis = self._analyze_extended_strategic_complexity(input_grid, output_grid, is_arc_task)
         
-        # Very permissive filtering to ensure adequate training data
-        if self.strategic_focus and strategic_analysis['strategic_intelligence_level'] < 0:
-            if random.random() > 0.95:  # Keep 95% of all cases, reject almost nothing
-                return None
+        # Keep everything - no filtering for maximum data
+        # All samples are valuable for V5 training
         
         return {
             'input': input_grid,
@@ -477,14 +475,34 @@ class ExtendedStrategicDataset(Dataset):
         }
     
     def __len__(self) -> int:
-        return len(self.samples)
+        # Artificially increase dataset size through augmentation
+        return len(self.samples) * 3  # 3x larger effective dataset
     
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, Dict]:
-        sample = self.samples[idx]
+        # Map augmented indices back to real samples
+        real_idx = idx % len(self.samples)
+        
+        sample = self.samples[real_idx]
         
         # Convert to tensors
         input_tensor = torch.tensor(sample['input'], dtype=torch.long)
         output_tensor = torch.tensor(sample['output'], dtype=torch.long)
+        
+        # Apply geometric augmentations (50% chance)
+        if random.random() < 0.5:
+            # Random rotation (90, 180, 270 degrees)
+            k = random.randint(1, 3)
+            input_tensor = torch.rot90(input_tensor, k=k, dims=[0, 1])
+            output_tensor = torch.rot90(output_tensor, k=k, dims=[0, 1])
+        
+        if random.random() < 0.3:
+            # Random flip
+            if random.random() < 0.5:
+                input_tensor = torch.flip(input_tensor, dims=[0])  # Vertical flip
+                output_tensor = torch.flip(output_tensor, dims=[0])
+            else:
+                input_tensor = torch.flip(input_tensor, dims=[1])  # Horizontal flip
+                output_tensor = torch.flip(output_tensor, dims=[1])
         
         # Pad to consistent size
         target_h = min(self.max_grid_size, max(input_tensor.shape[0], output_tensor.shape[0]))

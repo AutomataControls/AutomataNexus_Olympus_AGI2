@@ -32,12 +32,12 @@ from src.models.iris_v4_enhanced import IrisV4Enhanced
 # Enhanced IRIS V4 Configuration - Chromatic Intelligence Focus
 IRIS_V4_CONFIG = {
     # Core Training Parameters - Enhanced for V4 Color Intelligence
-    'batch_size': 30,  # Optimal for chromatic transformer computations
+    'batch_size': 16,  # Reduced for speed
     'learning_rate': 0.00015,  # Lower for chromatic stability
-    'num_epochs': 650,  # Extended training: 13 stages x 50 epochs
-    'gradient_accumulation': 8,  # Effective batch: 240
-    'epochs_per_stage': 50,  # Extended epochs per stage
-    'curriculum_stages': 13,  # Fine-grained 13-stage progression
+    'num_epochs': 240,  # Reduced: 8 stages x 30 epochs
+    'gradient_accumulation': 4,  # Reduced accumulation
+    'epochs_per_stage': 30,  # Reduced epochs per stage for speed
+    'curriculum_stages': 8,  # Reduced stages
     
     # Enhanced Loss Configuration
     'transform_penalty': 0.05,  # Low - encourage color transformations
@@ -78,22 +78,17 @@ IRIS_V4_CONFIG = {
 STAGE_CONFIG = [
     # Foundation Color Understanding (6x6 - 10x10)
     {'stage': 0, 'max_grid_size': 6,  'synthesis_ratio': 0.8, 'color_complexity': 'basic_colors', 'focus': 'primary_color_recognition'},
-    {'stage': 1, 'max_grid_size': 7,  'synthesis_ratio': 0.75, 'color_complexity': 'color_pairs', 'focus': 'color_relationship_learning'},
-    {'stage': 2, 'max_grid_size': 8,  'synthesis_ratio': 0.7, 'color_complexity': 'simple_mapping', 'focus': 'basic_color_mapping'},
-    {'stage': 3, 'max_grid_size': 9,  'synthesis_ratio': 0.65, 'color_complexity': 'color_patterns', 'focus': 'color_pattern_recognition'},
-    {'stage': 4, 'max_grid_size': 10, 'synthesis_ratio': 0.6, 'color_complexity': 'harmony_basic', 'focus': 'color_harmony_basics'},
+    {'stage': 1, 'max_grid_size': 8,  'synthesis_ratio': 0.7, 'color_complexity': 'color_patterns', 'focus': 'color_pattern_recognition'},
+    {'stage': 2, 'max_grid_size': 10, 'synthesis_ratio': 0.6, 'color_complexity': 'simple_mapping', 'focus': 'basic_color_mapping'},
     
     # Intermediate Chromatic Reasoning (12x12 - 18x18)
-    {'stage': 5, 'max_grid_size': 12, 'synthesis_ratio': 0.55, 'color_complexity': 'complex_mapping', 'focus': 'complex_color_mapping'},
-    {'stage': 6, 'max_grid_size': 14, 'synthesis_ratio': 0.5, 'color_complexity': 'chromatic_logic', 'focus': 'chromatic_logical_rules'},
-    {'stage': 7, 'max_grid_size': 15, 'synthesis_ratio': 0.45, 'color_complexity': 'harmony_advanced', 'focus': 'advanced_color_harmony'},
-    {'stage': 8, 'max_grid_size': 16, 'synthesis_ratio': 0.4, 'color_complexity': 'color_space', 'focus': 'color_space_reasoning'},
-    {'stage': 9, 'max_grid_size': 18, 'synthesis_ratio': 0.35, 'color_complexity': 'ensemble_color', 'focus': 'ensemble_color_coordination'},
+    {'stage': 3, 'max_grid_size': 12, 'synthesis_ratio': 0.5, 'color_complexity': 'complex_mapping', 'focus': 'complex_color_mapping'},
+    {'stage': 4, 'max_grid_size': 15, 'synthesis_ratio': 0.45, 'color_complexity': 'chromatic_logic', 'focus': 'chromatic_logical_rules'},
+    {'stage': 5, 'max_grid_size': 18, 'synthesis_ratio': 0.4, 'color_complexity': 'color_space', 'focus': 'color_space_reasoning'},
     
-    # Advanced Chromatic Mastery (20x20 - 30x30)
-    {'stage': 10, 'max_grid_size': 22, 'synthesis_ratio': 0.3, 'color_complexity': 'expert_chromatic', 'focus': 'expert_color_analysis'},
-    {'stage': 11, 'max_grid_size': 26, 'synthesis_ratio': 0.25, 'color_complexity': 'chromatic_mastery', 'focus': 'chromatic_pattern_mastery'},
-    {'stage': 12, 'max_grid_size': 30, 'synthesis_ratio': 0.2, 'color_complexity': 'color_genius', 'focus': 'color_intelligence_mastery'}
+    # Advanced Chromatic Mastery (22x22 - 30x30)
+    {'stage': 6, 'max_grid_size': 25, 'synthesis_ratio': 0.3, 'color_complexity': 'expert_chromatic', 'focus': 'expert_color_analysis'},
+    {'stage': 7, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'color_complexity': 'color_genius', 'focus': 'color_intelligence_mastery'}
 ]
 
 # Device setup

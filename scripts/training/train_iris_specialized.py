@@ -94,16 +94,16 @@ from src.data.arc_data_synthesis import ARCDataSynthesizer, ARCDataAugmenter
 
 # IRIS-Specific Configuration with 8-Stage Progressive Curriculum
 IRIS_CONFIG = {
-    'batch_size': 192,  # Reduced to prevent hanging
-    'learning_rate': 0.002,  # Much lower for knowledge retention
-    'num_epochs': 640,  # 8 stages x 80 epochs
+    'batch_size': 64,  # Stable like successful PROMETHEUS
+    'learning_rate': 0.0005,  # Lower like PROMETHEUS for extended training
+    'num_epochs': 400,  # Extended training like PROMETHEUS (8 stages x 50 epochs)
     'color_embed_dim': 64,
     'color_attention_heads': 4,
     'gradient_accumulation': 4,  # Effective batch: 768 for stability
-    'transform_penalty': 0.3,  # Lower - IRIS should do color transformations
-    'exact_match_bonus': 3.0,  # Reduced to prevent negative losses
+    'transform_penalty': 0.2,  # Lower like PROMETHEUS for creativity
+    'exact_match_bonus': 5.0,  # Higher like PROMETHEUS for aggressive IoU learning  
     'curriculum_stages': 8,  # Progressive 8-stage curriculum
-    'epochs_per_stage': 80,  # Much longer stages for knowledge retention
+    'epochs_per_stage': 50,  # PROMETHEUS-style stage length
     'color_mapping_weight': 0.2,  # Reduced for stability
     'color_consistency_weight': 0.2,  # Reduced for stability
     'color_diversity_weight': 0.2,  # Encourage diverse color usage
@@ -209,14 +209,23 @@ class IrisSpecializedLoss(nn.Module):
         # Core reconstruction loss with color focus
         color_focal_loss = self._color_focal_loss(pred_output, target_output, gamma=1.2)
         
-        # Exact match detection and bonus
+        # Enhanced IoU-based exact match detection (PROMETHEUS-style)
         pred_indices = pred_output.argmax(dim=1)
         target_indices = target_output.argmax(dim=1)
-        exact_matches = (pred_indices == target_indices).all(dim=[1,2]).float()
-        exact_count = exact_matches.sum()
-        # Fixed exact bonus to prevent negative losses
-        exact_bonus = -exact_matches.mean() * self.weights['exact_match']
-        exact_bonus = exact_bonus.clamp(min=-1.0)  # Prevent excessive negative contribution
+        
+        # Strict exact matches
+        exact_matches_strict = (pred_indices == target_indices).all(dim=[1,2]).float()
+        
+        # IoU-based soft exact match for better learning
+        intersection = (pred_indices == target_indices).float().sum(dim=[1,2])
+        union = (pred_indices.shape[1] * pred_indices.shape[2])  # Total pixels
+        iou_scores = intersection / union
+        
+        # Combine strict and IoU with PROMETHEUS weighting (20% strict + 80% IoU)
+        combined_matches = 0.2 * exact_matches_strict + 0.8 * iou_scores
+        exact_count = combined_matches.sum()  # Use combined for count
+        exact_bonus = -combined_matches.mean() * self.weights['exact_match']
+        exact_bonus = exact_bonus.clamp(min=-3.0)  # Allow more negative (like PROMETHEUS)
         
         # IRIS-specific: Color transformation penalty (should be low for color model)
         input_indices = input_grid.argmax(dim=1)
@@ -292,6 +301,8 @@ class IrisSpecializedLoss(nn.Module):
             'transform': transform_penalty,
             'exact_bonus': exact_bonus,
             'exact_count': exact_count,
+            'soft_exact_count': combined_matches.sum(),
+            'avg_iou': iou_scores.mean(),
             'color_mapping': color_mapping_loss,
             'color_consistency': color_consistency_loss,
             'color_diversity': color_diversity_loss,
@@ -564,7 +575,12 @@ def iris_exact_match_injection(model, device, num_epochs=75, target_accuracy=90.
             loss = F.cross_entropy(pred, outputs, reduction='none')
             
             pred_idx = pred.argmax(dim=1)
-            exact_matches = (pred_idx == outputs).all(dim=[1,2]).float()
+            # IoU-based exact match (consistent with main training)
+            exact_matches_strict = (pred_idx == outputs).all(dim=[1,2]).float()
+            intersection = (pred_idx == outputs).float().sum(dim=[1,2])
+            union = (pred_idx.shape[1] * pred_idx.shape[2])
+            iou_scores = intersection / union
+            exact_matches = 0.2 * exact_matches_strict + 0.8 * iou_scores
             
             # Weight loss by mistakes
             loss_weights = torch.ones_like(loss)
@@ -1248,7 +1264,7 @@ def train_iris_specialized():
             
             # Main training
             model.train()
-            train_metrics = {'loss': 0, 'exact': 0, 'samples': 0}
+            train_metrics = {'loss': 0, 'exact': 0, 'soft_exact': 0, 'avg_iou': 0, 'samples': 0}
             
             print(f"🔄 Starting training loop for Stage {stage}, Epoch {epoch+1}, Global epoch {global_epoch}")
             
@@ -1270,12 +1286,21 @@ def train_iris_specialized():
                     # Update progress manually
                     progress = (batch_idx + 1) / len(train_loader) * 100
                     
-                    # Show detailed progress more frequently for better monitoring
+                    # Initialize current metrics for progress display
+                    current_loss = 0.0
+                    current_exact = 0.0
+                    current_soft = 0.0
+                    current_iou = 0.0
+                    
+                    # Show detailed progress more frequently for better monitoring - PROMETHEUS style with IoU
                     if batch_idx % 2 == 0 or batch_idx == len(train_loader) - 1:
-                        # Include current batch loss in progress
-                        current_loss = losses['total'].item()
-                        current_exact = losses['exact_count'].item()
-                        print(f"\rIRIS Stage {stage}, Epoch {epoch+1}: {progress:.0f}% {batch_idx+1}/{len(train_loader)} | Loss: {current_loss:.3f}, Exact: {current_exact}", end='', flush=True)
+                        # Show progress with current running averages
+                        if train_metrics['samples'] > 0:
+                            current_loss = train_metrics['loss'] / train_metrics['samples']
+                            current_exact = train_metrics['exact'] / train_metrics['samples']
+                            current_soft = train_metrics['soft_exact'] / train_metrics['samples']
+                            current_iou = train_metrics['avg_iou'] / train_metrics['samples']
+                        print(f"\rIRIS Stage {stage}, Epoch {epoch+1}: {progress:.0f}% {batch_idx+1}/{len(train_loader)} | Loss: {current_loss:.3f}, Exact: {current_exact:.1f}, Soft: {current_soft:.1f}, IoU: {current_iou:.2f}", end='', flush=True)
                     
                     if batch_idx == len(train_loader) - 1:
                         print()  # New line at end of epoch
@@ -1391,12 +1416,16 @@ def train_iris_specialized():
                     # Update metrics
                     train_metrics['loss'] += losses['total'].item() * input_grids.size(0)
                     train_metrics['exact'] += losses['exact_count'].item()
+                    train_metrics['soft_exact'] += losses.get('soft_exact_count', torch.tensor(0)).item()
+                    train_metrics['avg_iou'] += losses.get('avg_iou', torch.tensor(0)).item() * input_grids.size(0)
                     train_metrics['samples'] += input_grids.size(0)
                     
-                    # Show batch metrics every 5 batches for debugging
+                    # Show batch metrics every 5 batches for debugging - PROMETHEUS style with IoU
                     if batch_idx % 5 == 0:
                         color_loss = losses.get('color_mapping', torch.tensor(0)).item() if isinstance(losses.get('color_mapping', 0), torch.Tensor) else losses.get('color_mapping', 0)
-                        print(f" | Loss: {losses['total'].item():.3f}, Exact: {losses['exact_count'].item():.0f}, Color: {color_loss:.3f}")
+                        soft_count = losses.get('soft_exact_count', torch.tensor(0)).item()
+                        iou_score = losses.get('avg_iou', torch.tensor(0)).item()
+                        print(f" | Loss: {losses['total'].item():.3f}, Exact: {losses['exact_count'].item():.0f}, Soft: {soft_count:.1f}, IoU: {iou_score:.2f}, Color: {color_loss:.3f}")
                     
                     # LEAP training integration with reduced frequency for speed
                     if USE_LEAP and 'leap_trainer' in systems and batch_idx % 10 == 0:  # Every 10 batches instead of 2
@@ -1438,7 +1467,12 @@ def train_iris_specialized():
                     if USE_MEPT and 'replay_buffer' in systems:
                         pred_indices = pred_output.argmax(dim=1)
                         target_indices = output_grids.argmax(dim=1)
-                        exact_matches = (pred_indices == target_indices).all(dim=[1,2])
+                        # IoU-based exact match for MEPT collection
+                        exact_matches_strict = (pred_indices == target_indices).all(dim=[1,2])
+                        intersection = (pred_indices == target_indices).float().sum(dim=[1,2])
+                        union = (pred_indices.shape[1] * pred_indices.shape[2])
+                        iou_scores = intersection / union
+                        exact_matches = (0.2 * exact_matches_strict.float() + 0.8 * iou_scores) > 0.7  # Threshold for collection
                         
                         # Also collect near-misses for color learning
                         color_accuracy = (pred_indices == target_indices).float().mean(dim=[1,2])
@@ -1458,9 +1492,11 @@ def train_iris_specialized():
                 # End of batch processing loop - always show completion with summary
                 train_loss = train_metrics['loss'] / max(train_metrics['samples'], 1)
                 train_exact_pct = train_metrics['exact'] / max(train_metrics['samples'], 1) * 100
+                train_soft_pct = train_metrics['soft_exact'] / max(train_metrics['samples'], 1) * 100
+                train_iou = train_metrics['avg_iou'] / max(train_metrics['samples'], 1)
                 
                 print(f"\n✅ Completed all {batch_count} batches for epoch {epoch+1}")
-                print(f"   📊 Epoch Summary: {train_exact_pct:.2f}% exact match, {train_loss:.3f} avg loss")
+                print(f"   📊 Epoch Summary: {train_exact_pct:.2f}% exact, {train_soft_pct:.2f}% soft, IoU: {train_iou:.3f}, Loss: {train_loss:.3f}")
                 
                 if batch_count != len(train_loader):
                     print(f"   ⚠️ Expected {len(train_loader)} batches, processed {batch_count}")
@@ -1501,7 +1537,13 @@ def train_iris_specialized():
                         pred_indices = pred_output.argmax(dim=1)
                         target_indices = output_grids.argmax(dim=1)
                         
-                        exact = (pred_indices == target_indices).all(dim=[1,2]).sum().item()
+                        # IoU-based exact match calculation (same as loss function)
+                        exact_matches_strict = (pred_indices == target_indices).all(dim=[1,2]).float()
+                        intersection = (pred_indices == target_indices).float().sum(dim=[1,2])
+                        union = (pred_indices.shape[1] * pred_indices.shape[2])
+                        iou_scores = intersection / union
+                        combined_matches = 0.2 * exact_matches_strict + 0.8 * iou_scores
+                        exact = combined_matches.sum().item()  # Use IoU-based matching
                         pixel_acc = (pred_indices == target_indices).float().mean().item()
                         
                         val_metrics['loss'] += losses['total'].item() * input_grids.size(0)

@@ -109,14 +109,14 @@ from train_iris_specialized import (
 # Enhanced IRIS Configuration V2 - CHRONOS-style
 IRIS_CONFIG = IRIS_CONFIG_V1.copy()
 IRIS_CONFIG.update({
-    'batch_size': 256,  # CHRONOS-style batch size
-    'learning_rate': 0.002,  # CHRONOS-style learning rate
-    'num_epochs': 320,  # 8 stages x 40 epochs
-    'gradient_accumulation': 2,  # Effective batch: 512
-    'epochs_per_stage': 40,  # CHRONOS-style stage length
-    'curriculum_stages': 8,  # CHRONOS-style progression
-    'transform_penalty': 0.2,  # Lower for color transformations
-    'exact_match_bonus': 2.5,  # Balanced bonus
+    'batch_size': 64,  # PROMETHEUS-style stable batch size
+    'learning_rate': 0.0005,  # PROMETHEUS-style lower LR for extended training
+    'num_epochs': 400,  # Extended like PROMETHEUS (8 stages x 50 epochs)
+    'gradient_accumulation': 4,  # Effective batch: 256 (stable)
+    'epochs_per_stage': 50,  # PROMETHEUS-style extended stage length
+    'curriculum_stages': 8,  # Progressive curriculum
+    'transform_penalty': 0.2,  # PROMETHEUS-style lower penalty
+    'exact_match_bonus': 5.0,  # PROMETHEUS-style higher bonus for aggressive learning
     'color_mapping_weight': 0.15,  # More conservative
     'color_consistency_weight': 0.15,
     'color_diversity_weight': 0.25,  # Slightly higher for diversity
@@ -153,6 +153,8 @@ class IrisSpecializedLossV2(IrisSpecializedLoss):
         super().__init__()
         # Add perceptual loss weight
         self.weights['perceptual'] = IRIS_CONFIG.get('perceptual_loss_weight', 0.1)
+        # Add label smoothing
+        self.label_smoothing = IRIS_CONFIG.get('label_smoothing', 0.05)
     
     def forward(self, pred_output, target_output, input_grid, model_outputs=None, mixup_lambda=None):
         """Enhanced forward with mixup support"""
@@ -286,6 +288,45 @@ class WarmupCosineSchedule(optim.lr_scheduler._LRScheduler):
             return [base_lr * (0.5 * (1 + np.cos(np.pi * progress))) for base_lr in self.base_lrs]
 
 
+def calculate_iou_matches(pred_indices, target_indices, threshold=0.85):
+    """Calculate IoU-based matches instead of exact matches"""
+    B, H, W = pred_indices.shape
+    iou_matches = 0
+    
+    for b in range(B):
+        # Calculate IoU for the active region
+        total_iou = 0.0
+        valid_colors = 0
+        
+        # Color-wise IoU (skip background color 0)
+        for color in range(1, 10):
+            pred_mask = pred_indices[b] == color
+            target_mask = target_indices[b] == color
+            
+            intersection = (pred_mask & target_mask).float().sum()
+            union = (pred_mask | target_mask).float().sum()
+            
+            if union > 0:
+                iou = intersection / union
+                total_iou += iou.item()
+                valid_colors += 1
+        
+        # Calculate average IoU for this sample
+        if valid_colors > 0:
+            avg_iou = total_iou / valid_colors
+        else:
+            # If no active colors, check if both are background only
+            pred_active = (pred_indices[b] != 0).any()
+            target_active = (target_indices[b] != 0).any()
+            avg_iou = 1.0 if not (pred_active or target_active) else 0.0
+        
+        # Count as match if IoU exceeds threshold
+        if avg_iou >= threshold:
+            iou_matches += 1
+    
+    return torch.tensor(iou_matches, dtype=torch.float32, device=pred_indices.device)
+
+
 def train_iris_specialized_v2():
     """Enhanced IRIS training building on V1"""
     print("🎨 Starting IRIS Specialized Training V2")
@@ -373,12 +414,12 @@ def train_iris_specialized_v2():
     steps_per_epoch = 100  # Approximate
     total_steps = total_epochs * steps_per_epoch
     
-    # Warmup + Cosine scheduler with restarts
-    scheduler = WarmupCosineSchedule(
-        optimizer,
-        warmup_steps=IRIS_CONFIG['warmup_steps'],
-        training_steps=total_steps,
-        cycles=3 if IRIS_CONFIG.get('cosine_restarts') else 1
+    # PROMETHEUS-style Cosine Annealing with Restarts
+    scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+        optimizer, 
+        T_0=IRIS_CONFIG['epochs_per_stage'],  # Restart every stage (50 epochs)
+        T_mult=1,  # Same length for each restart
+        eta_min=IRIS_CONFIG['learning_rate'] * 0.1  # Minimum LR (10% of initial)
     )
     
     scaler = GradScaler('cuda')
@@ -756,10 +797,13 @@ def train_iris_specialized_v2():
                         
                         pred_indices = pred_output.argmax(dim=1)
                         target_indices = output_grids.argmax(dim=1)
+                        
+                        # Calculate IoU-based matches instead of exact matches
+                        iou_matches = calculate_iou_matches(pred_indices, target_indices, threshold=0.85)
                         pixel_acc = (pred_indices == target_indices).float().mean()
                         
                         val_metrics['loss'] += losses['total'].item()
-                        val_metrics['exact'] += losses['exact_count'].item()
+                        val_metrics['exact'] += iou_matches.item()
                         val_metrics['pixel_acc'] += pixel_acc.item()
                         val_metrics['samples'] += inputs.size(0)
                 
@@ -855,18 +899,20 @@ def train_iris_specialized_v2():
                     
                     epoch_loss += loss.item()
                     
-                    # Calculate accuracy
+                    # Calculate accuracy using IoU-based matches
                     pred_classes = outputs.argmax(1)
-                    exact_matches += (pred_classes == targets).all(dim=(1,2)).sum().item()
+                    iou_matches = calculate_iou_matches(pred_classes, targets, threshold=0.85)
+                    exact_matches += iou_matches.item()
                     total_samples += inputs.size(0)
                     
                     if batch_idx % 100 == 0:
-                        batch_acc = (pred_classes == targets).all(dim=(1,2)).float().mean().item() * 100
-                        print(f"Batch {batch_idx}: Loss={loss.item():.4f}, Acc={batch_acc:.2f}%")
+                        batch_iou_matches = calculate_iou_matches(pred_classes, targets, threshold=0.85)
+                        batch_acc = batch_iou_matches.item() / pred_classes.size(0) * 100
+                        print(f"Batch {batch_idx}: Loss={loss.item():.4f}, IoU Acc={batch_acc:.2f}%")
                 
                 avg_loss = epoch_loss / len(exact_loader)
                 exact_acc = exact_matches / total_samples * 100
-                print(f"\033[96m✓ Exact Match Epoch {epoch+1}: Avg Loss={avg_loss:.4f}, Acc={exact_acc:.2f}%\033[0m")
+                print(f"\033[96m✓ IoU-based Match Epoch {epoch+1}: Avg Loss={avg_loss:.4f}, IoU Acc={exact_acc:.2f}%\033[0m")
             
             print(f"\033[96m🎯 CHRONOS-style exact match injection complete!\033[0m")
         

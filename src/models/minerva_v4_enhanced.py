@@ -358,9 +358,25 @@ class MinervaV4Enhanced(nn.Module):
         
         # Strategic mixing of predictions
         strategic_weight = torch.sigmoid(self.strategic_mix) * confidence
+        
+        # Ensure predictions have same spatial dimensions
+        if enhanced_prediction.shape != base_prediction.shape:
+            # Resize base prediction to match enhanced prediction
+            base_prediction_resized = F.interpolate(
+                base_prediction, 
+                size=(enhanced_prediction.shape[2], enhanced_prediction.shape[3]),
+                mode='bilinear', 
+                align_corners=False
+            )
+        else:
+            base_prediction_resized = base_prediction
+        
+        # Expand strategic_weight to match spatial dimensions
+        strategic_weight_expanded = strategic_weight.unsqueeze(-1).unsqueeze(-1).expand_as(enhanced_prediction)
+        
         final_prediction = (
-            strategic_weight * enhanced_prediction + 
-            (1 - strategic_weight) * base_prediction
+            strategic_weight_expanded * enhanced_prediction + 
+            (1 - strategic_weight_expanded) * base_prediction_resized
         )
         
         # Comprehensive output for ensemble coordination

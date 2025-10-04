@@ -31,13 +31,13 @@ from src.models.atlas_model import EnhancedAtlasNet
 
 # Enhanced ATLAS Configuration V3 - Advanced Spatial Reasoning
 ATLAS_CONFIG = {
-    # Core Training Parameters - Enhanced for V3
-    'batch_size': 40,  # Optimal for spatial complexity
-    'learning_rate': 0.0003,  # Careful learning for geometric precision
-    'num_epochs': 500,  # Extended training: 10 stages x 50 epochs
-    'gradient_accumulation': 6,  # Effective batch: 240
-    'epochs_per_stage': 50,  # Extended epochs per stage
-    'curriculum_stages': 10,  # Full 10-stage progression
+    # Core Training Parameters - OPTIMIZED for V3 Speed
+    'batch_size': 60,  # Larger batch for faster training
+    'learning_rate': 0.0004,  # Higher for faster convergence
+    'num_epochs': 240,  # Reduced: 8 stages x 30 epochs
+    'gradient_accumulation': 4,  # Reduced accumulation: effective batch 240
+    'epochs_per_stage': 30,  # Reduced epochs per stage for speed
+    'curriculum_stages': 8,  # Reduced stages for efficiency
     
     # Enhanced Loss Configuration
     'transform_penalty': 0.3,  # Balanced for spatial transformations
@@ -71,23 +71,21 @@ ATLAS_CONFIG = {
     'restart_multiplier': 1.2,
 }
 
-# Enhanced 10-Stage Progressive Configuration - Spatial-Geometric Focus
+# Optimized 8-Stage Progressive Configuration - Efficient Spatial Learning
 STAGE_CONFIG = [
-    # Basic Spatial Patterns
-    {'stage': 0, 'max_grid_size': 6,  'synthesis_ratio': 0.9, 'geometric_complexity': 'basic_shapes', 'focus': 'shape_recognition'},
-    {'stage': 1, 'max_grid_size': 8,  'synthesis_ratio': 0.8, 'geometric_complexity': 'simple_transforms', 'focus': 'rotation_translation'},
-    {'stage': 2, 'max_grid_size': 10, 'synthesis_ratio': 0.7, 'geometric_complexity': 'pattern_completion', 'focus': 'spatial_completion'},
+    # Basic Spatial Patterns (6x6 - 12x12)
+    {'stage': 0, 'max_grid_size': 6,  'synthesis_ratio': 0.85, 'geometric_complexity': 'basic_shapes', 'focus': 'shape_recognition'},
+    {'stage': 1, 'max_grid_size': 10, 'synthesis_ratio': 0.75, 'geometric_complexity': 'simple_transforms', 'focus': 'rotation_translation'},
+    {'stage': 2, 'max_grid_size': 12, 'synthesis_ratio': 0.65, 'geometric_complexity': 'pattern_completion', 'focus': 'spatial_completion'},
     
-    # Intermediate Spatial Reasoning
-    {'stage': 3, 'max_grid_size': 12, 'synthesis_ratio': 0.6, 'geometric_complexity': 'multi_object', 'focus': 'object_relationships'},
-    {'stage': 4, 'max_grid_size': 15, 'synthesis_ratio': 0.5, 'geometric_complexity': 'complex_transforms', 'focus': 'advanced_transforms'},
-    {'stage': 5, 'max_grid_size': 18, 'synthesis_ratio': 0.4, 'geometric_complexity': 'spatial_logic', 'focus': 'geometric_rules'},
+    # Intermediate Spatial Reasoning (15x15 - 20x20)
+    {'stage': 3, 'max_grid_size': 15, 'synthesis_ratio': 0.55, 'geometric_complexity': 'multi_object', 'focus': 'object_relationships'},
+    {'stage': 4, 'max_grid_size': 18, 'synthesis_ratio': 0.45, 'geometric_complexity': 'complex_transforms', 'focus': 'advanced_transforms'},
+    {'stage': 5, 'max_grid_size': 20, 'synthesis_ratio': 0.35, 'geometric_complexity': 'spatial_logic', 'focus': 'geometric_rules'},
     
-    # Advanced Geometric Mastery
-    {'stage': 6, 'max_grid_size': 22, 'synthesis_ratio': 0.3, 'geometric_complexity': 'multi_scale', 'focus': 'scale_invariance'},
-    {'stage': 7, 'max_grid_size': 26, 'synthesis_ratio': 0.2, 'geometric_complexity': 'complex_spatial', 'focus': 'spatial_reasoning'},
-    {'stage': 8, 'max_grid_size': 30, 'synthesis_ratio': 0.15, 'geometric_complexity': 'geometric_mastery', 'focus': 'transformation_mastery'},
-    {'stage': 9, 'max_grid_size': 30, 'synthesis_ratio': 0.1, 'geometric_complexity': 'expert_spatial', 'focus': 'spatial_expertise'}
+    # Advanced Geometric Mastery (25x25 - 30x30)
+    {'stage': 6, 'max_grid_size': 25, 'synthesis_ratio': 0.25, 'geometric_complexity': 'multi_scale', 'focus': 'scale_invariance'},
+    {'stage': 7, 'max_grid_size': 30, 'synthesis_ratio': 0.2, 'geometric_complexity': 'geometric_mastery', 'focus': 'spatial_expertise'}
 ]
 
 # Device setup

@@ -199,7 +199,7 @@ class AdvancedEnsembleInterface(nn.Module):
         
         # Multi-head cross-attention for ensemble coordination
         self.ensemble_attention = nn.MultiheadAttention(
-            d_model, num_heads=12, batch_first=True
+            d_model, num_heads=8, batch_first=True
         )
         
         # Advanced strategic decision network
@@ -388,7 +388,7 @@ class MinervaV6Enhanced(nn.Module):
         
         # OLYMPUS preparation: Advanced ensemble integration
         self.olympus_broadcaster = nn.Linear(hidden_dim, hidden_dim)
-        self.olympus_aggregator = nn.MultiheadAttention(hidden_dim, num_heads=6, batch_first=True)
+        self.olympus_aggregator = nn.MultiheadAttention(hidden_dim, num_heads=8, batch_first=True)
         
         # Separate parameter for ensemble weights (can't go in ModuleDict)
         self.ensemble_weights = nn.Parameter(torch.ones(5) / 5)  # Equal initial weighting

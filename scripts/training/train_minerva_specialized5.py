@@ -35,10 +35,10 @@ MINERVA_V5_CONFIG = {
     # Core Training Parameters - Enhanced for V5 Extended Training
     'batch_size': 28,  # Slightly smaller for more complex V5 computations
     'learning_rate': 0.00012,  # Lower for fine-tuning from V4
-    'num_epochs': 800,  # Extended training: 16 stages x 50 epochs
+    'num_epochs': 600,  # Extended training: 12 stages x 50 epochs
     'gradient_accumulation': 9,  # Effective batch: 252
     'epochs_per_stage': 50,  # Extended epochs per stage
-    'curriculum_stages': 16,  # Extended 16-stage strategic progression
+    'curriculum_stages': 12,  # Focused 12-stage strategic progression
     
     # Enhanced Loss Configuration
     'transform_penalty': 0.06,  # Even lower - max strategic exploration
@@ -313,28 +313,39 @@ class ExtendedStrategicDataset(Dataset):
         print(f"\033[96mLoaded {len(self.samples)} extended strategic samples for MINERVA V5 training\033[0m")
     
     def _load_extended_strategic_data(self):
-        """Load data with extended strategic complexity focus and ARC specificity"""
-        data_files = [
-            'arc_training_padded.json',
-            'arc_evaluation_padded.json',
-            'synthetic_data_mega_v4.json'
-        ]
+        """Load data with extended strategic complexity focus using working pattern"""
+        # Load training data (challenges + solutions)
+        challenges_path = os.path.join(self.data_dir, 'arc-agi_training_challenges.json')
+        solutions_path = os.path.join(self.data_dir, 'arc-agi_training_solutions.json')
         
-        # Emphasize ARC data more in V5
-        arc_emphasis = 3 if self.arc_specific else 1
+        if os.path.exists(challenges_path) and os.path.exists(solutions_path):
+            with open(challenges_path, 'r') as f:
+                challenges = json.load(f)
+            with open(solutions_path, 'r') as f:
+                solutions = json.load(f)
+            
+            for task_id, task_data in challenges.items():
+                if task_id in solutions:
+                    combined_task = {
+                        'train': task_data['train'],
+                        'test': []
+                    }
+                    for i, test_input in enumerate(task_data['test']):
+                        if i < len(solutions[task_id]):
+                            combined_task['test'].append({
+                                'input': test_input['input'],
+                                'output': solutions[task_id][i]
+                            })
+                    self._process_extended_strategic_task(combined_task, 'training')
         
-        for file in data_files:
-            file_path = os.path.join(self.data_dir, file)
-            if os.path.exists(file_path):
-                with open(file_path, 'r') as f:
-                    data = json.load(f)
-                    
-                    # Process ARC data multiple times for emphasis
-                    emphasis_count = arc_emphasis if 'arc_' in file else 1
-                    
-                    for _ in range(emphasis_count):
-                        for task in data:
-                            self._process_extended_strategic_task(task, file)
+        # Load evaluation data
+        eval_path = os.path.join(self.data_dir, 'arc-agi_evaluation_challenges.json')
+        if os.path.exists(eval_path):
+            with open(eval_path, 'r') as f:
+                eval_data = json.load(f)
+            for task_id, task_data in eval_data.items():
+                eval_task = {'train': task_data['train'], 'test': []}
+                self._process_extended_strategic_task(eval_task, 'evaluation')
     
     def _process_extended_strategic_task(self, task: Dict, source_file: str):
         """Process task with extended strategic analysis"""
@@ -359,9 +370,9 @@ class ExtendedStrategicDataset(Dataset):
         # Extended strategic analysis
         strategic_analysis = self._analyze_extended_strategic_complexity(input_grid, output_grid, is_arc_task)
         
-        # Filter for extended strategic relevance (more inclusive for V5)
-        if self.strategic_focus and strategic_analysis['strategic_intelligence_level'] < 1:
-            if random.random() > 0.6:  # Keep 60% of simple cases for V5
+        # Filter for extended strategic relevance (more permissive)
+        if self.strategic_focus and strategic_analysis['strategic_intelligence_level'] < 2:
+            if random.random() > 0.8:  # Keep 80% of simple cases
                 return None
         
         return {
@@ -523,7 +534,7 @@ def train_minerva_specialized_v5():
     print(f"\033[96mModel initialized with {sum(p.numel() for p in model.parameters())} parameters\033[0m")
     
     # Load V4 weights
-    model_path = '/content/AutomataNexus_Olympus_AGI2/models/minerva_v4_best.pt'
+    model_path = '/content/AutomataNexus_Olympus_AGI2/models/minerva_best.pt'
     weights_loaded = model.load_compatible_weights(model_path)
     
     if not weights_loaded:
@@ -558,12 +569,12 @@ def train_minerva_specialized_v5():
     best_performance = 0.0
     training_stats = defaultdict(list)
     
-    print(f"\033[96mStarting Extended Progressive Strategic Training - 16 Enhanced Strategic Intelligence Stages\033[0m")
+    print(f"\033[96mStarting Enhanced Progressive Strategic Training - 12 Advanced Strategic Intelligence Stages\033[0m")
     
     # Extended progressive training through strategic stages
     for stage_idx, stage_config in enumerate(STAGE_CONFIG):
         print(f"\n\033[96m{'=' * 110}\033[0m")
-        print(f"\033[96mStage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
+        print(f"\033[38;2;255;222;173mStage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
               f"Strategic: {stage_config['strategic_complexity']} | Focus: {stage_config['focus']}\033[0m")
         print(f"\033[96m{'=' * 110}\033[0m")
         
@@ -594,9 +605,10 @@ def train_minerva_specialized_v5():
         # Update best performance
         if stage_performance > best_performance:
             best_performance = stage_performance
-            # Save best V5 model
+            # Save best V5 model to BOTH locations
             os.makedirs('/content/AutomataNexus_Olympus_AGI2/models', exist_ok=True)
-            torch.save({
+            
+            save_dict = {
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'scheduler_state_dict': scheduler.state_dict(),
@@ -605,8 +617,14 @@ def train_minerva_specialized_v5():
                 'config': MINERVA_V5_CONFIG,
                 'ensemble_state': model.get_ensemble_state(),
                 'training_version': 'V5'
-            }, '/content/AutomataNexus_Olympus_AGI2/models/minerva_v5_best.pt')
-            print(f"\033[96mNew best V5 strategic performance: {best_performance:.2%} - Model saved!\033[0m")
+            }
+            
+            # Save as minerva_best.pt (primary)
+            torch.save(save_dict, '/content/AutomataNexus_Olympus_AGI2/models/minerva_best.pt')
+            # Save as minerva_best_v5.pt (backup)
+            torch.save(save_dict, '/content/AutomataNexus_Olympus_AGI2/models/minerva_best_v5.pt')
+            
+            print(f"\033[96mNew best V5 strategic performance: {best_performance:.2%} - Models saved to BOTH locations!\033[0m")
         
         # Memory cleanup
         torch.cuda.empty_cache()
@@ -639,14 +657,14 @@ def train_extended_strategic_stage(model, dataloader, criterion, optimizer, sche
         arc_strategic_count = 0
         
         # Progress bar
-        pbar = tqdm(dataloader, desc=f"\033[96mExtended Strategic Stage {stage_idx} Epoch {epoch}\033[0m")
+        pbar = tqdm(dataloader, desc=f"\033[38;2;255;204;153mAdvanced Strategic Stage {stage_idx} Epoch {epoch}\033[0m")
         
         for batch_idx, (inputs, targets, metadata) in enumerate(pbar):
             inputs = inputs.to(device)
             targets = targets.to(device)
             
             # Forward pass with mixed precision
-            with autocast():
+            with autocast(device_type='cuda'):
                 outputs = model(inputs, targets, mode='train')
                 loss_dict = criterion(outputs, targets, inputs)
                 loss = loss_dict['total'] / accumulation_steps
@@ -699,11 +717,13 @@ def train_extended_strategic_stage(model, dataloader, criterion, optimizer, sche
         if epoch % 5 == 0 or epoch == epochs_for_stage - 1:
             strategic_ratio = advanced_strategic_count / max(total_samples, 1)
             arc_ratio = arc_strategic_count / max(total_samples, 1)
-            print(f"\033[96mExtended Strategic Stage {stage_idx} Epoch {epoch}: "
-                  f"Performance = {epoch_performance:.1%}, "
-                  f"Advanced Strategic = {strategic_ratio:.1%}, "
-                  f"ARC Strategic = {arc_ratio:.1%}, "
-                  f"Loss = {epoch_losses['total']/len(dataloader):.4f}\033[0m")
+            avg_loss = epoch_losses['total']/len(dataloader)
+            current_lr = scheduler.get_last_lr()[0]
+            print(f"\033[96m⏰ MINERVA V5 Stage {stage_idx}, Epoch {epoch} (Global: {stage_idx * MINERVA_V5_CONFIG['epochs_per_stage'] + epoch + 1}):\033[0m")
+            print(f"\033[96m   🎯 Train: {epoch_performance:.2%} exact, Loss: {avg_loss:.3f}\033[0m")
+            print(f"\033[96m   📊 LR: {current_lr:.6f} | Grid: {stage_config['max_grid_size']}x{stage_config['max_grid_size']} | Strategic: {strategic_ratio:.1%} | ARC: {arc_ratio:.1%}\033[0m")
+            if epoch == epochs_for_stage - 1:
+                print(f"\033[96m✅ Stage {stage_idx} complete! Final exact: {epoch_performance:.2%}\033[0m")
         
         # Memory cleanup
         torch.cuda.empty_cache()

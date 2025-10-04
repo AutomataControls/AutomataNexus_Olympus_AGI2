@@ -82,7 +82,7 @@ STAGE_CONFIG = [
     {'stage': 6, 'max_grid_size': 22, 'synthesis_ratio': 0.3, 'pattern_complexity': 'multi_step_logical'},
     {'stage': 7, 'max_grid_size': 26, 'synthesis_ratio': 0.2, 'pattern_complexity': 'abstract_completion'},
     {'stage': 8, 'max_grid_size': 30, 'synthesis_ratio': 0.15, 'pattern_complexity': 'complex_spatial'},
-    {'stage': 9, 'max_grid_size': 35, 'synthesis_ratio': 0.1, 'pattern_complexity': 'expert_reasoning'}
+    {'stage': 9, 'max_grid_size': 30, 'synthesis_ratio': 0.1, 'pattern_complexity': 'expert_reasoning'}
 ]
 
 # Device setup
@@ -288,7 +288,7 @@ def train_minerva_specialized_v3():
     print("🧠 Starting MINERVA V3 Enhanced Training")
     print("=" * 70)
     print("📊 Advanced Strategic Grid Analysis Features:")
-    print("  • 10-stage progressive curriculum (6x6 → 35x35)")
+    print("  • 10-stage progressive curriculum (6x6 → 30x30)")
     print("  • Enhanced program synthesis capabilities")
     print("  • ULTRA TEAL IoU scoring (85% soft + 15% strict)")
     print("  • Advanced pattern diversity and complexity bonuses")
@@ -296,8 +296,8 @@ def train_minerva_specialized_v3():
     print("  • Extended 500-epoch training with careful learning")
     print("=" * 70)
     
-    # Initialize enhanced model
-    model = EnhancedMinervaNet(max_grid_size=35).to(device)
+    # Initialize enhanced model - start with existing size, then adjust if needed
+    model = EnhancedMinervaNet(max_grid_size=30).to(device)
     print(f"🧠 MINERVA V3 Model: {sum(p.numel() for p in model.parameters()):,} parameters")
     
     # Enhanced loss function
@@ -641,7 +641,7 @@ def train_minerva_specialized_v3():
     print(f"\n🎉 MINERVA V3 Enhanced Strategic Training Complete!")
     print("=" * 60)
     print(f"   🏆 Best exact match: {best_exact:.2f}%")
-    print(f"   📏 Enhanced stages completed: 10 (6x6 → 35x35 grids)")
+    print(f"   📏 Enhanced stages completed: 10 (6x6 → 30x30 grids)")
     print(f"   📊 Total epochs: {global_epoch}")
     print(f"   🧠 Enhanced with program synthesis and strategic reasoning")
     

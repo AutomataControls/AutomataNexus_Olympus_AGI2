@@ -357,20 +357,19 @@ def train_minerva_specialized_v3():
     
     # Load existing best model if available
     if os.path.exists(best_model_path):
-        print(f"🔄 Loading best MINERVA model from {best_model_path}")
+        print(f"🔄 Loading best MINERVA model weights from {best_model_path}")
         try:
             checkpoint = torch.load(best_model_path, map_location=device, weights_only=False)
             model.load_state_dict(checkpoint['model_state_dict'])
-            if 'optimizer_state_dict' in checkpoint:
-                optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-            if 'scheduler_state_dict' in checkpoint:
-                scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
             best_exact = checkpoint.get('best_exact', 0.0)
-            global_epoch = checkpoint.get('epoch', 0)
-            start_stage = checkpoint.get('stage', 0)
-            print(f"✅ Resumed from epoch {global_epoch}, stage {start_stage}, best: {best_exact:.2f}%")
+            print(f"✅ Loaded model weights with {best_exact:.2f}% performance")
+            print(f"🆕 Starting fresh V3 training from stage 0 with loaded weights")
+            # Reset training state for V3
+            global_epoch = 0
+            start_stage = 0
         except Exception as e:
             print(f"⚠️ Failed to load checkpoint: {e}")
+            print("🆕 Starting fresh V3 training")
     else:
         print("🆕 No existing model found - starting fresh V3 training")
     

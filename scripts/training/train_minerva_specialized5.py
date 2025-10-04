@@ -526,8 +526,7 @@ def train_minerva_specialized_v5():
     # Initialize enhanced model
     model = MinervaV4Enhanced(
         max_grid_size=30,
-        d_model=256,
-        num_layers=6,
+        hidden_dim=256,
         preserve_weights=True
     ).to(device)
     

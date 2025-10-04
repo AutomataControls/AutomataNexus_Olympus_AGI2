@@ -305,28 +305,39 @@ class ExtendedCreativeDataset(Dataset):
         print(f"\033[96mLoaded {len(self.samples)} extended creative samples for PROMETHEUS V5 training\033[0m")
     
     def _load_extended_creative_data(self):
-        """Load data with extended creative complexity focus and ARC specificity"""
-        data_files = [
-            'arc_training_padded.json',
-            'arc_evaluation_padded.json',
-            'synthetic_data_mega_v4.json'
-        ]
+        """Load data with extended creative complexity focus using working V4 pattern"""
+        # Load training data (challenges + solutions)
+        challenges_path = os.path.join(self.data_dir, 'arc-agi_training_challenges.json')
+        solutions_path = os.path.join(self.data_dir, 'arc-agi_training_solutions.json')
         
-        # Emphasize ARC data more in V5
-        arc_emphasis = 2 if self.arc_specific else 1
+        if os.path.exists(challenges_path) and os.path.exists(solutions_path):
+            with open(challenges_path, 'r') as f:
+                challenges = json.load(f)
+            with open(solutions_path, 'r') as f:
+                solutions = json.load(f)
+            
+            for task_id, task_data in challenges.items():
+                if task_id in solutions:
+                    combined_task = {
+                        'train': task_data['train'],
+                        'test': []
+                    }
+                    for i, test_input in enumerate(task_data['test']):
+                        if i < len(solutions[task_id]):
+                            combined_task['test'].append({
+                                'input': test_input['input'],
+                                'output': solutions[task_id][i]
+                            })
+                    self._process_extended_creative_task(combined_task, 'training')
         
-        for file in data_files:
-            file_path = os.path.join(self.data_dir, file)
-            if os.path.exists(file_path):
-                with open(file_path, 'r') as f:
-                    data = json.load(f)
-                    
-                    # Process ARC data multiple times for emphasis
-                    emphasis_count = arc_emphasis if 'arc_' in file else 1
-                    
-                    for _ in range(emphasis_count):
-                        for task in data:
-                            self._process_extended_creative_task(task, file)
+        # Load evaluation data
+        eval_path = os.path.join(self.data_dir, 'arc-agi_evaluation_challenges.json')
+        if os.path.exists(eval_path):
+            with open(eval_path, 'r') as f:
+                eval_data = json.load(f)
+            for task_id, task_data in eval_data.items():
+                eval_task = {'train': task_data['train'], 'test': []}
+                self._process_extended_creative_task(eval_task, 'evaluation')
     
     def _process_extended_creative_task(self, task: Dict, source_file: str):
         """Process task with extended creative analysis"""
@@ -351,9 +362,9 @@ class ExtendedCreativeDataset(Dataset):
         # Extended creative analysis
         creative_analysis = self._analyze_extended_creative_complexity(input_grid, output_grid, is_arc_task)
         
-        # Filter for extended creative relevance (more lenient for V5)
-        if self.creative_focus and creative_analysis['creative_intelligence_level'] < 1:
-            if random.random() > 0.5:  # Keep 50% of simple cases for V5
+        # Filter for extended creative relevance (more permissive)
+        if self.creative_focus and creative_analysis['creative_intelligence_level'] < 2:
+            if random.random() > 0.8:  # Keep 80% of simple cases
                 return None
         
         return {

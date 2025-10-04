@@ -41,6 +41,28 @@ class PrometheusEnhancedLossV2(nn.Module):
         pred_output = model_outputs['predicted_output']
         B, C, H, W = pred_output.shape
         
+        # Handle mixup targets
+        if mixup_lambda is not None and isinstance(targets, tuple):
+            targets_a, targets_b = targets
+            # Calculate loss for both targets and mix
+            loss_a = self._calculate_single_loss(pred_output, targets_a, inputs)
+            loss_b = self._calculate_single_loss(pred_output, targets_b, inputs)
+            
+            # Mix the losses
+            mixed_losses = {}
+            for key in loss_a:
+                if torch.is_tensor(loss_a[key]):
+                    mixed_losses[key] = mixup_lambda * loss_a[key] + (1 - mixup_lambda) * loss_b[key]
+                else:
+                    mixed_losses[key] = loss_a[key]
+            
+            return mixed_losses
+        
+        return self._calculate_single_loss(pred_output, targets, inputs)
+    
+    def _calculate_single_loss(self, pred_output, targets, inputs):
+        B, C, H, W = pred_output.shape
+        
         focal_loss = F.cross_entropy(pred_output, targets.argmax(dim=1) if targets.dim() > 3 else targets)
         
         pred_indices = pred_output.argmax(dim=1)
@@ -51,7 +73,8 @@ class PrometheusEnhancedLossV2(nn.Module):
         union = (pred_indices.shape[1] * pred_indices.shape[2])
         iou_scores = intersection / union
         
-        combined_matches = 0.2 * exact_matches_strict + 0.8 * iou_scores
+        # ULTRA TEAL: 85% IoU + 15% strict (maximum soft matching)
+        combined_matches = 0.15 * exact_matches_strict + 0.85 * iou_scores
         exact_count = combined_matches.sum()
         exact_bonus = -combined_matches.mean() * self.exact_match_bonus
         exact_bonus = exact_bonus.clamp(min=-3.0)
@@ -274,7 +297,8 @@ class PrometheusUltimateCreativeLoss(PrometheusEnhancedLossV2):
         if self.ultra_iou_weighting:
             combined_matches = 0.15 * exact_matches_strict + 0.85 * iou_scores
         else:
-            combined_matches = 0.2 * exact_matches_strict + 0.8 * iou_scores
+            # ULTRA TEAL: 85% IoU + 15% strict (maximum soft matching)
+        combined_matches = 0.15 * exact_matches_strict + 0.85 * iou_scores
         
         exact_count = combined_matches.sum()
         exact_bonus = -combined_matches.mean() * self.exact_match_bonus
@@ -647,7 +671,7 @@ def train_prometheus_specialized_v3():
     # Model directory
     models_dir = '/content/AutomataNexus_Olympus_AGI2/arc_models_v4'
     os.makedirs(models_dir, exist_ok=True)
-    best_model_path = f'{models_dir}/prometheus_v3_ultimate.pt'
+    best_model_path = f'{models_dir}/prometheus_best.pt'
     
     best_exact = 0.0
     global_epoch = 0
@@ -804,8 +828,8 @@ def train_prometheus_specialized_v3():
                     for inp, out in injection_patterns:
                         optimizer.zero_grad()
                         
-                        inp_oh = F.one_hot(inp.unsqueeze(0), num_classes=10).permute(0, 3, 1, 2).float().to(device)
-                        out_oh = F.one_hot(out.unsqueeze(0), num_classes=10).permute(0, 3, 1, 2).float().to(device)
+                        inp_oh = F.one_hot(inp.to(device).unsqueeze(0), num_classes=10).permute(0, 3, 1, 2).float().to(device)
+                        out_oh = F.one_hot(out.to(device).unsqueeze(0), num_classes=10).permute(0, 3, 1, 2).float().to(device)
                         
                         model_outputs = model(inp_oh, mode='train')
                         losses = loss_fn(model_outputs, out_oh, inp_oh)
@@ -817,9 +841,10 @@ def train_prometheus_specialized_v3():
                         # Check creative mastery
                         pred_idx = model_outputs['predicted_output'].argmax(dim=1)
                         
-                        # Use ultra IoU-based matching for injection assessment
-                        exact_matches_strict = (pred_idx[0] == out).all()
-                        intersection = (pred_idx[0] == out).float().sum()
+                        # Use ultra IoU-based matching for injection assessment  
+                        out_device = out.to(device)
+                        exact_matches_strict = (pred_idx[0] == out_device).all()
+                        intersection = (pred_idx[0] == out_device).float().sum()
                         union = pred_idx[0].numel()
                         iou_score = intersection / union
                         combined_match = 0.15 * exact_matches_strict.float() + 0.85 * iou_score

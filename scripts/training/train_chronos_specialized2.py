@@ -498,7 +498,6 @@ def train_chronos_specialized_v2():
     # Initialize enhanced model
     model = EnhancedChronosNet(
         max_grid_size=30, 
-        sequence_length=CHRONOS_CONFIG['sequence_length'],
         hidden_dim=CHRONOS_CONFIG['hidden_dim']
     ).to(device)
     print(f"⏰ CHRONOS V2 Model: {sum(p.numel() for p in model.parameters()):,} parameters")
@@ -694,7 +693,11 @@ def train_chronos_specialized_v2():
                                     temporal_sequence.append(t_step.unsqueeze(0).to(device))
                             temp_data = temporal_sequence if temporal_sequence else None
                         
-                        model_outputs = model(inp_oh, out_oh, mode='train')
+                        # CHRONOS model expects sequence input
+                        sequence_input = [inp_oh]
+                        if temp_data and isinstance(temp_data, list):
+                            sequence_input.extend(temp_data)
+                        model_outputs = model(sequence_input, target=out_oh)
                         losses = loss_fn(model_outputs, out_oh, inp_oh, temporal_sequence=temp_data)
                         
                         losses['total'].backward()
@@ -776,7 +779,12 @@ def train_chronos_specialized_v2():
                     temporal_data = mixed_temporal
                 
                 with autocast(device.type):
-                    model_outputs = model(input_grids, mode='train')
+                    # CHRONOS expects sequence input, not single tensor
+                    sequence_input = [input_grids]
+                    if temporal_data and isinstance(temporal_data, list):
+                        sequence_input.extend(temporal_data)
+                    
+                    model_outputs = model(sequence_input, target=output_grids)
                     losses = loss_fn(
                         model_outputs, output_grids, input_grids, 
                         mixup_lambda=mixup_lambda, temporal_sequence=temporal_data
@@ -825,7 +833,9 @@ def train_chronos_specialized_v2():
                         output_grids = F.one_hot(outputs, num_classes=10).permute(0, 3, 1, 2).float()
                         
                         with autocast(device.type):
-                            model_outputs = model(input_grids, mode='inference')
+                            # CHRONOS expects sequence input for inference too
+                            sequence_input = [input_grids]
+                            model_outputs = model(sequence_input, target=output_grids)
                             losses = loss_fn(model_outputs, output_grids, input_grids)
                         
                         val_metrics['loss'] += losses['total'].item()

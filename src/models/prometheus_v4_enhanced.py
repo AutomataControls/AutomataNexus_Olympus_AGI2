@@ -560,9 +560,24 @@ class PrometheusV4Enhanced(nn.Module):
         creative_expertise = ensemble_output['creative_expertise']
         innovation_weight = torch.sigmoid(self.creative_mix) * creative_expertise
         
+        # Ensure predictions have same spatial dimensions
+        if enhanced_prediction.shape != base_prediction.shape:
+            # Resize base prediction to match enhanced prediction
+            base_prediction_resized = F.interpolate(
+                base_prediction, 
+                size=(enhanced_prediction.shape[2], enhanced_prediction.shape[3]),
+                mode='bilinear', 
+                align_corners=False
+            )
+        else:
+            base_prediction_resized = base_prediction
+        
+        # Expand innovation_weight to match spatial dimensions
+        innovation_weight_expanded = innovation_weight.unsqueeze(-1).unsqueeze(-1).expand_as(enhanced_prediction)
+        
         final_prediction = (
-            innovation_weight * enhanced_prediction + 
-            (1 - innovation_weight) * base_prediction
+            innovation_weight_expanded * enhanced_prediction + 
+            (1 - innovation_weight_expanded) * base_prediction_resized
         )
         
         # Comprehensive output for ensemble coordination

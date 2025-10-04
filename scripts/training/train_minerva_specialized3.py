@@ -231,19 +231,26 @@ def custom_collate_fn(batch):
     
     for item in batch:
         inp = item['inputs']
-        # Handle different tensor shapes
-        if inp.dim() == 2:  # H, W
-            h, w = inp.shape
-        elif inp.dim() == 3:  # C, H, W or H, W, C
-            if inp.shape[0] <= 10:  # Likely C, H, W
-                h, w = inp.shape[1], inp.shape[2]
-            else:  # Likely H, W, C
-                h, w = inp.shape[0], inp.shape[1]
-        else:
-            continue
+        out = item['outputs']
         
-        max_h = max(max_h, h)
-        max_w = max(max_w, w)
+        # Get dimensions from both input and output
+        for tensor in [inp, out]:
+            if tensor.dim() == 2:  # H, W
+                h, w = tensor.shape
+            elif tensor.dim() == 3:  # C, H, W or H, W, C
+                if tensor.shape[0] <= 10:  # Likely C, H, W
+                    h, w = tensor.shape[1], tensor.shape[2]
+                else:  # Likely H, W, C
+                    h, w = tensor.shape[0], tensor.shape[1]
+            else:
+                continue
+            
+            max_h = max(max_h, h)
+            max_w = max(max_w, w)
+    
+    # Ensure we have reasonable max dimensions
+    max_h = max(max_h, 1)
+    max_w = max(max_w, 1)
     
     # Pad all tensors to maximum size
     padded_inputs = []
@@ -266,13 +273,27 @@ def custom_collate_fn(batch):
             else:  # H, W, C -> H, W
                 out = out.argmax(dim=-1)
         
-        # Pad to maximum size
-        h_pad = max_h - inp.shape[0]
-        w_pad = max_w - inp.shape[1]
+        # Ensure tensors are at least 2D
+        if inp.dim() == 1:
+            inp = inp.unsqueeze(0)
+        if out.dim() == 1:
+            out = out.unsqueeze(0)
         
-        if h_pad > 0 or w_pad > 0:
-            inp = F.pad(inp, (0, w_pad, 0, h_pad), mode='constant', value=0)
-            out = F.pad(out, (0, w_pad, 0, h_pad), mode='constant', value=0)
+        # Get current dimensions
+        inp_h, inp_w = inp.shape[-2:]
+        out_h, out_w = out.shape[-2:]
+        
+        # Pad input to maximum size
+        inp_h_pad = max_h - inp_h
+        inp_w_pad = max_w - inp_w
+        if inp_h_pad > 0 or inp_w_pad > 0:
+            inp = F.pad(inp, (0, inp_w_pad, 0, inp_h_pad), mode='constant', value=0)
+        
+        # Pad output to maximum size  
+        out_h_pad = max_h - out_h
+        out_w_pad = max_w - out_w
+        if out_h_pad > 0 or out_w_pad > 0:
+            out = F.pad(out, (0, out_w_pad, 0, out_h_pad), mode='constant', value=0)
         
         padded_inputs.append(inp)
         padded_outputs.append(out)

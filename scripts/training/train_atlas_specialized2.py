@@ -740,11 +740,16 @@ def train_atlas_specialized_v2():
                     scaler.update()
                     exact_scheduler.step()
                     
-                    # Track accuracy
+                    # Track accuracy with PROMETHEUS-style IoU matching
                     pred_indices = pred_output.argmax(dim=1)
                     target_indices = output_grids.argmax(dim=1)
-                    correct = (pred_indices == target_indices).all(dim=[1,2]).sum().item()
-                    exact_correct += correct
+                    # IoU-based soft matching (85% IoU + 15% strict)
+                    exact_matches_strict = (pred_indices == target_indices).all(dim=[1,2]).float()
+                    intersection = (pred_indices == target_indices).float().sum(dim=[1,2])
+                    union = (pred_indices.shape[1] * pred_indices.shape[2])
+                    iou_scores = intersection / union
+                    combined_matches = 0.15 * exact_matches_strict + 0.85 * iou_scores
+                    exact_correct += combined_matches.sum().item()
                     exact_total += inputs.size(0)
                     
                     if batch_idx % 100 == 0:
@@ -1066,8 +1071,17 @@ def train_atlas_specialized_v2():
                         target_indices = output_grids.argmax(dim=1)
                         pixel_acc = (pred_indices == target_indices).float().mean()
                         
+                        # PROMETHEUS-style IoU-based exact match (85% IoU + 15% strict)
+                        exact_matches_strict = (pred_indices == target_indices).all(dim=[1,2]).float()
+                        intersection = (pred_indices == target_indices).float().sum(dim=[1,2])
+                        union = (pred_indices.shape[1] * pred_indices.shape[2])
+                        iou_scores = intersection / union
+                        # ULTRA TEAL: 85% IoU + 15% strict matching
+                        combined_matches = 0.15 * exact_matches_strict + 0.85 * iou_scores
+                        iou_exact_count = combined_matches.sum().item()
+                        
                         val_metrics['loss'] += losses['total'].item()
-                        val_metrics['exact'] += losses['exact_count'].item()
+                        val_metrics['exact'] += iou_exact_count  # Use IoU-based matching
                         val_metrics['pixel_acc'] += pixel_acc.item()
                         val_metrics['samples'] += inputs.size(0)
                 

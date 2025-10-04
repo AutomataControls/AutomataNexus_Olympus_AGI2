@@ -208,11 +208,11 @@ class AtlasSpecializedLoss(nn.Module):
         union = (pred_indices.shape[1] * pred_indices.shape[2])  # Total pixels
         iou_scores = intersection / union
         
-        # Combine strict and soft matches (weighted towards IoU for learning)
-        combined_matches = 0.3 * exact_matches_strict + 0.7 * iou_scores
+        # PROMETHEUS ULTRA TEAL: 85% IoU + 15% strict (maximum soft matching)
+        combined_matches = 0.15 * exact_matches_strict + 0.85 * iou_scores
         exact_count = exact_matches_strict.sum()
         exact_bonus = -combined_matches.mean() * self.weights['exact_match']
-        exact_bonus = exact_bonus.clamp(min=-2.0)  # Prevent excessive negative contribution
+        exact_bonus = exact_bonus.clamp(min=-4.0)  # Allow more aggressive IoU learning like PROMETHEUS
         
         # Simple transformation penalty (very low for ATLAS)
         input_indices = input_grid.argmax(dim=1)

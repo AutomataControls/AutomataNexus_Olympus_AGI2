@@ -264,18 +264,42 @@ class StrategicARCDataset(Dataset):
     def _load_strategic_data(self):
         """Load data with strategic complexity focus"""
         data_files = [
-            'arc_training_padded.json',
-            'arc_evaluation_padded.json',
-            'synthetic_data_mega_v4.json'
+            'arc-agi_training_challenges.json',
+            'arc-agi_evaluation_challenges.json'
         ]
         
-        for file in data_files:
-            file_path = os.path.join(self.data_dir, file)
-            if os.path.exists(file_path):
-                with open(file_path, 'r') as f:
-                    data = json.load(f)
-                    for task in data:
-                        self._process_strategic_task(task, file)
+        # Load training data (challenges + solutions)
+        challenges_path = os.path.join(self.data_dir, 'arc-agi_training_challenges.json')
+        solutions_path = os.path.join(self.data_dir, 'arc-agi_training_solutions.json')
+        
+        if os.path.exists(challenges_path) and os.path.exists(solutions_path):
+            with open(challenges_path, 'r') as f:
+                challenges = json.load(f)
+            with open(solutions_path, 'r') as f:
+                solutions = json.load(f)
+            
+            for task_id, task_data in challenges.items():
+                if task_id in solutions:
+                    combined_task = {
+                        'train': task_data['train'],
+                        'test': []
+                    }
+                    for i, test_input in enumerate(task_data['test']):
+                        if i < len(solutions[task_id]):
+                            combined_task['test'].append({
+                                'input': test_input['input'],
+                                'output': solutions[task_id][i]
+                            })
+                    self._process_strategic_task(combined_task, 'training')
+        
+        # Load evaluation data
+        eval_path = os.path.join(self.data_dir, 'arc-agi_evaluation_challenges.json')
+        if os.path.exists(eval_path):
+            with open(eval_path, 'r') as f:
+                eval_data = json.load(f)
+            for task_id, task_data in eval_data.items():
+                eval_task = {'train': task_data['train'], 'test': []}
+                self._process_strategic_task(eval_task, 'evaluation')
     
     def _process_strategic_task(self, task: Dict, source_file: str):
         """Process task with strategic complexity analysis"""
@@ -302,7 +326,7 @@ class StrategicARCDataset(Dataset):
         
         # Filter for strategic relevance if enabled
         if self.strategic_focus and strategic_analysis['strategic_level'] < 2:
-            if random.random() > 0.3:  # Keep 30% of simple cases for baseline
+            if random.random() > 0.8:  # Keep 80% of simple cases
                 return None
         
         return {

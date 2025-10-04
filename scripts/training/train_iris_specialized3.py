@@ -268,8 +268,8 @@ class IrisDatasetV3(Dataset):
                 with open(file_path, 'r') as f:
                     data = json.load(f)
                     print(f"\033[96mFound {len(data)} tasks in {file}\033[0m")
-                    for task in data:
-                        self._process_color_task(task, file)
+                    for task_id, task_data in data.items():
+                        self._process_color_task(task_data, file)
             else:
                 print(f"\033[96mWarning: {file} not found in {self.data_dir}\033[0m")
     

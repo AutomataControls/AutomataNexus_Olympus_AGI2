@@ -750,6 +750,7 @@ def train_prometheus_specialized_v3():
             shuffle=False,
             num_workers=0,
             pin_memory=True,
+            collate_fn=lambda batch: custom_collate_fn(batch, stage),
             drop_last=False
         )
         

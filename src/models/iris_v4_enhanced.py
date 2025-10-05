@@ -491,39 +491,29 @@ class IrisV4Enhanced(nn.Module):
         # Add chromatic positional encoding
         x = self.pos_encoding(x, color_indices)
         
-        # Apply chromatic transformer layers
+        # Apply only first chromatic transformer layer for speed
         chromatic_analyses = []
-        for layer in self.chromatic_transformer_layers:
-            x, chromatic_info = layer(x, color_indices)
+        if len(self.chromatic_transformer_layers) > 0:
+            x, chromatic_info = self.chromatic_transformer_layers[0](x, color_indices)
             chromatic_analyses.append(chromatic_info)
         
-        # Multi-chromatic processing (different color space interpretations)
-        x_flat = x.mean(dim=[1, 2])  # B, d_model
-        multichromatic_features = []
-        for processor in self.multichromatic_processor:
-            chromatic_features = processor(x_flat)
-            multichromatic_features.append(chromatic_features)
+        # Use only first multichromatic processor for speed
+        global_features = x.mean(dim=[1, 2])
+        multichromatic_features = [self.multichromatic_processor[0](global_features)]
         
-        multichromatic_concat = torch.cat(multichromatic_features, dim=1)  # B, 4*d_model
-        fused_chromatic = self.chromatic_fusion(multichromatic_concat)  # B, d_model
-        
-        # Advanced color reasoning
-        global_features = x.mean(dim=[1, 2])  # B, d_model
         color_rule_encoding = self.color_rule_extractor(global_features)
         
-        # Color memory matching
+        # Use smaller memory bank for speed
         memory_similarity = F.cosine_similarity(
             global_features.unsqueeze(1), 
-            self.color_pattern_memory.unsqueeze(0), 
+            self.color_pattern_memory[:32].unsqueeze(0), 
             dim=2
-        )  # B, 128
-        top_color_patterns = memory_similarity.topk(8, dim=1)[0].mean(dim=1, keepdim=True)  # B, 1
+        )
+        top_color_patterns = memory_similarity.topk(4, dim=1)[0].mean(dim=1, keepdim=True)
         
-        # Compose color transformations
         composition_input = torch.cat([global_features, color_rule_encoding], dim=1)
         color_transform_params = self.color_transformation_composer(composition_input)
         
-        # Ensemble coordination
         ensemble_output = self.ensemble_interface(x)
         
         # Combine enhanced features with transformation parameters

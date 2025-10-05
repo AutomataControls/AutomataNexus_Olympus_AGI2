@@ -49,34 +49,49 @@ class FastChromaticTransformer(nn.Module):
         
         return out.view(B, H, W, D), {'attention_weights': attn.mean(dim=1)}
 
-class FastColorProcessor(nn.Module):
-    """Fast color space processing"""
+class EnhancedColorProcessor(nn.Module):
+    """Enhanced color space processing with more intelligence"""
     def __init__(self, d_model: int):
         super().__init__()
         self.color_analyzer = nn.Sequential(
             nn.Linear(d_model, d_model // 2),
             nn.ReLU(),
-            nn.Linear(d_model // 2, 32)  # Color features
+            nn.Linear(d_model // 2, 64)  # More color features
         )
         self.harmony_detector = nn.Sequential(
-            nn.Linear(d_model, 16),  # Harmony patterns
+            nn.Linear(d_model, 32),  # More harmony patterns
             nn.Softmax(dim=-1)
+        )
+        self.color_transform_predictor = nn.Sequential(
+            nn.Linear(d_model, d_model // 2),
+            nn.ReLU(),
+            nn.Linear(d_model // 2, 100)  # Color transformation matrix
+        )
+        # Color relationship analyzer
+        self.relationship_analyzer = nn.Sequential(
+            nn.Linear(d_model, 48),
+            nn.ReLU(),
+            nn.Linear(48, 16)  # Color relationships
         )
         
     def forward(self, x):
         # x: B, d_model (global features)
         color_features = self.color_analyzer(x)
         harmony_patterns = self.harmony_detector(x)
+        color_transforms = self.color_transform_predictor(x)
+        relationships = self.relationship_analyzer(x)
         
         return {
             'color_features': color_features,
-            'harmony_patterns': harmony_patterns
+            'harmony_patterns': harmony_patterns,
+            'color_transformation_matrix': F.softmax(color_transforms.view(-1, 10, 10), dim=-1),
+            'color_relationships': relationships
         }
 
 class IrisV6Enhanced(nn.Module):
     """IRIS V6 Enhanced - Intelligent but fast color pattern recognition"""
     
-    def __init__(self, max_grid_size: int = 30, d_model: int = 128, num_layers: int = 2, preserve_weights: bool = True):
+    def __init__(self, max_grid_size: int = 30, d_model: int = 128, num_layers: int = 3, preserve_weights: bool = True):
         super().__init__()
         self.max_grid_size = max_grid_size
         self.d_model = d_model
@@ -88,29 +103,41 @@ class IrisV6Enhanced(nn.Module):
         # V6 Enhancements - optimized for speed
         self.input_embedding = nn.Linear(10, d_model)
         
-        # Fast chromatic transformers (only 2 layers for speed)
+        # Fast chromatic transformers with more attention heads
         self.chromatic_layers = nn.ModuleList([
-            FastChromaticTransformer(d_model, num_heads=4) for _ in range(num_layers)
+            FastChromaticTransformer(d_model, num_heads=6) for _ in range(num_layers)
         ])
         
-        # Fast color processing
-        self.color_processor = FastColorProcessor(d_model)
+        # Enhanced color processing
+        self.color_processor = EnhancedColorProcessor(d_model)
         
-        # Compact color memory (32 patterns instead of 128)
-        self.color_memory = nn.Parameter(torch.randn(32, d_model) * 0.02)
+        # Enhanced color memory (64 patterns for more intelligence)
+        self.color_memory = nn.Parameter(torch.randn(64, d_model) * 0.02)
         
-        # Color rule extractor
+        # Enhanced color rule extractor
         self.rule_extractor = nn.Sequential(
             nn.Linear(d_model, d_model // 2),
             nn.ReLU(),
-            nn.Linear(d_model // 2, 32)  # Rule encoding
+            nn.Linear(d_model // 2, 64)  # More rule encoding
         )
         
-        # Fast decoder
-        self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(d_model + 32, d_model, 3, padding=1),
+        # Color pattern classifier
+        self.pattern_classifier = nn.Sequential(
+            nn.Linear(d_model, 32),
             nn.ReLU(),
-            nn.ConvTranspose2d(d_model, 32, 3, padding=1),
+            nn.Linear(32, 8),  # 8 pattern types
+            nn.Softmax(dim=-1)
+        )
+        
+        # Enhanced decoder with more capacity
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(d_model + 64, d_model, 3, padding=1),
+            nn.BatchNorm2d(d_model),
+            nn.ReLU(),
+            nn.ConvTranspose2d(d_model, d_model // 2, 3, padding=1),
+            nn.BatchNorm2d(d_model // 2),
+            nn.ReLU(),
+            nn.ConvTranspose2d(d_model // 2, 32, 3, padding=1),
             nn.ReLU(),
             nn.ConvTranspose2d(32, 10, 1)
         )
@@ -180,18 +207,21 @@ class IrisV6Enhanced(nn.Module):
         global_features = x.mean(dim=[1, 2])  # B, d_model
         color_analysis = self.color_processor(global_features)
         
-        # Color memory matching (fast)
+        # Enhanced color memory matching
         memory_similarity = F.cosine_similarity(
             global_features.unsqueeze(1), 
             self.color_memory.unsqueeze(0), 
             dim=2
-        )  # B, 32
-        top_patterns = memory_similarity.topk(4, dim=1)[0].mean(dim=1, keepdim=True)
+        )  # B, 64
+        top_patterns = memory_similarity.topk(8, dim=1)[0].mean(dim=1, keepdim=True)
         
-        # Rule extraction
+        # Enhanced rule extraction
         color_rules = self.rule_extractor(global_features)
         
-        # Enhanced prediction
+        # Pattern classification
+        pattern_types = self.pattern_classifier(global_features)
+        
+        # Enhanced prediction with more features
         enhanced_features = x.permute(0, 3, 1, 2)  # B, d_model, H, W
         rule_spatial = color_rules.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, H, W)
         combined_features = torch.cat([enhanced_features, rule_spatial], dim=1)
@@ -219,7 +249,7 @@ class IrisV6Enhanced(nn.Module):
             (1 - mix_weight_expanded) * base_prediction
         )
         
-        # Comprehensive output
+        # Enhanced comprehensive output
         result = {
             'predicted_output': final_prediction,
             'base_prediction': base_prediction,
@@ -230,11 +260,16 @@ class IrisV6Enhanced(nn.Module):
             'chromatic_analyses': chromatic_analyses,
             'ensemble_output': {
                 'color_consensus': color_expertise,
-                'color_expertise': color_expertise
+                'color_expertise': color_expertise,
+                'pattern_types': pattern_types
             },
             'multichromatic_features': [color_analysis['color_features']],
             'color_expertise': color_expertise,
-            'creative_memory_similarity': top_patterns
+            'creative_memory_similarity': top_patterns,
+            'pattern_types': pattern_types,
+            'color_harmony_patterns': color_analysis['harmony_patterns'],
+            'color_transformation_matrix': color_analysis['color_transformation_matrix'],
+            'color_relationships': color_analysis['color_relationships']
         }
         
         # Add original outputs for compatibility

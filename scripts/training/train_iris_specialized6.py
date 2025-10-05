@@ -34,10 +34,10 @@ from src.models.iris_v6_enhanced import IrisV6Enhanced
 IRIS_V6_CONFIG = {
     'batch_size': 48,
     'learning_rate': 0.0002,
-    'num_epochs': 300,
+    'num_epochs': 600,
     'gradient_accumulation': 5,
     'epochs_per_stage': 30,
-    'curriculum_stages': 10,
+    'curriculum_stages': 20,
     
     # Enhanced Loss Configuration
     'transform_penalty': 0.06,
@@ -78,19 +78,41 @@ IRIS_V6_CONFIG = {
 }
 
 STAGE_CONFIG = [
-    {'stage': 0, 'max_grid_size': 8,  'synthesis_ratio': 0.95, 'color_complexity': 'basic_colors', 'focus': 'primary_color_recognition'},
-    {'stage': 1, 'max_grid_size': 12, 'synthesis_ratio': 0.9, 'color_complexity': 'color_patterns', 'focus': 'color_pattern_recognition'},
-    {'stage': 2, 'max_grid_size': 16, 'synthesis_ratio': 0.85, 'color_complexity': 'simple_mapping', 'focus': 'basic_color_mapping'},
-    {'stage': 3, 'max_grid_size': 20, 'synthesis_ratio': 0.8, 'color_complexity': 'complex_mapping', 'focus': 'complex_color_mapping'},
-    {'stage': 4, 'max_grid_size': 25, 'synthesis_ratio': 0.75, 'color_complexity': 'color_genius', 'focus': 'color_intelligence_mastery'}
+    # Foundation Color Understanding (5x5 - 9x9)
+    {'stage': 0, 'max_grid_size': 5,  'synthesis_ratio': 0.92, 'color_complexity': 'micro_color', 'focus': 'micro_color_patterns'},
+    {'stage': 1, 'max_grid_size': 6,  'synthesis_ratio': 0.9, 'color_complexity': 'basic_color', 'focus': 'basic_color_recognition'},
+    {'stage': 2, 'max_grid_size': 7,  'synthesis_ratio': 0.85, 'color_complexity': 'simple_color_reasoning', 'focus': 'simple_color_inference'},
+    {'stage': 3, 'max_grid_size': 8,  'synthesis_ratio': 0.8, 'color_complexity': 'color_rule_detection', 'focus': 'color_rule_identification'},
+    {'stage': 4, 'max_grid_size': 9,  'synthesis_ratio': 0.75, 'color_complexity': 'color_pattern_analysis', 'focus': 'color_pattern_analysis'},
+    
+    # Intermediate Color Reasoning (10x10 - 15x15) 
+    {'stage': 5, 'max_grid_size': 10, 'synthesis_ratio': 0.7, 'color_complexity': 'multi_step_color', 'focus': 'multi_step_color_reasoning'},
+    {'stage': 6, 'max_grid_size': 11, 'synthesis_ratio': 0.65, 'color_complexity': 'complex_color_rules', 'focus': 'complex_color_rule_learning'},
+    {'stage': 7, 'max_grid_size': 12, 'synthesis_ratio': 0.6, 'color_complexity': 'color_harmony_planning', 'focus': 'color_harmony_planning'},
+    {'stage': 8, 'max_grid_size': 13, 'synthesis_ratio': 0.55, 'color_complexity': 'ensemble_color_prep_basic', 'focus': 'basic_ensemble_color_coordination'},
+    {'stage': 9, 'max_grid_size': 14, 'synthesis_ratio': 0.5, 'color_complexity': 'arc_color_basic', 'focus': 'arc_color_patterns'},
+    {'stage': 10, 'max_grid_size': 15, 'synthesis_ratio': 0.45, 'color_complexity': 'meta_color_reasoning', 'focus': 'meta_color_cognitive_reasoning'},
+    
+    # Advanced Color Mastery (16x16 - 22x22)
+    {'stage': 11, 'max_grid_size': 16, 'synthesis_ratio': 0.4, 'color_complexity': 'color_synthesis_basic', 'focus': 'basic_color_synthesis'},
+    {'stage': 12, 'max_grid_size': 18, 'synthesis_ratio': 0.35, 'color_complexity': 'deep_color_basic', 'focus': 'basic_deep_color'},
+    {'stage': 13, 'max_grid_size': 20, 'synthesis_ratio': 0.3, 'color_complexity': 'ensemble_color_prep_advanced', 'focus': 'advanced_ensemble_color_coordination'},
+    {'stage': 14, 'max_grid_size': 22, 'synthesis_ratio': 0.25, 'color_complexity': 'arc_color_advanced', 'focus': 'arc_advanced_color'},
+    {'stage': 15, 'max_grid_size': 24, 'synthesis_ratio': 0.2, 'color_complexity': 'color_synthesis_advanced', 'focus': 'advanced_color_synthesis'},
+    
+    # Ultimate Color Genius (26x26 - 30x30)
+    {'stage': 16, 'max_grid_size': 26, 'synthesis_ratio': 0.18, 'color_complexity': 'deep_color_advanced', 'focus': 'advanced_deep_color'},
+    {'stage': 17, 'max_grid_size': 28, 'synthesis_ratio': 0.16, 'color_complexity': 'color_mastery', 'focus': 'color_expertise'},
+    {'stage': 18, 'max_grid_size': 29, 'synthesis_ratio': 0.14, 'color_complexity': 'ultimate_color_mastery', 'focus': 'ultimate_color_mastery'},
+    {'stage': 19, 'max_grid_size': 30, 'synthesis_ratio': 0.12, 'color_complexity': 'ultimate_color_genius', 'focus': 'ultimate_color_intelligence_mastery'}
 ]
 
 # Device setup
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 print(f"\033[96m{'=' * 120}\033[0m")
-print(f"\033[96mIRIS V5 Enhanced Training - Extended Color Pattern Recognition Expert for ARC-AGI-2\033[0m")
-print(f"\033[96mBuilds on V4 with Extended Training: 5 Stages + ARC-Specific Color Intelligence\033[0m")
+print(f"\033[96mIRIS V6 Enhanced Training - Complete Color Pattern Recognition Master for ARC-AGI-2\033[0m")
+print(f"\033[96mBuilds on V4 with Complete Grid Mastery: 20 Stages (5x5→30x30) + ARC-Specific Color Intelligence\033[0m")
 print(f"\033[96mTarget: 80%+ Performance with Extended Color Intelligence Mastery\033[0m")
 print(f"\033[96m{'=' * 120}\033[0m")
 
@@ -535,7 +557,7 @@ def train_iris_specialized_v6():
     model = IrisV6Enhanced(
         max_grid_size=30,
         d_model=128,
-        num_layers=2,
+        num_layers=3,
         preserve_weights=True
     ).to(device)
     
@@ -593,7 +615,7 @@ def train_iris_specialized_v6():
     best_performance = 0.0
     training_stats = defaultdict(list)
     
-    print(f"\033[96mStarting Extended Progressive Color Training - 5 Enhanced Color Intelligence Stages\033[0m")
+    print(f"\033[96mStarting Complete Progressive Color Training - 20 Enhanced Color Intelligence Stages\033[0m")
     
     # Extended progressive training through color stages
     for stage_idx, stage_config in enumerate(STAGE_CONFIG):

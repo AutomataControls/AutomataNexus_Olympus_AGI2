@@ -250,8 +250,15 @@ class ChronosV5TemporalLoss(nn.Module):
         # Encourage diverse temporal scale representations
         movement_score = 0
         for i, temporal_features in enumerate(multitemporal_features):
-            # Measure temporal diversity at each scale
-            temporal_diversity = temporal_features.std(dim=[2, 3]).mean()
+            # Measure temporal diversity at each scale - handle different tensor shapes
+            if len(temporal_features.shape) >= 4:
+                temporal_diversity = temporal_features.std(dim=[2, 3]).mean()
+            elif len(temporal_features.shape) == 3:
+                temporal_diversity = temporal_features.std(dim=[1, 2]).mean()
+            elif len(temporal_features.shape) == 2:
+                temporal_diversity = temporal_features.std(dim=1).mean()
+            else:
+                temporal_diversity = temporal_features.std().mean()
             movement_score += temporal_diversity * (1.0 / (i + 1))  # Weight by scale importance
         
         # Normalize

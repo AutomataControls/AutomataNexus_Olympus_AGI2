@@ -32,11 +32,11 @@ from src.models.iris_v4_enhanced import IrisV4Enhanced
 # Enhanced IRIS V4 Configuration - Chromatic Intelligence Focus
 IRIS_V4_CONFIG = {
     # Core Training Parameters - Enhanced for V4 Color Intelligence
-    'batch_size': 4,  # MINIMUM batch for maximum speed
-    'learning_rate': 0.0005,  # Very high for fastest convergence
-    'num_epochs': 12,  # EXTREME reduction: 6 stages x 2 epochs
+    'batch_size': 2,  # ABSOLUTE MINIMUM for maximum speed
+    'learning_rate': 0.001,  # VERY high for fastest convergence
+    'num_epochs': 6,  # ULTRA reduction: 6 stages x 1 epoch
     'gradient_accumulation': 1,  # No accumulation - immediate updates
-    'epochs_per_stage': 2,  # MINIMAL epochs per stage
+    'epochs_per_stage': 1,  # SINGLE epoch per stage
     'curriculum_stages': 6,  # Keep 6 stages
     
     # Enhanced Loss Configuration
@@ -60,18 +60,18 @@ IRIS_V4_CONFIG = {
     'ensemble_preparation': False,  # Disabled for speed
     'test_time_adaptation': False,  # Disabled for speed
     
-    # Advanced Training Features
-    'label_smoothing': 0.02,  # Light for color precision
-    'pattern_diversity_bonus': True,
-    'chromatic_reasoning_bonus': True,
-    'color_harmony_bonus': True,
-    'color_expertise_bonus': True,
+    # Advanced Training Features - ALL DISABLED FOR SPEED
+    'label_smoothing': 0.0,  # Disabled for speed
+    'pattern_diversity_bonus': False,
+    'chromatic_reasoning_bonus': False,
+    'color_harmony_bonus': False,
+    'color_expertise_bonus': False,
     
-    # Learning Rate Scheduling
-    'warmup_epochs': 35,  # Extended warmup for chromatic transformers
-    'cosine_restarts': True,
-    'restart_multiplier': 1.35,
-    'plateau_patience': 16,
+    # Learning Rate Scheduling - MINIMAL FOR SPEED
+    'warmup_epochs': 0,  # No warmup for speed
+    'cosine_restarts': False,  # Disabled for speed
+    'restart_multiplier': 1.0,
+    'plateau_patience': 5,
 }
 
 # ULTRA FAST 6-Stage Configuration - Speed Optimized Color Intelligence

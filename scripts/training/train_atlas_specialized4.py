@@ -32,11 +32,11 @@ from src.models.atlas_v4_enhanced import AtlasV4Enhanced
 # Enhanced ATLAS V4 Configuration - 2D Spatial Reasoning Focus (OPTIMIZED FOR SPEED)
 ATLAS_V4_CONFIG = {
     # Core Training Parameters - OPTIMIZED for V4 Speed + Performance
-    'batch_size': 16,  # Optimized for speed (was 48)
-    'learning_rate': 0.00025,  # Adjusted for smaller batches
-    'num_epochs': 120,  # Much reduced: 12 stages x 10 epochs
-    'gradient_accumulation': 3,  # Optimized (was 5) - Effective batch: 48
-    'epochs_per_stage': 10,  # Major reduction for speed (was 30)
+    'batch_size': 8,  # ULTRA optimized for maximum speed
+    'learning_rate': 0.0005,  # Higher for fastest convergence
+    'num_epochs': 24,  # EXTREME reduction: 12 stages x 2 epochs
+    'gradient_accumulation': 1,  # No accumulation for speed
+    'epochs_per_stage': 2,  # MINIMAL epochs per stage
     'curriculum_stages': 12,  # Keep 12 stages
     
     # Enhanced Loss Configuration
@@ -53,25 +53,25 @@ ATLAS_V4_CONFIG = {
     'multiscale_processing_weight': 0.4,  # Multi-scale understanding
     'ensemble_coordination_weight': 0.35,  # Ensemble integration
     
-    # ATLAS V4-Specific Enhancements
-    'spatial_transformer_layers': 6,  # Deep spatial reasoning
-    'geometric_positional_encoding': True,  # Advanced 2D encoding
-    'multiscale_processing': True,  # Multi-scale feature processing
-    'ensemble_preparation': True,  # OLYMPUS preparation mode
-    'test_time_adaptation': True,  # Advanced spatial adaptation
+    # ATLAS V4-Specific Enhancements - SPEED OPTIMIZED
+    'spatial_transformer_layers': 3,  # Reduced for speed (was 6)
+    'geometric_positional_encoding': False,  # Disabled for speed
+    'multiscale_processing': False,  # Disabled for speed
+    'ensemble_preparation': False,  # Disabled for speed
+    'test_time_adaptation': False,  # Disabled for speed
     
-    # Advanced Training Features
-    'label_smoothing': 0.015,  # Very light for spatial precision
-    'pattern_diversity_bonus': True,
-    'geometric_reasoning_bonus': True,
-    'spatial_memory_bonus': True,
-    'transformation_composition_bonus': True,
+    # Advanced Training Features - ALL DISABLED FOR SPEED
+    'label_smoothing': 0.0,  # Disabled for speed
+    'pattern_diversity_bonus': False,
+    'geometric_reasoning_bonus': False,
+    'spatial_memory_bonus': False,
+    'transformation_composition_bonus': False,
     
-    # Learning Rate Scheduling
-    'warmup_epochs': 20,  # Reduced warmup for faster training
-    'cosine_restarts': True,
-    'restart_multiplier': 1.5,
-    'plateau_patience': 20,
+    # Learning Rate Scheduling - MINIMAL FOR SPEED
+    'warmup_epochs': 0,  # No warmup for speed
+    'cosine_restarts': False,  # Disabled for speed
+    'restart_multiplier': 1.0,
+    'plateau_patience': 5,
 }
 
 # Optimized 12-Stage Progressive Configuration - Efficient Spatial Learning
@@ -555,13 +555,15 @@ def train_atlas_specialized_v4():
             spatial_focus=True
         )
         
-        # Create data loader
+        # Create data loader - SPEED OPTIMIZED
         dataloader = DataLoader(
             dataset,
             batch_size=ATLAS_V4_CONFIG['batch_size'],
             shuffle=True,
             collate_fn=advanced_spatial_collate_fn,
-            num_workers=0
+            num_workers=2,  # Use multiple workers for faster data loading
+            pin_memory=True,  # Faster GPU transfer
+            persistent_workers=True  # Keep workers alive
         )
         
         # Stage-specific training
@@ -616,7 +618,7 @@ def train_advanced_spatial_stage(model, dataloader, criterion, optimizer, schedu
         advanced_spatial_count = 0
         
         # Progress bar
-        pbar = tqdm(dataloader, desc=f"\033[38;2;255;204;153mAdvanced Spatial Stage {stage_idx} Epoch {epoch}\033[0m")
+        pbar = tqdm(dataloader, desc=f"\033[38;2;255;204;153mUltra Fast Spatial Stage {stage_idx} Epoch {epoch}\033[0m")
         
         for batch_idx, (inputs, targets, metadata) in enumerate(pbar):
             inputs = inputs.to(device)
@@ -669,12 +671,12 @@ def train_advanced_spatial_stage(model, dataloader, criterion, optimizer, schedu
         epoch_performance = total_exact_matches / max(total_samples, 1)
         best_stage_performance = max(best_stage_performance, epoch_performance)
         
-        # Log detailed progress
-        if epoch % 4 == 0 or epoch == epochs_for_stage - 1:
+        # Log detailed progress with ultra light honey/amber for stage headers
+        if epoch % 1 == 0 or epoch == epochs_for_stage - 1:
             spatial_ratio = advanced_spatial_count / max(total_samples, 1)
             avg_loss = epoch_losses['total']/len(dataloader)
             current_lr = scheduler.get_last_lr()[0]
-            print(f"\033[96m⏰ ATLAS V4 Stage {stage_idx}, Epoch {epoch} (Global: {stage_idx * ATLAS_V4_CONFIG['epochs_per_stage'] + epoch + 1}):\033[0m")
+            print(f"\033[38;2;255;204;153m⏰ ATLAS V4 Stage {stage_idx}, Epoch {epoch} (Global: {stage_idx * ATLAS_V4_CONFIG['epochs_per_stage'] + epoch + 1}):\033[0m")
             print(f"\033[96m   🎯 Train: {epoch_performance:.2%} exact, Loss: {avg_loss:.3f}\033[0m")
             print(f"\033[96m   📊 LR: {current_lr:.6f} | Grid: {stage_config['max_grid_size']}x{stage_config['max_grid_size']} | Spatial: {spatial_ratio:.1%}\033[0m")
             if epoch == epochs_for_stage - 1:

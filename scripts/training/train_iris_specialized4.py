@@ -29,29 +29,29 @@ sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
 # Import enhanced IRIS V4 model
 from src.models.iris_v4_enhanced import IrisV4Enhanced
 
-# Enhanced IRIS V4 Configuration - Chromatic Intelligence Focus
+# Enhanced IRIS V4 Configuration - OPTIMIZED FOR SPEED
 IRIS_V4_CONFIG = {
-    # Core Training Parameters - Enhanced for V4 Color Intelligence
-    'batch_size': 16,  # MINERVA-like efficiency
-    'learning_rate': 0.0002,  # Stable like MINERVA
-    'num_epochs': 48,  # Proper training: 8 stages x 6 epochs
-    'gradient_accumulation': 3,  # Effective batch 48 for stability
-    'epochs_per_stage': 6,  # Adequate training per stage
-    'curriculum_stages': 8,  # Full color curriculum
+    # Core Training Parameters - SPEED OPTIMIZED
+    'batch_size': 32,  # Double batch size for efficiency
+    'learning_rate': 0.0003,  # Higher LR for faster convergence
+    'num_epochs': 26,  # Reduced: 13 stages x 2 epochs
+    'gradient_accumulation': 2,  # Reduced accumulation
+    'epochs_per_stage': 2,  # FAST training per stage
+    'curriculum_stages': 13,  # Keep all color stages
     
-    # Enhanced Loss Configuration
-    'transform_penalty': 0.05,  # Low - encourage color transformations
-    'exact_match_bonus': 8.8,  # High bonus for color precision
-    'gradient_clip': 0.45,  # Tight clipping for chromatic stability
-    'weight_decay': 4e-6,  # Very light regularization
+    # SIMPLIFIED Loss Configuration for Speed
+    'transform_penalty': 0.02,  # Minimal penalty
+    'exact_match_bonus': 5.0,  # Reduced bonus computation
+    'gradient_clip': 1.0,  # Relaxed clipping
+    'weight_decay': 1e-5,  # Light regularization
     
-    # ULTRA TEAL Enhanced (proven formula)
-    'ultra_teal_iou_weight': 0.85,  # 85% IoU weighting
-    'strict_match_weight': 0.15,   # 15% strict matching
-    'chromatic_reasoning_weight': 0.5,  # Primary focus - color intelligence
-    'color_harmony_weight': 0.4,  # Color harmony understanding
-    'color_space_weight': 0.35,  # Color space analysis
-    'ensemble_coordination_weight': 0.3,  # Ensemble integration
+    # SIMPLIFIED scoring (ULTRA TEAL core only)
+    'ultra_teal_iou_weight': 0.85,  # Keep proven IoU weighting
+    'strict_match_weight': 0.15,   # Keep strict matching
+    'chromatic_reasoning_weight': 0.2,  # REDUCED - speed focus
+    'color_harmony_weight': 0.1,  # MINIMAL computation
+    'color_space_weight': 0.1,  # MINIMAL computation
+    'ensemble_coordination_weight': 0.1,  # MINIMAL computation
     
     # IRIS V4-Specific Enhancements - KEEP FUNCTIONALITY
     'chromatic_transformer_layers': 4,  # Balanced for speed + capability
@@ -60,35 +60,40 @@ IRIS_V4_CONFIG = {
     'ensemble_preparation': True,  # Keep OLYMPUS preparation
     'test_time_adaptation': True,  # Keep chromatic adaptation
     
-    # Advanced Training Features - KEEP FUNCTIONALITY
-    'label_smoothing': 0.015,  # Light for color precision
-    'pattern_diversity_bonus': True,
-    'chromatic_reasoning_bonus': True,
-    'color_harmony_bonus': True,
-    'color_expertise_bonus': True,
+    # SIMPLIFIED Training Features for SPEED
+    'label_smoothing': 0.01,  # Minimal smoothing
+    'pattern_diversity_bonus': False,  # DISABLED for speed
+    'chromatic_reasoning_bonus': False,  # DISABLED for speed  
+    'color_harmony_bonus': False,  # DISABLED for speed
+    'color_expertise_bonus': False,  # DISABLED for speed
     
-    # Learning Rate Scheduling - MINERVA-like
-    'warmup_epochs': 15,  # Proper warmup
-    'cosine_restarts': True,
-    'restart_multiplier': 1.2,
-    'plateau_patience': 15,
+    # SIMPLIFIED Learning Rate Scheduling for SPEED
+    'warmup_epochs': 5,  # FAST warmup
+    'cosine_restarts': False,  # DISABLED for speed
+    'restart_multiplier': 1.0,  # No restarts
+    'plateau_patience': 5,  # Fast plateau detection
 }
 
-# Efficient 8-Stage Color Intelligence Curriculum - MINERVA-like
+# ULTRA FAST 13-Stage Color Intelligence Curriculum - SPEED OPTIMIZED
 STAGE_CONFIG = [
-    # Foundation Color Understanding 
-    {'stage': 0, 'max_grid_size': 6,  'synthesis_ratio': 0.8, 'color_complexity': 'basic_colors', 'focus': 'primary_color_recognition'},
-    {'stage': 1, 'max_grid_size': 8,  'synthesis_ratio': 0.7, 'color_complexity': 'color_patterns', 'focus': 'color_pattern_recognition'},
-    {'stage': 2, 'max_grid_size': 10, 'synthesis_ratio': 0.6, 'color_complexity': 'simple_mapping', 'focus': 'basic_color_mapping'},
+    # Foundation Color Understanding (Fast progression)
+    {'stage': 0, 'max_grid_size': 6,  'synthesis_ratio': 0.9, 'color_complexity': 'basic_colors', 'focus': 'primary_color_recognition'},
+    {'stage': 1, 'max_grid_size': 7,  'synthesis_ratio': 0.85, 'color_complexity': 'color_patterns', 'focus': 'color_pattern_recognition'},
+    {'stage': 2, 'max_grid_size': 8, 'synthesis_ratio': 0.8, 'color_complexity': 'simple_mapping', 'focus': 'basic_color_mapping'},
+    {'stage': 3, 'max_grid_size': 10, 'synthesis_ratio': 0.75, 'color_complexity': 'color_relations', 'focus': 'color_relationships'},
+    {'stage': 4, 'max_grid_size': 12, 'synthesis_ratio': 0.7, 'color_complexity': 'complex_mapping', 'focus': 'complex_color_mapping'},
     
-    # Intermediate Chromatic Reasoning
-    {'stage': 3, 'max_grid_size': 12, 'synthesis_ratio': 0.5, 'color_complexity': 'complex_mapping', 'focus': 'complex_color_mapping'},
-    {'stage': 4, 'max_grid_size': 15, 'synthesis_ratio': 0.45, 'color_complexity': 'chromatic_logic', 'focus': 'chromatic_logical_rules'},
-    {'stage': 5, 'max_grid_size': 18, 'synthesis_ratio': 0.4, 'color_complexity': 'color_space', 'focus': 'color_space_reasoning'},
+    # Intermediate Chromatic Reasoning (Fast progression)
+    {'stage': 5, 'max_grid_size': 14, 'synthesis_ratio': 0.65, 'color_complexity': 'chromatic_logic', 'focus': 'chromatic_logical_rules'},
+    {'stage': 6, 'max_grid_size': 16, 'synthesis_ratio': 0.6, 'color_complexity': 'color_space', 'focus': 'color_space_reasoning'},
+    {'stage': 7, 'max_grid_size': 18, 'synthesis_ratio': 0.55, 'color_complexity': 'color_transformations', 'focus': 'color_transformations'},
+    {'stage': 8, 'max_grid_size': 20, 'synthesis_ratio': 0.5, 'color_complexity': 'color_sequences', 'focus': 'color_sequences'},
     
-    # Advanced Chromatic Mastery
-    {'stage': 6, 'max_grid_size': 25, 'synthesis_ratio': 0.3, 'color_complexity': 'expert_chromatic', 'focus': 'expert_color_analysis'},
-    {'stage': 7, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'color_complexity': 'color_genius', 'focus': 'color_intelligence_mastery'}
+    # Advanced Chromatic Mastery (Fast progression)
+    {'stage': 9, 'max_grid_size': 22, 'synthesis_ratio': 0.45, 'color_complexity': 'color_hierarchies', 'focus': 'color_hierarchies'},
+    {'stage': 10, 'max_grid_size': 25, 'synthesis_ratio': 0.4, 'color_complexity': 'expert_chromatic', 'focus': 'expert_color_analysis'},
+    {'stage': 11, 'max_grid_size': 28, 'synthesis_ratio': 0.35, 'color_complexity': 'color_mastery', 'focus': 'color_mastery'},
+    {'stage': 12, 'max_grid_size': 30, 'synthesis_ratio': 0.3, 'color_complexity': 'color_genius', 'focus': 'color_intelligence_mastery'}
 ]
 
 # Device setup
@@ -170,82 +175,47 @@ class IrisV4ChromaticLoss(nn.Module):
     
     def _calculate_chromatic_bonus(self, outputs: Dict, pred_indices: torch.Tensor, 
                                  target_indices: torch.Tensor, input_indices: torch.Tensor) -> torch.Tensor:
-        """Calculate chromatic reasoning bonus"""
+        """SIMPLIFIED chromatic reasoning bonus for speed"""
         if 'chromatic_features' not in outputs:
             return torch.tensor(0.0).to(pred_indices.device)
         
-        # Reward chromatic transformations
-        chromatic_accuracy = (pred_indices == target_indices).float().mean(dim=[1,2])
-        color_change_mask = (target_indices != input_indices).float().mean(dim=[1,2])
-        
-        # Use color expertise if available
-        if 'color_expertise' in outputs:
-            color_confidence = outputs['color_expertise'].squeeze(-1)
-            chromatic_score = chromatic_accuracy * color_confidence * (1.0 + color_change_mask * 0.7)
-        else:
-            chromatic_score = chromatic_accuracy * (1.0 + color_change_mask * 0.7)
-        
-        return -chromatic_score.mean() * self.chromatic_weight * 0.12
+        # FAST chromatic accuracy only
+        chromatic_accuracy = (pred_indices == target_indices).float().mean()
+        return -chromatic_accuracy * self.chromatic_weight * 0.05
     
     def _calculate_harmony_bonus(self, outputs: Dict, pred_indices: torch.Tensor, 
                                target_indices: torch.Tensor) -> torch.Tensor:
-        """Calculate color harmony bonus"""
-        if 'chromatic_analyses' not in outputs:
+        """SIMPLIFIED harmony bonus for speed"""
+        if 'chromatic_analyses' not in outputs or len(outputs['chromatic_analyses']) == 0:
             return torch.tensor(0.0).to(pred_indices.device)
         
-        harmony_score = 0
-        chromatic_analyses = outputs['chromatic_analyses']
+        # FAST harmony approximation - just check first analysis
+        first_analysis = outputs['chromatic_analyses'][0]
+        if 'color_analysis' in first_analysis and 'harmony_patterns' in first_analysis['color_analysis']:
+            harmony_score = first_analysis['color_analysis']['harmony_patterns'].mean()
+            return -harmony_score * self.harmony_weight * 0.02
         
-        for analysis in chromatic_analyses:
-            if 'color_analysis' in analysis:
-                color_analysis = analysis['color_analysis']
-                
-                # Reward color harmony detection
-                if 'harmony_patterns' in color_analysis:
-                    harmony_confidence = color_analysis['harmony_patterns'].max(dim=-1)[0].mean()
-                    harmony_score += harmony_confidence
-                
-                # Reward consistent color transformations
-                if 'color_transformation_matrix' in color_analysis:
-                    transform_matrix = color_analysis['color_transformation_matrix']
-                    # Measure transformation consistency (not too chaotic)
-                    transform_entropy = -(transform_matrix * torch.log(transform_matrix + 1e-8)).sum(dim=-1).mean()
-                    # Reward moderate entropy (structured but not trivial)
-                    optimal_entropy = 2.0  # Target entropy
-                    entropy_score = torch.exp(-torch.abs(transform_entropy - optimal_entropy))
-                    harmony_score += entropy_score * 0.5
-        
-        # Normalize by number of analyses
-        if len(chromatic_analyses) > 0:
-            harmony_score = harmony_score / len(chromatic_analyses)
-        
-        return -harmony_score * self.harmony_weight * 0.1
+        return torch.tensor(0.0).to(pred_indices.device)
     
     def _calculate_color_space_bonus(self, outputs: Dict) -> torch.Tensor:
-        """Calculate color space reasoning bonus"""
-        if 'multichromatic_features' not in outputs:
+        """SIMPLIFIED color space bonus for speed"""
+        if 'multichromatic_features' not in outputs or len(outputs['multichromatic_features']) == 0:
             return torch.tensor(0.0).to(list(outputs.values())[0].device)
         
-        multichromatic_features = outputs['multichromatic_features']
-        
-        # Encourage diverse color space representations
-        color_space_score = 0
-        for i, chromatic_features in enumerate(multichromatic_features):
-            # Measure chromatic diversity at each color space
-            chromatic_diversity = chromatic_features.std(dim=0).mean()
-            color_space_score += chromatic_diversity * (1.0 / (i + 1))  # Weight by importance
-        
-        # Normalize
-        color_space_score = color_space_score / len(multichromatic_features)
-        
-        return -color_space_score * self.color_space_weight * 0.08
+        # FAST approximation - just first color space
+        first_features = outputs['multichromatic_features'][0]
+        color_space_score = first_features.mean()  # Simple mean activation
+        return -color_space_score * self.color_space_weight * 0.01
     
     def _calculate_ensemble_bonus(self, outputs: Dict) -> torch.Tensor:
-        """Calculate ensemble coordination bonus"""
+        """SIMPLIFIED ensemble bonus for speed"""
         if 'ensemble_output' not in outputs:
             return torch.tensor(0.0).to(list(outputs.values())[0].device)
         
+        # FAST ensemble approximation - simple mean
         ensemble_output = outputs['ensemble_output']
+        ensemble_score = ensemble_output.mean()
+        return -ensemble_score * self.ensemble_weight * 0.01
         
         # Reward high color consensus
         if 'color_consensus' in ensemble_output:
@@ -584,11 +554,11 @@ def train_iris_specialized_v4():
                 'config': IRIS_V4_CONFIG,
                 'ensemble_state': model.get_ensemble_state()
             }, '/content/AutomataNexus_Olympus_AGI2/models/iris_v4_best.pt')
-            print(f"\033[96mNew best chromatic performance: {best_performance:.2%} - Model saved!\033[0m")
+                print(f"\033[96mNew best chromatic performance: {best_performance:.2%} - Model saved!\033[0m")
         
-        # Memory cleanup
-        torch.cuda.empty_cache()
-        gc.collect()
+        # MINIMAL memory cleanup for speed
+        if stage_idx % 4 == 0:  # Only cleanup every 4th stage
+            torch.cuda.empty_cache()
     
     print(f"\n\033[96m{'=' * 110}\033[0m")
     print(f"\033[96mIRIS V4 Advanced Color Intelligence Training Complete!\033[0m")

@@ -538,9 +538,40 @@ def train_atlas_specialized_v5():
     
     print(f"\033[96mModel initialized with {sum(p.numel() for p in model.parameters())} parameters\033[0m")
     
-    # Load V4 weights
-    model_path = '/content/AutomataNexus_Olympus_AGI2/models/atlas_v4_best.pt'
-    weights_loaded = model.load_compatible_weights(model_path)
+    # Load V4 weights with multiple fallback paths
+    model_paths = [
+        '/content/AutomataNexus_Olympus_AGI2/models/atlas_v4_best.pt',
+        '/content/AutomataNexus_Olympus_AGI2/arc_models_v4/atlas_best.pt',
+        '/content/AutomataNexus_Olympus_AGI2/models/atlas_best.pt'
+    ]
+    
+    weights_loaded = False
+    for model_path in model_paths:
+        if os.path.exists(model_path):
+            try:
+                # Manual weight loading with compatibility
+                checkpoint = torch.load(model_path, map_location=device)
+                if 'model_state_dict' in checkpoint:
+                    state_dict = checkpoint['model_state_dict']
+                else:
+                    state_dict = checkpoint
+                
+                # Load compatible parameters manually
+                model_dict = model.state_dict()
+                compatible_params = {}
+                
+                for name, param in state_dict.items():
+                    if name in model_dict and model_dict[name].shape == param.shape:
+                        compatible_params[name] = param
+                
+                model_dict.update(compatible_params)
+                model.load_state_dict(model_dict)
+                
+                print(f"\033[96mATLAS V4: Loaded {len(compatible_params)}/{len(state_dict)} compatible parameters\033[0m")
+                weights_loaded = True
+                break
+            except Exception as e:
+                continue
     
     if not weights_loaded:
         print(f"\033[96mWarning: Could not load V4 weights, starting V5 training from scratch\033[0m")
@@ -711,15 +742,17 @@ def train_extended_spatial_stage(model, dataloader, criterion, optimizer, schedu
         epoch_performance = total_exact_matches / max(total_samples, 1)
         best_stage_performance = max(best_stage_performance, epoch_performance)
         
-        # Log detailed progress
-        if epoch % 4 == 0 or epoch == epochs_for_stage - 1:
+        # Log detailed progress with ultra light honey/amber for stage headers
+        if epoch % 10 == 0 or epoch == epochs_for_stage - 1:
             spatial_ratio = advanced_spatial_count / max(total_samples, 1)
             arc_ratio = arc_spatial_count / max(total_samples, 1)
-            print(f"\033[96mExtended Spatial Stage {stage_idx} Epoch {epoch}: "
-                  f"Performance = {epoch_performance:.1%}, "
-                  f"Advanced Spatial = {spatial_ratio:.1%}, "
-                  f"ARC Spatial = {arc_ratio:.1%}, "
-                  f"Loss = {epoch_losses['total']/len(dataloader):.4f}\033[0m")
+            avg_loss = epoch_losses['total']/len(dataloader)
+            current_lr = scheduler.get_last_lr()[0]
+            print(f"\033[38;2;255;204;153m⏰ ATLAS V5 Stage {stage_idx}, Epoch {epoch} (Global: {stage_idx * ATLAS_V5_CONFIG['epochs_per_stage'] + epoch + 1}):\033[0m")
+            print(f"\033[96m   🎯 Train: {epoch_performance:.2%} exact, Loss: {avg_loss:.3f}\033[0m")
+            print(f"\033[96m   📊 LR: {current_lr:.6f} | Grid: {stage_config['max_grid_size']}x{stage_config['max_grid_size']} | Spatial: {spatial_ratio:.1%} | ARC: {arc_ratio:.1%}\033[0m")
+            if epoch == epochs_for_stage - 1:
+                print(f"\033[96m✅ Stage {stage_idx} complete! Final exact: {epoch_performance:.2%}\033[0m")
         
         # Memory cleanup
         torch.cuda.empty_cache()

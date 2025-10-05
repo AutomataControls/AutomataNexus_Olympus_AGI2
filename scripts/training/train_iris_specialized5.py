@@ -713,7 +713,7 @@ def train_extended_color_stage(model, dataloader, criterion, optimizer, schedule
             targets = targets.to(device)
             
             # Forward pass with mixed precision
-            with autocast():
+            with autocast(device_type='cuda'):
                 outputs = model(inputs, targets, mode='train')
                 loss_dict = criterion(outputs, targets, inputs)
                 loss = loss_dict['total'] / accumulation_steps

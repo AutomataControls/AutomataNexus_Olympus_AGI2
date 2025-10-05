@@ -32,12 +32,12 @@ from src.models.atlas_v4_enhanced import AtlasV4Enhanced
 # Enhanced ATLAS V4 Configuration - 2D Spatial Reasoning Focus (OPTIMIZED FOR SPEED)
 ATLAS_V4_CONFIG = {
     # Core Training Parameters - OPTIMIZED for V4 Speed + Performance
-    'batch_size': 48,  # Larger batch for efficiency
-    'learning_rate': 0.0002,  # Higher for faster convergence
-    'num_epochs': 360,  # Reduced: 12 stages x 30 epochs
-    'gradient_accumulation': 5,  # Reduced accumulation: effective batch 240
-    'epochs_per_stage': 30,  # Reduced epochs per stage for speed
-    'curriculum_stages': 12,  # Reduced stages for efficiency
+    'batch_size': 16,  # Optimized for speed (was 48)
+    'learning_rate': 0.00025,  # Adjusted for smaller batches
+    'num_epochs': 120,  # Much reduced: 12 stages x 10 epochs
+    'gradient_accumulation': 3,  # Optimized (was 5) - Effective batch: 48
+    'epochs_per_stage': 10,  # Major reduction for speed (was 30)
+    'curriculum_stages': 12,  # Keep 12 stages
     
     # Enhanced Loss Configuration
     'transform_penalty': 0.03,  # Very low - encourage spatial transformations

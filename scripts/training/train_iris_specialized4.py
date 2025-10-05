@@ -32,12 +32,12 @@ from src.models.iris_v4_enhanced import IrisV4Enhanced
 # Enhanced IRIS V4 Configuration - Chromatic Intelligence Focus
 IRIS_V4_CONFIG = {
     # Core Training Parameters - Enhanced for V4 Color Intelligence
-    'batch_size': 8,  # Ultra optimized for speed (was 10)
-    'learning_rate': 0.0002,  # Higher for faster convergence
-    'num_epochs': 80,  # Major reduction: 8 stages x 10 epochs
-    'gradient_accumulation': 2,  # Further optimized (was 3) - Effective batch: 16
-    'epochs_per_stage': 10,  # Major reduction for speed (was 20)
-    'curriculum_stages': 8,  # Keep 8 stages
+    'batch_size': 6,  # ULTRA optimized for maximum speed
+    'learning_rate': 0.0003,  # Higher for fastest convergence
+    'num_epochs': 30,  # EXTREME reduction: 6 stages x 5 epochs
+    'gradient_accumulation': 2,  # Keep - Effective batch: 12
+    'epochs_per_stage': 5,  # EXTREME reduction for max speed
+    'curriculum_stages': 6,  # Reduced to 6 stages
     
     # Enhanced Loss Configuration
     'transform_penalty': 0.05,  # Low - encourage color transformations
@@ -74,21 +74,15 @@ IRIS_V4_CONFIG = {
     'plateau_patience': 16,
 }
 
-# Enhanced 13-Stage Progressive Configuration - Color Intelligence Focus
+# ULTRA FAST 6-Stage Configuration - Speed Optimized Color Intelligence
 STAGE_CONFIG = [
-    # Foundation Color Understanding (6x6 - 10x10)
-    {'stage': 0, 'max_grid_size': 6,  'synthesis_ratio': 0.8, 'color_complexity': 'basic_colors', 'focus': 'primary_color_recognition'},
-    {'stage': 1, 'max_grid_size': 8,  'synthesis_ratio': 0.7, 'color_complexity': 'color_patterns', 'focus': 'color_pattern_recognition'},
-    {'stage': 2, 'max_grid_size': 10, 'synthesis_ratio': 0.6, 'color_complexity': 'simple_mapping', 'focus': 'basic_color_mapping'},
-    
-    # Intermediate Chromatic Reasoning (12x12 - 18x18)
-    {'stage': 3, 'max_grid_size': 12, 'synthesis_ratio': 0.5, 'color_complexity': 'complex_mapping', 'focus': 'complex_color_mapping'},
-    {'stage': 4, 'max_grid_size': 15, 'synthesis_ratio': 0.45, 'color_complexity': 'chromatic_logic', 'focus': 'chromatic_logical_rules'},
-    {'stage': 5, 'max_grid_size': 18, 'synthesis_ratio': 0.4, 'color_complexity': 'color_space', 'focus': 'color_space_reasoning'},
-    
-    # Advanced Chromatic Mastery (22x22 - 30x30)
-    {'stage': 6, 'max_grid_size': 25, 'synthesis_ratio': 0.3, 'color_complexity': 'expert_chromatic', 'focus': 'expert_color_analysis'},
-    {'stage': 7, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'color_complexity': 'color_genius', 'focus': 'color_intelligence_mastery'}
+    # Speed-optimized Color Understanding
+    {'stage': 0, 'max_grid_size': 8,  'synthesis_ratio': 0.7, 'color_complexity': 'basic_colors', 'focus': 'primary_color_recognition'},
+    {'stage': 1, 'max_grid_size': 12, 'synthesis_ratio': 0.6, 'color_complexity': 'color_patterns', 'focus': 'color_pattern_recognition'},
+    {'stage': 2, 'max_grid_size': 16, 'synthesis_ratio': 0.5, 'color_complexity': 'complex_mapping', 'focus': 'complex_color_mapping'},
+    {'stage': 3, 'max_grid_size': 20, 'synthesis_ratio': 0.4, 'color_complexity': 'chromatic_logic', 'focus': 'chromatic_logical_rules'},
+    {'stage': 4, 'max_grid_size': 25, 'synthesis_ratio': 0.3, 'color_complexity': 'expert_chromatic', 'focus': 'expert_color_analysis'},
+    {'stage': 5, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'color_complexity': 'color_genius', 'focus': 'color_intelligence_mastery'}
 ]
 
 # Device setup
@@ -614,7 +608,7 @@ def train_advanced_chromatic_stage(model, dataloader, criterion, optimizer, sche
         advanced_color_count = 0
         
         # Progress bar
-        pbar = tqdm(dataloader, desc=f"\033[38;2;255;204;153mAdvanced Chromatic Stage {stage_idx} Epoch {epoch}\033[0m")
+        pbar = tqdm(dataloader, desc=f"\033[38;2;255;204;153mUltra Fast Chromatic Stage {stage_idx} Epoch {epoch}\033[0m")
         
         for batch_idx, (inputs, targets, metadata) in enumerate(pbar):
             inputs = inputs.to(device)
@@ -667,12 +661,12 @@ def train_advanced_chromatic_stage(model, dataloader, criterion, optimizer, sche
         epoch_performance = total_exact_matches / max(total_samples, 1)
         best_stage_performance = max(best_stage_performance, epoch_performance)
         
-        # Log detailed progress
-        if epoch % 5 == 0 or epoch == epochs_for_stage - 1:
+        # Log detailed progress with ultra light honey/amber for stage headers
+        if epoch % 2 == 0 or epoch == epochs_for_stage - 1:
             color_ratio = advanced_color_count / max(total_samples, 1)
             avg_loss = epoch_losses['total']/len(dataloader)
             current_lr = scheduler.get_last_lr()[0]
-            print(f"\033[96m⏰ IRIS V4 Stage {stage_idx}, Epoch {epoch} (Global: {stage_idx * IRIS_V4_CONFIG['epochs_per_stage'] + epoch + 1}):\033[0m")
+            print(f"\033[38;2;255;204;153m⏰ IRIS V4 Stage {stage_idx}, Epoch {epoch} (Global: {stage_idx * IRIS_V4_CONFIG['epochs_per_stage'] + epoch + 1}):\033[0m")
             print(f"\033[96m   🎯 Train: {epoch_performance:.2%} exact, Loss: {avg_loss:.3f}\033[0m")
             print(f"\033[96m   📊 LR: {current_lr:.6f} | Grid: {stage_config['max_grid_size']}x{stage_config['max_grid_size']} | Color: {color_ratio:.1%}\033[0m")
             if epoch == epochs_for_stage - 1:

@@ -572,8 +572,8 @@ def train_iris_specialized_v6():
     # Initialize optimizer with V5 learning settings
     optimizer = optim.AdamW(
         model.parameters(),
-        lr=IRIS_V5_CONFIG['learning_rate'],
-        weight_decay=IRIS_V5_CONFIG['weight_decay'],
+        lr=IRIS_V6_CONFIG['learning_rate'],
+        weight_decay=IRIS_V6_CONFIG['weight_decay'],
         betas=(0.9, 0.999),
         eps=1e-8
     )
@@ -581,9 +581,9 @@ def train_iris_specialized_v6():
     # Learning rate scheduler
     scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
         optimizer,
-        T_0=IRIS_V5_CONFIG['warmup_epochs'],
-        T_mult=int(IRIS_V5_CONFIG['restart_multiplier']),
-        eta_min=IRIS_V5_CONFIG['learning_rate'] * 0.01
+        T_0=IRIS_V6_CONFIG['warmup_epochs'],
+        T_mult=int(IRIS_V6_CONFIG['restart_multiplier']),
+        eta_min=IRIS_V6_CONFIG['learning_rate'] * 0.01
     )
     
     # Mixed precision training
@@ -614,7 +614,7 @@ def train_iris_specialized_v6():
         # Create data loader
         dataloader = DataLoader(
             dataset,
-            batch_size=IRIS_V5_CONFIG['batch_size'],
+            batch_size=IRIS_V6_CONFIG['batch_size'],
             shuffle=True,
             collate_fn=extended_color_collate_fn,
             num_workers=2,
@@ -639,7 +639,7 @@ def train_iris_specialized_v6():
                 'scheduler_state_dict': scheduler.state_dict(),
                 'best_performance': best_performance,
                 'stage': stage_idx,
-                'config': IRIS_V5_CONFIG,
+                'config': IRIS_V6_CONFIG,
                 'ensemble_state': model.get_ensemble_state(),
                 'training_version': 'V5'
             }, '/content/AutomataNexus_Olympus_AGI2/models/iris_v5_best.pt')
@@ -663,8 +663,8 @@ def train_extended_color_stage(model, dataloader, criterion, optimizer, schedule
     """Train a single extended color curriculum stage for V5"""
     model.train()
     
-    epochs_for_stage = IRIS_V5_CONFIG['epochs_per_stage']
-    accumulation_steps = IRIS_V5_CONFIG['gradient_accumulation']
+    epochs_for_stage = IRIS_V6_CONFIG['epochs_per_stage']
+    accumulation_steps = IRIS_V6_CONFIG['gradient_accumulation']
     
     best_stage_performance = 0.0
     
@@ -694,7 +694,7 @@ def train_extended_color_stage(model, dataloader, criterion, optimizer, schedule
             # Update weights
             if (batch_idx + 1) % accumulation_steps == 0:
                 scaler.unscale_(optimizer)
-                torch.nn.utils.clip_grad_norm_(model.parameters(), IRIS_V5_CONFIG['gradient_clip'])
+                torch.nn.utils.clip_grad_norm_(model.parameters(), IRIS_V6_CONFIG['gradient_clip'])
                 scaler.step(optimizer)
                 scaler.update()
                 optimizer.zero_grad()
@@ -738,7 +738,7 @@ def train_extended_color_stage(model, dataloader, criterion, optimizer, schedule
             arc_ratio = arc_color_count / max(total_samples, 1)
             avg_loss = epoch_losses['total']/len(dataloader)
             current_lr = scheduler.get_last_lr()[0]
-            print(f"\033[38;2;255;204;153m⏰ IRIS V5 Stage {stage_idx}, Epoch {epoch} (Global: {stage_idx * IRIS_V5_CONFIG['epochs_per_stage'] + epoch + 1}):\033[0m")
+            print(f"\033[38;2;255;204;153m⏰ IRIS V6 Stage {stage_idx}, Epoch {epoch} (Global: {stage_idx * IRIS_V6_CONFIG['epochs_per_stage'] + epoch + 1}):\033[0m")
             print(f"\033[96m   🎯 Train: {epoch_performance:.2%} exact, Loss: {avg_loss:.3f}\033[0m")
             print(f"\033[96m   📊 LR: {current_lr:.6f} | Grid: {stage_config['max_grid_size']}x{stage_config['max_grid_size']} | Color: {color_ratio:.1%} | ARC: {arc_ratio:.1%}\033[0m")
             if epoch == epochs_for_stage - 1:

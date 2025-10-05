@@ -30,21 +30,21 @@ sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
 # Import enhanced IRIS V4 model
 from src.models.iris_v4_enhanced import IrisV4Enhanced
 
-# Enhanced IRIS V5 Configuration - Extended Color Intelligence Focus
+# Enhanced IRIS V5 Configuration - MINERVA-LIKE SPEED OPTIMIZATION
 IRIS_V5_CONFIG = {
-    # Core Training Parameters - Enhanced for V5 Extended Training
-    'batch_size': 26,  # Optimal for extended color transformer computations
-    'learning_rate': 0.00013,  # Lower for fine-tuning from V4
-    'num_epochs': 850,  # Extended training: 17 stages x 50 epochs
-    'gradient_accumulation': 9,  # Effective batch: 234
-    'epochs_per_stage': 50,  # Extended epochs per stage
-    'curriculum_stages': 17,  # Extended 17-stage color progression
+    # Core Training Parameters - OPTIMIZED for V5 Speed + Performance
+    'batch_size': 48,  # Larger batch for efficiency like MINERVA
+    'learning_rate': 0.0002,  # Higher for faster convergence from V4 base
+    'num_epochs': 300,  # Reduced: 10 stages x 30 epochs like MINERVA
+    'gradient_accumulation': 5,  # Reduced accumulation: effective batch 240
+    'epochs_per_stage': 30,  # Reduced epochs per stage for speed
+    'curriculum_stages': 10,  # Reduced stages for efficiency
     
-    # Enhanced Loss Configuration
-    'transform_penalty': 0.04,  # Lower - encourage color transformations
-    'exact_match_bonus': 9.5,  # Higher bonus for color precision
-    'gradient_clip': 0.48,  # Refined clipping for color stability
-    'weight_decay': 1.8e-6,  # Even lighter regularization for color learning
+    # Enhanced Loss Configuration - MINERVA-LIKE
+    'transform_penalty': 0.06,  # Even lower - max color exploration like MINERVA
+    'exact_match_bonus': 9.2,  # Higher bonus for color accuracy
+    'gradient_clip': 0.52,  # Slightly higher tolerance for V5
+    'weight_decay': 4e-6,  # Even lighter regularization for color
     
     # ULTRA TEAL Enhanced (proven formula)
     'ultra_teal_iou_weight': 0.85,  # 85% IoU weighting
@@ -71,14 +71,14 @@ IRIS_V5_CONFIG = {
     'color_expertise_bonus': True,
     'arc_color_bonus': True,  # NEW: ARC-specific color bonus
     
-    # Learning Rate Scheduling
-    'warmup_epochs': 30,  # Extended warmup for color transformers
+    # Learning Rate Scheduling - MINERVA-LIKE SPEED
+    'warmup_epochs': 15,  # Reduced warmup for faster training
     'cosine_restarts': True,
-    'restart_multiplier': 1.22,
-    'plateau_patience': 20,
+    'restart_multiplier': 1.25,
+    'plateau_patience': 22,
 }
 
-# Enhanced 17-Stage Progressive Configuration - Extended Color Intelligence Focus
+# Enhanced 10-Stage Progressive Configuration - MINERVA-LIKE Color Intelligence Focus
 STAGE_CONFIG = [
     # Foundation Color Understanding (5x5 - 9x9)
     {'stage': 0, 'max_grid_size': 5,  'synthesis_ratio': 0.95, 'color_complexity': 'micro_colors', 'focus': 'micro_color_patterns'},
@@ -89,19 +89,10 @@ STAGE_CONFIG = [
     
     # Intermediate Chromatic Reasoning (10x10 - 16x16)
     {'stage': 5, 'max_grid_size': 10, 'synthesis_ratio': 0.7, 'color_complexity': 'harmony_basic', 'focus': 'color_harmony_basics'},
-    {'stage': 6, 'max_grid_size': 11, 'synthesis_ratio': 0.65, 'color_complexity': 'complex_mapping', 'focus': 'complex_color_mapping'},
-    {'stage': 7, 'max_grid_size': 12, 'synthesis_ratio': 0.6, 'color_complexity': 'chromatic_logic', 'focus': 'chromatic_logical_rules'},
-    {'stage': 8, 'max_grid_size': 14, 'synthesis_ratio': 0.55, 'color_complexity': 'harmony_advanced', 'focus': 'advanced_color_harmony'},
-    {'stage': 9, 'max_grid_size': 15, 'synthesis_ratio': 0.5, 'color_complexity': 'color_space', 'focus': 'color_space_reasoning'},
-    {'stage': 10, 'max_grid_size': 16, 'synthesis_ratio': 0.45, 'color_complexity': 'arc_color_basic', 'focus': 'arc_color_patterns'},
-    
-    # Advanced Chromatic Mastery (18x18 - 30x30)
-    {'stage': 11, 'max_grid_size': 18, 'synthesis_ratio': 0.4, 'color_complexity': 'ensemble_color', 'focus': 'ensemble_color_coordination'},
-    {'stage': 12, 'max_grid_size': 22, 'synthesis_ratio': 0.35, 'color_complexity': 'arc_color_intermediate', 'focus': 'arc_intermediate_color'},
-    {'stage': 13, 'max_grid_size': 26, 'synthesis_ratio': 0.3, 'color_complexity': 'expert_chromatic', 'focus': 'expert_color_analysis'},
-    {'stage': 14, 'max_grid_size': 28, 'synthesis_ratio': 0.25, 'color_complexity': 'arc_color_advanced', 'focus': 'arc_advanced_color'},
-    {'stage': 15, 'max_grid_size': 30, 'synthesis_ratio': 0.2, 'color_complexity': 'chromatic_mastery', 'focus': 'chromatic_pattern_mastery'},
-    {'stage': 16, 'max_grid_size': 30, 'synthesis_ratio': 0.15, 'color_complexity': 'color_genius', 'focus': 'color_intelligence_genius'}
+    {'stage': 6, 'max_grid_size': 12, 'synthesis_ratio': 0.65, 'color_complexity': 'complex_mapping', 'focus': 'complex_color_mapping'},
+    {'stage': 7, 'max_grid_size': 14, 'synthesis_ratio': 0.6, 'color_complexity': 'chromatic_logic', 'focus': 'chromatic_logical_rules'},
+    {'stage': 8, 'max_grid_size': 15, 'synthesis_ratio': 0.55, 'color_complexity': 'ensemble_prep_basic', 'focus': 'basic_ensemble_coordination'},
+    {'stage': 9, 'max_grid_size': 16, 'synthesis_ratio': 0.5, 'color_complexity': 'arc_color_basic', 'focus': 'arc_color_patterns'}
 ]
 
 # Device setup

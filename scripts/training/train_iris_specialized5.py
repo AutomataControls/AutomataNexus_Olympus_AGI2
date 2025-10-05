@@ -56,8 +56,8 @@ IRIS_V5_CONFIG = {
     'arc_color_weight': 0.35,  # NEW: ARC-specific color reasoning
     
     # IRIS V5-Specific Enhancements
-    'chromatic_transformer_layers': 2,
-    'color_pattern_memory_size': 120,
+    'chromatic_transformer_layers': 6,
+    'color_pattern_memory_size': 280,
     'chromatic_positional_encoding': False,
     'ensemble_preparation': False,
     'test_time_adaptation': False,

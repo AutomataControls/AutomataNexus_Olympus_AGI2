@@ -338,8 +338,8 @@ class ExtendedSpatialDataset(Dataset):
         """Process task with extended spatial analysis"""
         is_arc_task = 'arc_' in source_file
         
-        # Process all examples for spatial learning
-        for example in task.get('train', []) + task.get('test', []):
+        # Process only training examples (they have both input and output)
+        for example in task.get('train', []):
             sample = self._create_extended_spatial_sample(example, is_arc_task)
             if sample:
                 self.samples.append(sample)

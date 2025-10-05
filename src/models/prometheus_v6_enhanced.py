@@ -168,6 +168,8 @@ class PrometheusV6Enhanced(nn.Module):
             self.original_prometheus.load_state_dict(model_dict)
             
             print(f"\033[96mPROMETHEUS V6: Loaded {len(compatible_params)}/{len(state_dict)} compatible parameters\033[0m")
+            if len(compatible_params) < 10:
+                print(f"\033[96mV6 Compatible params: {list(compatible_params.keys())}\033[0m")
             return len(compatible_params) > 0
             
         except Exception as e:

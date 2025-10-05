@@ -361,7 +361,7 @@ def train_prometheus_specialized_v6():
     # Ultimate progressive training through creative stages
     for stage_idx, stage_config in enumerate(STAGE_CONFIG):
         print(f"\n\033[96m{'=' * 155}\033[0m")
-        print(f"\033[96mStage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
+        print(f"\033[38;2;255;204;153mStage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
               f"Creative: {stage_config['creative_complexity']} | Focus: {stage_config['focus']}\033[0m")
         print(f"\033[96m{'=' * 155}\033[0m")
         
@@ -473,7 +473,7 @@ def train_ultimate_creative_stage(model, dataloader, criterion, optimizer, sched
             
             # Count ultimate creative cases and ARC-specific cases
             for meta in metadata:
-                if meta['generative_analysis']['creative_intelligence_level'] >= 4:
+                if meta['creative_analysis']['creative_intelligence_level'] >= 3:
                     ultimate_creative_count += 1
                 if 'arc_' in stage_config.get('focus', ''):
                     arc_creative_count += 1

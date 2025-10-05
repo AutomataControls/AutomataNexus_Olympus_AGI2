@@ -148,7 +148,7 @@ class AtlasV5Enhanced(nn.Module):
     def load_compatible_weights(self, checkpoint_path: str):
         """Load V4 weights into core model"""
         try:
-            checkpoint = torch.load(checkpoint_path, map_location='cpu')
+            checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
             if 'model_state_dict' in checkpoint:
                 state_dict = checkpoint['model_state_dict']
             else:

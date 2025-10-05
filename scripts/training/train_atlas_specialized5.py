@@ -331,8 +331,8 @@ class ExtendedSpatialDataset(Dataset):
                     emphasis_count = arc_emphasis if 'arc_' in file else 1
                     
                     for _ in range(emphasis_count):
-                        for task in data:
-                            self._process_extended_spatial_task(task, file)
+                        for task_id, task_data in data.items():
+                            self._process_extended_spatial_task(task_data, file)
     
     def _process_extended_spatial_task(self, task: Dict, source_file: str):
         """Process task with extended spatial analysis"""

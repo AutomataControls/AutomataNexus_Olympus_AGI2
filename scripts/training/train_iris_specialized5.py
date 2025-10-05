@@ -90,7 +90,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 print(f"\033[96m{'=' * 120}\033[0m")
 print(f"\033[96mIRIS V5 Enhanced Training - Extended Color Pattern Recognition Expert for ARC-AGI-2\033[0m")
-print(f"\033[96mBuilds on V4 with Extended Training: 17 Stages + ARC-Specific Color Intelligence\033[0m")
+print(f"\033[96mBuilds on V4 with Extended Training: 5 Stages + ARC-Specific Color Intelligence\033[0m")
 print(f"\033[96mTarget: 80%+ Performance with Extended Color Intelligence Mastery\033[0m")
 print(f"\033[96m{'=' * 120}\033[0m")
 
@@ -571,8 +571,8 @@ def train_iris_specialized_v5():
                 success = model.load_compatible_weights(model_path)
                 if success:
                     print(f"\033[96mIRIS V4: Successfully loaded compatible weights from {model_path}\033[0m")
-                weights_loaded = True
-                break
+                    weights_loaded = True
+                    break
             except Exception as e:
                 continue
     
@@ -608,7 +608,7 @@ def train_iris_specialized_v5():
     best_performance = 0.0
     training_stats = defaultdict(list)
     
-    print(f"\033[96mStarting Extended Progressive Color Training - 17 Enhanced Color Intelligence Stages\033[0m")
+    print(f"\033[96mStarting Extended Progressive Color Training - 5 Enhanced Color Intelligence Stages\033[0m")
     
     # Extended progressive training through color stages
     for stage_idx, stage_config in enumerate(STAGE_CONFIG):

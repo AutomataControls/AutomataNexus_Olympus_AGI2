@@ -32,12 +32,12 @@ from src.models.chronos_v4_enhanced import ChronosV4Enhanced
 # Enhanced CHRONOS V4 Configuration - Temporal Intelligence Focus
 CHRONOS_V4_CONFIG = {
     # Core Training Parameters - Enhanced for V4 Temporal Intelligence
-    'batch_size': 26,  # Optimal for temporal transformer computations
-    'learning_rate': 0.00016,  # Balanced for temporal learning
-    'num_epochs': 650,  # Extended training: 13 stages x 50 epochs
-    'gradient_accumulation': 8,  # Effective batch: 208
-    'epochs_per_stage': 50,  # Extended epochs per stage
-    'curriculum_stages': 13,  # 13-stage temporal progression
+    'batch_size': 12,  # Optimized for speed (was 26)
+    'learning_rate': 0.0002,  # Adjusted for smaller batches
+    'num_epochs': 260,  # Reduced: 13 stages x 20 epochs (was 650)
+    'gradient_accumulation': 4,  # Optimized (was 8) - Effective batch: 48
+    'epochs_per_stage': 20,  # Optimized for speed (was 50)
+    'curriculum_stages': 13,  # Keep 13-stage temporal progression
     
     # Enhanced Loss Configuration
     'transform_penalty': 0.04,  # Low - encourage temporal transformations

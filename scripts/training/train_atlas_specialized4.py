@@ -29,29 +29,29 @@ sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
 # Import enhanced ATLAS V4 model
 from src.models.atlas_v4_enhanced import AtlasV4Enhanced
 
-# Enhanced ATLAS V4 Configuration - 2D Spatial Reasoning Focus (OPTIMIZED FOR SPEED)
+# ULTRA FAST ATLAS V4 Configuration - MAXIMUM SPEED
 ATLAS_V4_CONFIG = {
-    # Core Training Parameters - OPTIMIZED for V4 Speed + Performance
-    'batch_size': 20,  # MINERVA-like efficiency 
-    'learning_rate': 0.0002,  # Stable like MINERVA
-    'num_epochs': 60,  # Proper training: 10 stages x 6 epochs
-    'gradient_accumulation': 2,  # Effective batch 40 for stability
-    'epochs_per_stage': 6,  # Adequate training per stage
-    'curriculum_stages': 10,  # Streamlined spatial curriculum
+    # Core Training Parameters - MAXIMUM SPEED OPTIMIZATION
+    'batch_size': 16,  # Optimal size for speed
+    'learning_rate': 0.0005,  # Higher LR for fast convergence
+    'num_epochs': 14,  # MINIMAL: 14 stages x 1 epoch
+    'gradient_accumulation': 1,  # NO accumulation for speed
+    'epochs_per_stage': 1,  # SINGLE epoch per stage
+    'curriculum_stages': 14,  # Keep all spatial stages
     
-    # Enhanced Loss Configuration
-    'transform_penalty': 0.03,  # Very low - encourage spatial transformations
-    'exact_match_bonus': 9.5,  # Very high bonus for spatial precision
-    'gradient_clip': 0.4,  # Tight clipping for spatial stability
-    'weight_decay': 3e-6,  # Very light regularization
+    # MINIMAL Loss Configuration for MAXIMUM SPEED
+    'transform_penalty': 0.01,  # Minimal penalty
+    'exact_match_bonus': 5.0,  # Reduced bonus computation
+    'gradient_clip': 1.0,  # Relaxed clipping
+    'weight_decay': 1e-5,  # Light regularization
     
-    # ULTRA TEAL Enhanced (proven formula)
-    'ultra_teal_iou_weight': 0.85,  # 85% IoU weighting
-    'strict_match_weight': 0.15,   # 15% strict matching
-    'spatial_reasoning_weight': 0.55,  # Primary focus - spatial reasoning
-    'geometric_transformation_weight': 0.45,  # Geometric mastery
-    'multiscale_processing_weight': 0.4,  # Multi-scale understanding
-    'ensemble_coordination_weight': 0.35,  # Ensemble integration
+    # ULTRA MINIMAL scoring for MAXIMUM speed
+    'ultra_teal_iou_weight': 0.9,  # 90% IoU weighting
+    'strict_match_weight': 0.1,   # 10% strict matching
+    'spatial_reasoning_weight': 0.05,  # TINY computation
+    'geometric_transformation_weight': 0.02,  # NEARLY ZERO
+    'multiscale_processing_weight': 0.02,  # NEARLY ZERO
+    'ensemble_coordination_weight': 0.02,  # NEARLY ZERO
     
     # ATLAS V4-Specific Enhancements - KEEP FUNCTIONALITY
     'spatial_transformer_layers': 4,  # Balanced for speed + capability
@@ -60,37 +60,41 @@ ATLAS_V4_CONFIG = {
     'ensemble_preparation': True,  # Keep OLYMPUS preparation
     'test_time_adaptation': True,  # Keep spatial adaptation
     
-    # Advanced Training Features - KEEP FUNCTIONALITY
-    'label_smoothing': 0.012,  # Light for spatial precision
-    'pattern_diversity_bonus': True,
-    'geometric_reasoning_bonus': True,
-    'spatial_memory_bonus': True,
-    'transformation_composition_bonus': True,
+    # ALL BONUSES DISABLED for MAXIMUM SPEED
+    'label_smoothing': 0.0,  # NO smoothing
+    'pattern_diversity_bonus': False,  # DISABLED
+    'geometric_reasoning_bonus': False,  # DISABLED
+    'spatial_memory_bonus': False,  # DISABLED
+    'transformation_composition_bonus': False,  # DISABLED
     
-    # Learning Rate Scheduling - MINERVA-like
-    'warmup_epochs': 12,  # Proper warmup
-    'cosine_restarts': True,
-    'restart_multiplier': 1.3,
-    'plateau_patience': 18,
+    # NO SCHEDULING for MAXIMUM SPEED
+    'warmup_epochs': 1,  # MINIMAL warmup
+    'cosine_restarts': False,  # DISABLED
+    'restart_multiplier': 1.0,  # No restarts
+    'plateau_patience': 1,  # Immediate plateau detection
 }
 
-# Efficient 10-Stage Spatial Intelligence Curriculum - MINERVA-like
+# ULTRA FAST 14-Stage Spatial Intelligence Curriculum - SPEED OPTIMIZED
 STAGE_CONFIG = [
-    # Foundation Spatial Understanding
-    {'stage': 0, 'max_grid_size': 6,  'synthesis_ratio': 0.8, 'spatial_complexity': 'basic_shapes', 'focus': 'shape_recognition'},
-    {'stage': 1, 'max_grid_size': 8,  'synthesis_ratio': 0.75, 'spatial_complexity': 'simple_rotation', 'focus': 'rotation_detection'},
-    {'stage': 2, 'max_grid_size': 10, 'synthesis_ratio': 0.7, 'spatial_complexity': 'reflection_basic', 'focus': 'reflection_learning'},
+    # Foundation Spatial Understanding (Fast progression)
+    {'stage': 0, 'max_grid_size': 6,  'synthesis_ratio': 0.9, 'spatial_complexity': 'basic_shapes', 'focus': 'shape_recognition'},
+    {'stage': 1, 'max_grid_size': 7,  'synthesis_ratio': 0.85, 'spatial_complexity': 'simple_rotation', 'focus': 'rotation_detection'},
+    {'stage': 2, 'max_grid_size': 8, 'synthesis_ratio': 0.8, 'spatial_complexity': 'reflection_basic', 'focus': 'reflection_learning'},
+    {'stage': 3, 'max_grid_size': 10, 'synthesis_ratio': 0.75, 'spatial_complexity': 'translation_basic', 'focus': 'translation_understanding'},
+    {'stage': 4, 'max_grid_size': 12, 'synthesis_ratio': 0.7, 'spatial_complexity': 'affine_basic', 'focus': 'affine_transformations'},
     
-    # Intermediate Spatial Transformations
-    {'stage': 3, 'max_grid_size': 12, 'synthesis_ratio': 0.6, 'spatial_complexity': 'translation_basic', 'focus': 'translation_understanding'},
-    {'stage': 4, 'max_grid_size': 15, 'synthesis_ratio': 0.55, 'spatial_complexity': 'affine_basic', 'focus': 'affine_transformations'},
-    {'stage': 5, 'max_grid_size': 18, 'synthesis_ratio': 0.5, 'spatial_complexity': 'composite_simple', 'focus': 'composite_transforms'},
-    {'stage': 6, 'max_grid_size': 20, 'synthesis_ratio': 0.45, 'spatial_complexity': 'scaling_rotation', 'focus': 'scaling_with_rotation'},
+    # Intermediate Spatial Transformations (Fast progression)
+    {'stage': 5, 'max_grid_size': 14, 'synthesis_ratio': 0.65, 'spatial_complexity': 'composite_simple', 'focus': 'composite_transforms'},
+    {'stage': 6, 'max_grid_size': 16, 'synthesis_ratio': 0.6, 'spatial_complexity': 'scaling_rotation', 'focus': 'scaling_with_rotation'},
+    {'stage': 7, 'max_grid_size': 18, 'synthesis_ratio': 0.55, 'spatial_complexity': 'perspective_basic', 'focus': 'perspective_transforms'},
+    {'stage': 8, 'max_grid_size': 20, 'synthesis_ratio': 0.5, 'spatial_complexity': 'multi_object', 'focus': 'multi_object_spatial'},
     
-    # Advanced Spatial Mastery
-    {'stage': 7, 'max_grid_size': 24, 'synthesis_ratio': 0.35, 'spatial_complexity': 'complex_geometric', 'focus': 'complex_geometry'},
-    {'stage': 8, 'max_grid_size': 28, 'synthesis_ratio': 0.3, 'spatial_complexity': 'pattern_spatial', 'focus': 'spatial_patterns'},
-    {'stage': 9, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'spatial_complexity': 'spatial_genius', 'focus': 'spatial_intelligence'}
+    # Advanced Spatial Mastery (Fast progression)
+    {'stage': 9, 'max_grid_size': 22, 'synthesis_ratio': 0.45, 'spatial_complexity': 'complex_geometric', 'focus': 'complex_geometry'},
+    {'stage': 10, 'max_grid_size': 24, 'synthesis_ratio': 0.4, 'spatial_complexity': 'pattern_spatial', 'focus': 'spatial_patterns'},
+    {'stage': 11, 'max_grid_size': 26, 'synthesis_ratio': 0.35, 'spatial_complexity': 'spatial_sequences', 'focus': 'spatial_sequences'},
+    {'stage': 12, 'max_grid_size': 28, 'synthesis_ratio': 0.3, 'spatial_complexity': 'spatial_mastery', 'focus': 'spatial_mastery'},
+    {'stage': 13, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'spatial_complexity': 'spatial_genius', 'focus': 'spatial_intelligence'}
 ]
 
 # Device setup
@@ -147,14 +151,14 @@ class AtlasV4SpatialLoss(nn.Module):
         copy_penalty = (pred_indices == input_indices).all(dim=[1,2]).float()
         transform_penalty = copy_penalty.mean() * self.transform_penalty
         
-        # Spatial reasoning bonuses
-        spatial_bonus = self._calculate_spatial_bonus(model_outputs, pred_indices, target_indices, input_indices)
-        geometric_bonus = self._calculate_geometric_bonus(model_outputs, pred_indices, target_indices)
-        multiscale_bonus = self._calculate_multiscale_bonus(model_outputs)
-        ensemble_bonus = self._calculate_ensemble_bonus(model_outputs)
+        # MINIMAL bonuses for SPEED - most are near zero anyway
+        spatial_bonus = torch.tensor(0.0).to(pred_indices.device)
+        geometric_bonus = torch.tensor(0.0).to(pred_indices.device)
+        multiscale_bonus = torch.tensor(0.0).to(pred_indices.device)
+        ensemble_bonus = torch.tensor(0.0).to(pred_indices.device)
         
-        total_loss = (focal_loss + transform_penalty + exact_bonus + 
-                     spatial_bonus + geometric_bonus + multiscale_bonus + ensemble_bonus)
+        # ULTRA SIMPLE loss computation
+        total_loss = focal_loss + transform_penalty + exact_bonus
         
         return {
             'total': total_loss,
@@ -553,15 +557,15 @@ def train_atlas_specialized_v4():
             spatial_focus=True
         )
         
-        # Create data loader - SPEED OPTIMIZED
+        # ULTRA SPEED data loader - MAXIMUM OPTIMIZATION
         dataloader = DataLoader(
             dataset,
             batch_size=ATLAS_V4_CONFIG['batch_size'],
             shuffle=True,
             collate_fn=advanced_spatial_collate_fn,
-            num_workers=2,  # Use multiple workers for faster data loading
-            pin_memory=True,  # Faster GPU transfer
-            persistent_workers=True  # Keep workers alive
+            num_workers=0,  # NO multiprocessing to avoid overhead
+            pin_memory=False,  # Skip pinning for speed
+            drop_last=True  # Consistent batches
         )
         
         # Stage-specific training
@@ -570,25 +574,23 @@ def train_atlas_specialized_v4():
             stage_idx, stage_config, training_stats
         )
         
-        # Update best performance
-        if stage_performance > best_performance:
+        # Update best performance - SAVE LESS FREQUENTLY FOR SPEED
+        if stage_performance > best_performance and stage_performance > 0.65:  # Only save if > 65%
             best_performance = stage_performance
-            # Save best model
-            os.makedirs('/content/AutomataNexus_Olympus_AGI2/models', exist_ok=True)
-            torch.save({
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'scheduler_state_dict': scheduler.state_dict(),
-                'best_performance': best_performance,
-                'stage': stage_idx,
-                'config': ATLAS_V4_CONFIG,
-                'ensemble_state': model.get_ensemble_state()
-            }, '/content/AutomataNexus_Olympus_AGI2/models/atlas_v4_best.pt')
-            print(f"\033[96mNew best spatial performance: {best_performance:.2%} - Model saved!\033[0m")
+            # FAST save - minimal state for speed
+            if stage_idx % 3 == 0:  # Only save every 3rd stage
+                os.makedirs('/content/AutomataNexus_Olympus_AGI2/models', exist_ok=True)
+                torch.save({
+                    'model_state_dict': model.state_dict(),
+                    'best_performance': best_performance,
+                    'stage': stage_idx,
+                    'config': ATLAS_V4_CONFIG
+                }, '/content/AutomataNexus_Olympus_AGI2/models/atlas_v4_best.pt')
+                print(f"\033[96mNew best spatial performance: {best_performance:.2%} - Model saved!\033[0m")
         
-        # Memory cleanup
-        torch.cuda.empty_cache()
-        gc.collect()
+        # MINIMAL memory cleanup for speed
+        if stage_idx % 4 == 0:  # Only cleanup every 4th stage
+            torch.cuda.empty_cache()
     
     print(f"\n\033[96m{'=' * 105}\033[0m")
     print(f"\033[96mATLAS V4 Advanced Spatial Training Complete!\033[0m")
@@ -669,20 +671,19 @@ def train_advanced_spatial_stage(model, dataloader, criterion, optimizer, schedu
         epoch_performance = total_exact_matches / max(total_samples, 1)
         best_stage_performance = max(best_stage_performance, epoch_performance)
         
-        # Log detailed progress with ultra light honey/amber for stage headers
-        if epoch % 1 == 0 or epoch == epochs_for_stage - 1:
+        # MINIMAL logging for speed - only final epoch per stage
+        if epoch == epochs_for_stage - 1:
             spatial_ratio = advanced_spatial_count / max(total_samples, 1)
             avg_loss = epoch_losses['total']/len(dataloader)
             current_lr = scheduler.get_last_lr()[0]
             print(f"\033[38;2;255;204;153m⏰ ATLAS V4 Stage {stage_idx}, Epoch {epoch} (Global: {stage_idx * ATLAS_V4_CONFIG['epochs_per_stage'] + epoch + 1}):\033[0m")
             print(f"\033[96m   🎯 Train: {epoch_performance:.2%} exact, Loss: {avg_loss:.3f}\033[0m")
             print(f"\033[96m   📊 LR: {current_lr:.6f} | Grid: {stage_config['max_grid_size']}x{stage_config['max_grid_size']} | Spatial: {spatial_ratio:.1%}\033[0m")
-            if epoch == epochs_for_stage - 1:
-                print(f"\033[96m✅ Stage {stage_idx} complete! Final exact: {epoch_performance:.2%}\033[0m")
+            print(f"\033[96m✅ Stage {stage_idx} complete! Final exact: {epoch_performance:.2%}\033[0m")
         
-        # Memory cleanup
-        torch.cuda.empty_cache()
-        gc.collect()
+        # MINIMAL memory cleanup for speed
+        if epoch % 2 == 1:  # Only clean every other epoch
+            torch.cuda.empty_cache()
     
     return best_stage_performance
 

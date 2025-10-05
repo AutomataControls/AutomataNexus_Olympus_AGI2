@@ -69,10 +69,10 @@ IRIS_V5_CONFIG = {
     'chromatic_reasoning_bonus': False,
     'color_harmony_bonus': False,
     'color_expertise_bonus': False,
-    'arc_color_bonus': False
+    'arc_color_bonus': False,
     
     # Learning Rate Scheduling - MINERVA-LIKE SPEED
-    'warmup_epochs': 15,  # Reduced warmup for faster training
+    'warmup_epochs': 15,
     'cosine_restarts': True,
     'restart_multiplier': 1.25,
     'plateau_patience': 22,

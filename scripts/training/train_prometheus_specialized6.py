@@ -475,7 +475,7 @@ def train_ultimate_creative_stage(model, dataloader, criterion, optimizer, sched
             for meta in metadata:
                 if meta['creative_analysis']['creative_intelligence_level'] >= 3:
                     ultimate_creative_count += 1
-                if 'arc_' in stage_config.get('focus', ''):
+                if meta['creative_analysis'].get('arc_specific', False):
                     arc_creative_count += 1
             
             # Update progress bar

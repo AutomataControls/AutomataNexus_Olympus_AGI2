@@ -111,35 +111,35 @@ class IrisV6Enhanced(nn.Module):
         # Enhanced color processing
         self.color_processor = EnhancedColorProcessor(d_model)
         
-        # Enhanced color memory (64 patterns for more intelligence)
-        self.color_memory = nn.Parameter(torch.randn(64, d_model) * 0.02)
+        # Enhanced color memory (128 patterns for more intelligence)
+        self.color_memory = nn.Parameter(torch.randn(128, d_model) * 0.02)
         
         # Enhanced color rule extractor
         self.rule_extractor = nn.Sequential(
             nn.Linear(d_model, d_model // 2),
             nn.ReLU(),
-            nn.Linear(d_model // 2, 64)  # More rule encoding
+            nn.Linear(d_model // 2, 96)  # More rule encoding for intelligence
         )
         
         # Color pattern classifier
         self.pattern_classifier = nn.Sequential(
-            nn.Linear(d_model, 32),
+            nn.Linear(d_model, 48),
             nn.ReLU(),
-            nn.Linear(32, 8),  # 8 pattern types
+            nn.Linear(48, 12),  # 12 pattern types for more intelligence
             nn.Softmax(dim=-1)
         )
         
         # Enhanced decoder with more capacity
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(d_model + 64, d_model, 3, padding=1),
+            nn.ConvTranspose2d(d_model + 96, d_model, 3, padding=1),  # Updated for 96 rules
             nn.BatchNorm2d(d_model),
             nn.ReLU(),
             nn.ConvTranspose2d(d_model, d_model // 2, 3, padding=1),
             nn.BatchNorm2d(d_model // 2),
             nn.ReLU(),
-            nn.ConvTranspose2d(d_model // 2, 32, 3, padding=1),
+            nn.ConvTranspose2d(d_model // 2, 48, 3, padding=1),  # More intermediate features
             nn.ReLU(),
-            nn.ConvTranspose2d(32, 10, 1)
+            nn.ConvTranspose2d(48, 10, 1)
         )
         
         # Mixing parameters
@@ -212,8 +212,8 @@ class IrisV6Enhanced(nn.Module):
             global_features.unsqueeze(1), 
             self.color_memory.unsqueeze(0), 
             dim=2
-        )  # B, 64
-        top_patterns = memory_similarity.topk(8, dim=1)[0].mean(dim=1, keepdim=True)
+        )  # B, 128
+        top_patterns = memory_similarity.topk(12, dim=1)[0].mean(dim=1, keepdim=True)
         
         # Enhanced rule extraction
         color_rules = self.rule_extractor(global_features)
@@ -223,7 +223,7 @@ class IrisV6Enhanced(nn.Module):
         
         # Enhanced prediction with more features
         enhanced_features = x.permute(0, 3, 1, 2)  # B, d_model, H, W
-        rule_spatial = color_rules.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, H, W)
+        rule_spatial = color_rules.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, H, W)  # 96 features
         combined_features = torch.cat([enhanced_features, rule_spatial], dim=1)
         
         enhanced_prediction = self.decoder(combined_features)

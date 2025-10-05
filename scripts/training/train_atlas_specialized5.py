@@ -328,7 +328,7 @@ class ExtendedSpatialDataset(Dataset):
                     data = json.load(f)
                     
                     # Process ARC data multiple times for emphasis
-                    emphasis_count = arc_emphasis if 'arc_' in file else 1
+                    emphasis_count = arc_emphasis if 'arc-agi' in file else 1
                     
                     for _ in range(emphasis_count):
                         for task_id, task_data in data.items():
@@ -336,7 +336,7 @@ class ExtendedSpatialDataset(Dataset):
     
     def _process_extended_spatial_task(self, task: Dict, source_file: str):
         """Process task with extended spatial analysis"""
-        is_arc_task = 'arc_' in source_file
+        is_arc_task = 'arc-agi' in source_file
         
         # Process only training examples (they have both input and output)
         for example in task.get('train', []):
@@ -594,7 +594,7 @@ def train_atlas_specialized_v5():
     # Extended progressive training through spatial stages
     for stage_idx, stage_config in enumerate(STAGE_CONFIG):
         print(f"\n\033[96m{'=' * 115}\033[0m")
-        print(f"\033[96mStage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
+        print(f"\033[38;2;255;204;153mStage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
               f"Spatial: {stage_config['spatial_complexity']} | Focus: {stage_config['focus']}\033[0m")
         print(f"\033[96m{'=' * 115}\033[0m")
         
@@ -670,7 +670,7 @@ def train_extended_spatial_stage(model, dataloader, criterion, optimizer, schedu
         arc_spatial_count = 0
         
         # Progress bar
-        pbar = tqdm(dataloader, desc=f"\033[96mExtended Spatial Stage {stage_idx} Epoch {epoch}\033[0m")
+        pbar = tqdm(dataloader, desc=f"\033[38;2;255;204;153mExtended Spatial Stage {stage_idx} Epoch {epoch}\033[0m")
         
         for batch_idx, (inputs, targets, metadata) in enumerate(pbar):
             inputs = inputs.to(device)
@@ -732,7 +732,7 @@ def train_extended_spatial_stage(model, dataloader, criterion, optimizer, schedu
             arc_ratio = arc_spatial_count / max(total_samples, 1)
             avg_loss = epoch_losses['total']/len(dataloader)
             current_lr = scheduler.get_last_lr()[0]
-            print(f"\033[38;2;255;204;153m⏰ ATLAS V5 Stage {stage_idx}, Epoch {epoch} (Global: {stage_idx * ATLAS_V5_CONFIG['epochs_per_stage'] + epoch + 1}):\033[0m")
+            print(f"\033[38;2;255;204;153m⏰ ATLAS V5 Stage {stage_idx}, Epoch {epoch} \033[96m(Global: {stage_idx * ATLAS_V5_CONFIG['epochs_per_stage'] + epoch + 1})\033[38;2;255;204;153m:\033[0m")
             print(f"\033[96m   🎯 Train: {epoch_performance:.2%} exact, Loss: {avg_loss:.3f}\033[0m")
             print(f"\033[96m   📊 LR: {current_lr:.6f} | Grid: {stage_config['max_grid_size']}x{stage_config['max_grid_size']} | Spatial: {spatial_ratio:.1%} | ARC: {arc_ratio:.1%}\033[0m")
             if epoch == epochs_for_stage - 1:

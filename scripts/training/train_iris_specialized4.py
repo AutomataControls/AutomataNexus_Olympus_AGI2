@@ -29,14 +29,14 @@ sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
 # Import enhanced IRIS V4 model
 from src.models.iris_v4_enhanced import IrisV4Enhanced
 
-# Enhanced IRIS V4 Configuration - OPTIMIZED FOR SPEED
+# ULTRA FAST IRIS V4 Configuration - MAXIMUM SPEED
 IRIS_V4_CONFIG = {
-    # Core Training Parameters - SPEED OPTIMIZED
-    'batch_size': 32,  # Double batch size for efficiency
-    'learning_rate': 0.0003,  # Higher LR for faster convergence
-    'num_epochs': 26,  # Reduced: 13 stages x 2 epochs
-    'gradient_accumulation': 2,  # Reduced accumulation
-    'epochs_per_stage': 2,  # FAST training per stage
+    # Core Training Parameters - MAXIMUM SPEED OPTIMIZATION
+    'batch_size': 16,  # Back to original - 32 was too big
+    'learning_rate': 0.0005,  # Even higher LR for very fast convergence
+    'num_epochs': 13,  # MINIMAL: 13 stages x 1 epoch each
+    'gradient_accumulation': 1,  # NO accumulation for speed
+    'epochs_per_stage': 1,  # SINGLE epoch per stage
     'curriculum_stages': 13,  # Keep all color stages
     
     # SIMPLIFIED Loss Configuration for Speed
@@ -45,13 +45,13 @@ IRIS_V4_CONFIG = {
     'gradient_clip': 1.0,  # Relaxed clipping
     'weight_decay': 1e-5,  # Light regularization
     
-    # SIMPLIFIED scoring (ULTRA TEAL core only)
-    'ultra_teal_iou_weight': 0.85,  # Keep proven IoU weighting
-    'strict_match_weight': 0.15,   # Keep strict matching
-    'chromatic_reasoning_weight': 0.2,  # REDUCED - speed focus
-    'color_harmony_weight': 0.1,  # MINIMAL computation
-    'color_space_weight': 0.1,  # MINIMAL computation
-    'ensemble_coordination_weight': 0.1,  # MINIMAL computation
+    # ULTRA MINIMAL scoring for MAXIMUM speed
+    'ultra_teal_iou_weight': 0.9,  # Simplified to 90% IoU
+    'strict_match_weight': 0.1,   # 10% strict matching
+    'chromatic_reasoning_weight': 0.05,  # TINY computation
+    'color_harmony_weight': 0.02,  # NEARLY ZERO
+    'color_space_weight': 0.02,  # NEARLY ZERO
+    'ensemble_coordination_weight': 0.02,  # NEARLY ZERO
     
     # IRIS V4-Specific Enhancements - KEEP FUNCTIONALITY
     'chromatic_transformer_layers': 4,  # Balanced for speed + capability
@@ -60,18 +60,18 @@ IRIS_V4_CONFIG = {
     'ensemble_preparation': True,  # Keep OLYMPUS preparation
     'test_time_adaptation': True,  # Keep chromatic adaptation
     
-    # SIMPLIFIED Training Features for SPEED
-    'label_smoothing': 0.01,  # Minimal smoothing
-    'pattern_diversity_bonus': False,  # DISABLED for speed
-    'chromatic_reasoning_bonus': False,  # DISABLED for speed  
-    'color_harmony_bonus': False,  # DISABLED for speed
-    'color_expertise_bonus': False,  # DISABLED for speed
+    # ALL BONUSES DISABLED for MAXIMUM SPEED
+    'label_smoothing': 0.0,  # NO smoothing
+    'pattern_diversity_bonus': False,  # DISABLED
+    'chromatic_reasoning_bonus': False,  # DISABLED
+    'color_harmony_bonus': False,  # DISABLED
+    'color_expertise_bonus': False,  # DISABLED
     
-    # SIMPLIFIED Learning Rate Scheduling for SPEED
-    'warmup_epochs': 5,  # FAST warmup
-    'cosine_restarts': False,  # DISABLED for speed
+    # NO SCHEDULING for MAXIMUM SPEED
+    'warmup_epochs': 1,  # MINIMAL warmup
+    'cosine_restarts': False,  # DISABLED
     'restart_multiplier': 1.0,  # No restarts
-    'plateau_patience': 5,  # Fast plateau detection
+    'plateau_patience': 1,  # Immediate plateau detection
 }
 
 # ULTRA FAST 13-Stage Color Intelligence Curriculum - SPEED OPTIMIZED
@@ -513,15 +513,15 @@ def train_iris_specialized_v4():
             color_focus=True
         )
         
-        # Create data loader - SPEED OPTIMIZED
+        # ULTRA SPEED data loader - MAXIMUM OPTIMIZATION
         dataloader = DataLoader(
             dataset,
             batch_size=IRIS_V4_CONFIG['batch_size'],
             shuffle=True,
             collate_fn=advanced_color_collate_fn,
-            num_workers=2,  # Use multiple workers for faster data loading
-            pin_memory=True,  # Faster GPU transfer
-            persistent_workers=True  # Keep workers alive
+            num_workers=0,  # NO multiprocessing to avoid overhead
+            pin_memory=False,  # Skip pinning for speed
+            drop_last=True  # Consistent batches
         )
         
         # Stage-specific training

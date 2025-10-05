@@ -358,9 +358,9 @@ class ExtendedColorDataset(Dataset):
         # Extended color analysis
         color_analysis = self._analyze_extended_color_complexity(input_grid, output_grid, is_arc_task)
         
-        # Filter for extended color relevance (more inclusive for V5)
+        # Filter for extended color relevance (VERY inclusive for V5 to avoid empty dataset)
         if self.color_focus and color_analysis['color_intelligence_level'] < 1:
-            if random.random() > 0.55:  # Keep 55% of simple cases for V5
+            if random.random() > 0.9:  # Keep 90% of simple cases for V5 to ensure samples
                 return None
         
         return {

@@ -32,7 +32,7 @@ from src.models.iris_v4_enhanced import IrisV4Enhanced
 
 # Enhanced IRIS V5 Configuration - MINERVA-LIKE SPEED OPTIMIZATION
 IRIS_V5_CONFIG = {
-    'batch_size': 8,
+    'batch_size': 32,
     'learning_rate': 0.001,
     'num_epochs': 5,
     'gradient_accumulation': 1,

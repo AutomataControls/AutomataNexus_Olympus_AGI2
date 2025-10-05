@@ -338,8 +338,14 @@ class ExtendedColorDataset(Dataset):
                     
                     before_count = len(self.samples)
                     for _ in range(emphasis_count):
-                        for task in data:
-                            self._process_extended_color_task(task, file)
+                        # Handle ARC data format (dict with task IDs as keys)
+                        if isinstance(data, dict):
+                            for task_id, task_data in data.items():
+                                self._process_extended_color_task(task_data, file)
+                        else:
+                            # Handle list format if needed
+                            for task in data:
+                                self._process_extended_color_task(task, file)
                     after_count = len(self.samples)
                     print(f"   Added {after_count - before_count} samples from {file}")
             else:

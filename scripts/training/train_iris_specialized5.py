@@ -54,9 +54,9 @@ IRIS_V5_CONFIG = {
     'ensemble_coordination_weight': 0.02,
     'arc_color_weight': 0.02,
     
-    # IRIS V5-Specific Enhancements
-    'chromatic_transformer_layers': 6,
-    'color_pattern_memory_size': 280,
+    # IRIS V5-Specific Enhancements - DISABLED FOR SPEED
+    'chromatic_transformer_layers': 1,
+    'color_pattern_memory_size': 32,
     'chromatic_positional_encoding': False,
     'ensemble_preparation': False,
     'test_time_adaptation': False,

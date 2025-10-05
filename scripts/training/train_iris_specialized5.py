@@ -140,12 +140,12 @@ class IrisV5ChromaticLoss(nn.Module):
         copy_penalty = (pred_indices == input_indices).all(dim=[1,2]).float()
         transform_penalty = copy_penalty.mean() * self.transform_penalty
         
-        # V5 Enhanced chromatic reasoning bonuses
-        chromatic_bonus = self._calculate_chromatic_bonus(model_outputs, pred_indices, target_indices, input_indices)
-        harmony_bonus = self._calculate_harmony_bonus(model_outputs, pred_indices, target_indices)
-        color_space_bonus = self._calculate_color_space_bonus(model_outputs)
-        ensemble_bonus = self._calculate_ensemble_bonus(model_outputs)
-        arc_color_bonus = self._calculate_arc_color_bonus(model_outputs, pred_indices, target_indices)
+        # Simplified bonuses for speed
+        chromatic_bonus = torch.tensor(0.0).to(pred_indices.device)
+        harmony_bonus = torch.tensor(0.0).to(pred_indices.device) 
+        color_space_bonus = torch.tensor(0.0).to(pred_indices.device)
+        ensemble_bonus = torch.tensor(0.0).to(pred_indices.device)
+        arc_color_bonus = torch.tensor(0.0).to(pred_indices.device)
         
         total_loss = (focal_loss + transform_penalty + exact_bonus + 
                      chromatic_bonus + harmony_bonus + color_space_bonus + ensemble_bonus + arc_color_bonus)

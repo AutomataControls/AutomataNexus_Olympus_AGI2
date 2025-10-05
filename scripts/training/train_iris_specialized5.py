@@ -618,7 +618,9 @@ def train_iris_specialized_v5():
             batch_size=IRIS_V5_CONFIG['batch_size'],
             shuffle=True,
             collate_fn=extended_color_collate_fn,
-            num_workers=0
+            num_workers=2,
+            pin_memory=True,
+            persistent_workers=True
         )
         
         # Stage-specific training

@@ -535,8 +535,8 @@ def train_iris_specialized_v5():
     # Initialize enhanced model (same as MINERVA approach)
     model = IrisV4Enhanced(
         max_grid_size=30,
-        d_model=256,
-        num_layers=6,
+        d_model=128,
+        num_layers=2,
         preserve_weights=True
     ).to(device)
     

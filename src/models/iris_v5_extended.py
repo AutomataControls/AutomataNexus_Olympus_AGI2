@@ -90,7 +90,30 @@ class IrisV5Extended(nn.Module):
     
     def load_v4_weights(self, checkpoint_path: str) -> bool:
         """Load V4 weights into the V4 core"""
-        return self.iris_v4_core.load_compatible_weights(checkpoint_path)
+        try:
+            checkpoint = torch.load(checkpoint_path, map_location='cpu')
+            if 'model_state_dict' in checkpoint:
+                state_dict = checkpoint['model_state_dict']
+            else:
+                state_dict = checkpoint
+            
+            # Load weights directly into V4 core
+            v4_dict = self.iris_v4_core.state_dict()
+            compatible_params = {}
+            
+            for name, param in state_dict.items():
+                if name in v4_dict and v4_dict[name].shape == param.shape:
+                    compatible_params[name] = param
+            
+            v4_dict.update(compatible_params)
+            self.iris_v4_core.load_state_dict(v4_dict)
+            
+            print(f"\033[96mIRIS V4: Loaded {len(compatible_params)}/{len(state_dict)} compatible parameters into V5 core\033[0m")
+            return len(compatible_params) > 0
+            
+        except Exception as e:
+            print(f"Error loading V4 weights: {e}")
+            return False
     
     def get_ensemble_state(self) -> Dict:
         """Get ensemble state from V4 core"""

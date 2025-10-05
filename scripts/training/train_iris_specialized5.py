@@ -38,7 +38,7 @@ IRIS_V5_CONFIG = {
     'num_epochs': 15,
     'gradient_accumulation': 1,
     'epochs_per_stage': 3,
-    'curriculum_stages': 5
+    'curriculum_stages': 5,
     
     # Enhanced Loss Configuration - MINERVA-LIKE
     'transform_penalty': 0.06,  # Even lower - max color exploration like MINERVA

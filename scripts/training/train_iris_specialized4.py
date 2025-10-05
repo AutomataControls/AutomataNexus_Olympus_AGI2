@@ -32,12 +32,12 @@ from src.models.iris_v4_enhanced import IrisV4Enhanced
 # Enhanced IRIS V4 Configuration - Chromatic Intelligence Focus
 IRIS_V4_CONFIG = {
     # Core Training Parameters - Enhanced for V4 Color Intelligence
-    'batch_size': 6,  # ULTRA optimized for maximum speed
-    'learning_rate': 0.0003,  # Higher for fastest convergence
-    'num_epochs': 30,  # EXTREME reduction: 6 stages x 5 epochs
-    'gradient_accumulation': 2,  # Keep - Effective batch: 12
-    'epochs_per_stage': 5,  # EXTREME reduction for max speed
-    'curriculum_stages': 6,  # Reduced to 6 stages
+    'batch_size': 4,  # MINIMUM batch for maximum speed
+    'learning_rate': 0.0005,  # Very high for fastest convergence
+    'num_epochs': 12,  # EXTREME reduction: 6 stages x 2 epochs
+    'gradient_accumulation': 1,  # No accumulation - immediate updates
+    'epochs_per_stage': 2,  # MINIMAL epochs per stage
+    'curriculum_stages': 6,  # Keep 6 stages
     
     # Enhanced Loss Configuration
     'transform_penalty': 0.05,  # Low - encourage color transformations
@@ -53,12 +53,12 @@ IRIS_V4_CONFIG = {
     'color_space_weight': 0.35,  # Color space analysis
     'ensemble_coordination_weight': 0.3,  # Ensemble integration
     
-    # IRIS V4-Specific Enhancements
-    'chromatic_transformer_layers': 6,  # Deep color reasoning
-    'color_space_processing': True,  # Advanced color space analysis
-    'chromatic_positional_encoding': True,  # Color-aware positioning
-    'ensemble_preparation': True,  # OLYMPUS preparation mode
-    'test_time_adaptation': True,  # Advanced chromatic adaptation
+    # IRIS V4-Specific Enhancements - SPEED OPTIMIZED
+    'chromatic_transformer_layers': 3,  # Reduced for speed (was 6)
+    'color_space_processing': False,  # Disabled for speed
+    'chromatic_positional_encoding': False,  # Disabled for speed
+    'ensemble_preparation': False,  # Disabled for speed
+    'test_time_adaptation': False,  # Disabled for speed
     
     # Advanced Training Features
     'label_smoothing': 0.02,  # Light for color precision
@@ -547,13 +547,15 @@ def train_iris_specialized_v4():
             color_focus=True
         )
         
-        # Create data loader
+        # Create data loader - SPEED OPTIMIZED
         dataloader = DataLoader(
             dataset,
             batch_size=IRIS_V4_CONFIG['batch_size'],
             shuffle=True,
             collate_fn=advanced_color_collate_fn,
-            num_workers=0
+            num_workers=2,  # Use multiple workers for faster data loading
+            pin_memory=True,  # Faster GPU transfer
+            persistent_workers=True  # Keep workers alive
         )
         
         # Stage-specific training

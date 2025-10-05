@@ -27,8 +27,8 @@ sys.path.append('/content/AutomataNexus_Olympus_AGI2')
 sys.path.append('/content/AutomataNexus_Olympus_AGI2/src')
 sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
 
-# Import enhanced IRIS V4 model
-from src.models.iris_v4_enhanced import IrisV4Enhanced
+# Import IRIS V5 Extended model
+from src.models.iris_v5_extended import IrisV5Extended
 
 # Enhanced IRIS V5 Configuration - MINERVA-LIKE SPEED OPTIMIZATION
 IRIS_V5_CONFIG = {
@@ -530,8 +530,8 @@ def train_iris_specialized_v5():
     """Main training function for IRIS V5"""
     print(f"\033[96mInitializing IRIS V5 Extended Color Intelligence Training...\033[0m")
     
-    # Initialize enhanced model
-    model = IrisV4Enhanced(
+    # Initialize V5 extended model (contains V4 core)
+    model = IrisV5Extended(
         max_grid_size=30,
         d_model=256,
         num_layers=6,

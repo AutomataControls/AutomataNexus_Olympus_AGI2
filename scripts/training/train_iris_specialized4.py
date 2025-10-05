@@ -212,24 +212,14 @@ class IrisV4ChromaticLoss(nn.Module):
         if 'ensemble_output' not in outputs:
             return torch.tensor(0.0).to(list(outputs.values())[0].device)
         
-        # FAST ensemble approximation - simple mean
+        # FAST ensemble approximation - handle dict or tensor
         ensemble_output = outputs['ensemble_output']
-        ensemble_score = ensemble_output.mean()
-        return -ensemble_score * self.ensemble_weight * 0.01
-        
-        # Reward high color consensus
-        if 'color_consensus' in ensemble_output:
-            consensus = ensemble_output['color_consensus'].mean()
-            ensemble_score = consensus
+        if isinstance(ensemble_output, dict):
+            # Get first tensor value from dict
+            ensemble_score = next(iter(ensemble_output.values())).mean()
         else:
-            ensemble_score = torch.tensor(0.7).to(list(outputs.values())[0].device)
-        
-        # Reward high color expertise
-        if 'color_expertise' in ensemble_output:
-            expertise = ensemble_output['color_expertise'].mean()
-            ensemble_score = ensemble_score * expertise
-        
-        return -ensemble_score * self.ensemble_weight * 0.06
+            ensemble_score = ensemble_output.mean()
+        return -ensemble_score * self.ensemble_weight * 0.01
 
 
 class AdvancedColorDataset(Dataset):

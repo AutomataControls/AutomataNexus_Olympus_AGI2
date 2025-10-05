@@ -293,46 +293,47 @@ class ExtendedColorDataset(Dataset):
         print(f"\033[96mLoaded {len(self.samples)} extended color samples for IRIS V5 training\033[0m")
     
     def _load_extended_color_data(self):
-        """Load data with extended color complexity focus and ARC specificity"""
-        data_files = [
-            'arc-agi_training_challenges.json',
-            'arc-agi_evaluation_challenges.json',
-            'arc-agi_test_challenges.json'
-        ]
+        """Load data with extended color complexity focus using working pattern"""
+        # Load training data (challenges + solutions)
+        challenges_path = os.path.join(self.data_dir, 'arc-agi_training_challenges.json')
+        solutions_path = os.path.join(self.data_dir, 'arc-agi_training_solutions.json')
         
-        print(f"🔍 Looking for data files in: {self.data_dir}")
+        if os.path.exists(challenges_path) and os.path.exists(solutions_path):
+            with open(challenges_path, 'r') as f:
+                challenges = json.load(f)
+            with open(solutions_path, 'r') as f:
+                solutions = json.load(f)
+            
+            for task_id, task_data in challenges.items():
+                # Process ALL training examples without solution requirement
+                for example in task_data['train']:
+                    sample = self._create_extended_color_sample(example, True)
+                    if sample:
+                        self.samples.append(sample)
+                
+                # Also process test examples if solutions exist
+                if task_id in solutions:
+                    for i, test_input in enumerate(task_data['test']):
+                        if i < len(solutions[task_id]):
+                            test_example = {
+                                'input': test_input['input'],
+                                'output': solutions[task_id][i]
+                            }
+                            sample = self._create_extended_color_sample(test_example, True)
+                            if sample:
+                                self.samples.append(sample)
         
-        # Emphasize ARC data more in V5
-        arc_emphasis = 3 if self.arc_specific else 1
-        files_found = 0
-        
-        for file in data_files:
-            file_path = os.path.join(self.data_dir, file)
-            if os.path.exists(file_path):
-                files_found += 1
-                print(f"✅ Found: {file}")
-                with open(file_path, 'r') as f:
-                    data = json.load(f)
-                    
-                    # Process ARC data multiple times for emphasis
-                    emphasis_count = arc_emphasis if 'arc_' in file else 1
-                    
-                    before_count = len(self.samples)
-                    for _ in range(emphasis_count):
-                        # Handle ARC data format (dict with task IDs as keys)
-                        if isinstance(data, dict):
-                            for task_id, task_data in data.items():
-                                self._process_extended_color_task(task_data, file)
-                        else:
-                            # Handle list format if needed
-                            for task in data:
-                                self._process_extended_color_task(task, file)
-                    after_count = len(self.samples)
-                    print(f"   Added {after_count - before_count} samples from {file}")
-            else:
-                print(f"❌ Missing: {file}")
-        
-        print(f"📊 Found {files_found} data files, total samples: {len(self.samples)}")
+        # Load evaluation data
+        eval_path = os.path.join(self.data_dir, 'arc-agi_evaluation_challenges.json')
+        if os.path.exists(eval_path):
+            with open(eval_path, 'r') as f:
+                eval_data = json.load(f)
+            for task_id, task_data in eval_data.items():
+                # Process ALL training examples from evaluation set
+                for example in task_data['train']:
+                    sample = self._create_extended_color_sample(example, True)
+                    if sample:
+                        self.samples.append(sample)
     
     def _process_extended_color_task(self, task: Dict, source_file: str):
         """Process task with extended color analysis"""

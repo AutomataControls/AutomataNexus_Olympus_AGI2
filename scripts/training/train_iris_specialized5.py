@@ -32,12 +32,12 @@ from src.models.iris_v4_enhanced import IrisV4Enhanced
 
 # Enhanced IRIS V5 Configuration - MINERVA-LIKE SPEED OPTIMIZATION
 IRIS_V5_CONFIG = {
-    'batch_size': 32,
-    'learning_rate': 0.001,
-    'num_epochs': 5,
-    'gradient_accumulation': 1,
-    'epochs_per_stage': 1,
-    'curriculum_stages': 5,
+    'batch_size': 48,
+    'learning_rate': 0.0002,
+    'num_epochs': 300,
+    'gradient_accumulation': 5,
+    'epochs_per_stage': 30,
+    'curriculum_stages': 10,
     
     # Enhanced Loss Configuration - MINERVA-LIKE
     'transform_penalty': 0.06,  # Even lower - max color exploration like MINERVA

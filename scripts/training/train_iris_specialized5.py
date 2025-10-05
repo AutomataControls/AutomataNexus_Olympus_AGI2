@@ -474,11 +474,10 @@ class ExtendedColorDataset(Dataset):
         }
     
     def __len__(self) -> int:
-        return len(self.samples) * 5
+        return len(self.samples)
     
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, Dict]:
-        real_idx = idx % len(self.samples)
-        sample = self.samples[real_idx]
+        sample = self.samples[idx]
         
         # Convert to tensors
         input_tensor = torch.tensor(sample['input'], dtype=torch.long)

@@ -314,26 +314,38 @@ class ExtendedColorDataset(Dataset):
     def _load_extended_color_data(self):
         """Load data with extended color complexity focus and ARC specificity"""
         data_files = [
-            'arc_training_padded.json',
-            'arc_evaluation_padded.json',
-            'synthetic_data_mega_v4.json'
+            'arc-agi_training_challenges.json',
+            'arc-agi_evaluation_challenges.json',
+            'arc-agi_test_challenges.json'
         ]
+        
+        print(f"🔍 Looking for data files in: {self.data_dir}")
         
         # Emphasize ARC data more in V5
         arc_emphasis = 3 if self.arc_specific else 1
+        files_found = 0
         
         for file in data_files:
             file_path = os.path.join(self.data_dir, file)
             if os.path.exists(file_path):
+                files_found += 1
+                print(f"✅ Found: {file}")
                 with open(file_path, 'r') as f:
                     data = json.load(f)
                     
                     # Process ARC data multiple times for emphasis
                     emphasis_count = arc_emphasis if 'arc_' in file else 1
                     
+                    before_count = len(self.samples)
                     for _ in range(emphasis_count):
                         for task in data:
                             self._process_extended_color_task(task, file)
+                    after_count = len(self.samples)
+                    print(f"   Added {after_count - before_count} samples from {file}")
+            else:
+                print(f"❌ Missing: {file}")
+        
+        print(f"📊 Found {files_found} data files, total samples: {len(self.samples)}")
     
     def _process_extended_color_task(self, task: Dict, source_file: str):
         """Process task with extended color analysis"""

@@ -27,18 +27,18 @@ sys.path.append('/content/AutomataNexus_Olympus_AGI2')
 sys.path.append('/content/AutomataNexus_Olympus_AGI2/src')
 sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
 
-# Import enhanced ATLAS V4 model
-from src.models.atlas_v4_enhanced import AtlasV4Enhanced
+# Import ATLAS V5 enhanced model
+from src.models.atlas_v5_enhanced import AtlasV5Enhanced
 
 # Enhanced ATLAS V5 Configuration - Extended Spatial Intelligence Focus
 ATLAS_V5_CONFIG = {
     # Core Training Parameters - Enhanced for V5 Extended Training
-    'batch_size': 24,  # Smaller for more complex V5 spatial computations
-    'learning_rate': 0.00010,  # Lower for fine-tuning from V4
-    'num_epochs': 900,  # Extended training: 18 stages x 50 epochs
-    'gradient_accumulation': 10,  # Effective batch: 240
-    'epochs_per_stage': 50,  # Extended epochs per stage
-    'curriculum_stages': 18,  # Extended 18-stage spatial progression
+    'batch_size': 48,
+    'learning_rate': 0.0002,
+    'num_epochs': 600,
+    'gradient_accumulation': 5,
+    'epochs_per_stage': 30,
+    'curriculum_stages': 20,
     
     # Enhanced Loss Configuration
     'transform_penalty': 0.025,  # Even lower - max spatial exploration
@@ -529,10 +529,10 @@ def train_atlas_specialized_v5():
     print(f"\033[96mInitializing ATLAS V5 Extended Spatial Intelligence Training...\033[0m")
     
     # Initialize enhanced model
-    model = AtlasV4Enhanced(
+    model = AtlasV5Enhanced(
         max_grid_size=30,
-        d_model=256,
-        num_layers=6,
+        d_model=128,
+        num_layers=2,
         preserve_weights=True
     ).to(device)
     

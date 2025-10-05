@@ -540,20 +540,18 @@ def train_iris_specialized_v4():
             stage_idx, stage_config, training_stats
         )
         
-        # Update best performance
-        if stage_performance > best_performance:
+        # Update best performance - SAVE LESS FREQUENTLY FOR SPEED
+        if stage_performance > best_performance and stage_performance > 0.65:  # Only save if > 65%
             best_performance = stage_performance
-            # Save best model
-            os.makedirs('/content/AutomataNexus_Olympus_AGI2/models', exist_ok=True)
-            torch.save({
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'scheduler_state_dict': scheduler.state_dict(),
-                'best_performance': best_performance,
-                'stage': stage_idx,
-                'config': IRIS_V4_CONFIG,
-                'ensemble_state': model.get_ensemble_state()
-            }, '/content/AutomataNexus_Olympus_AGI2/models/iris_v4_best.pt')
+            # FAST save - minimal state for speed
+            if stage_idx % 3 == 0:  # Only save every 3rd stage
+                os.makedirs('/content/AutomataNexus_Olympus_AGI2/models', exist_ok=True)
+                torch.save({
+                    'model_state_dict': model.state_dict(),
+                    'best_performance': best_performance,
+                    'stage': stage_idx,
+                    'config': IRIS_V4_CONFIG
+                }, '/content/AutomataNexus_Olympus_AGI2/models/iris_v4_best.pt')
                 print(f"\033[96mNew best chromatic performance: {best_performance:.2%} - Model saved!\033[0m")
         
         # MINIMAL memory cleanup for speed

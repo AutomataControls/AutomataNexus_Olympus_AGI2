@@ -61,7 +61,7 @@ IRIS_V5_CONFIG = {
     'chromatic_positional_encoding': False,
     'ensemble_preparation': False,
     'test_time_adaptation': False,
-    'arc_color_training': False
+    'arc_color_training': False,
     
     # Advanced Training Features
     'label_smoothing': 0.018,  # Refined for color precision

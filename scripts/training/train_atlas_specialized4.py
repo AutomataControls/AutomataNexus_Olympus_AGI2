@@ -32,12 +32,12 @@ from src.models.atlas_v4_enhanced import AtlasV4Enhanced
 # Enhanced ATLAS V4 Configuration - 2D Spatial Reasoning Focus (OPTIMIZED FOR SPEED)
 ATLAS_V4_CONFIG = {
     # Core Training Parameters - OPTIMIZED for V4 Speed + Performance
-    'batch_size': 8,  # ULTRA optimized for maximum speed
-    'learning_rate': 0.0005,  # Higher for fastest convergence
-    'num_epochs': 24,  # EXTREME reduction: 12 stages x 2 epochs
-    'gradient_accumulation': 1,  # No accumulation for speed
-    'epochs_per_stage': 2,  # MINIMAL epochs per stage
-    'curriculum_stages': 12,  # Keep 12 stages
+    'batch_size': 20,  # MINERVA-like efficiency 
+    'learning_rate': 0.0002,  # Stable like MINERVA
+    'num_epochs': 60,  # Proper training: 10 stages x 6 epochs
+    'gradient_accumulation': 2,  # Effective batch 40 for stability
+    'epochs_per_stage': 6,  # Adequate training per stage
+    'curriculum_stages': 10,  # Streamlined spatial curriculum
     
     # Enhanced Loss Configuration
     'transform_penalty': 0.03,  # Very low - encourage spatial transformations
@@ -53,46 +53,44 @@ ATLAS_V4_CONFIG = {
     'multiscale_processing_weight': 0.4,  # Multi-scale understanding
     'ensemble_coordination_weight': 0.35,  # Ensemble integration
     
-    # ATLAS V4-Specific Enhancements - SPEED OPTIMIZED
-    'spatial_transformer_layers': 3,  # Reduced for speed (was 6)
-    'geometric_positional_encoding': False,  # Disabled for speed
-    'multiscale_processing': False,  # Disabled for speed
-    'ensemble_preparation': False,  # Disabled for speed
-    'test_time_adaptation': False,  # Disabled for speed
+    # ATLAS V4-Specific Enhancements - KEEP FUNCTIONALITY
+    'spatial_transformer_layers': 4,  # Balanced for speed + capability
+    'geometric_positional_encoding': True,  # Keep 2D spatial encoding
+    'multiscale_processing': True,  # Keep multi-scale features
+    'ensemble_preparation': True,  # Keep OLYMPUS preparation
+    'test_time_adaptation': True,  # Keep spatial adaptation
     
-    # Advanced Training Features - ALL DISABLED FOR SPEED
-    'label_smoothing': 0.0,  # Disabled for speed
-    'pattern_diversity_bonus': False,
-    'geometric_reasoning_bonus': False,
-    'spatial_memory_bonus': False,
-    'transformation_composition_bonus': False,
+    # Advanced Training Features - KEEP FUNCTIONALITY
+    'label_smoothing': 0.012,  # Light for spatial precision
+    'pattern_diversity_bonus': True,
+    'geometric_reasoning_bonus': True,
+    'spatial_memory_bonus': True,
+    'transformation_composition_bonus': True,
     
-    # Learning Rate Scheduling - MINIMAL FOR SPEED
-    'warmup_epochs': 0,  # No warmup for speed
-    'cosine_restarts': False,  # Disabled for speed
-    'restart_multiplier': 1.0,
-    'plateau_patience': 5,
+    # Learning Rate Scheduling - MINERVA-like
+    'warmup_epochs': 12,  # Proper warmup
+    'cosine_restarts': True,
+    'restart_multiplier': 1.3,
+    'plateau_patience': 18,
 }
 
-# Optimized 12-Stage Progressive Configuration - Efficient Spatial Learning
+# Efficient 10-Stage Spatial Intelligence Curriculum - MINERVA-like
 STAGE_CONFIG = [
-    # Foundation Spatial Understanding (6x6 - 10x10)
+    # Foundation Spatial Understanding
     {'stage': 0, 'max_grid_size': 6,  'synthesis_ratio': 0.8, 'spatial_complexity': 'basic_shapes', 'focus': 'shape_recognition'},
     {'stage': 1, 'max_grid_size': 8,  'synthesis_ratio': 0.75, 'spatial_complexity': 'simple_rotation', 'focus': 'rotation_detection'},
     {'stage': 2, 'max_grid_size': 10, 'synthesis_ratio': 0.7, 'spatial_complexity': 'reflection_basic', 'focus': 'reflection_learning'},
     
-    # Intermediate Spatial Transformations (12x12 - 18x18)
-    {'stage': 3, 'max_grid_size': 12, 'synthesis_ratio': 0.65, 'spatial_complexity': 'translation_basic', 'focus': 'translation_understanding'},
-    {'stage': 4, 'max_grid_size': 14, 'synthesis_ratio': 0.6, 'spatial_complexity': 'affine_basic', 'focus': 'affine_transformations'},
-    {'stage': 5, 'max_grid_size': 16, 'synthesis_ratio': 0.55, 'spatial_complexity': 'composite_simple', 'focus': 'composite_transforms'},
-    {'stage': 6, 'max_grid_size': 18, 'synthesis_ratio': 0.5, 'spatial_complexity': 'scaling_rotation', 'focus': 'scaling_with_rotation'},
+    # Intermediate Spatial Transformations
+    {'stage': 3, 'max_grid_size': 12, 'synthesis_ratio': 0.6, 'spatial_complexity': 'translation_basic', 'focus': 'translation_understanding'},
+    {'stage': 4, 'max_grid_size': 15, 'synthesis_ratio': 0.55, 'spatial_complexity': 'affine_basic', 'focus': 'affine_transformations'},
+    {'stage': 5, 'max_grid_size': 18, 'synthesis_ratio': 0.5, 'spatial_complexity': 'composite_simple', 'focus': 'composite_transforms'},
+    {'stage': 6, 'max_grid_size': 20, 'synthesis_ratio': 0.45, 'spatial_complexity': 'scaling_rotation', 'focus': 'scaling_with_rotation'},
     
-    # Advanced Spatial Mastery (20x20 - 30x30)
-    {'stage': 7, 'max_grid_size': 20, 'synthesis_ratio': 0.45, 'spatial_complexity': 'complex_geometric', 'focus': 'complex_geometry'},
-    {'stage': 8, 'max_grid_size': 22, 'synthesis_ratio': 0.4, 'spatial_complexity': 'pattern_spatial', 'focus': 'spatial_patterns'},
-    {'stage': 9, 'max_grid_size': 25, 'synthesis_ratio': 0.35, 'spatial_complexity': 'multiscale_basic', 'focus': 'multiscale_reasoning'},
-    {'stage': 10, 'max_grid_size': 28, 'synthesis_ratio': 0.3, 'spatial_complexity': 'ensemble_spatial', 'focus': 'ensemble_coordination'},
-    {'stage': 11, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'spatial_complexity': 'spatial_genius', 'focus': 'spatial_intelligence'}
+    # Advanced Spatial Mastery
+    {'stage': 7, 'max_grid_size': 24, 'synthesis_ratio': 0.35, 'spatial_complexity': 'complex_geometric', 'focus': 'complex_geometry'},
+    {'stage': 8, 'max_grid_size': 28, 'synthesis_ratio': 0.3, 'spatial_complexity': 'pattern_spatial', 'focus': 'spatial_patterns'},
+    {'stage': 9, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'spatial_complexity': 'spatial_genius', 'focus': 'spatial_intelligence'}
 ]
 
 # Device setup

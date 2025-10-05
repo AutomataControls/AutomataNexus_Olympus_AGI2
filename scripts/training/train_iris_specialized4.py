@@ -32,12 +32,12 @@ from src.models.iris_v4_enhanced import IrisV4Enhanced
 # Enhanced IRIS V4 Configuration - Chromatic Intelligence Focus
 IRIS_V4_CONFIG = {
     # Core Training Parameters - Enhanced for V4 Color Intelligence
-    'batch_size': 2,  # ABSOLUTE MINIMUM for maximum speed
-    'learning_rate': 0.001,  # VERY high for fastest convergence
-    'num_epochs': 6,  # ULTRA reduction: 6 stages x 1 epoch
-    'gradient_accumulation': 1,  # No accumulation - immediate updates
-    'epochs_per_stage': 1,  # SINGLE epoch per stage
-    'curriculum_stages': 6,  # Keep 6 stages
+    'batch_size': 16,  # MINERVA-like efficiency
+    'learning_rate': 0.0002,  # Stable like MINERVA
+    'num_epochs': 48,  # Proper training: 8 stages x 6 epochs
+    'gradient_accumulation': 3,  # Effective batch 48 for stability
+    'epochs_per_stage': 6,  # Adequate training per stage
+    'curriculum_stages': 8,  # Full color curriculum
     
     # Enhanced Loss Configuration
     'transform_penalty': 0.05,  # Low - encourage color transformations
@@ -53,36 +53,42 @@ IRIS_V4_CONFIG = {
     'color_space_weight': 0.35,  # Color space analysis
     'ensemble_coordination_weight': 0.3,  # Ensemble integration
     
-    # IRIS V4-Specific Enhancements - SPEED OPTIMIZED
-    'chromatic_transformer_layers': 3,  # Reduced for speed (was 6)
-    'color_space_processing': False,  # Disabled for speed
-    'chromatic_positional_encoding': False,  # Disabled for speed
-    'ensemble_preparation': False,  # Disabled for speed
-    'test_time_adaptation': False,  # Disabled for speed
+    # IRIS V4-Specific Enhancements - KEEP FUNCTIONALITY
+    'chromatic_transformer_layers': 4,  # Balanced for speed + capability
+    'color_space_processing': True,  # Keep color intelligence
+    'chromatic_positional_encoding': True,  # Keep color-aware positioning
+    'ensemble_preparation': True,  # Keep OLYMPUS preparation
+    'test_time_adaptation': True,  # Keep chromatic adaptation
     
-    # Advanced Training Features - ALL DISABLED FOR SPEED
-    'label_smoothing': 0.0,  # Disabled for speed
-    'pattern_diversity_bonus': False,
-    'chromatic_reasoning_bonus': False,
-    'color_harmony_bonus': False,
-    'color_expertise_bonus': False,
+    # Advanced Training Features - KEEP FUNCTIONALITY
+    'label_smoothing': 0.015,  # Light for color precision
+    'pattern_diversity_bonus': True,
+    'chromatic_reasoning_bonus': True,
+    'color_harmony_bonus': True,
+    'color_expertise_bonus': True,
     
-    # Learning Rate Scheduling - MINIMAL FOR SPEED
-    'warmup_epochs': 0,  # No warmup for speed
-    'cosine_restarts': False,  # Disabled for speed
-    'restart_multiplier': 1.0,
-    'plateau_patience': 5,
+    # Learning Rate Scheduling - MINERVA-like
+    'warmup_epochs': 15,  # Proper warmup
+    'cosine_restarts': True,
+    'restart_multiplier': 1.2,
+    'plateau_patience': 15,
 }
 
-# ULTRA FAST 6-Stage Configuration - Speed Optimized Color Intelligence
+# Efficient 8-Stage Color Intelligence Curriculum - MINERVA-like
 STAGE_CONFIG = [
-    # Speed-optimized Color Understanding
-    {'stage': 0, 'max_grid_size': 8,  'synthesis_ratio': 0.7, 'color_complexity': 'basic_colors', 'focus': 'primary_color_recognition'},
-    {'stage': 1, 'max_grid_size': 12, 'synthesis_ratio': 0.6, 'color_complexity': 'color_patterns', 'focus': 'color_pattern_recognition'},
-    {'stage': 2, 'max_grid_size': 16, 'synthesis_ratio': 0.5, 'color_complexity': 'complex_mapping', 'focus': 'complex_color_mapping'},
-    {'stage': 3, 'max_grid_size': 20, 'synthesis_ratio': 0.4, 'color_complexity': 'chromatic_logic', 'focus': 'chromatic_logical_rules'},
-    {'stage': 4, 'max_grid_size': 25, 'synthesis_ratio': 0.3, 'color_complexity': 'expert_chromatic', 'focus': 'expert_color_analysis'},
-    {'stage': 5, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'color_complexity': 'color_genius', 'focus': 'color_intelligence_mastery'}
+    # Foundation Color Understanding 
+    {'stage': 0, 'max_grid_size': 6,  'synthesis_ratio': 0.8, 'color_complexity': 'basic_colors', 'focus': 'primary_color_recognition'},
+    {'stage': 1, 'max_grid_size': 8,  'synthesis_ratio': 0.7, 'color_complexity': 'color_patterns', 'focus': 'color_pattern_recognition'},
+    {'stage': 2, 'max_grid_size': 10, 'synthesis_ratio': 0.6, 'color_complexity': 'simple_mapping', 'focus': 'basic_color_mapping'},
+    
+    # Intermediate Chromatic Reasoning
+    {'stage': 3, 'max_grid_size': 12, 'synthesis_ratio': 0.5, 'color_complexity': 'complex_mapping', 'focus': 'complex_color_mapping'},
+    {'stage': 4, 'max_grid_size': 15, 'synthesis_ratio': 0.45, 'color_complexity': 'chromatic_logic', 'focus': 'chromatic_logical_rules'},
+    {'stage': 5, 'max_grid_size': 18, 'synthesis_ratio': 0.4, 'color_complexity': 'color_space', 'focus': 'color_space_reasoning'},
+    
+    # Advanced Chromatic Mastery
+    {'stage': 6, 'max_grid_size': 25, 'synthesis_ratio': 0.3, 'color_complexity': 'expert_chromatic', 'focus': 'expert_color_analysis'},
+    {'stage': 7, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'color_complexity': 'color_genius', 'focus': 'color_intelligence_mastery'}
 ]
 
 # Device setup

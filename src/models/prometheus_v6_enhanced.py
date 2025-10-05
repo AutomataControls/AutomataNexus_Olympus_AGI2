@@ -56,21 +56,35 @@ class EnhancedPatternProcessor(nn.Module):
         self.pattern_analyzer = nn.Sequential(
             nn.Linear(d_model, d_model // 2),
             nn.ReLU(),
-            nn.Linear(d_model // 2, 64)
+            nn.Linear(d_model // 2, 96)  # More pattern features
         )
         self.synthesis_detector = nn.Sequential(
-            nn.Linear(d_model, 32),
+            nn.Linear(d_model, 48),  # More synthesis patterns
             nn.Softmax(dim=-1)
         )
         self.creative_transform_predictor = nn.Sequential(
             nn.Linear(d_model, d_model // 2),
             nn.ReLU(),
-            nn.Linear(d_model // 2, 100)
+            nn.Linear(d_model // 2, 100)  # Creative transformation matrix
         )
+        # Enhanced abstraction analyzer
         self.abstraction_analyzer = nn.Sequential(
-            nn.Linear(d_model, 48),
+            nn.Linear(d_model, 64),
             nn.ReLU(),
-            nn.Linear(48, 16)
+            nn.Linear(64, 24)  # More abstraction levels
+        )
+        # Add creative harmony detector
+        self.harmony_detector = nn.Sequential(
+            nn.Linear(d_model, 40),
+            nn.ReLU(),
+            nn.Linear(40, 20),  # Creative harmony patterns
+            nn.Softmax(dim=-1)
+        )
+        # Add pattern relationship analyzer
+        self.relationship_analyzer = nn.Sequential(
+            nn.Linear(d_model, 56),
+            nn.ReLU(),
+            nn.Linear(56, 20)  # Pattern relationships
         )
         
     def forward(self, x):
@@ -79,18 +93,22 @@ class EnhancedPatternProcessor(nn.Module):
         synthesis_patterns = self.synthesis_detector(x)
         creative_transforms = self.creative_transform_predictor(x)
         abstractions = self.abstraction_analyzer(x)
+        harmony_patterns = self.harmony_detector(x)
+        relationships = self.relationship_analyzer(x)
         
         return {
             'pattern_features': pattern_features,
             'synthesis_patterns': synthesis_patterns,
             'creative_transformation_matrix': F.softmax(creative_transforms.view(-1, 10, 10), dim=-1),
-            'abstraction_levels': abstractions
+            'abstraction_levels': abstractions,
+            'harmony_patterns': harmony_patterns,
+            'pattern_relationships': relationships
         }
 
 class PrometheusV6Enhanced(nn.Module):
     """PROMETHEUS V6 Enhanced - Fast but intelligent creative pattern generation"""
     
-    def __init__(self, max_grid_size: int = 30, d_model: int = 128, num_layers: int = 2, preserve_weights: bool = True):
+    def __init__(self, max_grid_size: int = 30, d_model: int = 128, num_layers: int = 3, preserve_weights: bool = True):
         super().__init__()
         self.max_grid_size = max_grid_size
         self.d_model = d_model
@@ -110,35 +128,43 @@ class PrometheusV6Enhanced(nn.Module):
         # Enhanced pattern processing
         self.pattern_processor = EnhancedPatternProcessor(d_model)
         
-        # Enhanced creative memory (64 patterns for more intelligence)
-        self.creative_memory = nn.Parameter(torch.randn(64, d_model) * 0.02)
+        # Enhanced creative memory (96 patterns for more intelligence)
+        self.creative_memory = nn.Parameter(torch.randn(96, d_model) * 0.02)
         
         # Enhanced pattern rule extractor
         self.rule_extractor = nn.Sequential(
             nn.Linear(d_model, d_model // 2),
             nn.ReLU(),
-            nn.Linear(d_model // 2, 64)
+            nn.Linear(d_model // 2, 80)  # More rule encoding
         )
         
-        # Pattern type classifier
+        # Enhanced pattern type classifier
         self.pattern_classifier = nn.Sequential(
-            nn.Linear(d_model, 32),
+            nn.Linear(d_model, 48),
             nn.ReLU(),
-            nn.Linear(32, 8),
+            nn.Linear(48, 12),  # More pattern types
+            nn.Softmax(dim=-1)
+        )
+        
+        # Creative abstraction detector
+        self.abstraction_detector = nn.Sequential(
+            nn.Linear(d_model, 40),
+            nn.ReLU(),
+            nn.Linear(40, 16),
             nn.Softmax(dim=-1)
         )
         
         # Enhanced decoder with more capacity
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(d_model + 64, d_model, 3, padding=1),
+            nn.ConvTranspose2d(d_model + 80, d_model, 3, padding=1),  # Updated for 80 rules
             nn.BatchNorm2d(d_model),
             nn.ReLU(),
             nn.ConvTranspose2d(d_model, d_model // 2, 3, padding=1),
             nn.BatchNorm2d(d_model // 2),
             nn.ReLU(),
-            nn.ConvTranspose2d(d_model // 2, 32, 3, padding=1),
+            nn.ConvTranspose2d(d_model // 2, 48, 3, padding=1),  # More intermediate features
             nn.ReLU(),
-            nn.ConvTranspose2d(32, 10, 1)
+            nn.ConvTranspose2d(48, 10, 1)
         )
         
         # Mixing parameters
@@ -210,8 +236,8 @@ class PrometheusV6Enhanced(nn.Module):
             global_features.unsqueeze(1), 
             self.creative_memory.unsqueeze(0), 
             dim=2
-        )  # B, 64
-        top_patterns = memory_similarity.topk(8, dim=1)[0].mean(dim=1, keepdim=True)
+        )  # B, 96
+        top_patterns = memory_similarity.topk(10, dim=1)[0].mean(dim=1, keepdim=True)
         
         # Enhanced rule extraction
         creative_rules = self.rule_extractor(global_features)
@@ -219,9 +245,12 @@ class PrometheusV6Enhanced(nn.Module):
         # Pattern classification
         pattern_types = self.pattern_classifier(global_features)
         
+        # Abstraction detection
+        abstraction_levels = self.abstraction_detector(global_features)
+        
         # Enhanced prediction with more features
         enhanced_features = x.permute(0, 3, 1, 2)  # B, d_model, H, W
-        rule_spatial = creative_rules.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, H, W)
+        rule_spatial = creative_rules.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, H, W)  # 80 features
         combined_features = torch.cat([enhanced_features, rule_spatial], dim=1)
         
         enhanced_prediction = self.decoder(combined_features)
@@ -267,7 +296,10 @@ class PrometheusV6Enhanced(nn.Module):
             'pattern_types': pattern_types,
             'synthesis_patterns': pattern_analysis['synthesis_patterns'],
             'creative_transformation_matrix': pattern_analysis['creative_transformation_matrix'],
-            'abstraction_levels': pattern_analysis['abstraction_levels']
+            'abstraction_levels': abstraction_levels,
+            'harmony_patterns': pattern_analysis['harmony_patterns'],
+            'pattern_relationships': pattern_analysis['pattern_relationships'],
+            'enhanced_abstractions': pattern_analysis['abstraction_levels']
         }
         
         # Add original outputs for compatibility

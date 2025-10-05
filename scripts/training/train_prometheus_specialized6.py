@@ -282,7 +282,7 @@ def train_prometheus_specialized_v6():
     model = PrometheusV6Enhanced(
         max_grid_size=30,
         d_model=128,
-        num_layers=2,
+        num_layers=3,
         preserve_weights=True
     ).to(device)
     
@@ -403,7 +403,7 @@ def train_prometheus_specialized_v6():
                 'config': PROMETHEUS_V6_CONFIG,
                 'ensemble_state': model.get_ensemble_state(),
                 'training_version': 'V6'
-            }, '/content/AutomataNexus_Olympus_AGI2/models/prometheus_v6_best.pt')
+            }, '/content/AutomataNexus_Olympus_AGI2/models/prometheus_best.pt')
             print(f"\033[96mNew best V6 creative performance: {best_performance:.2%} - Model saved!\033[0m")
         
         # Memory cleanup

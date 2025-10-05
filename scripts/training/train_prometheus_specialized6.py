@@ -1,8 +1,8 @@
 """
-PROMETHEUS Specialized Training V6 - Ultimate Creative Pattern Generation Master for ARC-AGI-2
-Complete grid mastery (5x5 to 30x30) with deep generative architecture and creative synthesis
-Builds upon V5 with revolutionary creative intelligence capabilities and massive data pipeline
-Target: 90%+ performance with ultimate creative intelligence mastery
+PROMETHEUS Specialized Training V6 - Fast Creative Pattern Generation Expert for ARC-AGI-2
+Enhanced V6 trainer that builds upon V4 with optimized speed and intelligence
+Loads from prometheus_v4_best.pt and adds fast creative intelligence mastery
+Target: 70%+ performance with fast creative intelligence training
 """
 
 import torch
@@ -27,17 +27,17 @@ sys.path.append('/content/AutomataNexus_Olympus_AGI2')
 sys.path.append('/content/AutomataNexus_Olympus_AGI2/src')
 sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
 
-# Import enhanced PROMETHEUS V4 model (contains V6 improvements)
-from src.models.prometheus_v4_enhanced import PrometheusV4Enhanced
+# Import PROMETHEUS V6 enhanced model
+from src.models.prometheus_v6_enhanced import PrometheusV6Enhanced
 
 # Enhanced PROMETHEUS V6 Configuration - Ultimate Creative Intelligence Focus
 PROMETHEUS_V6_CONFIG = {
     # Core Training Parameters - OPTIMIZED for V6 Ultimate Performance
-    'batch_size': 22,  # Balanced for deep creative architecture
-    'learning_rate': 0.00016,  # Lower for deep creative learning
-    'num_epochs': 560,  # Extended: 20 stages x 28 epochs
-    'gradient_accumulation': 6,  # Effective batch 132 for stability
-    'epochs_per_stage': 28,  # Deep learning per stage
+    'batch_size': 48,
+    'learning_rate': 0.0002,
+    'num_epochs': 600,
+    'gradient_accumulation': 5,
+    'epochs_per_stage': 30,
     'curriculum_stages': 20,  # Complete grid mastery 5x5 -> 30x30
     
     # Enhanced Loss Configuration
@@ -132,10 +132,10 @@ def train_prometheus_specialized_v6():
     print(f"\033[96mInitializing PROMETHEUS V6 Ultimate Creative Intelligence Training...\033[0m")
     
     # Initialize enhanced model (V4 model contains all V6 improvements)
-    model = PrometheusV4Enhanced(
+    model = PrometheusV6Enhanced(
         max_grid_size=30,
-        d_model=256,
-        num_layers=8,  # Deep architecture for ultimate performance
+        d_model=128,
+        num_layers=2,
         preserve_weights=True
     ).to(device)
     

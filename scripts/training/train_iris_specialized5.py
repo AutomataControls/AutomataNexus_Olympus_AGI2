@@ -483,21 +483,6 @@ class ExtendedColorDataset(Dataset):
         input_tensor = torch.tensor(sample['input'], dtype=torch.long)
         output_tensor = torch.tensor(sample['output'], dtype=torch.long)
         
-        # Apply geometric augmentations (50% chance)
-        if random.random() < 0.5:
-            # Random rotation (90, 180, 270 degrees)
-            k = random.randint(1, 3)
-            input_tensor = torch.rot90(input_tensor, k=k, dims=[0, 1])
-            output_tensor = torch.rot90(output_tensor, k=k, dims=[0, 1])
-        
-        if random.random() < 0.3:
-            # Random flip
-            if random.random() < 0.5:
-                input_tensor = torch.flip(input_tensor, dims=[0])  # Vertical flip
-                output_tensor = torch.flip(output_tensor, dims=[0])
-            else:
-                input_tensor = torch.flip(input_tensor, dims=[1])  # Horizontal flip
-                output_tensor = torch.flip(output_tensor, dims=[1])
         
         # Pad to consistent size
         target_h = min(self.max_grid_size, max(input_tensor.shape[0], output_tensor.shape[0]))

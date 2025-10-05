@@ -27,8 +27,8 @@ sys.path.append('/content/AutomataNexus_Olympus_AGI2')
 sys.path.append('/content/AutomataNexus_Olympus_AGI2/src')
 sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
 
-# Import IRIS V5 Extended model
-from src.models.iris_v5_extended import IrisV5Extended
+# Import enhanced IRIS V4 model
+from src.models.iris_v4_enhanced import IrisV4Enhanced
 
 # Enhanced IRIS V5 Configuration - MINERVA-LIKE SPEED OPTIMIZATION
 IRIS_V5_CONFIG = {
@@ -530,8 +530,8 @@ def train_iris_specialized_v5():
     """Main training function for IRIS V5"""
     print(f"\033[96mInitializing IRIS V5 Extended Color Intelligence Training...\033[0m")
     
-    # Initialize V5 extended model (contains V4 core)
-    model = IrisV5Extended(
+    # Initialize enhanced model (same as MINERVA approach)
+    model = IrisV4Enhanced(
         max_grid_size=30,
         d_model=256,
         num_layers=6,
@@ -551,25 +551,10 @@ def train_iris_specialized_v5():
     for model_path in model_paths:
         if os.path.exists(model_path):
             try:
-                # Manual weight loading with compatibility
-                checkpoint = torch.load(model_path, map_location=device)
-                if 'model_state_dict' in checkpoint:
-                    state_dict = checkpoint['model_state_dict']
-                else:
-                    state_dict = checkpoint
-                
-                # Load compatible parameters manually
-                model_dict = model.state_dict()
-                compatible_params = {}
-                
-                for name, param in state_dict.items():
-                    if name in model_dict and model_dict[name].shape == param.shape:
-                        compatible_params[name] = param
-                
-                model_dict.update(compatible_params)
-                model.load_state_dict(model_dict)
-                
-                print(f"\033[96mIRIS V4: Loaded {len(compatible_params)}/{len(state_dict)} compatible parameters\033[0m")
+                # Use built-in compatible weight loading
+                success = model.load_compatible_weights(model_path)
+                if success:
+                    print(f"\033[96mIRIS V4: Successfully loaded compatible weights from {model_path}\033[0m")
                 weights_loaded = True
                 break
             except Exception as e:

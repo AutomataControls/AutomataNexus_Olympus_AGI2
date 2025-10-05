@@ -29,15 +29,15 @@ sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
 # Import enhanced IRIS V4 model
 from src.models.iris_v4_enhanced import IrisV4Enhanced
 
-# ULTRA FAST IRIS V4 Configuration - MAXIMUM SPEED
+# NUCLEAR SPEED IRIS V4 Configuration - ABSOLUTE MAXIMUM SPEED
 IRIS_V4_CONFIG = {
-    # Core Training Parameters - MAXIMUM SPEED OPTIMIZATION
-    'batch_size': 16,  # Back to original - 32 was too big
-    'learning_rate': 0.0005,  # Even higher LR for very fast convergence
-    'num_epochs': 13,  # MINIMAL: 13 stages x 1 epoch each
-    'gradient_accumulation': 1,  # NO accumulation for speed
+    # Core Training Parameters - NUCLEAR SPEED OPTIMIZATION
+    'batch_size': 8,  # SMALL batches for speed
+    'learning_rate': 0.001,  # VERY high LR for instant convergence
+    'num_epochs': 5,  # ULTRA MINIMAL: 5 stages only
+    'gradient_accumulation': 1,  # NO accumulation
     'epochs_per_stage': 1,  # SINGLE epoch per stage
-    'curriculum_stages': 13,  # Keep all color stages
+    'curriculum_stages': 5,  # ONLY 5 stages for speed
     
     # SIMPLIFIED Loss Configuration for Speed
     'transform_penalty': 0.02,  # Minimal penalty
@@ -74,26 +74,14 @@ IRIS_V4_CONFIG = {
     'plateau_patience': 1,  # Immediate plateau detection
 }
 
-# ULTRA FAST 13-Stage Color Intelligence Curriculum - SPEED OPTIMIZED
+# NUCLEAR SPEED 5-Stage Color Intelligence Curriculum - ABSOLUTE MINIMUM
 STAGE_CONFIG = [
-    # Foundation Color Understanding (Fast progression)
-    {'stage': 0, 'max_grid_size': 6,  'synthesis_ratio': 0.9, 'color_complexity': 'basic_colors', 'focus': 'primary_color_recognition'},
-    {'stage': 1, 'max_grid_size': 7,  'synthesis_ratio': 0.85, 'color_complexity': 'color_patterns', 'focus': 'color_pattern_recognition'},
-    {'stage': 2, 'max_grid_size': 8, 'synthesis_ratio': 0.8, 'color_complexity': 'simple_mapping', 'focus': 'basic_color_mapping'},
-    {'stage': 3, 'max_grid_size': 10, 'synthesis_ratio': 0.75, 'color_complexity': 'color_relations', 'focus': 'color_relationships'},
-    {'stage': 4, 'max_grid_size': 12, 'synthesis_ratio': 0.7, 'color_complexity': 'complex_mapping', 'focus': 'complex_color_mapping'},
-    
-    # Intermediate Chromatic Reasoning (Fast progression)
-    {'stage': 5, 'max_grid_size': 14, 'synthesis_ratio': 0.65, 'color_complexity': 'chromatic_logic', 'focus': 'chromatic_logical_rules'},
-    {'stage': 6, 'max_grid_size': 16, 'synthesis_ratio': 0.6, 'color_complexity': 'color_space', 'focus': 'color_space_reasoning'},
-    {'stage': 7, 'max_grid_size': 18, 'synthesis_ratio': 0.55, 'color_complexity': 'color_transformations', 'focus': 'color_transformations'},
-    {'stage': 8, 'max_grid_size': 20, 'synthesis_ratio': 0.5, 'color_complexity': 'color_sequences', 'focus': 'color_sequences'},
-    
-    # Advanced Chromatic Mastery (Fast progression)
-    {'stage': 9, 'max_grid_size': 22, 'synthesis_ratio': 0.45, 'color_complexity': 'color_hierarchies', 'focus': 'color_hierarchies'},
-    {'stage': 10, 'max_grid_size': 25, 'synthesis_ratio': 0.4, 'color_complexity': 'expert_chromatic', 'focus': 'expert_color_analysis'},
-    {'stage': 11, 'max_grid_size': 28, 'synthesis_ratio': 0.35, 'color_complexity': 'color_mastery', 'focus': 'color_mastery'},
-    {'stage': 12, 'max_grid_size': 30, 'synthesis_ratio': 0.3, 'color_complexity': 'color_genius', 'focus': 'color_intelligence_mastery'}
+    # ONLY Essential Color Understanding - SPEED FIRST
+    {'stage': 0, 'max_grid_size': 8,  'synthesis_ratio': 0.95, 'color_complexity': 'basic_colors', 'focus': 'primary_color_recognition'},
+    {'stage': 1, 'max_grid_size': 12, 'synthesis_ratio': 0.9, 'color_complexity': 'color_patterns', 'focus': 'color_pattern_recognition'},
+    {'stage': 2, 'max_grid_size': 16, 'synthesis_ratio': 0.85, 'color_complexity': 'simple_mapping', 'focus': 'basic_color_mapping'},
+    {'stage': 3, 'max_grid_size': 20, 'synthesis_ratio': 0.8, 'color_complexity': 'complex_mapping', 'focus': 'complex_color_mapping'},
+    {'stage': 4, 'max_grid_size': 25, 'synthesis_ratio': 0.75, 'color_complexity': 'color_genius', 'focus': 'color_intelligence_mastery'}
 ]
 
 # Device setup
@@ -608,35 +596,24 @@ def train_advanced_chromatic_stage(model, dataloader, criterion, optimizer, sche
             total_exact_matches += loss_dict['exact_count'].item()
             total_samples += inputs.shape[0]
             
-            # Count advanced color cases
-            for meta in metadata:
-                if meta['color_analysis']['color_intelligence_level'] >= 3:
-                    advanced_color_count += 1
+            # SKIP color counting for maximum speed
+            advanced_color_count += len(metadata)  # Just use total count
             
-            # Update progress bar
-            current_performance = total_exact_matches / max(total_samples, 1) * 100
-            pbar.set_postfix({
-                'Loss': f"{loss_dict['total'].item():.4f}",
-                'Performance': f"{current_performance:.1f}%",
-                'IoU': f"{loss_dict['avg_iou'].item():.3f}",
-                'AdvColor': f"{advanced_color_count}",
-                'LR': f"{scheduler.get_last_lr()[0]:.6f}"
-            })
+            # MINIMAL progress bar for speed
+            if batch_idx % 10 == 0:  # Only update every 10 batches
+                current_performance = total_exact_matches / max(total_samples, 1) * 100
+                pbar.set_postfix({
+                    'Loss': f"{loss_dict['total'].item():.2f}",
+                    'Perf': f"{current_performance:.0f}%"
+                })
         
         # Calculate epoch performance
         epoch_performance = total_exact_matches / max(total_samples, 1)
         best_stage_performance = max(best_stage_performance, epoch_performance)
         
-        # Log detailed progress with ultra light honey/amber for stage headers
-        if epoch % 2 == 0 or epoch == epochs_for_stage - 1:
-            color_ratio = advanced_color_count / max(total_samples, 1)
-            avg_loss = epoch_losses['total']/len(dataloader)
-            current_lr = scheduler.get_last_lr()[0]
-            print(f"\033[38;2;255;204;153m⏰ IRIS V4 Stage {stage_idx}, Epoch {epoch} (Global: {stage_idx * IRIS_V4_CONFIG['epochs_per_stage'] + epoch + 1}):\033[0m")
-            print(f"\033[96m   🎯 Train: {epoch_performance:.2%} exact, Loss: {avg_loss:.3f}\033[0m")
-            print(f"\033[96m   📊 LR: {current_lr:.6f} | Grid: {stage_config['max_grid_size']}x{stage_config['max_grid_size']} | Color: {color_ratio:.1%}\033[0m")
-            if epoch == epochs_for_stage - 1:
-                print(f"\033[96m✅ Stage {stage_idx} complete! Final exact: {epoch_performance:.2%}\033[0m")
+        # ULTRA MINIMAL logging for speed
+        if epoch == epochs_for_stage - 1:
+            print(f"\033[96m✅ IRIS Stage {stage_idx} complete: {epoch_performance:.1%}\033[0m")
         
         # Memory cleanup
         torch.cuda.empty_cache()

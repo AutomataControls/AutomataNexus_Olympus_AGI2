@@ -314,9 +314,8 @@ class ExtendedSpatialDataset(Dataset):
     def _load_extended_spatial_data(self):
         """Load data with extended spatial complexity focus and ARC specificity"""
         data_files = [
-            'arc_training_padded.json',
-            'arc_evaluation_padded.json',
-            'synthetic_data_mega_v4.json'
+            'arc-agi_training_challenges.json',
+            'arc-agi_evaluation_challenges.json'
         ]
         
         # Emphasize ARC data more in V5
@@ -549,34 +548,19 @@ def train_atlas_specialized_v5():
     for model_path in model_paths:
         if os.path.exists(model_path):
             try:
-                # Manual weight loading with compatibility
-                checkpoint = torch.load(model_path, map_location=device)
-                if 'model_state_dict' in checkpoint:
-                    state_dict = checkpoint['model_state_dict']
-                else:
-                    state_dict = checkpoint
-                
-                # Load compatible parameters manually
-                model_dict = model.state_dict()
-                compatible_params = {}
-                
-                for name, param in state_dict.items():
-                    if name in model_dict and model_dict[name].shape == param.shape:
-                        compatible_params[name] = param
-                
-                model_dict.update(compatible_params)
-                model.load_state_dict(model_dict)
-                
-                print(f"\033[96mATLAS V4: Loaded {len(compatible_params)}/{len(state_dict)} compatible parameters\033[0m")
-                weights_loaded = True
-                break
+                # Use built-in compatible weight loading
+                success = model.load_compatible_weights(model_path)
+                if success:
+                    print(f"\033[96mATLAS V4: Successfully loaded compatible weights from {model_path}\033[0m")
+                    weights_loaded = True
+                    break
             except Exception as e:
                 continue
     
     if not weights_loaded:
         print(f"\033[96mWarning: Could not load V4 weights, starting V5 training from scratch\033[0m")
     else:
-        print(f"\033[96mSuccessfully loaded V4 weights for V5 extended training\033[0m")
+        print(f"\033[96mSuccessfully loaded V4 weights for V5 fast training\033[0m")
     
     # Initialize loss function
     criterion = AtlasV5SpatialLoss(ATLAS_V5_CONFIG)

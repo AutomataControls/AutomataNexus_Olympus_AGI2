@@ -103,9 +103,9 @@ class IrisV6Enhanced(nn.Module):
         # V6 Enhancements - optimized for speed
         self.input_embedding = nn.Linear(10, d_model)
         
-        # Fast chromatic transformers with more attention heads
+        # Fast chromatic transformers with 8 attention heads (128/8=16 head_dim)
         self.chromatic_layers = nn.ModuleList([
-            FastChromaticTransformer(d_model, num_heads=6) for _ in range(num_layers)
+            FastChromaticTransformer(d_model, num_heads=8) for _ in range(num_layers)
         ])
         
         # Enhanced color processing

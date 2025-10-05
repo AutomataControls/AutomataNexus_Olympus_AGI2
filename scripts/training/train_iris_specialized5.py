@@ -32,12 +32,11 @@ from src.models.iris_v4_enhanced import IrisV4Enhanced
 
 # Enhanced IRIS V5 Configuration - MINERVA-LIKE SPEED OPTIMIZATION
 IRIS_V5_CONFIG = {
-    # Core Training Parameters - OPTIMIZED for V5 Speed + Performance
-    'batch_size': 16,
-    'learning_rate': 0.0005,
-    'num_epochs': 15,
+    'batch_size': 8,
+    'learning_rate': 0.001,
+    'num_epochs': 5,
     'gradient_accumulation': 1,
-    'epochs_per_stage': 3,
+    'epochs_per_stage': 1,
     'curriculum_stages': 5,
     
     # Enhanced Loss Configuration - MINERVA-LIKE
@@ -49,11 +48,11 @@ IRIS_V5_CONFIG = {
     # ULTRA TEAL Enhanced (proven formula)
     'ultra_teal_iou_weight': 0.85,  # 85% IoU weighting
     'strict_match_weight': 0.15,   # 15% strict matching
-    'chromatic_reasoning_weight': 0.58,  # Enhanced focus - color intelligence
-    'color_harmony_weight': 0.48,  # Enhanced color harmony understanding
-    'color_space_weight': 0.42,  # Enhanced color space analysis
-    'ensemble_coordination_weight': 0.38,  # Enhanced ensemble integration
-    'arc_color_weight': 0.35,  # NEW: ARC-specific color reasoning
+    'chromatic_reasoning_weight': 0.05,
+    'color_harmony_weight': 0.02,
+    'color_space_weight': 0.02,
+    'ensemble_coordination_weight': 0.02,
+    'arc_color_weight': 0.02,
     
     # IRIS V5-Specific Enhancements
     'chromatic_transformer_layers': 6,

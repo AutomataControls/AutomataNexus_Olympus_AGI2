@@ -33,11 +33,11 @@ from src.models.prometheus_v4_enhanced import PrometheusV4Enhanced
 # Enhanced PROMETHEUS V5 Configuration - Massive Multi-Dimensional Intelligence Focus
 PROMETHEUS_V5_CONFIG = {
     # Core Training Parameters - Enhanced for V5 Massive Training
-    'batch_size': 20,  # Smaller for massive scale computations
-    'learning_rate': 0.00012,  # Lower for massive fine-tuning from V4
-    'num_epochs': 500,  # Extended training: 10 stages x 50 epochs
-    'gradient_accumulation': 12,  # Effective batch: 240
-    'epochs_per_stage': 50,  # Extended epochs per stage
+    'batch_size': 8,  # Optimized for speed (was 20)
+    'learning_rate': 0.00015,  # Slightly higher due to smaller batches
+    'num_epochs': 200,  # Reduced from 500 for faster completion: 10 stages x 20 epochs
+    'gradient_accumulation': 4,  # Optimized (was 12) - Effective batch: 32
+    'epochs_per_stage': 20,  # Optimized epochs per stage (was 50)
     'curriculum_stages': 10,  # Focused 10-stage progression
     
     # Enhanced Loss Configuration

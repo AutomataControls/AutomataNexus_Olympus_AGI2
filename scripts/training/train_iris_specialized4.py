@@ -32,12 +32,12 @@ from src.models.iris_v4_enhanced import IrisV4Enhanced
 # Enhanced IRIS V4 Configuration - Chromatic Intelligence Focus
 IRIS_V4_CONFIG = {
     # Core Training Parameters - Enhanced for V4 Color Intelligence
-    'batch_size': 16,  # Reduced for speed
-    'learning_rate': 0.00015,  # Lower for chromatic stability
-    'num_epochs': 240,  # Reduced: 8 stages x 30 epochs
-    'gradient_accumulation': 4,  # Reduced accumulation
-    'epochs_per_stage': 30,  # Reduced epochs per stage for speed
-    'curriculum_stages': 8,  # Reduced stages
+    'batch_size': 10,  # Further optimized for speed (was 16)
+    'learning_rate': 0.00018,  # Adjusted for smaller batches
+    'num_epochs': 160,  # Further reduced: 8 stages x 20 epochs
+    'gradient_accumulation': 3,  # Optimized (was 4) - Effective batch: 30
+    'epochs_per_stage': 20,  # Reduced epochs per stage for speed (was 30)
+    'curriculum_stages': 8,  # Keep 8 stages
     
     # Enhanced Loss Configuration
     'transform_penalty': 0.05,  # Low - encourage color transformations

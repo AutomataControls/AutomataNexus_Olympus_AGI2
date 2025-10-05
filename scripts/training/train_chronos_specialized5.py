@@ -348,15 +348,16 @@ class ExtendedTemporalDataset(Dataset):
                     
                     self._process_extended_temporal_task(combined_task, 'arc_training')
         
-        # Load evaluation data for broader coverage
+        # Load evaluation data for broader coverage - ONLY TRAINING EXAMPLES
         eval_path = os.path.join(self.data_dir, 'arc-agi_evaluation_challenges.json')
         if os.path.exists(eval_path):
             with open(eval_path, 'r') as f:
                 eval_data = json.load(f)
             for task_id, task_data in eval_data.items():
+                # Only process training examples from evaluation data (test has no outputs)
                 combined_task = {
                     'train': task_data['train'],
-                    'test': task_data['test']
+                    'test': []  # Empty test since evaluation test has no solutions
                 }
                 self._process_extended_temporal_task(combined_task, 'arc_evaluation')
     

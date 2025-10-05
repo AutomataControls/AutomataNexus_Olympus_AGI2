@@ -123,8 +123,155 @@ print(f"\033[96mTarget: 90%+ Performance with Ultimate Creative Intelligence Mas
 print(f"\033[96m{'=' * 150}\033[0m")
 
 
-# Use the same loss and dataset classes as V4/V5 but with V6 config
-from train_prometheus_specialized4 import PrometheusV4GenerativeLoss, AdvancedGenerativeDataset, advanced_generative_collate_fn
+# V6 Fast Loss and Dataset Classes
+class PrometheusV6CreativeLoss(nn.Module):
+    """Fast loss function for V6 creative reasoning"""
+    def __init__(self, config):
+        super().__init__()
+        self.transform_penalty = config['transform_penalty']
+        self.exact_match_bonus = config['exact_match_bonus']
+        self.ultra_teal_weight = config['ultra_teal_iou_weight']
+        self.strict_weight = config['strict_match_weight']
+        self.label_smoothing = config['label_smoothing']
+        self.focal_loss = nn.CrossEntropyLoss(label_smoothing=self.label_smoothing)
+        
+    def forward(self, model_outputs, targets, inputs):
+        pred_output = model_outputs['predicted_output']
+        target_indices = targets.argmax(dim=1) if targets.dim() > 3 else targets
+        focal_loss = self.focal_loss(pred_output, target_indices)
+        pred_indices = pred_output.argmax(dim=1)
+        
+        # ULTRA TEAL scoring
+        exact_matches_strict = (pred_indices == target_indices).all(dim=[1,2]).float()
+        intersection = (pred_indices == target_indices).float().sum(dim=[1,2])
+        union = (pred_indices.shape[1] * pred_indices.shape[2])
+        iou_scores = intersection / union
+        
+        combined_matches = self.strict_weight * exact_matches_strict + self.ultra_teal_weight * iou_scores
+        exact_count = combined_matches.sum()
+        exact_bonus = -combined_matches.mean() * self.exact_match_bonus
+        exact_bonus = exact_bonus.clamp(min=-6.5)
+        
+        # Transform penalty
+        input_indices = inputs.argmax(dim=1) if inputs.dim() > 3 else inputs
+        copy_penalty = (pred_indices == input_indices).all(dim=[1,2]).float()
+        transform_penalty = copy_penalty.mean() * self.transform_penalty
+        
+        total_loss = focal_loss + transform_penalty + exact_bonus
+        
+        return {
+            'total': total_loss,
+            'focal': focal_loss,
+            'transform': transform_penalty,
+            'exact_bonus': exact_bonus,
+            'exact_count': exact_count,
+            'soft_exact_count': combined_matches.sum(),
+            'avg_iou': iou_scores.mean(),
+        }
+
+class FastCreativeDataset(Dataset):
+    """Fast dataset for V6 creative training"""
+    def __init__(self, data_dir, max_grid_size, stage_config):
+        self.data_dir = data_dir
+        self.max_grid_size = max_grid_size
+        self.stage_config = stage_config
+        self.samples = []
+        self._load_fast_creative_data()
+        print(f"\033[96mLoaded {len(self.samples)} fast creative samples for PROMETHEUS V6 training\033[0m")
+    
+    def _load_fast_creative_data(self):
+        challenges_path = os.path.join(self.data_dir, 'arc-agi_training_challenges.json')
+        solutions_path = os.path.join(self.data_dir, 'arc-agi_training_solutions.json')
+        
+        if os.path.exists(challenges_path) and os.path.exists(solutions_path):
+            with open(challenges_path, 'r') as f:
+                challenges = json.load(f)
+            with open(solutions_path, 'r') as f:
+                solutions = json.load(f)
+            
+            for task_id, task_data in challenges.items():
+                for example in task_data['train']:
+                    sample = self._create_fast_creative_sample(example, True)
+                    if sample:
+                        self.samples.append(sample)
+                
+                if task_id in solutions:
+                    for i, test_input in enumerate(task_data['test']):
+                        if i < len(solutions[task_id]):
+                            test_example = {
+                                'input': test_input['input'],
+                                'output': solutions[task_id][i]
+                            }
+                            sample = self._create_fast_creative_sample(test_example, True)
+                            if sample:
+                                self.samples.append(sample)
+        
+        eval_path = os.path.join(self.data_dir, 'arc-agi_evaluation_challenges.json')
+        if os.path.exists(eval_path):
+            with open(eval_path, 'r') as f:
+                eval_data = json.load(f)
+            for task_id, task_data in eval_data.items():
+                for example in task_data['train']:
+                    sample = self._create_fast_creative_sample(example, True)
+                    if sample:
+                        self.samples.append(sample)
+    
+    def _create_fast_creative_sample(self, example, is_arc_task):
+        input_grid = np.array(example['input'])
+        output_grid = np.array(example['output'])
+        
+        if (max(input_grid.shape) > self.max_grid_size or 
+            max(output_grid.shape) > self.max_grid_size):
+            return None
+        
+        return {
+            'input': input_grid,
+            'output': output_grid,
+            'is_arc': is_arc_task,
+            'creative_analysis': {'creative_intelligence_level': 2, 'arc_specific': is_arc_task}
+        }
+    
+    def __len__(self):
+        return len(self.samples)
+    
+    def __getitem__(self, idx):
+        sample = self.samples[idx]
+        input_tensor = torch.tensor(sample['input'], dtype=torch.long)
+        output_tensor = torch.tensor(sample['output'], dtype=torch.long)
+        
+        target_h = min(self.max_grid_size, max(input_tensor.shape[0], output_tensor.shape[0]))
+        target_w = min(self.max_grid_size, max(input_tensor.shape[1], output_tensor.shape[1]))
+        
+        input_padded = F.pad(input_tensor, (0, target_w - input_tensor.shape[1], 
+                                          0, target_h - input_tensor.shape[0]))
+        output_padded = F.pad(output_tensor, (0, target_w - output_tensor.shape[1], 
+                                            0, target_h - output_tensor.shape[0]))
+        
+        input_final = F.one_hot(input_padded, num_classes=10).float().permute(2, 0, 1)
+        output_final = F.one_hot(output_padded, num_classes=10).float().permute(2, 0, 1)
+        
+        metadata = {
+            'is_arc': sample['is_arc'],
+            'creative_analysis': sample['creative_analysis']
+        }
+        
+        return input_final, output_final, metadata
+
+def fast_creative_collate_fn(batch):
+    inputs, outputs, metadata = zip(*batch)
+    max_h = max(t.shape[1] for t in inputs + outputs)
+    max_w = max(t.shape[2] for t in inputs + outputs)
+    
+    inputs_padded = []
+    outputs_padded = []
+    
+    for inp, out in zip(inputs, outputs):
+        inp_padded = F.pad(inp, (0, max_w - inp.shape[2], 0, max_h - inp.shape[1]))
+        out_padded = F.pad(out, (0, max_w - out.shape[2], 0, max_h - out.shape[1]))
+        inputs_padded.append(inp_padded)
+        outputs_padded.append(out_padded)
+    
+    return torch.stack(inputs_padded), torch.stack(outputs_padded), list(metadata)
 
 
 def train_prometheus_specialized_v6():
@@ -183,7 +330,7 @@ def train_prometheus_specialized_v6():
         print(f"\033[96mSuccessfully loaded existing weights for V6 ultimate training\033[0m")
     
     # Initialize loss function
-    criterion = PrometheusV4GenerativeLoss(PROMETHEUS_V6_CONFIG)
+    criterion = PrometheusV6CreativeLoss(PROMETHEUS_V6_CONFIG)
     
     # Initialize optimizer with V6 learning settings
     optimizer = optim.AdamW(
@@ -219,11 +366,10 @@ def train_prometheus_specialized_v6():
         print(f"\033[96m{'=' * 155}\033[0m")
         
         # Create ultimate creative dataset for this stage
-        dataset = AdvancedGenerativeDataset(
+        dataset = FastCreativeDataset(
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',
             max_grid_size=stage_config['max_grid_size'],
-            stage_config=stage_config,
-            creative_focus=True
+            stage_config=stage_config
         )
         
         # Create data loader
@@ -231,7 +377,7 @@ def train_prometheus_specialized_v6():
             dataset,
             batch_size=PROMETHEUS_V6_CONFIG['batch_size'],
             shuffle=True,
-            collate_fn=advanced_generative_collate_fn,
+            collate_fn=fast_creative_collate_fn,
             num_workers=2,
             pin_memory=True,
             persistent_workers=True

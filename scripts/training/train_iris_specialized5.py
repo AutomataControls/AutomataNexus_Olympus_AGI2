@@ -27,10 +27,10 @@ sys.path.append('/content/AutomataNexus_Olympus_AGI2')
 sys.path.append('/content/AutomataNexus_Olympus_AGI2/src')
 sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
 
-# Import enhanced IRIS V4 model
-from src.models.iris_v4_enhanced import IrisV4Enhanced
+# Import IRIS V5 enhanced model
+from src.models.iris_v5_enhanced import IrisV5Enhanced
 
-# Enhanced IRIS V5 Configuration - MINERVA-LIKE SPEED OPTIMIZATION
+# Enhanced IRIS V5 Configuration
 IRIS_V5_CONFIG = {
     'batch_size': 48,
     'learning_rate': 0.0002,
@@ -39,8 +39,8 @@ IRIS_V5_CONFIG = {
     'epochs_per_stage': 30,
     'curriculum_stages': 10,
     
-    # Enhanced Loss Configuration - MINERVA-LIKE
-    'transform_penalty': 0.06,  # Even lower - max color exploration like MINERVA
+    # Enhanced Loss Configuration
+    'transform_penalty': 0.06,
     'exact_match_bonus': 9.2,  # Higher bonus for color accuracy
     'gradient_clip': 0.52,  # Slightly higher tolerance for V5
     'weight_decay': 4e-6,  # Even lighter regularization for color
@@ -70,7 +70,7 @@ IRIS_V5_CONFIG = {
     'color_expertise_bonus': False,
     'arc_color_bonus': False,
     
-    # Learning Rate Scheduling - MINERVA-LIKE SPEED
+    # Learning Rate Scheduling
     'warmup_epochs': 15,
     'cosine_restarts': True,
     'restart_multiplier': 1.25,
@@ -531,11 +531,9 @@ def train_iris_specialized_v5():
     """Main training function for IRIS V5"""
     print(f"\033[96mInitializing IRIS V5 Extended Color Intelligence Training...\033[0m")
     
-    # Initialize enhanced model (same as MINERVA approach)
-    model = IrisV4Enhanced(
+    # Initialize enhanced model
+    model = IrisV5Enhanced(
         max_grid_size=30,
-        d_model=128,
-        num_layers=2,
         preserve_weights=True
     ).to(device)
     

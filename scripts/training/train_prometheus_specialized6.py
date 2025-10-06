@@ -393,7 +393,7 @@ def train_prometheus_specialized_v6():
         if stage_performance > best_performance:
             best_performance = stage_performance
             # Save best V6 model
-            os.makedirs('/content/AutomataNexus_Olympus_AGI2/models', exist_ok=True)
+            os.makedirs('/content/AutomataNexus_Olympus_AGI2/arc_models_v4', exist_ok=True)
             torch.save({
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
@@ -403,7 +403,7 @@ def train_prometheus_specialized_v6():
                 'config': PROMETHEUS_V6_CONFIG,
                 'ensemble_state': model.get_ensemble_state(),
                 'training_version': 'V6'
-            }, '/content/AutomataNexus_Olympus_AGI2/models/prometheus_best.pt')
+            }, '/content/AutomataNexus_Olympus_AGI2/arc_models_v4/prometheus_best.pt')
             print(f"\033[96mNew best V6 creative performance: {best_performance:.2%} - Model saved!\033[0m")
         
         # Memory cleanup

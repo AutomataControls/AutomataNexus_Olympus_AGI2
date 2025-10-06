@@ -626,7 +626,7 @@ def train_atlas_specialized_v5():
         if stage_performance > best_performance:
             best_performance = stage_performance
             # Save best V5 model
-            os.makedirs('/content/AutomataNexus_Olympus_AGI2/models', exist_ok=True)
+            os.makedirs('/content/AutomataNexus_Olympus_AGI2/arc_models_v4', exist_ok=True)
             torch.save({
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
@@ -636,7 +636,7 @@ def train_atlas_specialized_v5():
                 'config': ATLAS_V5_CONFIG,
                 'ensemble_state': model.get_ensemble_state(),
                 'training_version': 'V5'
-            }, '/content/AutomataNexus_Olympus_AGI2/models/atlas_v5_best.pt')
+            }, '/content/AutomataNexus_Olympus_AGI2/arc_models_v4/atlas_best.pt')
             print(f"\033[96mNew best V5 spatial performance: {best_performance:.2%} - Model saved!\033[0m")
         
         # Memory cleanup

@@ -13,12 +13,12 @@ import logging
 from collections import defaultdict
 import os
 
-# Import all specialist models
-from .minerva_v4_enhanced import MinervaV4Enhanced
-from .atlas_v4_enhanced import AtlasV4Enhanced
-from .iris_v4_enhanced import IrisV4Enhanced
-from .chronos_v4_enhanced import ChronosV4Enhanced
-from .prometheus_v4_enhanced import PrometheusV4Enhanced
+# Import all current enhanced specialist models (matching active trainers)
+from .minerva_v6_enhanced import MinervaV6Enhanced      # MINERVA V6 (latest)
+from .atlas_v5_enhanced import AtlasV5Enhanced          # ATLAS V5 Enhanced  
+from .iris_v6_enhanced import IrisV6Enhanced            # IRIS V6 Enhanced
+from .chronos_v4_enhanced import ChronosV4Enhanced      # CHRONOS V4 (V5 trainer uses V4 model)
+from .prometheus_v6_enhanced import PrometheusV6Enhanced # PROMETHEUS V6 Enhanced
 
 
 class EnsembleDecision:
@@ -186,13 +186,13 @@ class OlympusEnsemble(nn.Module):
         
         print(f"\033[96m🏛️ Initializing OLYMPUS Ensemble - Ultimate AGI2 System\033[0m")
         
-        # Initialize all 5 specialist models
+        # Initialize all 5 specialist models (current enhanced versions)
         self.specialists = nn.ModuleDict({
-            'minerva': MinervaV4Enhanced(max_grid_size, d_model, 8, preserve_weights=True),
-            'atlas': AtlasV4Enhanced(max_grid_size, d_model, 8, preserve_weights=True),
-            'iris': IrisV4Enhanced(max_grid_size, d_model, 8, preserve_weights=True),
+            'minerva': MinervaV6Enhanced(max_grid_size, d_model, 8, preserve_weights=True),
+            'atlas': AtlasV5Enhanced(max_grid_size, d_model, 2, preserve_weights=True),  # V5 uses 2 layers
+            'iris': IrisV6Enhanced(max_grid_size, d_model, 3, preserve_weights=True),   # V6 uses 3 layers
             'chronos': ChronosV4Enhanced(max_grid_size, d_model, 8, preserve_weights=True),
-            'prometheus': PrometheusV4Enhanced(max_grid_size, d_model, 8, preserve_weights=True)
+            'prometheus': PrometheusV6Enhanced(max_grid_size, d_model, 8, preserve_weights=True)
         })
         
         # Decision fusion engine
@@ -215,7 +215,7 @@ class OlympusEnsemble(nn.Module):
         total_params = sum(p.numel() for p in self.parameters())
         print(f"\033[96m🏛️ OLYMPUS initialized with {total_params:,} total parameters across all specialists\033[0m")
         
-    def load_all_specialists(self, weight_dir: str = '/content/AutomataNexus_Olympus_AGI2/models') -> Dict[str, bool]:
+    def load_all_specialists(self, weight_dir: str = '/content/AutomataNexus_Olympus_AGI2/arc_models_v4') -> Dict[str, bool]:
         """Load pre-trained weights for all specialists"""
         print(f"\033[96m🏛️ Loading all specialist weights...\033[0m")
         

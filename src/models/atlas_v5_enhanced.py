@@ -255,8 +255,9 @@ class AtlasV5Enhanced(nn.Module):
                 align_corners=False
             )
         
-        # Expand mix weight to spatial dimensions
-        mix_weight_expanded = mix_weight.unsqueeze(-1).unsqueeze(-1).expand_as(enhanced_prediction)
+        # Expand mix weight to spatial dimensions and channels
+        B, C, H, W = enhanced_prediction.shape
+        mix_weight_expanded = mix_weight.view(B, 1, 1, 1).expand(B, C, H, W)
         
         final_prediction = (
             mix_weight_expanded * enhanced_prediction + 

@@ -160,6 +160,13 @@ class DecisionFusionEngine(nn.Module):
         combined_weights = F.softmax(combined_weights, dim=-1)
         
         consensus_input = torch.cat([flat_predictions, confidence_tensor.expand(batch_size, -1)], dim=1)
+        
+        # Re-initialize if input size changed or networks not initialized
+        if (self.similarity_network is None or 
+            self.similarity_network[0].in_features != consensus_input.shape[1]):
+            self.networks_initialized = False
+            self._initialize_networks(flat_predictions.shape[1], predictions[0].device)
+            
         consensus_score = self.similarity_network(consensus_input).squeeze()  # [batch]
         
         # Generate final prediction using meta-fusion
@@ -168,6 +175,12 @@ class DecisionFusionEngine(nn.Module):
             combined_weights,  # Final fusion weights
             consensus_score.unsqueeze(-1) if consensus_score.dim() == 1 else consensus_score  # Consensus score
         ], dim=1)
+        
+        # Check if meta_fusion network size matches
+        if (self.meta_fusion is None or 
+            self.meta_fusion[0].in_features != meta_input.shape[1]):
+            self.networks_initialized = False
+            self._initialize_networks(flat_predictions.shape[1], predictions[0].device)
         
         final_prediction = self.meta_fusion(meta_input)  # [batch, 10]
         
@@ -326,7 +339,18 @@ class OlympusEnsemble(nn.Module):
                 
                 # Extract outputs
                 specialist_predictions[name] = output['predicted_output']
-                specialist_confidences[name] = output.get('confidence', torch.tensor(0.5)).item()
+                
+                # Extract confidence robustly
+                confidence = output.get('confidence', 0.5)
+                if torch.is_tensor(confidence):
+                    if confidence.numel() == 1:
+                        specialist_confidences[name] = confidence.item()
+                    else:
+                        # Multiple confidence values - take mean
+                        specialist_confidences[name] = confidence.mean().item()
+                else:
+                    specialist_confidences[name] = float(confidence)
+                    
                 specialist_features[name] = output.get('features', None)
                 
                 if mode == 'inference':

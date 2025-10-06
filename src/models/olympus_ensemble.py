@@ -310,8 +310,7 @@ class OlympusEnsemble(nn.Module):
                 mode: str = 'inference') -> EnsembleDecision:
         """OLYMPUS forward pass - all specialists process every problem"""
         
-        if mode == 'train':
-            print(f"\033[96m🏛️ OLYMPUS Training Mode: All specialists processing problems...\033[0m")
+        # Training mode - process all specialists (removed verbose logging)
         
         # Prepare inputs for all specialists
         specialist_predictions = {}
@@ -332,10 +331,10 @@ class OlympusEnsemble(nn.Module):
                         inputs = input_grid
                     else:
                         inputs = [input_grid]  # Convert single grid to sequence
-                    output = specialist(inputs, target_grid, mode=mode)
+                    output = specialist(inputs, output_grid=target_grid, mode=mode)
                 else:
                     # Other specialists expect single grid input
-                    output = specialist(input_grid, target_grid, mode=mode)
+                    output = specialist(input_grid, output_grid=target_grid, mode=mode)
                 
                 # Extract outputs
                 specialist_predictions[name] = output['predicted_output']

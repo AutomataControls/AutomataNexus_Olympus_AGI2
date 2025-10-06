@@ -140,16 +140,26 @@ class DecisionFusionEngine(nn.Module):
         combined_weights = fusion_weights * iou_scores
         combined_weights = F.softmax(combined_weights, dim=-1)
         
-        # Calculate consensus score
+        # Calculate consensus score - make robust to different prediction shapes
         flat_predictions = stacked_predictions.transpose(0, 1).reshape(batch_size, -1)  # [batch, 5*C*H*W]
-        consensus_input = torch.cat([flat_predictions[:, :10*5], confidence_tensor.expand(batch_size, -1)], dim=1)
+        
+        # Take only first 50 features (10 classes * 5 specialists) to match expected size
+        expected_features = 10 * self.num_specialists
+        if flat_predictions.shape[1] > expected_features:
+            prediction_features = flat_predictions[:, :expected_features]
+        else:
+            # Pad if too small
+            padding = expected_features - flat_predictions.shape[1]
+            prediction_features = F.pad(flat_predictions, (0, padding))
+        
+        consensus_input = torch.cat([prediction_features, confidence_tensor.expand(batch_size, -1)], dim=1)
         consensus_score = self.similarity_network(consensus_input).squeeze()  # [batch]
         
         # Generate final prediction using meta-fusion
         meta_input = torch.cat([
-            flat_predictions[:, :10*5],  # Flattened predictions
+            prediction_features,  # Standardized prediction features
             combined_weights,  # Final fusion weights
-            consensus_score.unsqueeze(-1)  # Consensus score
+            consensus_score.unsqueeze(-1) if consensus_score.dim() == 1 else consensus_score  # Consensus score
         ], dim=1)
         
         final_prediction = self.meta_fusion(meta_input)  # [batch, 10]

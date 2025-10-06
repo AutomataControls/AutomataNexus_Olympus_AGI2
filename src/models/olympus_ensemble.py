@@ -13,11 +13,11 @@ import logging
 from collections import defaultdict
 import os
 
-# Import all current enhanced specialist models (matching active trainers)
-from .minerva_v6_enhanced import MinervaV6Enhanced      # MINERVA V6 (latest)
+# Import actual enhanced specialist models that match your checkpoints
+from .minerva_v6_enhanced import MinervaV6Enhanced      # MINERVA V6 Enhanced
 from .atlas_v5_enhanced import AtlasV5Enhanced          # ATLAS V5 Enhanced  
 from .iris_v6_enhanced import IrisV6Enhanced            # IRIS V6 Enhanced
-from .chronos_v4_enhanced import ChronosV4Enhanced      # CHRONOS V4 (V5 trainer uses V4 model)
+from .chronos_v4_enhanced import ChronosV4Enhanced      # CHRONOS V4 Enhanced (stays V4)
 from .prometheus_v6_enhanced import PrometheusV6Enhanced # PROMETHEUS V6 Enhanced
 
 
@@ -196,11 +196,11 @@ class OlympusEnsemble(nn.Module):
         
         print(f"\033[96m🏛️ Initializing OLYMPUS Ensemble - Ultimate AGI2 System\033[0m")
         
-        # Initialize all 5 specialist models (current enhanced versions)
+        # Initialize all 5 specialist models (latest enhanced versions that match your checkpoints)
         self.specialists = nn.ModuleDict({
             'minerva': MinervaV6Enhanced(max_grid_size, d_model, preserve_weights=True),
-            'atlas': AtlasV5Enhanced(max_grid_size, d_model, 2, preserve_weights=True),  # V5 uses 2 layers
-            'iris': IrisV6Enhanced(max_grid_size, d_model, 3, preserve_weights=True),   # V6 uses 3 layers
+            'atlas': AtlasV5Enhanced(max_grid_size, d_model, 2, preserve_weights=True),
+            'iris': IrisV6Enhanced(max_grid_size, d_model, 3, preserve_weights=True),
             'chronos': ChronosV4Enhanced(max_grid_size, d_model, 8, preserve_weights=True),
             'prometheus': PrometheusV6Enhanced(max_grid_size, d_model, 8, preserve_weights=True)
         })
@@ -244,6 +244,7 @@ class OlympusEnsemble(nn.Module):
             loaded = False
             for pattern in patterns:
                 weight_path = os.path.join(weight_dir, pattern)
+                print(f"\033[96m   Checking: {weight_path}\033[0m")
                 if os.path.exists(weight_path):
                     try:
                         if hasattr(self.specialists[specialist_name], 'load_compatible_weights'):
@@ -272,6 +273,7 @@ class OlympusEnsemble(nn.Module):
                             break
                         
                     except Exception as e:
+                        print(f"\033[93m⚠️  {specialist_name.upper()}: Loading error: {e}\033[0m")
                         continue
             
             load_results[specialist_name] = loaded

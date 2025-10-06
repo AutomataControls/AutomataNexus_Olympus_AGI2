@@ -170,10 +170,16 @@ class DecisionFusionEngine(nn.Module):
         consensus_score = self.similarity_network(consensus_input).squeeze()  # [batch]
         
         # Generate final prediction using meta-fusion
+        # Ensure consensus_score has proper dimensions
+        if consensus_score.dim() == 0:  # Scalar tensor
+            consensus_score = consensus_score.unsqueeze(0)  # Make it [1]
+        if consensus_score.dim() == 1:  # [batch] tensor
+            consensus_score = consensus_score.unsqueeze(-1)  # Make it [batch, 1]
+            
         meta_input = torch.cat([
             flat_predictions,  # All prediction features
             combined_weights,  # Final fusion weights
-            consensus_score.unsqueeze(-1) if consensus_score.dim() == 1 else consensus_score  # Consensus score
+            consensus_score  # Consensus score with proper dimensions
         ], dim=1)
         
         # Check if meta_fusion network size matches

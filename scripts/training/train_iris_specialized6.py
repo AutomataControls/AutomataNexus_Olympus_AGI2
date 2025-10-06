@@ -563,10 +563,11 @@ def train_iris_specialized_v6():
     
     print(f"\033[96mModel initialized with {sum(p.numel() for p in model.parameters())} parameters\033[0m")
     
-    # Load V4 weights with multiple fallback paths
+    # Load V5 weights with multiple fallback paths (V5 preferred, then V4)
     model_paths = [
-        '/content/AutomataNexus_Olympus_AGI2/models/iris_v4_best.pt',
+        '/content/AutomataNexus_Olympus_AGI2/arc_models_v4/iris_v5_best.pt',  # V5 preferred
         '/content/AutomataNexus_Olympus_AGI2/arc_models_v4/iris_best.pt',
+        '/content/AutomataNexus_Olympus_AGI2/models/iris_v4_best.pt',
         '/content/AutomataNexus_Olympus_AGI2/models/iris_best.pt'
     ]
     
@@ -577,16 +578,19 @@ def train_iris_specialized_v6():
                 # Use built-in compatible weight loading
                 success = model.load_compatible_weights(model_path)
                 if success:
-                    print(f"\033[96mIRIS V4: Successfully loaded compatible weights from {model_path}\033[0m")
+                    if 'v5_best.pt' in model_path:
+                        print(f"\033[96mIRIS V6: Successfully loaded V5 weights from {model_path}\033[0m")
+                    else:
+                        print(f"\033[96mIRIS V6: Successfully loaded compatible weights from {model_path}\033[0m")
                     weights_loaded = True
                     break
             except Exception as e:
                 continue
     
     if not weights_loaded:
-        print(f"\033[96mWarning: Could not load V4 weights, starting V5 training from scratch\033[0m")
+        print(f"\033[96mWarning: Could not load V5/V4 weights, starting V6 training from scratch\033[0m")
     else:
-        print(f"\033[96mSuccessfully loaded V4 weights for V5 extended training\033[0m")
+        print(f"\033[96mReady for V6 enhanced training with loaded weights\033[0m")
     
     # Initialize loss function
     criterion = IrisV5ChromaticLoss(IRIS_V6_CONFIG)

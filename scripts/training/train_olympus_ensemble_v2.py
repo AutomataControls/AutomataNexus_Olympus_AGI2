@@ -344,7 +344,7 @@ def train_olympus_ensemble_v2():
     # Advanced progressive training through coordination stages
     for stage_idx, stage_config in enumerate(STAGE_CONFIG):
         print(f"\n\\033[96m{'=' * 130}\\033[0m")
-        print(f"\033[96m🏛️ V2 Stage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
+        print(f"\033[38;2;255;204;153m🏛️ V2 Stage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
               f"Complexity: {stage_config['complexity']} | Focus: {stage_config['focus']}\\033[0m")
         print(f"\033[96m{'=' * 130}\\033[0m")
         
@@ -413,7 +413,9 @@ def train_advanced_coordination_stage(olympus, dataloader, criterion,
         total_consensus = 0.0
         
         # Progress bar
-        pbar = tqdm(dataloader, desc=f"\033[38;2;255;204;153m🏛️ Advanced Stage {stage_idx} Epoch {epoch}\\033[0m")
+        # Dynamic progress bar with stage focus (like ATLAS)
+        stage_focus = stage_config['focus'].replace('_', ' ').title()
+        pbar = tqdm(dataloader, desc=f"\033[38;2;255;204;153m🏛️ {stage_focus} Stage {stage_idx} Epoch {epoch}\\033[0m")
         
         for batch_idx, (inputs, targets, metadata) in enumerate(pbar):
             inputs = inputs.to(device)

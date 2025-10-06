@@ -150,9 +150,9 @@ class IrisV6Enhanced(nn.Module):
             nn.ConvTranspose2d(48, 10, 1)
         )
         
-        # Mixing parameters - Push to 90%+ performance 
-        self.chromatic_weight = nn.Parameter(torch.tensor(0.8))  # Trust enhanced color intelligence
-        self.color_confidence = nn.Parameter(torch.tensor(0.95))  # Maximum color confidence
+        # Mixing parameters - Ultra-aggressive 90%+ breakthrough
+        self.chromatic_weight = nn.Parameter(torch.tensor(0.95))  # Ultra-aggressive enhanced prediction
+        self.color_confidence = nn.Parameter(torch.tensor(0.98))  # Maximum possible confidence
         
     def load_compatible_weights(self, checkpoint_path: str):
         """Load V4/V5 weights into core model"""

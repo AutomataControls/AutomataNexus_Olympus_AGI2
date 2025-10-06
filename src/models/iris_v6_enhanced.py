@@ -54,18 +54,26 @@ class EnhancedColorProcessor(nn.Module):
     def __init__(self, d_model: int):
         super().__init__()
         self.color_analyzer = nn.Sequential(
+            nn.Linear(d_model, d_model),
+            nn.ReLU(),
+            nn.Dropout(0.05),  # Light dropout for generalization
             nn.Linear(d_model, d_model // 2),
             nn.ReLU(),
-            nn.Linear(d_model // 2, 64)  # More color features
+            nn.Linear(d_model // 2, 96)  # Premium color features for 90%+
         )
         self.harmony_detector = nn.Sequential(
-            nn.Linear(d_model, 32),  # More harmony patterns
+            nn.Linear(d_model, 64),
+            nn.ReLU(),
+            nn.Linear(64, 48),  # Premium harmony patterns for 90%+
             nn.Softmax(dim=-1)
         )
         self.color_transform_predictor = nn.Sequential(
+            nn.Linear(d_model, d_model),
+            nn.ReLU(),
+            nn.Dropout(0.05),
             nn.Linear(d_model, d_model // 2),
             nn.ReLU(),
-            nn.Linear(d_model // 2, 100)  # Color transformation matrix
+            nn.Linear(d_model // 2, 121)  # 11x11 color transformation matrix
         )
         # Color relationship analyzer
         self.relationship_analyzer = nn.Sequential(
@@ -84,7 +92,7 @@ class EnhancedColorProcessor(nn.Module):
         return {
             'color_features': color_features,
             'harmony_patterns': harmony_patterns,
-            'color_transformation_matrix': F.softmax(color_transforms.view(-1, 10, 10), dim=-1),
+            'color_transformation_matrix': F.softmax(color_transforms.view(-1, 11, 11), dim=-1),
             'color_relationships': relationships
         }
 
@@ -142,9 +150,9 @@ class IrisV6Enhanced(nn.Module):
             nn.ConvTranspose2d(48, 10, 1)
         )
         
-        # Mixing parameters
-        self.chromatic_weight = nn.Parameter(torch.tensor(0.4))
-        self.color_confidence = nn.Parameter(torch.tensor(0.8))
+        # Mixing parameters - Push to 90%+ performance 
+        self.chromatic_weight = nn.Parameter(torch.tensor(0.8))  # Trust enhanced color intelligence
+        self.color_confidence = nn.Parameter(torch.tensor(0.95))  # Maximum color confidence
         
     def load_compatible_weights(self, checkpoint_path: str):
         """Load V4/V5 weights into core model"""
@@ -213,7 +221,7 @@ class IrisV6Enhanced(nn.Module):
             self.color_memory.unsqueeze(0), 
             dim=2
         )  # B, 128
-        top_patterns = memory_similarity.topk(12, dim=1)[0].mean(dim=1, keepdim=True)
+        top_patterns = memory_similarity.topk(16, dim=1)[0].mean(dim=1, keepdim=True)  # Premium pattern matching
         
         # Enhanced rule extraction
         color_rules = self.rule_extractor(global_features)
@@ -228,9 +236,20 @@ class IrisV6Enhanced(nn.Module):
         
         enhanced_prediction = self.decoder(combined_features)
         
-        # Strategic mixing
+        # Premium adaptive mixing for 90%+ performance
         color_expertise = torch.sigmoid(self.color_confidence)
-        mix_weight = torch.sigmoid(self.chromatic_weight) * color_expertise
+        base_mix_weight = torch.sigmoid(self.chromatic_weight)
+        
+        # Boost enhanced prediction for complex color patterns
+        color_pattern_complexity = pattern_types.max(dim=1)[0]  # Max confidence in any color pattern
+        color_memory_strength = top_patterns.squeeze(-1)        # Memory pattern strength
+        harmony_complexity = color_analysis['harmony_patterns'].max(dim=1)[0]  # Harmony complexity
+        
+        # Triple boost for premium color intelligence (for 90%+ performance)
+        complexity_boost = (color_pattern_complexity + color_memory_strength + harmony_complexity) / 3
+        
+        # Final premium mixing - trust enhanced color intelligence more for complex patterns
+        mix_weight = base_mix_weight * color_expertise * (1.0 + complexity_boost * 0.4)
         
         # Ensure same spatial dimensions
         if enhanced_prediction.shape != base_prediction.shape:

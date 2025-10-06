@@ -54,18 +54,26 @@ class EnhancedSpatialProcessor(nn.Module):
     def __init__(self, d_model: int):
         super().__init__()
         self.spatial_analyzer = nn.Sequential(
+            nn.Linear(d_model, d_model),
+            nn.ReLU(),
+            nn.Dropout(0.1),
             nn.Linear(d_model, d_model // 2),
             nn.ReLU(),
-            nn.Linear(d_model // 2, 64)
+            nn.Linear(d_model // 2, 96)  # More spatial features
         )
         self.geometry_detector = nn.Sequential(
-            nn.Linear(d_model, 32),
+            nn.Linear(d_model, 64),
+            nn.ReLU(),
+            nn.Linear(64, 48),  # More geometry patterns
             nn.Softmax(dim=-1)
         )
         self.transform_predictor = nn.Sequential(
+            nn.Linear(d_model, d_model),
+            nn.ReLU(),
+            nn.Dropout(0.1),
             nn.Linear(d_model, d_model // 2),
             nn.ReLU(),
-            nn.Linear(d_model // 2, 100)
+            nn.Linear(d_model // 2, 144)  # 12x12 transformation matrix
         )
         self.relationship_analyzer = nn.Sequential(
             nn.Linear(d_model, 48),
@@ -83,7 +91,7 @@ class EnhancedSpatialProcessor(nn.Module):
         return {
             'spatial_features': spatial_features,
             'geometry_patterns': geometry_patterns,
-            'transformation_matrix': F.softmax(transforms.view(-1, 10, 10), dim=-1),
+            'transformation_matrix': F.softmax(transforms.view(-1, 12, 12), dim=-1),
             'spatial_relationships': relationships
         }
 
@@ -141,9 +149,9 @@ class AtlasV5Enhanced(nn.Module):
             nn.ConvTranspose2d(48, 10, 1)
         )
         
-        # Mixing parameters
-        self.spatial_weight = nn.Parameter(torch.tensor(0.4))
-        self.spatial_confidence = nn.Parameter(torch.tensor(0.8))
+        # Mixing parameters - Boost enhanced spatial intelligence
+        self.spatial_weight = nn.Parameter(torch.tensor(0.7))  # Trust enhanced features more
+        self.spatial_confidence = nn.Parameter(torch.tensor(0.9))  # Higher spatial confidence
         
     def load_compatible_weights(self, checkpoint_path: str):
         """Load V4 weights into core model"""
@@ -226,9 +234,17 @@ class AtlasV5Enhanced(nn.Module):
         
         enhanced_prediction = self.decoder(combined_features)
         
-        # Strategic mixing
+        # Adaptive strategic mixing based on spatial complexity
         spatial_expertise = torch.sigmoid(self.spatial_confidence)
-        mix_weight = torch.sigmoid(self.spatial_weight) * spatial_expertise
+        base_mix_weight = torch.sigmoid(self.spatial_weight)
+        
+        # Boost enhanced prediction weight for complex spatial patterns
+        pattern_complexity = pattern_types.max(dim=1)[0]  # Max confidence in any pattern type
+        spatial_complexity = top_patterns.squeeze(-1)     # Memory similarity strength
+        complexity_boost = (pattern_complexity + spatial_complexity) / 2
+        
+        # Final adaptive mixing (higher complexity = more enhanced prediction)
+        mix_weight = base_mix_weight * spatial_expertise * (1.0 + complexity_boost * 0.3)
         
         # Ensure same spatial dimensions
         if enhanced_prediction.shape != base_prediction.shape:

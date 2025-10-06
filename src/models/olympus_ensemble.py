@@ -215,17 +215,17 @@ class OlympusEnsemble(nn.Module):
         total_params = sum(p.numel() for p in self.parameters())
         print(f"\033[96m🏛️ OLYMPUS initialized with {total_params:,} total parameters across all specialists\033[0m")
         
-    def load_all_specialists(self, weight_dir: str = '/content/AutomataNexus_Olympus_AGI2/arc_models_v4') -> Dict[str, bool]:
+    def load_all_specialists(self, weight_dir: str = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels') -> Dict[str, bool]:
         """Load pre-trained weights for all specialists"""
         print(f"\033[96m🏛️ Loading all specialist weights...\033[0m")
         
-        # Define weight file patterns for each specialist
+        # Define weight file patterns for each specialist (from InputBestModels directory)
         weight_patterns = {
-            'minerva': ['minerva_v6_best.pt', 'minerva_v5_best.pt', 'minerva_v4_best.pt', 'minerva_best.pt'],
-            'atlas': ['atlas_v6_best.pt', 'atlas_v5_best.pt', 'atlas_v4_best.pt', 'atlas_best.pt'],
-            'iris': ['iris_v6_best.pt', 'iris_v5_best.pt', 'iris_v4_best.pt', 'iris_best.pt'],
-            'chronos': ['chronos_v6_best.pt', 'chronos_v5_best.pt', 'chronos_v4_best.pt', 'chronos_best.pt'],
-            'prometheus': ['prometheus_v6_best.pt', 'prometheus_v5_best.pt', 'prometheus_v4_best.pt', 'prometheus_best.pt']
+            'minerva': ['minerva_best.pt'],      # MINERVA V6 Enhanced
+            'atlas': ['atlas_best.pt'],          # ATLAS V5 Enhanced  
+            'iris': ['iris_best.pt'],            # IRIS V6 Enhanced
+            'chronos': ['chronos_best.pt'],      # CHRONOS V4/V5 Enhanced
+            'prometheus': ['prometheus_best.pt'] # PROMETHEUS V6 Enhanced
         }
         
         load_results = {}

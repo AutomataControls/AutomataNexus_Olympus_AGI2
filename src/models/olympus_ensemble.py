@@ -56,31 +56,17 @@ class DecisionFusionEngine(nn.Module):
             nn.Softmax(dim=-1)
         )
         
-        # Prediction similarity analyzer
-        self.similarity_network = nn.Sequential(
-            nn.Linear(10 * self.num_specialists, 256),  # 5 predictions flattened
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(256, 128),
-            nn.ReLU(),
-            nn.Linear(128, 1),  # Consensus score
-            nn.Sigmoid()
-        )
+        # Adaptive networks - will be initialized on first forward pass
+        self.similarity_network = None
+        self.meta_fusion = None
         
         # IoU-based selection weights
         self.iou_weight = 0.85  # ULTRA TEAL formula
         self.exact_weight = 0.15
         
-        # Meta-fusion network for final decision
-        self.meta_fusion = nn.Sequential(
-            nn.Linear(10 * self.num_specialists + self.num_specialists + 1, 128),  # Predictions + confidences + consensus
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Linear(64, 10),  # Final prediction logits
-            nn.Softmax(dim=-1)
-        )
+        # Track expected feature sizes
+        self.expected_pred_features = 10 * self.num_specialists
+        self.networks_initialized = False
         
     def calculate_iou_scores(self, predictions: List[torch.Tensor], target: Optional[torch.Tensor] = None) -> torch.Tensor:
         """Calculate IoU scores between specialist predictions"""
@@ -108,6 +94,33 @@ class DecisionFusionEngine(nn.Module):
         
         return iou_scores.transpose(0, 1)  # [batch, num_specialists]
     
+    def _initialize_networks(self, feature_size: int, device: torch.device):
+        """Initialize adaptive networks based on actual feature size"""
+        if not self.networks_initialized:
+            # Prediction similarity analyzer
+            self.similarity_network = nn.Sequential(
+                nn.Linear(feature_size + self.num_specialists, 256),  # predictions + confidences
+                nn.ReLU(),
+                nn.Dropout(0.1),
+                nn.Linear(256, 128),
+                nn.ReLU(),
+                nn.Linear(128, 1),  # Consensus score
+                nn.Sigmoid()
+            ).to(device)
+            
+            # Meta-fusion network for final decision
+            self.meta_fusion = nn.Sequential(
+                nn.Linear(feature_size + self.num_specialists + 1, 128),  # Predictions + confidences + consensus
+                nn.ReLU(),
+                nn.Dropout(0.1),
+                nn.Linear(128, 64),
+                nn.ReLU(),
+                nn.Linear(64, 10),  # Final prediction logits
+                nn.Softmax(dim=-1)
+            ).to(device)
+            
+            self.networks_initialized = True
+    
     def forward(self, specialist_predictions: Dict[str, torch.Tensor],
                 specialist_confidences: Dict[str, float],
                 target: Optional[torch.Tensor] = None) -> EnsembleDecision:
@@ -129,6 +142,12 @@ class DecisionFusionEngine(nn.Module):
         confidence_tensor = torch.tensor(confidences, device=predictions[0].device).unsqueeze(0)  # [1, 5]
         batch_size = predictions[0].shape[0]
         
+        # Calculate consensus score - make robust to different prediction shapes
+        flat_predictions = stacked_predictions.transpose(0, 1).reshape(batch_size, -1)  # [batch, 5*C*H*W]
+        
+        # Initialize networks adaptively based on actual feature size
+        self._initialize_networks(flat_predictions.shape[1], predictions[0].device)
+        
         # Calculate IoU-based quality scores
         iou_scores = self.calculate_iou_scores(predictions, target)  # [batch, 5]
         
@@ -140,24 +159,12 @@ class DecisionFusionEngine(nn.Module):
         combined_weights = fusion_weights * iou_scores
         combined_weights = F.softmax(combined_weights, dim=-1)
         
-        # Calculate consensus score - make robust to different prediction shapes
-        flat_predictions = stacked_predictions.transpose(0, 1).reshape(batch_size, -1)  # [batch, 5*C*H*W]
-        
-        # Take only first 50 features (10 classes * 5 specialists) to match expected size
-        expected_features = 10 * self.num_specialists
-        if flat_predictions.shape[1] > expected_features:
-            prediction_features = flat_predictions[:, :expected_features]
-        else:
-            # Pad if too small
-            padding = expected_features - flat_predictions.shape[1]
-            prediction_features = F.pad(flat_predictions, (0, padding))
-        
-        consensus_input = torch.cat([prediction_features, confidence_tensor.expand(batch_size, -1)], dim=1)
+        consensus_input = torch.cat([flat_predictions, confidence_tensor.expand(batch_size, -1)], dim=1)
         consensus_score = self.similarity_network(consensus_input).squeeze()  # [batch]
         
         # Generate final prediction using meta-fusion
         meta_input = torch.cat([
-            prediction_features,  # Standardized prediction features
+            flat_predictions,  # All prediction features
             combined_weights,  # Final fusion weights
             consensus_score.unsqueeze(-1) if consensus_score.dim() == 1 else consensus_score  # Consensus score
         ], dim=1)

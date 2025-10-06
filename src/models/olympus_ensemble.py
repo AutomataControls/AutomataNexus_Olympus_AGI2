@@ -311,7 +311,7 @@ class OlympusEnsemble(nn.Module):
         """OLYMPUS forward pass - all specialists process every problem"""
         
         if mode == 'train':
-            print(f"\033[96m🏛️ OLYMPUS Training Mode: All specialists processing problem...\033[0m")
+            print(f"\033[96m🏛️ OLYMPUS Training Mode: All specialists processing problems...\033[0m")
         
         # Prepare inputs for all specialists
         specialist_predictions = {}

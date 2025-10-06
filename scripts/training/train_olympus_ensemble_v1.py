@@ -35,10 +35,10 @@ OLYMPUS_V1_CONFIG = {
     # Core Training Parameters - Foundation Level
     'batch_size': 8,  # Small batches for stability with 5 models
     'learning_rate': 0.0001,  # Conservative for ensemble coordination
-    'num_epochs': 120,  # Foundation training: 6 stages x 20 epochs
+    'num_epochs': 300,  # Foundation training: 15 stages x 20 epochs
     'gradient_accumulation': 4,  # Effective batch 32 for stability
     'epochs_per_stage': 20,  # Foundation epochs per stage
-    'curriculum_stages': 6,  # Foundation curriculum stages
+    'curriculum_stages': 15,  # Comprehensive curriculum stages
     
     # Enhanced Loss Configuration
     'ensemble_loss_weight': 1.0,  # Primary ensemble loss
@@ -75,15 +75,28 @@ OLYMPUS_V1_CONFIG = {
     'plateau_patience': 15,
 }
 
-# Foundation 6-Stage Progressive Configuration
+# Comprehensive 15-Stage Progressive Configuration - Matching Specialist Training
 STAGE_CONFIG = [
-    # Foundation Ensemble Learning (Simple → Complex)
-    {'stage': 0, 'max_grid_size': 8,  'synthesis_ratio': 0.9, 'complexity': 'simple_ensemble', 'focus': 'basic_specialist_coordination'},
-    {'stage': 1, 'max_grid_size': 12, 'synthesis_ratio': 0.8, 'complexity': 'fusion_training', 'focus': 'decision_fusion_learning'},
-    {'stage': 2, 'max_grid_size': 16, 'synthesis_ratio': 0.7, 'complexity': 'consensus_building', 'focus': 'specialist_consensus_training'},
-    {'stage': 3, 'max_grid_size': 20, 'synthesis_ratio': 0.6, 'complexity': 'coordination_advanced', 'focus': 'advanced_coordination_protocols'},
-    {'stage': 4, 'max_grid_size': 25, 'synthesis_ratio': 0.5, 'complexity': 'ensemble_synergy', 'focus': 'ensemble_synergy_optimization'},
-    {'stage': 5, 'max_grid_size': 30, 'synthesis_ratio': 0.4, 'complexity': 'olympus_foundation', 'focus': 'foundation_olympus_mastery'}
+    # Foundation Ensemble Coordination (4x4 - 8x8) 
+    {'stage': 0, 'max_grid_size': 4,  'synthesis_ratio': 0.95, 'complexity': 'micro_ensemble', 'focus': 'micro_grid_specialist_coordination'},
+    {'stage': 1, 'max_grid_size': 5,  'synthesis_ratio': 0.9,  'complexity': 'basic_shapes', 'focus': 'basic_ensemble_shape_coordination'},
+    {'stage': 2, 'max_grid_size': 6,  'synthesis_ratio': 0.85, 'complexity': 'simple_fusion', 'focus': 'simple_decision_fusion_learning'},
+    {'stage': 3, 'max_grid_size': 7,  'synthesis_ratio': 0.8,  'complexity': 'pattern_sync', 'focus': 'pattern_synchronization_training'},
+    {'stage': 4, 'max_grid_size': 8,  'synthesis_ratio': 0.75, 'complexity': 'consensus_basic', 'focus': 'basic_specialist_consensus'},
+    
+    # Intermediate Ensemble Coordination (9x9 - 16x16)
+    {'stage': 5, 'max_grid_size': 9,  'synthesis_ratio': 0.7,  'complexity': 'fusion_intermediate', 'focus': 'intermediate_fusion_protocols'},
+    {'stage': 6, 'max_grid_size': 10, 'synthesis_ratio': 0.65, 'complexity': 'composite_ensemble', 'focus': 'composite_ensemble_decisions'},
+    {'stage': 7, 'max_grid_size': 11, 'synthesis_ratio': 0.6,  'complexity': 'coordination_scaling', 'focus': 'scaling_coordination_protocols'},
+    {'stage': 8, 'max_grid_size': 12, 'synthesis_ratio': 0.55, 'complexity': 'complex_consensus', 'focus': 'complex_consensus_building'},
+    {'stage': 9, 'max_grid_size': 14, 'synthesis_ratio': 0.5,  'complexity': 'pattern_ensemble', 'focus': 'pattern_ensemble_coordination'},
+    {'stage': 10, 'max_grid_size': 16, 'synthesis_ratio': 0.45, 'complexity': 'ensemble_intelligence', 'focus': 'ensemble_intelligence_emergence'},
+    
+    # Advanced Ensemble Mastery (18x18 - 30x30)
+    {'stage': 11, 'max_grid_size': 18, 'synthesis_ratio': 0.4,  'complexity': 'multiscale_ensemble', 'focus': 'multiscale_ensemble_reasoning'},
+    {'stage': 12, 'max_grid_size': 22, 'synthesis_ratio': 0.35, 'complexity': 'advanced_coordination', 'focus': 'advanced_coordination_protocols'},
+    {'stage': 13, 'max_grid_size': 27, 'synthesis_ratio': 0.3,  'complexity': 'ensemble_mastery', 'focus': 'ensemble_coordination_mastery'},
+    {'stage': 14, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'complexity': 'olympus_foundation', 'focus': 'foundation_olympus_intelligence'}
 ]
 
 # Device setup

@@ -426,9 +426,9 @@ def train_olympus_ensemble_v1():
         # Update best performance
         if stage_performance > best_performance:
             best_performance = stage_performance
-            # Save best OLYMPUS model
-            os.makedirs('/content/AutomataNexus_Olympus_AGI2/models', exist_ok=True)
-            olympus.save_ensemble('/content/AutomataNexus_Olympus_AGI2/models/olympus_v1_best.pt')
+            # Save best OLYMPUS model to same location as specialist models
+            os.makedirs('/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels', exist_ok=True)
+            olympus.save_ensemble('/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt')
             print(f"\033[96m🏛️ New best V1 ensemble performance: {best_performance:.2%} - OLYMPUS saved!\033[0m")
         
         # Memory cleanup

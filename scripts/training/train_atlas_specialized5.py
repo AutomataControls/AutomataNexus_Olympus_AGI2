@@ -537,10 +537,11 @@ def train_atlas_specialized_v5():
     
     print(f"\033[96mModel initialized with {sum(p.numel() for p in model.parameters())} parameters\033[0m")
     
-    # Load V4 weights with multiple fallback paths
+    # Load V4 weights with multiple fallback paths (V4 preferred, then current)
     model_paths = [
-        '/content/AutomataNexus_Olympus_AGI2/models/atlas_v4_best.pt',
+        '/content/AutomataNexus_Olympus_AGI2/arc_models_v4/atlas_v4_best.pt',  # V4 preferred
         '/content/AutomataNexus_Olympus_AGI2/arc_models_v4/atlas_best.pt',
+        '/content/AutomataNexus_Olympus_AGI2/models/atlas_v4_best.pt',
         '/content/AutomataNexus_Olympus_AGI2/models/atlas_best.pt'
     ]
     
@@ -551,7 +552,10 @@ def train_atlas_specialized_v5():
                 # Use built-in compatible weight loading
                 success = model.load_compatible_weights(model_path)
                 if success:
-                    print(f"\033[96mATLAS V4: Successfully loaded compatible weights from {model_path}\033[0m")
+                    if 'v4_best.pt' in model_path:
+                        print(f"\033[96mATLAS V5: Successfully loaded V4 weights from {model_path}\033[0m")
+                    else:
+                        print(f"\033[96mATLAS V5: Successfully loaded compatible weights from {model_path}\033[0m")
                     weights_loaded = True
                     break
             except Exception as e:
@@ -560,7 +564,7 @@ def train_atlas_specialized_v5():
     if not weights_loaded:
         print(f"\033[96mWarning: Could not load V4 weights, starting V5 training from scratch\033[0m")
     else:
-        print(f"\033[96mSuccessfully loaded V4 weights for V5 fast training\033[0m")
+        print(f"\033[96mReady for V5 enhanced training with loaded weights\033[0m")
     
     # Initialize loss function
     criterion = AtlasV5SpatialLoss(ATLAS_V5_CONFIG)

@@ -473,7 +473,7 @@ def train_ultimate_creative_stage(model, dataloader, criterion, optimizer, sched
             
             # Count ultimate creative cases and ARC-specific cases
             for meta in metadata:
-                if meta['creative_analysis']['creative_intelligence_level'] >= 3:
+                if meta['creative_analysis']['creative_intelligence_level'] >= 2:
                     ultimate_creative_count += 1
                 if meta['creative_analysis'].get('arc_specific', False):
                     arc_creative_count += 1

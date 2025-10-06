@@ -188,7 +188,7 @@ class OlympusEnsemble(nn.Module):
         
         # Initialize all 5 specialist models (current enhanced versions)
         self.specialists = nn.ModuleDict({
-            'minerva': MinervaV6Enhanced(max_grid_size, d_model, 8, preserve_weights=True),
+            'minerva': MinervaV6Enhanced(max_grid_size, d_model, preserve_weights=True),
             'atlas': AtlasV5Enhanced(max_grid_size, d_model, 2, preserve_weights=True),  # V5 uses 2 layers
             'iris': IrisV6Enhanced(max_grid_size, d_model, 3, preserve_weights=True),   # V6 uses 3 layers
             'chronos': ChronosV4Enhanced(max_grid_size, d_model, 8, preserve_weights=True),

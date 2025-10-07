@@ -32,11 +32,11 @@ from src.models.olympus_ensemble import OlympusEnsemble, EnsembleDecision
 
 # OLYMPUS V1 Configuration - Foundation Ensemble Training
 OLYMPUS_V1_CONFIG = {
-    # Core Training Parameters - Foundation Level (Slight Memory Adjustment)
-    'batch_size': 384,  # Slightly reduced from 512 for large grid stages
+    # Core Training Parameters - Foundation Level (Memory Optimized for Large Grids)
+    'batch_size': 256,  # Further reduced for 27x27+ grid stages
     'learning_rate': 0.0001,  # Conservative for ensemble coordination
     'num_epochs': 300,  # Foundation training: 15 stages x 20 epochs
-    'gradient_accumulation': 2,  # Effective batch maintained
+    'gradient_accumulation': 3,  # Increased to maintain effective batch size
     'epochs_per_stage': 10,  # More epochs for better learning - 10 epochs per stage
     'curriculum_stages': 15,  # All stages - just faster
     

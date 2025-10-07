@@ -144,11 +144,7 @@ class DecisionFusionEngine(nn.Module):
                 nn.Softmax(dim=-1)
             ).to(device)
             
-            # Register adaptive networks as modules for proper state dict handling
-            if not hasattr(self, '_adaptive_registered'):
-                self.add_module('adaptive_similarity', self.similarity_network)
-                self.add_module('adaptive_meta_fusion', self.meta_fusion)
-                self._adaptive_registered = True
+            # Adaptive networks will be recreated as needed for different input dimensions
             
             self.networks_initialized = True
             self.current_feature_size = feature_size
@@ -210,13 +206,13 @@ class DecisionFusionEngine(nn.Module):
         
         # Re-initialize if input size changed or networks not initialized
         if (self.similarity_network is None or 
-            self.similarity_network[0].in_features != consensus_input.shape[1]):
+            (hasattr(self.similarity_network, '__getitem__') and 
+             self.similarity_network[0].in_features != consensus_input.shape[1])):
             self.networks_initialized = False
             self._initialize_networks(flat_predictions.shape[1], predictions[0].device)
         
-        # Use registered modules if available, fallback to direct reference
-        similarity_net = getattr(self, 'adaptive_similarity', self.similarity_network)
-        consensus_score = similarity_net(consensus_input).squeeze()  # [batch]
+        # Always use direct reference to ensure correct dimensions
+        consensus_score = self.similarity_network(consensus_input).squeeze()  # [batch]
         
         # Generate final prediction using meta-fusion
         # Ensure consensus_score has proper dimensions
@@ -233,13 +229,13 @@ class DecisionFusionEngine(nn.Module):
         
         # Check if meta_fusion network size matches
         if (self.meta_fusion is None or 
-            self.meta_fusion[0].in_features != meta_input.shape[1]):
+            (hasattr(self.meta_fusion, '__getitem__') and
+             self.meta_fusion[0].in_features != meta_input.shape[1])):
             self.networks_initialized = False
             self._initialize_networks(flat_predictions.shape[1], predictions[0].device)
         
-        # Use registered modules if available, fallback to direct reference
-        meta_fusion_net = getattr(self, 'adaptive_meta_fusion', self.meta_fusion)
-        final_prediction = meta_fusion_net(meta_input)  # [batch, 10]
+        # Always use direct reference to ensure correct dimensions
+        final_prediction = self.meta_fusion(meta_input)  # [batch, 10]
         
         # Calculate final confidence
         weighted_confidences = torch.sum(combined_weights * confidence_tensor.expand(batch_size, -1), dim=1)

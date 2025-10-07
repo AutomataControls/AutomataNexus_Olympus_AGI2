@@ -589,10 +589,13 @@ def train_foundation_stage(olympus, dataloader, criterion, optimizer, scheduler,
 
 
 if __name__ == "__main__":
-    # Set seeds for reproducibility
-    torch.manual_seed(42)
-    np.random.seed(42)
-    random.seed(42)
+    # INCREMENTAL TRAINING: Use different random seeds for each run
+    import time
+    seed = int(time.time()) % 10000  # Different seed each run
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    print(f"\033[96m🏛️ Using random seed: {seed} for incremental variation\033[0m")
     
     # Train OLYMPUS V1
     olympus, best_performance = train_olympus_ensemble_v1()

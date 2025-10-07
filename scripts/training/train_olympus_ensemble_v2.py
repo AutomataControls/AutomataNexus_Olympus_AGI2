@@ -259,13 +259,13 @@ def train_olympus_ensemble_v2():
         except Exception as e:
             print(f"\033[93m⚠️  Could not load V1 weights, loading individual specialists: {e}\\033[0m")
             # Fallback to individual specialist loading
-            weight_dir = '/content/AutomataNexus_Olympus_AGI2/models'
+            weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
             load_results = olympus.load_all_specialists(weight_dir)
             successful_loads = sum(load_results.values())
             print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 specialist models\\033[0m")
     else:
         # Load all specialist weights individually
-        weight_dir = '/content/AutomataNexus_Olympus_AGI2/models'
+        weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
         load_results = olympus.load_all_specialists(weight_dir)
         successful_loads = sum(load_results.values())
         print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 specialist models\\033[0m")

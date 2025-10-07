@@ -67,6 +67,7 @@ class DecisionFusionEngine(nn.Module):
         # Track expected feature sizes
         self.expected_pred_features = 10 * self.num_specialists
         self.networks_initialized = False
+        self.current_feature_size = None
         
     def calculate_iou_scores(self, predictions: List[torch.Tensor], target: Optional[torch.Tensor] = None) -> torch.Tensor:
         """Calculate IoU scores between specialist predictions"""
@@ -96,7 +97,7 @@ class DecisionFusionEngine(nn.Module):
     
     def _initialize_networks(self, feature_size: int, device: torch.device):
         """Initialize adaptive networks based on actual feature size"""
-        if not self.networks_initialized and self.similarity_network is None:
+        if not self.networks_initialized or self.similarity_network is None or self.current_feature_size != feature_size:
             # Prediction similarity analyzer
             self.similarity_network = nn.Sequential(
                 nn.Linear(feature_size + self.num_specialists, 256),  # predictions + confidences
@@ -120,6 +121,7 @@ class DecisionFusionEngine(nn.Module):
             ).to(device)
             
             self.networks_initialized = True
+            self.current_feature_size = feature_size
     
     def forward(self, specialist_predictions: Dict[str, torch.Tensor],
                 specialist_confidences: Dict[str, float],
@@ -500,6 +502,10 @@ class OlympusEnsemble(nn.Module):
                         print(f"\033[91m🏛️ CRITICAL: Fusion engine keys missing: {len(fusion_missing)} (ensemble progress will reset!)\033[0m")
                 if unexpected_keys:
                     print(f"\033[96m🏛️ Unexpected keys (ignored): {len(unexpected_keys)}\033[0m")
+                    # Check if these are fusion engine keys (expected for adaptive networks)
+                    fusion_unexpected = [k for k in unexpected_keys if 'fusion_engine' in k and ('similarity_network' in k or 'meta_fusion' in k)]
+                    if fusion_unexpected:
+                        print(f"\033[96m🏛️ Note: {len(fusion_unexpected)} adaptive fusion network keys ignored (will recreate with correct dimensions)\033[0m")
             
             # Load performance history if available
             if 'performance_metrics' in ensemble_state:

@@ -484,10 +484,29 @@ class OlympusEnsemble(nn.Module):
     
     def load_ensemble(self, load_path: str):
         """Load complete OLYMPUS ensemble state"""
-        ensemble_state = torch.load(load_path, map_location=self.device_name)
-        
-        self.load_state_dict(ensemble_state['ensemble_state_dict'])
-        self.ensemble_performance = ensemble_state['performance_metrics']['ensemble_performance_history']
-        self.specialist_performance = defaultdict(list, ensemble_state['performance_metrics']['specialist_performance_history'])
-        
-        print(f"\033[96m🏛️ OLYMPUS ensemble loaded from {load_path}\033[0m")
+        try:
+            ensemble_state = torch.load(load_path, map_location=self.device_name)
+            
+            # Load state dict with proper error handling
+            if 'ensemble_state_dict' in ensemble_state:
+                state_dict = ensemble_state['ensemble_state_dict']
+                # Use strict=False to handle architecture differences
+                missing_keys, unexpected_keys = self.load_state_dict(state_dict, strict=False)
+                if missing_keys:
+                    print(f"\033[96m🏛️ Missing keys (will use initialized weights): {len(missing_keys)}\033[0m")
+                if unexpected_keys:
+                    print(f"\033[96m🏛️ Unexpected keys (ignored): {len(unexpected_keys)}\033[0m")
+            
+            # Load performance history if available
+            if 'performance_metrics' in ensemble_state:
+                metrics = ensemble_state['performance_metrics']
+                if 'ensemble_performance_history' in metrics:
+                    self.ensemble_performance = metrics['ensemble_performance_history']
+                if 'specialist_performance_history' in metrics:
+                    self.specialist_performance = defaultdict(list, metrics['specialist_performance_history'])
+            
+            print(f"\033[96m🏛️ OLYMPUS ensemble loaded from {load_path}\033[0m")
+            
+        except Exception as e:
+            print(f"\033[96m🏛️ Error loading OLYMPUS ensemble: {e}\033[0m")
+            print(f"\033[96m🏛️ Starting with fresh ensemble weights\033[0m")

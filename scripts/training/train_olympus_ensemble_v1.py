@@ -368,25 +368,44 @@ def train_olympus_ensemble_v1():
     else:
         print(f"\033[96m🏛️ No existing OLYMPUS model found - starting fresh V1 training\033[0m")
     
-    # Freeze specialist parameters for V1 (train only fusion components)
+    # Partially freeze specialist parameters for V1 (train fusion + top specialist layers)
     if OLYMPUS_V1_CONFIG['freeze_specialists']:
         for name, specialist in olympus.specialists.items():
-            for param in specialist.parameters():
-                param.requires_grad = False
-        print(f"\033[96m🏛️ Specialist weights frozen - training fusion components only\033[0m")
+            for param_name, param in specialist.named_parameters():
+                # Allow fine-tuning of output layers and top transformer/decoder layers
+                if any(layer in param_name for layer in ['output', 'final', 'head', 'classifier', 'decoder']):
+                    param.requires_grad = True
+                elif 'layer' in param_name or 'transformer' in param_name:
+                    # Extract layer number and only allow top 2 layers for adaptation
+                    import re
+                    layer_match = re.search(r'layer\.(\d+)|transformer.*\.(\d+)', param_name)
+                    if layer_match:
+                        layer_num = int([g for g in layer_match.groups() if g is not None][0])
+                        if layer_num >= 6:  # Top layers (6,7+) for adaptation
+                            param.requires_grad = True
+                        else:
+                            param.requires_grad = False
+                    else:
+                        param.requires_grad = False
+                else:
+                    param.requires_grad = False
+        
+        # Count trainable specialist parameters
+        specialist_trainable = sum(p.numel() for specialist in olympus.specialists.values() 
+                                  for p in specialist.parameters() if p.requires_grad)
+        print(f"\033[96m🏛️ Specialist top layers unfrozen - training fusion + {specialist_trainable:,} specialist parameters\033[0m")
     
     # Initialize loss function
     criterion = OlympusV1Loss(OLYMPUS_V1_CONFIG)
     
-    # Initialize optimizer (only fusion parameters if specialists are frozen)
-    if OLYMPUS_V1_CONFIG['fusion_training_only']:
-        fusion_params = list(olympus.fusion_engine.parameters())
-        trainable_params = fusion_params
-        total_fusion_params = sum(p.numel() for p in fusion_params if p.requires_grad)
-        print(f"\033[96m🏛️ Training {total_fusion_params:,} fusion parameters ({len(fusion_params)} groups)\033[0m")
-    else:
-        trainable_params = list(olympus.parameters())
-        print(f"\033[96m🏛️ Training all {len(trainable_params)} parameters\033[0m")
+    # Initialize optimizer (fusion + unfrozen specialist parameters)
+    fusion_params = list(olympus.fusion_engine.parameters())
+    specialist_params = [p for specialist in olympus.specialists.values() for p in specialist.parameters() if p.requires_grad]
+    trainable_params = fusion_params + specialist_params
+    
+    total_fusion_params = sum(p.numel() for p in fusion_params)
+    total_specialist_params = sum(p.numel() for p in specialist_params)
+    print(f"\033[96m🏛️ Training {total_fusion_params:,} fusion + {total_specialist_params:,} specialist parameters ({len(trainable_params)} total groups)\033[0m")
     
     optimizer = optim.AdamW(
         trainable_params,

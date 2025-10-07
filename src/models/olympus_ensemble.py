@@ -96,7 +96,7 @@ class DecisionFusionEngine(nn.Module):
     
     def _initialize_networks(self, feature_size: int, device: torch.device):
         """Initialize adaptive networks based on actual feature size"""
-        if not self.networks_initialized:
+        if not self.networks_initialized and self.similarity_network is None:
             # Prediction similarity analyzer
             self.similarity_network = nn.Sequential(
                 nn.Linear(feature_size + self.num_specialists, 256),  # predictions + confidences
@@ -494,6 +494,10 @@ class OlympusEnsemble(nn.Module):
                 missing_keys, unexpected_keys = self.load_state_dict(state_dict, strict=False)
                 if missing_keys:
                     print(f"\033[96m🏛️ Missing keys (will use initialized weights): {len(missing_keys)}\033[0m")
+                    # Check if fusion engine keys are missing
+                    fusion_missing = [k for k in missing_keys if 'fusion_engine' in k]
+                    if fusion_missing:
+                        print(f"\033[91m🏛️ CRITICAL: Fusion engine keys missing: {len(fusion_missing)} (ensemble progress will reset!)\033[0m")
                 if unexpected_keys:
                     print(f"\033[96m🏛️ Unexpected keys (ignored): {len(unexpected_keys)}\033[0m")
             

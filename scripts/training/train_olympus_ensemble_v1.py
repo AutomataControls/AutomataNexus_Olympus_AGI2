@@ -37,7 +37,7 @@ OLYMPUS_V1_CONFIG = {
     'learning_rate': 0.0001,  # Conservative for ensemble coordination
     'num_epochs': 300,  # Foundation training: 15 stages x 20 epochs
     'gradient_accumulation': 2,  # Effective batch 128 for A100 optimization
-    'epochs_per_stage': 2,  # Lightning training - 2 epochs per stage
+    'epochs_per_stage': 10,  # More epochs for better learning - 10 epochs per stage
     'curriculum_stages': 15,  # All stages - just faster
     
     # Enhanced Loss Configuration
@@ -349,14 +349,18 @@ def train_olympus_ensemble_v1():
     successful_loads = sum(load_results.values())
     print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 specialist models\033[0m")
     
-    # Try to load existing OLYMPUS ensemble state
+    # Save model path for later optimizer loading
     olympus_model_path = os.path.join(weight_dir, 'olympus_v1_best.pt')
+    saved_checkpoint = None
+    
     if os.path.exists(olympus_model_path):
         try:
+            saved_checkpoint = torch.load(olympus_model_path, map_location=device)
             olympus.load_ensemble(olympus_model_path)
             print(f"\033[96m🏛️ Successfully loaded existing OLYMPUS V1 ensemble state\033[0m")
         except Exception as e:
             print(f"\033[96m🏛️ Could not load OLYMPUS ensemble state: {e}\033[0m")
+            saved_checkpoint = None
     else:
         print(f"\033[96m🏛️ No existing OLYMPUS model found - starting fresh V1 training\033[0m")
     
@@ -387,6 +391,14 @@ def train_olympus_ensemble_v1():
         eps=1e-8
     )
     
+    # Load optimizer state if available
+    if saved_checkpoint and 'optimizer_state_dict' in saved_checkpoint:
+        try:
+            optimizer.load_state_dict(saved_checkpoint['optimizer_state_dict'])
+            print(f"\033[96m🏛️ Loaded optimizer state from checkpoint\033[0m")
+        except Exception as e:
+            print(f"\033[96m🏛️ Could not load optimizer state: {e}\033[0m")
+    
     # Learning rate scheduler
     scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
         optimizer,
@@ -394,6 +406,14 @@ def train_olympus_ensemble_v1():
         T_mult=int(OLYMPUS_V1_CONFIG['restart_multiplier']),
         eta_min=OLYMPUS_V1_CONFIG['learning_rate'] * 0.01
     )
+    
+    # Load scheduler state if available
+    if saved_checkpoint and 'scheduler_state_dict' in saved_checkpoint:
+        try:
+            scheduler.load_state_dict(saved_checkpoint['scheduler_state_dict'])
+            print(f"\033[96m🏛️ Loaded scheduler state from checkpoint\033[0m")
+        except Exception as e:
+            print(f"\033[96m🏛️ Could not load scheduler state: {e}\033[0m")
     
     # Mixed precision training
     scaler = GradScaler()
@@ -437,9 +457,25 @@ def train_olympus_ensemble_v1():
         # Update best performance
         if stage_performance > best_performance:
             best_performance = stage_performance
-            # Save best OLYMPUS model to same location as specialist models
+            # Save best OLYMPUS model with optimizer state
             os.makedirs('/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels', exist_ok=True)
-            olympus.save_ensemble('/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt')
+            
+            # Enhanced save with optimizer and scheduler state
+            ensemble_state = {
+                'ensemble_state_dict': olympus.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'scheduler_state_dict': scheduler.state_dict(),
+                'best_performance': best_performance,
+                'stage': stage_idx,
+                'ensemble_config': {
+                    'max_grid_size': olympus.max_grid_size,
+                    'd_model': olympus.d_model,
+                    'device': olympus.device_name
+                },
+                'performance_metrics': olympus.get_ensemble_state()
+            }
+            
+            torch.save(ensemble_state, '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt')
             print(f"\033[96m🏛️ New best V1 ensemble performance: {best_performance:.2%} - OLYMPUS saved!\033[0m")
         
         # Memory cleanup

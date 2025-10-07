@@ -33,12 +33,12 @@ from src.models.olympus_ensemble import OlympusEnsemble, EnsembleDecision
 # OLYMPUS V1 Configuration - Foundation Ensemble Training
 OLYMPUS_V1_CONFIG = {
     # Core Training Parameters - Foundation Level
-    'batch_size': 64,  # Optimized for A100 GPU utilization (10x faster)
+    'batch_size': 512,  # Ultra-maximum A100 utilization - 8x current
     'learning_rate': 0.0001,  # Conservative for ensemble coordination
     'num_epochs': 300,  # Foundation training: 15 stages x 20 epochs
     'gradient_accumulation': 2,  # Effective batch 128 for A100 optimization
-    'epochs_per_stage': 20,  # Foundation epochs per stage
-    'curriculum_stages': 15,  # Comprehensive curriculum stages
+    'epochs_per_stage': 2,  # Lightning training - 2 epochs per stage
+    'curriculum_stages': 15,  # All stages - just faster
     
     # Enhanced Loss Configuration
     'ensemble_loss_weight': 1.0,  # Primary ensemble loss
@@ -424,7 +424,7 @@ def train_olympus_ensemble_v1():
             batch_size=OLYMPUS_V1_CONFIG['batch_size'],
             shuffle=True,
             collate_fn=foundation_collate_fn,
-            num_workers=8,  # Optimized for multi-core data loading
+            num_workers=16,  # Maximum multi-core data loading
             pin_memory=True
         )
         

@@ -80,18 +80,38 @@ class DecisionFusionEngine(nn.Module):
             nn.Softmax(dim=-1)
         )
         
-        # Adaptive networks - will be initialized on first forward pass
-        self.similarity_network = None
-        self.meta_fusion = None
+        # Fixed-size adaptive networks for proper state saving/loading
+        # Use maximum expected feature size for consistency across grid sizes
+        max_feature_size = 30 * 30 * 10 * self.num_specialists  # Max grid 30x30, 10 classes, 5 specialists
+        
+        # Prediction similarity analyzer (fixed size)
+        self.similarity_network = nn.Sequential(
+            nn.Linear(max_feature_size + self.num_specialists, 512),  # predictions + confidences
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Linear(256, 1),  # Consensus score
+            nn.Sigmoid()
+        )
+        
+        # Meta-fusion network for final decision (fixed size)
+        self.meta_fusion = nn.Sequential(
+            nn.Linear(max_feature_size + self.num_specialists + 1, 512),  # Predictions + confidences + consensus
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Linear(256, 10),  # Final prediction logits
+            nn.Softmax(dim=-1)
+        )
         
         # IoU-based selection weights
         self.iou_weight = 0.85  # ULTRA TEAL formula
         self.exact_weight = 0.15
         
-        # Track expected feature sizes
-        self.expected_pred_features = 10 * self.num_specialists
-        self.networks_initialized = False
-        self.current_feature_size = None
+        # Track feature padding for consistency
+        self.max_feature_size = max_feature_size
         
     def calculate_iou_scores(self, predictions: List[torch.Tensor], target: Optional[torch.Tensor] = None) -> torch.Tensor:
         """Calculate IoU scores between specialist predictions"""
@@ -119,35 +139,18 @@ class DecisionFusionEngine(nn.Module):
         
         return iou_scores.transpose(0, 1)  # [batch, num_specialists]
     
-    def _initialize_networks(self, feature_size: int, device: torch.device):
-        """Initialize adaptive networks based on actual feature size"""
-        if not self.networks_initialized or self.similarity_network is None or self.current_feature_size != feature_size:
-            # Prediction similarity analyzer
-            self.similarity_network = nn.Sequential(
-                nn.Linear(feature_size + self.num_specialists, 256),  # predictions + confidences
-                nn.ReLU(),
-                nn.Dropout(0.1),
-                nn.Linear(256, 128),
-                nn.ReLU(),
-                nn.Linear(128, 1),  # Consensus score
-                nn.Sigmoid()
-            ).to(device)
-            
-            # Meta-fusion network for final decision
-            self.meta_fusion = nn.Sequential(
-                nn.Linear(feature_size + self.num_specialists + 1, 128),  # Predictions + confidences + consensus
-                nn.ReLU(),
-                nn.Dropout(0.1),
-                nn.Linear(128, 64),
-                nn.ReLU(),
-                nn.Linear(64, 10),  # Final prediction logits
-                nn.Softmax(dim=-1)
-            ).to(device)
-            
-            # Adaptive networks will be recreated as needed for different input dimensions
-            
-            self.networks_initialized = True
-            self.current_feature_size = feature_size
+    def _pad_features_to_max_size(self, features: torch.Tensor) -> torch.Tensor:
+        """Pad features to maximum size for consistent network input"""
+        current_size = features.shape[1]
+        if current_size < self.max_feature_size:
+            # Pad with zeros to max size
+            padding = torch.zeros(features.shape[0], self.max_feature_size - current_size, 
+                                device=features.device, dtype=features.dtype)
+            return torch.cat([features, padding], dim=1)
+        elif current_size > self.max_feature_size:
+            # Truncate if somehow larger (shouldn't happen)
+            return features[:, :self.max_feature_size]
+        return features
     
     def forward(self, specialist_predictions: Dict[str, torch.Tensor],
                 specialist_confidences: Dict[str, float],
@@ -177,8 +180,8 @@ class DecisionFusionEngine(nn.Module):
         # Calculate consensus score - make robust to different prediction shapes
         flat_predictions = stacked_predictions.transpose(0, 1).reshape(batch_size, -1)  # [batch, 5*C*H*W]
         
-        # Initialize networks adaptively based on actual feature size
-        self._initialize_networks(flat_predictions.shape[1], predictions[0].device)
+        # Pad features to maximum size for consistent network input
+        padded_predictions = self._pad_features_to_max_size(flat_predictions)
         
         # Calculate IoU-based quality scores
         iou_scores = self.calculate_iou_scores(predictions, target)  # [batch, 5]
@@ -202,16 +205,10 @@ class DecisionFusionEngine(nn.Module):
         combined_weights = fusion_weights * iou_scores
         combined_weights = F.softmax(combined_weights, dim=-1)
         
-        consensus_input = torch.cat([flat_predictions, confidence_tensor.expand(batch_size, -1)], dim=1)
+        # Create consensus input with padded features
+        consensus_input = torch.cat([padded_predictions, confidence_tensor.expand(batch_size, -1)], dim=1)
         
-        # Re-initialize if input size changed or networks not initialized
-        if (self.similarity_network is None or 
-            (hasattr(self.similarity_network, '__getitem__') and 
-             self.similarity_network[0].in_features != consensus_input.shape[1])):
-            self.networks_initialized = False
-            self._initialize_networks(flat_predictions.shape[1], predictions[0].device)
-        
-        # Always use direct reference to ensure correct dimensions
+        # Use fixed-size similarity network (no reinitialization needed)
         consensus_score = self.similarity_network(consensus_input).squeeze()  # [batch]
         
         # Generate final prediction using meta-fusion
@@ -222,19 +219,12 @@ class DecisionFusionEngine(nn.Module):
             consensus_score = consensus_score.unsqueeze(-1)  # Make it [batch, 1]
             
         meta_input = torch.cat([
-            flat_predictions,  # All prediction features
+            padded_predictions,  # Padded prediction features (fixed size)
             combined_weights,  # Final fusion weights
             consensus_score  # Consensus score with proper dimensions
         ], dim=1)
         
-        # Check if meta_fusion network size matches
-        if (self.meta_fusion is None or 
-            (hasattr(self.meta_fusion, '__getitem__') and
-             self.meta_fusion[0].in_features != meta_input.shape[1])):
-            self.networks_initialized = False
-            self._initialize_networks(flat_predictions.shape[1], predictions[0].device)
-        
-        # Always use direct reference to ensure correct dimensions
+        # Use fixed-size meta-fusion network (no reinitialization needed)
         final_prediction = self.meta_fusion(meta_input)  # [batch, 10]
         
         # Calculate final confidence

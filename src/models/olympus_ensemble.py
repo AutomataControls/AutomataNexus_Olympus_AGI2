@@ -45,14 +45,38 @@ class DecisionFusionEngine(nn.Module):
         self.d_model = d_model
         self.num_specialists = 5
         
-        # Confidence analysis network
+        # Enhanced confidence analysis network
         self.confidence_analyzer = nn.Sequential(
-            nn.Linear(self.num_specialists, 64),  # 5 confidence scores
+            nn.Linear(self.num_specialists, 256),  # 5 confidence scores -> 256
             nn.ReLU(),
             nn.Dropout(0.1),
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, self.num_specialists),  # Output fusion weights
+            nn.Softmax(dim=-1)
+        )
+        
+        # Grid-size adaptive weighting
+        self.grid_size_adapter = nn.Sequential(
+            nn.Linear(1, 64),  # Grid size as input
+            nn.ReLU(),
             nn.Linear(64, 32),
             nn.ReLU(),
-            nn.Linear(32, self.num_specialists),  # Output fusion weights
+            nn.Linear(32, self.num_specialists),  # Grid-specific specialist weights
+            nn.Softmax(dim=-1)
+        )
+        
+        # Specialist expertise router based on problem complexity
+        self.expertise_router = nn.Sequential(
+            nn.Linear(self.num_specialists * 2, 128),  # Confidences + grid weights
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, self.num_specialists),
             nn.Softmax(dim=-1)
         )
         
@@ -144,6 +168,10 @@ class DecisionFusionEngine(nn.Module):
         confidence_tensor = torch.tensor(confidences, device=predictions[0].device).unsqueeze(0)  # [1, 5]
         batch_size = predictions[0].shape[0]
         
+        # Get grid size for adaptive weighting
+        grid_size = max(predictions[0].shape[-2:])  # Get larger dimension
+        grid_size_tensor = torch.tensor([grid_size], dtype=torch.float32, device=predictions[0].device).unsqueeze(0)  # [1, 1]
+        
         # Calculate consensus score - make robust to different prediction shapes
         flat_predictions = stacked_predictions.transpose(0, 1).reshape(batch_size, -1)  # [batch, 5*C*H*W]
         
@@ -153,9 +181,20 @@ class DecisionFusionEngine(nn.Module):
         # Calculate IoU-based quality scores
         iou_scores = self.calculate_iou_scores(predictions, target)  # [batch, 5]
         
-        # Generate confidence-based fusion weights
-        fusion_weights = self.confidence_analyzer(confidence_tensor)  # [1, 5]
-        fusion_weights = fusion_weights.expand(batch_size, -1)  # [batch, 5]
+        # Generate enhanced fusion weights
+        base_fusion_weights = self.confidence_analyzer(confidence_tensor)  # [1, 5]
+        base_fusion_weights = base_fusion_weights.expand(batch_size, -1)  # [batch, 5]
+        
+        # Grid-size adaptive weights
+        grid_weights = self.grid_size_adapter(grid_size_tensor)  # [1, 5]
+        grid_weights = grid_weights.expand(batch_size, -1)  # [batch, 5]
+        
+        # Expertise routing based on confidences and grid complexity
+        router_input = torch.cat([confidence_tensor.expand(batch_size, -1), grid_weights], dim=1)  # [batch, 10]
+        expertise_weights = self.expertise_router(router_input)  # [batch, 5]
+        
+        # Combine all weighting mechanisms
+        fusion_weights = base_fusion_weights * grid_weights * expertise_weights
         
         # Combine with IoU scores for final weights
         combined_weights = fusion_weights * iou_scores

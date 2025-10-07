@@ -378,7 +378,8 @@ def train_olympus_ensemble_v1():
     if OLYMPUS_V1_CONFIG['fusion_training_only']:
         fusion_params = list(olympus.fusion_engine.parameters())
         trainable_params = fusion_params
-        print(f"\033[96m🏛️ Training {len(fusion_params)} fusion parameters\033[0m")
+        total_fusion_params = sum(p.numel() for p in fusion_params if p.requires_grad)
+        print(f"\033[96m🏛️ Training {total_fusion_params:,} fusion parameters ({len(fusion_params)} groups)\033[0m")
     else:
         trainable_params = list(olympus.parameters())
         print(f"\033[96m🏛️ Training all {len(trainable_params)} parameters\033[0m")

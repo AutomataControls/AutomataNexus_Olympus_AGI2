@@ -288,7 +288,7 @@ class OlympusEnsemble(nn.Module):
         total_params = sum(p.numel() for p in self.parameters())
         print(f"\033[96m🏛️ OLYMPUS initialized with {total_params:,} total parameters across all specialists\033[0m")
         
-    def load_all_specialists(self, weight_dir: str = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels') -> Dict[str, bool]:
+    def load_all_specialists(self, weight_dir: str = '/mnt/d/opt/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels') -> Dict[str, bool]:
         """Load pre-trained weights for all specialists"""
         print(f"\033[96m🏛️ Loading all specialist weights...\033[0m")
         

@@ -250,7 +250,7 @@ def train_olympus_ensemble_v2():
     ).to(device)
     
     # Load V1 ensemble weights first (from the correct InputBestModels directory)
-    v1_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt'
+    v1_model_path = '/mnt/d/opt/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt'
     if os.path.exists(v1_model_path):
         try:
             v1_loaded_successfully = olympus.load_ensemble(v1_model_path)
@@ -259,7 +259,7 @@ def train_olympus_ensemble_v2():
             else:
                 print(f"\033[91m⚠️  V1 fusion engine failed to load, loading individual specialists\\033[0m")
                 # Fallback to individual specialist loading
-                weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
+                weight_dir = '/mnt/d/opt/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
                 load_results = olympus.load_all_specialists(weight_dir)
                 successful_loads = sum(load_results.values())
                 print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 specialist models\\033[0m")
@@ -278,7 +278,7 @@ def train_olympus_ensemble_v2():
         print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 specialist models\\033[0m")
     
     # Try to load existing V2 ensemble state if available
-    v2_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v2_best.pt'
+    v2_model_path = '/mnt/d/opt/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v2_best.pt'
     v2_saved_checkpoint = None
     if os.path.exists(v2_model_path):
         try:
@@ -403,7 +403,7 @@ def train_olympus_ensemble_v2():
         
         # Create advanced dataset for this stage
         dataset = FoundationEnsembleDataset(
-            data_dir='/content/AutomataNexus_Olympus_AGI2/data',
+            data_dir='/mnt/d/opt/AutomataNexus_Olympus_AGI2/data',
             max_grid_size=stage_config['max_grid_size'],
             stage_config=stage_config
         )
@@ -430,7 +430,7 @@ def train_olympus_ensemble_v2():
         if stage_performance > best_performance:
             best_performance = stage_performance
             # Save best OLYMPUS V2 model in InputBestModels directory
-            os.makedirs('/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels', exist_ok=True)
+            os.makedirs('/mnt/d/opt/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels', exist_ok=True)
             
             # Enhanced save with optimizer and scheduler state (similar to V1)
             ensemble_state = {
@@ -449,7 +449,7 @@ def train_olympus_ensemble_v2():
                 'performance_metrics': olympus.get_ensemble_state()
             }
             
-            torch.save(ensemble_state, '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v2_best.pt')
+            torch.save(ensemble_state, '/mnt/d/opt/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v2_best.pt')
             print(f"\033[96m🏛️ New best V2 ensemble performance: {best_performance:.2%} - OLYMPUS V2 saved!\\033[0m")
         
         # Memory cleanup

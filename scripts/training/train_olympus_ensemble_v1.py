@@ -344,7 +344,7 @@ def train_olympus_ensemble_v1():
     ).to(device)
     
     # Load all specialist weights from InputBestModels directory
-    weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
+    weight_dir = '/mnt/d/opt/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
     load_results = olympus.load_all_specialists(weight_dir)
     successful_loads = sum(load_results.values())
     print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 specialist models\033[0m")
@@ -457,7 +457,7 @@ def train_olympus_ensemble_v1():
         
         # Create foundation dataset for this stage
         dataset = FoundationEnsembleDataset(
-            data_dir='/content/AutomataNexus_Olympus_AGI2/data',
+            data_dir='/mnt/d/opt/AutomataNexus_Olympus_AGI2/data',
             max_grid_size=stage_config['max_grid_size'],
             stage_config=stage_config
         )
@@ -482,7 +482,7 @@ def train_olympus_ensemble_v1():
         if stage_performance > best_performance:
             best_performance = stage_performance
             # Save best OLYMPUS model with optimizer state
-            os.makedirs('/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels', exist_ok=True)
+            os.makedirs('/mnt/d/opt/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels', exist_ok=True)
             
             # Enhanced save with optimizer and scheduler state
             ensemble_state = {
@@ -499,7 +499,7 @@ def train_olympus_ensemble_v1():
                 'performance_metrics': olympus.get_ensemble_state()
             }
             
-            torch.save(ensemble_state, '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt')
+            torch.save(ensemble_state, '/mnt/d/opt/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt')
             print(f"\033[96m🏛️ New best V1 ensemble performance: {best_performance:.2%} - OLYMPUS saved!\033[0m")
         
         # Memory cleanup

@@ -144,6 +144,12 @@ class DecisionFusionEngine(nn.Module):
                 nn.Softmax(dim=-1)
             ).to(device)
             
+            # Register adaptive networks as modules for proper state dict handling
+            if not hasattr(self, '_adaptive_registered'):
+                self.add_module('adaptive_similarity', self.similarity_network)
+                self.add_module('adaptive_meta_fusion', self.meta_fusion)
+                self._adaptive_registered = True
+            
             self.networks_initialized = True
             self.current_feature_size = feature_size
     
@@ -207,8 +213,10 @@ class DecisionFusionEngine(nn.Module):
             self.similarity_network[0].in_features != consensus_input.shape[1]):
             self.networks_initialized = False
             self._initialize_networks(flat_predictions.shape[1], predictions[0].device)
-            
-        consensus_score = self.similarity_network(consensus_input).squeeze()  # [batch]
+        
+        # Use registered modules if available, fallback to direct reference
+        similarity_net = getattr(self, 'adaptive_similarity', self.similarity_network)
+        consensus_score = similarity_net(consensus_input).squeeze()  # [batch]
         
         # Generate final prediction using meta-fusion
         # Ensure consensus_score has proper dimensions
@@ -229,7 +237,9 @@ class DecisionFusionEngine(nn.Module):
             self.networks_initialized = False
             self._initialize_networks(flat_predictions.shape[1], predictions[0].device)
         
-        final_prediction = self.meta_fusion(meta_input)  # [batch, 10]
+        # Use registered modules if available, fallback to direct reference
+        meta_fusion_net = getattr(self, 'adaptive_meta_fusion', self.meta_fusion)
+        final_prediction = meta_fusion_net(meta_input)  # [batch, 10]
         
         # Calculate final confidence
         weighted_confidences = torch.sum(combined_weights * confidence_tensor.expand(batch_size, -1), dim=1)

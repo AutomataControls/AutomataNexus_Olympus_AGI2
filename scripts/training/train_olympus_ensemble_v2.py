@@ -33,11 +33,11 @@ from src.models.olympus_ensemble import OlympusEnsemble, EnsembleDecision
 # OLYMPUS V2 Configuration - Advanced Ensemble Training
 OLYMPUS_V2_CONFIG = {
     # Core Training Parameters - Advanced Level
-    'batch_size': 6,  # Smaller batches for complex ensemble training
+    'batch_size': 512,  # Lightning-fast A100 utilization
     'learning_rate': 0.00008,  # Lower rate for fine-tuning specialists
     'num_epochs': 200,  # Advanced training: 8 stages x 25 epochs
-    'gradient_accumulation': 6,  # Effective batch 36 for stability
-    'epochs_per_stage': 25,  # Advanced epochs per stage
+    'gradient_accumulation': 2,  # Lightning-fast effective batch 1024
+    'epochs_per_stage': 3,  # Lightning-fast advanced training
     'curriculum_stages': 8,  # Advanced curriculum stages
     
     # Enhanced Loss Configuration
@@ -361,7 +361,7 @@ def train_olympus_ensemble_v2():
             batch_size=OLYMPUS_V2_CONFIG['batch_size'],
             shuffle=True,
             collate_fn=foundation_collate_fn,
-            num_workers=0,  # Keep 0 for OLYMPUS stability
+            num_workers=16,  # Lightning-fast multi-core data loading
             pin_memory=True
         )
         

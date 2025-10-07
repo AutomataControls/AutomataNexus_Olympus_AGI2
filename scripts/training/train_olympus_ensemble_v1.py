@@ -35,9 +35,9 @@ OLYMPUS_V1_CONFIG = {
     # Core Training Parameters - Foundation Level (Memory Optimized for Large Grids)
     'batch_size': 256,  # Further reduced for 27x27+ grid stages
     'learning_rate': 0.0001,  # Conservative for ensemble coordination
-    'num_epochs': 300,  # Foundation training: 15 stages x 20 epochs
+    'num_epochs': 375,  # Extended foundation training: 15 stages x 25 epochs
     'gradient_accumulation': 3,  # Increased to maintain effective batch size
-    'epochs_per_stage': 10,  # More epochs for better learning - 10 epochs per stage
+    'epochs_per_stage': 25,  # Extended epochs for deeper learning - 25 epochs per stage
     'curriculum_stages': 15,  # All stages - just faster
     
     # Enhanced Loss Configuration
@@ -591,7 +591,7 @@ def train_foundation_stage(olympus, dataloader, criterion, optimizer, scheduler,
         avg_consensus = total_consensus / len(dataloader)
         
         # Log detailed progress with ultra light honey/amber for stage headers
-        if epoch % 5 == 0 or epoch == epochs_for_stage - 1:
+        if epoch % 10 == 0 or epoch == epochs_for_stage - 1:
             avg_loss = epoch_losses['total']/len(dataloader)
             current_lr = scheduler.get_last_lr()[0]
             print(f"\033[38;2;255;204;153m⏰ OLYMPUS V1 Stage {stage_idx}, Epoch {epoch} (Global: {stage_idx * OLYMPUS_V1_CONFIG['epochs_per_stage'] + epoch + 1}):\033[0m")

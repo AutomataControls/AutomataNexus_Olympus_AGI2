@@ -356,8 +356,12 @@ def train_olympus_ensemble_v1():
     if os.path.exists(olympus_model_path):
         try:
             saved_checkpoint = torch.load(olympus_model_path, map_location=device)
-            olympus.load_ensemble(olympus_model_path)
-            print(f"\033[96m🏛️ Successfully loaded existing OLYMPUS V1 ensemble state\033[0m")
+            ensemble_loaded_successfully = olympus.load_ensemble(olympus_model_path)
+            if ensemble_loaded_successfully:
+                print(f"\033[92m🏛️ Successfully loaded existing OLYMPUS V1 ensemble state - INCREMENTAL TRAINING READY\033[0m")
+            else:
+                print(f"\033[91m🏛️ FAILED to load V1 ensemble state - fusion engine weights missing - WILL RESTART FROM SCRATCH\033[0m")
+                saved_checkpoint = None
         except Exception as e:
             print(f"\033[96m🏛️ Could not load OLYMPUS ensemble state: {e}\033[0m")
             saved_checkpoint = None

@@ -249,13 +249,20 @@ def train_olympus_ensemble_v2():
         device=device
     ).to(device)
     
-    # Load V1 ensemble weights first
-    v1_model_path = '/content/AutomataNexus_Olympus_AGI2/models/olympus_v1_best.pt'
+    # Load V1 ensemble weights first (from the correct InputBestModels directory)
+    v1_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt'
     if os.path.exists(v1_model_path):
         try:
-            ensemble_state = torch.load(v1_model_path, map_location=device)
-            olympus.load_state_dict(ensemble_state['ensemble_state_dict'])
-            print(f"\033[96m🏛️ Loaded V1 ensemble weights for V2 training\\033[0m")
+            v1_loaded_successfully = olympus.load_ensemble(v1_model_path)
+            if v1_loaded_successfully:
+                print(f"\033[92m🏛️ Loaded V1 ensemble weights for V2 training - FUSION ENGINE LOADED\\033[0m")
+            else:
+                print(f"\033[91m⚠️  V1 fusion engine failed to load, loading individual specialists\\033[0m")
+                # Fallback to individual specialist loading
+                weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
+                load_results = olympus.load_all_specialists(weight_dir)
+                successful_loads = sum(load_results.values())
+                print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 specialist models\\033[0m")
         except Exception as e:
             print(f"\033[93m⚠️  Could not load V1 weights, loading individual specialists: {e}\\033[0m")
             # Fallback to individual specialist loading
@@ -269,6 +276,22 @@ def train_olympus_ensemble_v2():
         load_results = olympus.load_all_specialists(weight_dir)
         successful_loads = sum(load_results.values())
         print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 specialist models\\033[0m")
+    
+    # Try to load existing V2 ensemble state if available
+    v2_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v2_best.pt'
+    v2_saved_checkpoint = None
+    if os.path.exists(v2_model_path):
+        try:
+            v2_saved_checkpoint = torch.load(v2_model_path, map_location=device)
+            v2_loaded_successfully = olympus.load_ensemble(v2_model_path)
+            if v2_loaded_successfully:
+                print(f"\033[92m🏛️ Loaded existing V2 ensemble state - INCREMENTAL V2 TRAINING READY\\033[0m")
+            else:
+                print(f"\033[91m🏛️ V2 fusion engine failed to load, continuing with V1 foundation\\033[0m")
+                v2_saved_checkpoint = None
+        except Exception as e:
+            print(f"\033[96m🏛️ Could not load V2 state, continuing with V1 foundation: {e}\\033[0m")
+            v2_saved_checkpoint = None
     
     # V2: Partial specialist fine-tuning (not fully frozen)
     if not OLYMPUS_V2_CONFIG['freeze_specialists']:
@@ -332,11 +355,41 @@ def train_olympus_ensemble_v2():
         eta_min=OLYMPUS_V2_CONFIG['specialist_learning_rate'] * 0.01
     ) if specialist_optimizer else None
     
+    # Load optimizer and scheduler states if V2 checkpoint exists
+    if v2_saved_checkpoint:
+        try:
+            if 'fusion_optimizer_state_dict' in v2_saved_checkpoint:
+                fusion_optimizer.load_state_dict(v2_saved_checkpoint['fusion_optimizer_state_dict'])
+                print(f"\033[96m🏛️ Loaded fusion optimizer state from V2 checkpoint\\033[0m")
+        except Exception as e:
+            print(f"\033[96m🏛️ Could not load fusion optimizer state: {e}\\033[0m")
+        
+        try:
+            if 'specialist_optimizer_state_dict' in v2_saved_checkpoint and specialist_optimizer:
+                specialist_optimizer.load_state_dict(v2_saved_checkpoint['specialist_optimizer_state_dict'])
+                print(f"\033[96m🏛️ Loaded specialist optimizer state from V2 checkpoint\\033[0m")
+        except Exception as e:
+            print(f"\033[96m🏛️ Could not load specialist optimizer state: {e}\\033[0m")
+        
+        try:
+            if 'fusion_scheduler_state_dict' in v2_saved_checkpoint:
+                fusion_scheduler.load_state_dict(v2_saved_checkpoint['fusion_scheduler_state_dict'])
+                print(f"\033[96m🏛️ Loaded fusion scheduler state from V2 checkpoint\\033[0m")
+        except Exception as e:
+            print(f"\033[96m🏛️ Could not load fusion scheduler state: {e}\\033[0m")
+        
+        try:
+            if 'specialist_scheduler_state_dict' in v2_saved_checkpoint and specialist_scheduler:
+                specialist_scheduler.load_state_dict(v2_saved_checkpoint['specialist_scheduler_state_dict'])
+                print(f"\033[96m🏛️ Loaded specialist scheduler state from V2 checkpoint\\033[0m")
+        except Exception as e:
+            print(f"\033[96m🏛️ Could not load specialist scheduler state: {e}\\033[0m")
+    
     # Mixed precision training
     scaler = GradScaler()
     
     # Training metrics
-    best_performance = 0.0
+    best_performance = v2_saved_checkpoint.get('best_performance', 0.0) if v2_saved_checkpoint else 0.0
     training_stats = defaultdict(list)
     
     print(f"\033[96m🏛️ Starting Advanced Progressive Ensemble Training - 8 Advanced Coordination Stages\\033[0m")
@@ -376,9 +429,27 @@ def train_olympus_ensemble_v2():
         # Update best performance
         if stage_performance > best_performance:
             best_performance = stage_performance
-            # Save best OLYMPUS V2 model
-            os.makedirs('/content/AutomataNexus_Olympus_AGI2/models', exist_ok=True)
-            olympus.save_ensemble('/content/AutomataNexus_Olympus_AGI2/models/olympus_v2_best.pt')
+            # Save best OLYMPUS V2 model in InputBestModels directory
+            os.makedirs('/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels', exist_ok=True)
+            
+            # Enhanced save with optimizer and scheduler state (similar to V1)
+            ensemble_state = {
+                'ensemble_state_dict': olympus.state_dict(),
+                'fusion_optimizer_state_dict': fusion_optimizer.state_dict(),
+                'specialist_optimizer_state_dict': specialist_optimizer.state_dict(),
+                'fusion_scheduler_state_dict': fusion_scheduler.state_dict(),
+                'specialist_scheduler_state_dict': specialist_scheduler.state_dict(),
+                'best_performance': best_performance,
+                'stage': stage_idx,
+                'ensemble_config': {
+                    'max_grid_size': olympus.max_grid_size,
+                    'd_model': olympus.d_model,
+                    'device': olympus.device_name
+                },
+                'performance_metrics': olympus.get_ensemble_state()
+            }
+            
+            torch.save(ensemble_state, '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v2_best.pt')
             print(f"\033[96m🏛️ New best V2 ensemble performance: {best_performance:.2%} - OLYMPUS V2 saved!\\033[0m")
         
         # Memory cleanup

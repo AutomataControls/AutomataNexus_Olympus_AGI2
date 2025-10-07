@@ -527,20 +527,36 @@ class OlympusEnsemble(nn.Module):
             # Load state dict with proper error handling
             if 'ensemble_state_dict' in ensemble_state:
                 state_dict = ensemble_state['ensemble_state_dict']
-                # Use strict=False to handle architecture differences
-                missing_keys, unexpected_keys = self.load_state_dict(state_dict, strict=False)
-                if missing_keys:
-                    print(f"\033[96m🏛️ Missing keys (will use initialized weights): {len(missing_keys)}\033[0m")
-                    # Check if fusion engine keys are missing
-                    fusion_missing = [k for k in missing_keys if 'fusion_engine' in k]
-                    if fusion_missing:
-                        print(f"\033[91m🏛️ CRITICAL: Fusion engine keys missing: {len(fusion_missing)} (ensemble progress will reset!)\033[0m")
-                if unexpected_keys:
-                    print(f"\033[96m🏛️ Unexpected keys (ignored): {len(unexpected_keys)}\033[0m")
-                    # Check if these are fusion engine keys (expected for adaptive networks)
-                    fusion_unexpected = [k for k in unexpected_keys if 'fusion_engine' in k and ('similarity_network' in k or 'meta_fusion' in k)]
-                    if fusion_unexpected:
-                        print(f"\033[96m🏛️ Note: {len(fusion_unexpected)} adaptive fusion network keys ignored (will recreate with correct dimensions)\033[0m")
+                
+                # CRITICAL FIX: Load fusion engine state separately first
+                current_state = self.state_dict()
+                fusion_keys_loaded = 0
+                fusion_keys_missing = 0
+                
+                # Load fusion engine weights with detailed tracking
+                for key, param in state_dict.items():
+                    if 'fusion_engine' in key and key in current_state:
+                        if current_state[key].shape == param.shape:
+                            current_state[key] = param
+                            fusion_keys_loaded += 1
+                        else:
+                            print(f"\033[91m🏛️ FUSION KEY MISMATCH: {key} - saved: {param.shape} vs current: {current_state[key].shape}\033[0m")
+                            fusion_keys_missing += 1
+                    elif 'fusion_engine' in key and key not in current_state:
+                        print(f"\033[91m🏛️ FUSION KEY NOT FOUND: {key}\033[0m")
+                        fusion_keys_missing += 1
+                
+                print(f"\033[96m🏛️ FUSION ENGINE: {fusion_keys_loaded} loaded, {fusion_keys_missing} missing/mismatched\033[0m")
+                
+                # Load the updated state dict
+                missing_keys, unexpected_keys = self.load_state_dict(current_state, strict=True)
+                
+                # Detailed fusion engine validation
+                if fusion_keys_missing > 0:
+                    print(f"\033[91m🏛️ CRITICAL: {fusion_keys_missing} fusion engine keys failed to load - ensemble will reset!\033[0m")
+                    return False
+                else:
+                    print(f"\033[92m🏛️ SUCCESS: All {fusion_keys_loaded} fusion engine weights loaded successfully!\033[0m")
             
             # Load performance history if available
             if 'performance_metrics' in ensemble_state:
@@ -551,7 +567,9 @@ class OlympusEnsemble(nn.Module):
                     self.specialist_performance = defaultdict(list, metrics['specialist_performance_history'])
             
             print(f"\033[96m🏛️ OLYMPUS ensemble loaded from {load_path}\033[0m")
+            return True
             
         except Exception as e:
             print(f"\033[96m🏛️ Error loading OLYMPUS ensemble: {e}\033[0m")
             print(f"\033[96m🏛️ Starting with fresh ensemble weights\033[0m")
+            return False

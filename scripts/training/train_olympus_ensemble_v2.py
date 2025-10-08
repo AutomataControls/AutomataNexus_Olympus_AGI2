@@ -23,9 +23,9 @@ import random
 from collections import defaultdict
 
 # Add project paths
-sys.path.append('/content/AutomataNexus_Olympus_AGI2')
-sys.path.append('/content/AutomataNexus_Olympus_AGI2/src')
-sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
+sys.path.append('/mnt/d/opt/AutomataNexus_Olympus_AGI2')
+sys.path.append('/mnt/d/opt/AutomataNexus_Olympus_AGI2/src')
+sys.path.append('/mnt/d/opt/AutomataNexus_Olympus_AGI2/scripts/training')
 
 # Import OLYMPUS ensemble
 from src.models.olympus_ensemble import OlympusEnsemble, EnsembleDecision
@@ -34,11 +34,11 @@ from src.models.olympus_ensemble import OlympusEnsemble, EnsembleDecision
 OLYMPUS_V2_CONFIG = {
     # Core Training Parameters - Advanced Level (Memory Optimized)
     'batch_size': 256,  # Memory optimized for large grid advanced training
-    'learning_rate': 0.00008,  # Lower rate for fine-tuning specialists
-    'num_epochs': 200,  # Advanced training: 8 stages x 25 epochs
+    'learning_rate': 0.0001,  # Lower rate for fine-tuning specialists
+    'num_epochs': 375,  # Advanced training: 15 stages x 25 epochs
     'gradient_accumulation': 3,  # Increased to maintain effective batch size
-    'epochs_per_stage': 3,  # Lightning-fast advanced training
-    'curriculum_stages': 8,  # Advanced curriculum stages
+    'epochs_per_stage': 25,  # Extended epochs for deeper learning
+    'curriculum_stages': 15,  # Advanced curriculum stages
     
     # Enhanced Loss Configuration
     'ensemble_loss_weight': 1.2,  # Increased ensemble focus
@@ -80,17 +80,23 @@ OLYMPUS_V2_CONFIG = {
     'plateau_patience': 20,
 }
 
-# Advanced 8-Stage Progressive Configuration
+# Advanced 15-Stage Progressive Configuration
 STAGE_CONFIG = [
-    # Advanced Ensemble Coordination (Building on V1 Foundation)
-    {'stage': 0, 'max_grid_size': 10, 'synthesis_ratio': 0.85, 'complexity': 'advanced_coordination', 'focus': 'specialist_fine_tuning_basic'},
-    {'stage': 1, 'max_grid_size': 14, 'synthesis_ratio': 0.75, 'complexity': 'meta_fusion_basic', 'focus': 'meta_learning_fusion_introduction'},
-    {'stage': 2, 'max_grid_size': 18, 'synthesis_ratio': 0.65, 'complexity': 'cross_attention', 'focus': 'inter_specialist_attention_learning'},
-    {'stage': 3, 'max_grid_size': 22, 'synthesis_ratio': 0.55, 'complexity': 'dynamic_weighting', 'focus': 'adaptive_fusion_weight_optimization'},
-    {'stage': 4, 'max_grid_size': 26, 'synthesis_ratio': 0.45, 'complexity': 'advanced_consensus', 'focus': 'sophisticated_consensus_algorithms'},
-    {'stage': 5, 'max_grid_size': 28, 'synthesis_ratio': 0.35, 'complexity': 'ensemble_synergy', 'focus': 'advanced_ensemble_synergy_mastery'},
-    {'stage': 6, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'complexity': 'meta_coordination', 'focus': 'meta_level_coordination_protocols'},
-    {'stage': 7, 'max_grid_size': 30, 'synthesis_ratio': 0.15, 'complexity': 'olympus_advanced', 'focus': 'advanced_olympus_intelligence'}
+    {'stage': 0, 'max_grid_size': 4, 'synthesis_ratio': 0.95, 'complexity': 'advanced_micro_ensemble', 'focus': 'advanced_micro_grid_specialist_coordination'},
+    {'stage': 1, 'max_grid_size': 5, 'synthesis_ratio': 0.90, 'complexity': 'advanced_basic_shapes', 'focus': 'advanced_ensemble_shape_coordination'},
+    {'stage': 2, 'max_grid_size': 6, 'synthesis_ratio': 0.85, 'complexity': 'advanced_simple_fusion', 'focus': 'advanced_decision_fusion_learning'},
+    {'stage': 3, 'max_grid_size': 7, 'synthesis_ratio': 0.80, 'complexity': 'advanced_pattern_sync', 'focus': 'advanced_pattern_synchronization_training'},
+    {'stage': 4, 'max_grid_size': 8, 'synthesis_ratio': 0.75, 'complexity': 'advanced_consensus_basic', 'focus': 'advanced_specialist_consensus'},
+    {'stage': 5, 'max_grid_size': 9, 'synthesis_ratio': 0.70, 'complexity': 'advanced_fusion_intermediate', 'focus': 'advanced_intermediate_fusion_protocols'},
+    {'stage': 6, 'max_grid_size': 10, 'synthesis_ratio': 0.65, 'complexity': 'advanced_composite_ensemble', 'focus': 'advanced_composite_ensemble_decisions'},
+    {'stage': 7, 'max_grid_size': 11, 'synthesis_ratio': 0.60, 'complexity': 'advanced_coordination_scaling', 'focus': 'advanced_scaling_coordination_protocols'},
+    {'stage': 8, 'max_grid_size': 12, 'synthesis_ratio': 0.55, 'complexity': 'advanced_complex_consensus', 'focus': 'advanced_complex_consensus_building'},
+    {'stage': 9, 'max_grid_size': 14, 'synthesis_ratio': 0.50, 'complexity': 'advanced_pattern_ensemble', 'focus': 'advanced_pattern_ensemble_coordination'},
+    {'stage': 10, 'max_grid_size': 16, 'synthesis_ratio': 0.45, 'complexity': 'advanced_ensemble_intelligence', 'focus': 'advanced_ensemble_intelligence_emergence'},
+    {'stage': 11, 'max_grid_size': 18, 'synthesis_ratio': 0.40, 'complexity': 'advanced_multiscale_ensemble', 'focus': 'advanced_multiscale_ensemble_reasoning'},
+    {'stage': 12, 'max_grid_size': 22, 'synthesis_ratio': 0.35, 'complexity': 'advanced_coordination_mastery', 'focus': 'advanced_coordination_protocols_mastery'},
+    {'stage': 13, 'max_grid_size': 27, 'synthesis_ratio': 0.30, 'complexity': 'advanced_ensemble_mastery', 'focus': 'advanced_ensemble_coordination_mastery'},
+    {'stage': 14, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'complexity': 'advanced_olympus_foundation', 'focus': 'advanced_olympus_intelligence_mastery'}
 ]
 
 # Device setup
@@ -486,7 +492,7 @@ def train_advanced_coordination_stage(olympus, dataloader, criterion,
         # Progress bar
         # Dynamic progress bar with stage focus (like ATLAS)
         stage_focus = stage_config['focus'].replace('_', ' ').title()
-        pbar = tqdm(dataloader, desc=f"\033[38;2;255;204;153m🏛️ {stage_focus} Stage {stage_idx} Epoch {epoch}\\033[0m")
+        pbar = tqdm(dataloader, desc=f"\033[38;2;255;204;153m🏛️ Advanced {stage_focus} Stage {stage_idx} Epoch {epoch}\\033[0m")
         
         for batch_idx, (inputs, targets, metadata) in enumerate(pbar):
             inputs = inputs.to(device)

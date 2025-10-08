@@ -409,7 +409,7 @@ def train_olympus_ensemble_v2():
         
         # Create advanced dataset for this stage
         dataset = FoundationEnsembleDataset(
-            data_dir='/mnt/d/opt/AutomataNexus_Olympus_AGI2/data',
+            data_dir='/content/AutomataNexus_Olympus_AGI2/data',
             max_grid_size=stage_config['max_grid_size'],
             stage_config=stage_config
         )

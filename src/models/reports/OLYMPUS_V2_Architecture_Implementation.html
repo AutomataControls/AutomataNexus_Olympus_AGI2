@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OLYMPUS V2 Architecture & Implementation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.8;
+            background-color: #f0f0f0;
+            color: #1a1a1a;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 95%;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        
+        h1 {
+            color: #1a1a1a;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #808080;
+            padding-bottom: 15px;
+        }
+        
+        h2 {
+            color: #1a1a1a;
+            font-size: 1.8em;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            border-left: 4px solid #808080;
+            padding-left: 15px;
+        }
+        
+        h3 {
+            color: #808080;
+            font-size: 1.4em;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        .subtitle {
+            color: #808080;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+        
+        .parameter-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: #f0f0f0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .parameter-table th {
+            background: #808080;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .parameter-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #cccccc;
+        }
+        
+        .parameter-table tr:hover {
+            background: #e0f7fa;
+        }
+        
+        .parameter-category {
+            background: #808080;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .code-block {
+            background: #e8e8e8;
+            border: 1px solid #cccccc;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+            position: relative;
+        }
+        
+        .code-block::before {
+            content: attr(data-language);
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            background: #808080;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        
+        .architecture-diagram {
+            background: #f0f0f0;
+            border: 2px solid #cccccc;
+            border-radius: 10px;
+            padding: 30px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        .flow-box {
+            display: inline-block;
+            background: white;
+            border: 2px solid #808080;
+            border-radius: 8px;
+            padding: 15px 25px;
+            margin: 10px;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .flow-arrow {
+            color: #808080;
+            font-size: 2em;
+            margin: 0 10px;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+        
+        .feature-card {
+            background: #f0f0f0;
+            border: 1px solid #cccccc;
+            border-radius: 10px;
+            padding: 25px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+        }
+        
+        .feature-card h4 {
+            color: #1a1a1a;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #808080;
+            padding-bottom: 5px;
+        }
+        
+        .highlight {
+            background: #e0f7fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        
+        .performance-box {
+            background: #e0f7fa;
+            border: 2px solid #808080;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .stage-progression {
+            background: #e8e8e8;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .stage-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #808080;
+        }
+        
+        .stage-number {
+            background: #2c5282;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+        
+        .augmentation-example {
+            background: #f0f0f0;
+            border: 1px solid #cccccc;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        
+        .memory-chart {
+            background: white;
+            border: 2px solid #cccccc;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+            color: #808080;
+        }
+        
+        .footer a {
+            color: #808080;
+            text-decoration: none;
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        
+        .implementation-detail {
+            background: #f0f0f0;
+            border-left: 4px solid #808080;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .parameter-hierarchy {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+        }
+        
+        .hierarchy-item {
+            margin-left: 20px;
+            padding: 5px 0;
+            border-left: 2px solid #cccccc;
+            padding-left: 15px;
+        }
+        
+        .hierarchy-root {
+            font-weight: bold;
+            color: #1a1a1a;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏛️ OLYMPUS V2 Architecture & Implementation</h1>
+        <p class="subtitle">Advanced Multi-Specialist Coordination with Partial Fine-Tuning and Meta-Learning Fusion</p>
+        
+        <h2>📊 Complete Parameter Configuration</h2>
+        <p>OLYMPUS V2 introduces 37 configuration parameters organized into 8 categories for advanced ensemble training:</p>
+        
+        <table class="parameter-table">
+            <thead>
+                <tr>
+                    <th>Parameter</th>
+                    <th>Value</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="parameter-category">
+                    <td colspan="3">Core Training Parameters (Memory Optimized)</td>
+                </tr>
+                <tr>
+                    <td><code>batch_size</code></td>
+                    <td>512</td>
+                    <td>Doubled for speed with available GPU memory</td>
+                </tr>
+                <tr>
+                    <td><code>learning_rate</code></td>
+                    <td>0.0001</td>
+                    <td>Lower rate for fine-tuning specialists</td>
+                </tr>
+                <tr>
+                    <td><code>num_epochs</code></td>
+                    <td>225</td>
+                    <td>Advanced training: 15 stages × 15 epochs</td>
+                </tr>
+                <tr>
+                    <td><code>gradient_accumulation</code></td>
+                    <td>1</td>
+                    <td>Reduced since batch size doubled</td>
+                </tr>
+                <tr>
+                    <td><code>epochs_per_stage</code></td>
+                    <td>12</td>
+                    <td>Reduced epochs for speed optimization</td>
+                </tr>
+                <tr>
+                    <td><code>curriculum_stages</code></td>
+                    <td>15</td>
+                    <td>Advanced curriculum learning stages</td>
+                </tr>
+                
+                <tr class="parameter-category">
+                    <td colspan="3">Enhanced Loss Configuration</td>
+                </tr>
+                <tr>
+                    <td><code>ensemble_loss_weight</code></td>
+                    <td>1.2</td>
+                    <td>Increased ensemble focus</td>
+                </tr>
+                <tr>
+                    <td><code>specialist_sync_weight</code></td>
+                    <td>0.4</td>
+                    <td>Enhanced synchronization between specialists</td>
+                </tr>
+                <tr>
+                    <td><code>consensus_weight</code></td>
+                    <td>0.3</td>
+                    <td>Stronger consensus building</td>
+                </tr>
+                <tr>
+                    <td><code>fusion_regularization</code></td>
+                    <td>0.15</td>
+                    <td>More sophisticated fusion control</td>
+                </tr>
+                <tr>
+                    <td><code>transform_penalty</code></td>
+                    <td>0.08</td>
+                    <td>Encourage complex transformations</td>
+                </tr>
+                <tr>
+                    <td><code>exact_match_bonus</code></td>
+                    <td>12.0</td>
+                    <td>Higher precision bonus for exact matches</td>
+                </tr>
+                <tr>
+                    <td><code>gradient_clip</code></td>
+                    <td>0.4</td>
+                    <td>Tighter gradient control</td>
+                </tr>
+                <tr>
+                    <td><code>weight_decay</code></td>
+                    <td>3e-6</td>
+                    <td>Balanced regularization</td>
+                </tr>
+                
+                <tr class="parameter-category">
+                    <td colspan="3">ULTRA TEAL Enhanced Configuration</td>
+                </tr>
+                <tr>
+                    <td><code>ultra_teal_iou_weight</code></td>
+                    <td>0.85</td>
+                    <td>85% IoU weighting (proven formula)</td>
+                </tr>
+                <tr>
+                    <td><code>strict_match_weight</code></td>
+                    <td>0.15</td>
+                    <td>15% strict matching</td>
+                </tr>
+                
+                <tr class="parameter-category">
+                    <td colspan="3">V2-Specific Advanced Settings</td>
+                </tr>
+                <tr>
+                    <td><code>freeze_specialists</code></td>
+                    <td>False</td>
+                    <td>Allow partial specialist fine-tuning</td>
+                </tr>
+                <tr>
+                    <td><code>fusion_training_only</code></td>
+                    <td>False</td>
+                    <td>Train both fusion and specialists</td>
+                </tr>
+                <tr>
+                    <td><code>specialist_learning_rate</code></td>
+                    <td>0.00003</td>
+                    <td>Lower rate for specialist fine-tuning</td>
+                </tr>
+                <tr>
+                    <td><code>consensus_threshold</code></td>
+                    <td>0.7</td>
+                    <td>Higher consensus for confidence</td>
+                </tr>
+                <tr>
+                    <td><code>specialist_dropout</code></td>
+                    <td>0.05</td>
+                    <td>Light dropout for robustness</td>
+                </tr>
+                <tr>
+                    <td><code>ensemble_coordination</code></td>
+                    <td>True</td>
+                    <td>Enable advanced coordination</td>
+                </tr>
+                <tr>
+                    <td><code>adaptive_weights</code></td>
+                    <td>True</td>
+                    <td>Dynamic specialist weighting</td>
+                </tr>
+                
+                <tr class="parameter-category">
+                    <td colspan="3">Advanced Training Features</td>
+                </tr>
+                <tr>
+                    <td><code>label_smoothing</code></td>
+                    <td>0.015</td>
+                    <td>Refined smoothing for advanced ensemble</td>
+                </tr>
+                <tr>
+                    <td><code>ensemble_diversity_bonus</code></td>
+                    <td>True</td>
+                    <td>Reward diverse predictions</td>
+                </tr>
+                <tr>
+                    <td><code>specialist_agreement_bonus</code></td>
+                    <td>True</td>
+                    <td>Reward specialist consensus</td>
+                </tr>
+                <tr>
+                    <td><code>consensus_building_bonus</code></td>
+                    <td>True</td>
+                    <td>Encourage consensus formation</td>
+                </tr>
+                <tr>
+                    <td><code>fusion_optimization</code></td>
+                    <td>True</td>
+                    <td>Optimize fusion engine</td>
+                </tr>
+                <tr>
+                    <td><code>advanced_meta_learning</code></td>
+                    <td>True</td>
+                    <td><span class="highlight">NEW:</span> Meta-learning fusion</td>
+                </tr>
+                <tr>
+                    <td><code>cross_specialist_attention</code></td>
+                    <td>True</td>
+                    <td><span class="highlight">NEW:</span> Inter-specialist attention</td>
+                </tr>
+                <tr>
+                    <td><code>dynamic_fusion_weights</code></td>
+                    <td>True</td>
+                    <td><span class="highlight">NEW:</span> Adaptive fusion weighting</td>
+                </tr>
+                
+                <tr class="parameter-category">
+                    <td colspan="3">Learning Rate Scheduling</td>
+                </tr>
+                <tr>
+                    <td><code>warmup_epochs</code></td>
+                    <td>15</td>
+                    <td>Advanced warmup period</td>
+                </tr>
+                <tr>
+                    <td><code>cosine_restarts</code></td>
+                    <td>True</td>
+                    <td>Enable cosine annealing with warm restarts</td>
+                </tr>
+                <tr>
+                    <td><code>restart_multiplier</code></td>
+                    <td>1.4</td>
+                    <td>Restart period multiplier</td>
+                </tr>
+                <tr>
+                    <td><code>plateau_patience</code></td>
+                    <td>20</td>
+                    <td>Patience for plateau detection</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h2>🔧 Architecture Data Flow</h2>
+        <div class="architecture-diagram">
+            <h3>OLYMPUS V2 Training Pipeline</h3>
+            <div style="margin: 20px 0;">
+                <div class="flow-box">Input Grids</div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-box">Augmentation Pipeline</div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-box">5 Specialists</div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-box">Cross-Attention</div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-box">Fusion Engine</div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-box">Ensemble Decision</div>
+            </div>
+            <div style="margin-top: 30px;">
+                <h4>Dual Optimizer System</h4>
+                <div class="flow-box" style="background: #e0f7fa;">Fusion Optimizer<br/><small>LR: 0.0001</small></div>
+                <span style="margin: 0 20px;">+</span>
+                <div class="flow-box" style="background: #f0f0f0;">Specialist Optimizer<br/><small>LR: 0.00003</small></div>
+            </div>
+        </div>
+        
+        <h2>🎨 Augmentation Pipeline</h2>
+        <p>V2 implements a sophisticated augmentation pipeline combining techniques from all 5 specialists:</p>
+        
+        <div class="augmentation-example">
+            <h4>Augmentation Types (6x factor)</h4>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>Rotation (MINERVA)</h4>
+                    <p>Random 90°, 180°, or 270° rotations</p>
+                    <code>k = random.choice([1, 2, 3])<br/>grid = np.rot90(grid, k)</code>
+                </div>
+                <div class="feature-card">
+                    <h4>Flipping (ATLAS)</h4>
+                    <p>Horizontal or vertical flips</p>
+                    <code>axis = random.choice([0, 1])<br/>grid = np.flip(grid, axis)</code>
+                </div>
+                <div class="feature-card">
+                    <h4>Transpose (Spatial)</h4>
+                    <p>Matrix transpose for square grids</p>
+                    <code>if grid.shape[0] == grid.shape[1]:<br/>    grid = grid.T</code>
+                </div>
+                <div class="feature-card">
+                    <h4>Color Permutation (IRIS)</h4>
+                    <p>Random color mapping (40% chance)</p>
+                    <code>colors = list(set(grid.flatten()))<br/>color_map = dict(zip(colors, np.random.permutation(colors)))</code>
+                </div>
+                <div class="feature-card">
+                    <h4>Spatial Shift (CHRONOS)</h4>
+                    <p>Light grid shifts (30% chance)</p>
+                    <code>shift_x = random.randint(-1, 1)<br/>grid = np.roll(grid, shift_x, axis=0)</code>
+                </div>
+                <div class="feature-card">
+                    <h4>Size Filtering</h4>
+                    <p>Stage-appropriate grid sizes</p>
+                    <code>if max(grid.shape) > max_grid_size:<br/>    return None</code>
+                </div>
+            </div>
+        </div>
+        
+        <h2>🏗️ Model Architecture Details</h2>
+        
+        <h3>Partial Specialist Fine-Tuning</h3>
+        <div class="code-block" data-language="python">
+# V2: Partial specialist fine-tuning strategy
+for name, specialist in olympus.specialists.items():
+    for param_name, param in specialist.named_parameters():
+        # Only allow fine-tuning of output layers and top transformer layers
+        if any(layer in param_name for layer in ['output', 'final', 'head', 'classifier']):
+            param.requires_grad = True
+        elif 'layer' in param_name:
+            # Extract layer number and only allow top 2 layers
+            layer_match = re.search(r'layer\.(\d+)', param_name)
+            if layer_match and int(layer_match.group(1)) >= 6:  # Top 2 layers (6,7)
+                param.requires_grad = True
+            else:
+                param.requires_grad = False
+        else:
+            param.requires_grad = False
+        </div>
+        
+        <h3>Advanced Loss Function</h3>
+        <div class="implementation-detail">
+            <strong>OlympusV2Loss Components:</strong>
+            <ul>
+                <li><strong>Ensemble Loss:</strong> Focal loss with label smoothing (0.015)</li>
+                <li><strong>Synchronization Loss:</strong> MSE between specialist predictions</li>
+                <li><strong>Cross-Attention Loss:</strong> Encourages complementary predictions</li>
+                <li><strong>Consensus Bonus:</strong> Rewards high agreement scores</li>
+                <li><strong>Meta-Learning Bonus:</strong> Encourages diverse meta-features</li>
+                <li><strong>Transform Penalty:</strong> Discourages trivial copy solutions</li>
+            </ul>
+        </div>
+        
+        <div class="code-block" data-language="python">
+# Cross-attention loss calculation
+if len(specialist_predictions) > 1:
+    for i, pred1 in enumerate(pred_values):
+        for j, pred2 in enumerate(pred_values[i+1:], i+1):
+            # Traditional synchronization
+            sync_loss += F.mse_loss(pred1_flat, pred2_flat)
+            
+            # Cross-attention loss (encourage complementary predictions)
+            attention_scores = torch.softmax(
+                torch.matmul(pred1_flat, pred2_flat.transpose(-2, -1)), 
+                dim=-1
+            )
+            cross_attention_loss += -torch.log(
+                attention_scores.diagonal(dim1=-2, dim2=-1) + 1e-8
+            ).mean()
+        </div>
+        
+        <h2>📈 Training Pipeline Implementation</h2>
+        
+        <h3>15-Stage Progressive Curriculum</h3>
+        <div class="stage-progression">
+            <div class="stage-item">
+                <div class="stage-number">0</div>
+                <div>
+                    <strong>Grid Size 4:</strong> Advanced micro-ensemble coordination<br/>
+                    <small>Focus: Advanced micro-grid specialist coordination</small>
+                </div>
+            </div>
+            <div class="stage-item">
+                <div class="stage-number">5</div>
+                <div>
+                    <strong>Grid Size 9:</strong> Advanced consensus building<br/>
+                    <small>Focus: Advanced intermediate fusion protocols</small>
+                </div>
+            </div>
+            <div class="stage-item">
+                <div class="stage-number">10</div>
+                <div>
+                    <strong>Grid Size 16:</strong> Advanced ensemble intelligence<br/>
+                    <small>Focus: Advanced ensemble intelligence emergence</small>
+                </div>
+            </div>
+            <div class="stage-item">
+                <div class="stage-number">14</div>
+                <div>
+                    <strong>Grid Size 30:</strong> OLYMPUS foundation mastery<br/>
+                    <small>Focus: Advanced OLYMPUS intelligence mastery</small>
+                </div>
+            </div>
+        </div>
+        
+        <h3>Training Loop Structure</h3>
+        <div class="code-block" data-language="python">
+# Main training loop with mixed precision
+for batch_idx, (inputs, targets, metadata) in enumerate(pbar):
+    # Forward pass with autocast
+    with autocast(device_type='cuda'):
+        ensemble_decision = olympus(inputs, targets, mode='train')
+        loss_dict = criterion(ensemble_decision, targets, inputs)
+        loss = loss_dict['total'] / accumulation_steps
+    
+    # Backward pass
+    scaler.scale(loss).backward()
+    
+    # Dual optimizer updates
+    if (batch_idx + 1) % accumulation_steps == 0:
+        # Update fusion parameters
+        scaler.unscale_(fusion_optimizer)
+        torch.nn.utils.clip_grad_norm_(fusion_params, gradient_clip)
+        scaler.step(fusion_optimizer)
+        
+        # Update specialist parameters (if training)
+        if specialist_optimizer is not None:
+            scaler.unscale_(specialist_optimizer)
+            torch.nn.utils.clip_grad_norm_(specialist_params, gradient_clip)
+            scaler.step(specialist_optimizer)
+        </div>
+        
+        <h2>💾 Memory Optimization Strategies</h2>
+        <div class="memory-chart">
+            <h3>Memory Usage Breakdown</h3>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>Batch Size Optimization</h4>
+                    <ul>
+                        <li>Doubled to 512 for GPU efficiency</li>
+                        <li>Reduced gradient accumulation to 1</li>
+                        <li>Effective batch size: 512</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>DataLoader Configuration</h4>
+                    <ul>
+                        <li>16 workers for parallel loading</li>
+                        <li>Pin memory enabled</li>
+                        <li>Prefetch factor: 8</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>Memory Cleanup</h4>
+                    <ul>
+                        <li>Empty CUDA cache after each epoch</li>
+                        <li>Garbage collection between stages</li>
+                        <li>Efficient tensor operations</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <h2>📂 Data Loader Configuration</h2>
+        <div class="code-block" data-language="python">
+# OlympusV2AugmentedDataset loading strategy
+def _load_olympus_data(self):
+    # Load training data (challenges + solutions)
+    challenges_path = os.path.join(self.data_dir, 'arc-agi_training_challenges.json')
+    solutions_path = os.path.join(self.data_dir, 'arc-agi_training_solutions.json')
+    
+    # Process ALL training examples directly
+    for task_id, task_data in challenges.items():
+        for example in task_data['train']:
+            sample = self._create_olympus_sample(example, True)
+            if sample:
+                self.samples.append(sample)
+        
+        # Also process test examples if solutions exist
+        if task_id in solutions:
+            for i, test_input in enumerate(task_data['test']):
+                if i < len(solutions[task_id]):
+                    test_example = {
+                        'input': test_input['input'],
+                        'output': solutions[task_id][i]
+                    }
+                    sample = self._create_olympus_sample(test_example, True)
+        </div>
+        
+        <h2>💽 Save/Load Mechanisms</h2>
+        <div class="implementation-detail">
+            <strong>V2 Checkpoint Structure:</strong>
+            <div class="code-block" data-language="python">
+ensemble_state = {
+    'ensemble_state_dict': olympus.state_dict(),
+    'fusion_optimizer_state_dict': fusion_optimizer.state_dict(),
+    'specialist_optimizer_state_dict': specialist_optimizer.state_dict(),
+    'fusion_scheduler_state_dict': fusion_scheduler.state_dict(),
+    'specialist_scheduler_state_dict': specialist_scheduler.state_dict(),
+    'best_performance': best_performance,
+    'stage': stage_idx,
+    'ensemble_config': {
+        'max_grid_size': olympus.max_grid_size,
+        'd_model': olympus.d_model,
+        'device': olympus.device_name
+    },
+    'performance_metrics': olympus.get_ensemble_state()
+}
+            </div>
+        </div>
+        
+        <h3>Incremental Training Support</h3>
+        <p>V2 supports loading from both V1 and existing V2 checkpoints:</p>
+        <ol>
+            <li><strong>V1 Loading:</strong> Loads fusion engine and specialist weights from V1</li>
+            <li><strong>V2 Incremental:</strong> Continues training from existing V2 checkpoint</li>
+            <li><strong>Fallback:</strong> Loads individual specialists if ensemble load fails</li>
+        </ol>
+        
+        <h2>⚡ Performance Optimizations</h2>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h4>Mixed Precision Training</h4>
+                <p>GradScaler with autocast for faster computation and reduced memory usage</p>
+            </div>
+            <div class="feature-card">
+                <h4>Dual Learning Rates</h4>
+                <p>Fusion: 0.0001, Specialists: 0.00003 for balanced updates</p>
+            </div>
+            <div class="feature-card">
+                <h4>Cosine Annealing</h4>
+                <p>With warm restarts (T_mult=1.4) for optimal convergence</p>
+            </div>
+            <div class="feature-card">
+                <h4>Gradient Clipping</h4>
+                <p>Tight control at 0.4 for stable training</p>
+            </div>
+            <div class="feature-card">
+                <h4>Adaptive Weighting</h4>
+                <p>Dynamic fusion weights based on specialist performance</p>
+            </div>
+            <div class="feature-card">
+                <h4>Efficient Collation</h4>
+                <p>Custom collate function for batched padding</p>
+            </div>
+        </div>
+        
+        <h2>🎯 Key Implementation Insights</h2>
+        <div class="parameter-hierarchy">
+            <div class="hierarchy-root">V2 Training Philosophy</div>
+            <div class="hierarchy-item">→ Partial Fine-Tuning: Only top 2 transformer layers + output layers</div>
+            <div class="hierarchy-item">→ Cross-Attention: Encourages complementary specialist predictions</div>
+            <div class="hierarchy-item">→ Meta-Learning: Learns from specialist interactions</div>
+            <div class="hierarchy-item">→ Adaptive Fusion: Dynamic weighting based on confidence</div>
+            <div class="hierarchy-item">→ Progressive Curriculum: 15 stages from 4×4 to 30×30 grids</div>
+        </div>
+        
+        <div class="performance-box">
+            <h3>🏆 V2 Performance Targets</h3>
+            <p><strong>Target: 90%+ Performance</strong></p>
+            <p>Advanced ensemble synergy through intelligent coordination</p>
+            <p>Building on V1 foundation with enhanced fusion capabilities</p>
+        </div>
+        
+        <div class="footer">
+            <p><strong>OLYMPUS V2 Architecture Documentation</strong></p>
+            <p>Advanced Multi-Specialist Coordination for ARC-AGI-2</p>
+            <p>Created by Andrew Jewell Sr. - AutomataNexus</p>
+            <p><a href="https://github.com/AutomataControls/AutomataNexus_Olympus_AGI2">GitHub Repository</a></p>
+        </div>
+    </div>
+</body>
+</html>

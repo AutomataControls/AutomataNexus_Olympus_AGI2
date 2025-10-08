@@ -37,7 +37,7 @@ OLYMPUS_V2_CONFIG = {
     'learning_rate': 0.0001,  # Lower rate for fine-tuning specialists
     'num_epochs': 225,  # Advanced training: 15 stages x 15 epochs
     'gradient_accumulation': 1,  # Reduced since batch size doubled
-    'epochs_per_stage': 15,  # Reduced epochs for speed
+    'epochs_per_stage': 12,  # Reduced epochs for speed
     'curriculum_stages': 15,  # Advanced curriculum stages
     
     # Enhanced Loss Configuration
@@ -257,7 +257,7 @@ class OlympusV2AugmentedDataset(Dataset):
         if augmentation_factor > 1:
             self._augment_olympus_data()
         
-        print(f"\\033[96m🏛️ Loaded {len(self.samples)} augmented samples for OLYMPUS V2 training\\033[0m")
+        print(f"\033[96m🏛️ Loaded {len(self.samples)} augmented samples for OLYMPUS V2 training\033[0m")
     
     def _load_olympus_data(self):
         """Load ARC data with comprehensive coverage like all specialists"""
@@ -331,7 +331,7 @@ class OlympusV2AugmentedDataset(Dataset):
                     augmented_samples.append(augmented)
         
         self.samples.extend(augmented_samples)
-        print(f"\\033[96m🏛️ Augmented from {original_count} to {len(self.samples)} samples ({self.augmentation_factor}x)\\033[0m")
+        print(f"\033[96m🏛️ Augmented from {original_count} to {len(self.samples)} samples ({self.augmentation_factor}x)\033[0m")
     
     def _augment_single_sample(self, sample: Dict) -> Optional[Dict]:
         """Augment single sample with transformations from all specialists"""
@@ -599,7 +599,7 @@ def train_olympus_ensemble_v2():
     
     # Advanced progressive training through coordination stages
     for stage_idx, stage_config in enumerate(STAGE_CONFIG):
-        print(f"\n\\033[38;2;255;204;153m{'=' * 130}\033[0m")
+        print(f"\n\033[38;2;255;204;153m{'=' * 130}\033[0m")
         print(f"\033[38;2;255;204;153m🏛️ V2 Stage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
               f"Complexity: {stage_config['complexity']} | Focus: {stage_config['focus']}\033[0m")
         print(f"\033[38;2;255;204;153m{'=' * 130}\033[0m")
@@ -620,7 +620,7 @@ def train_olympus_ensemble_v2():
             collate_fn=olympus_v2_augmented_collate_fn,
             num_workers=16,  # Optimized worker count
             pin_memory=True,
-            prefetch_factor=4  # Speed up data loading
+            prefetch_factor=8  # Speed up data loading
         )
         
         # Stage-specific training
@@ -661,7 +661,7 @@ def train_olympus_ensemble_v2():
         torch.cuda.empty_cache()
         gc.collect()
     
-    print(f"\n\\033[96m{'=' * 135}\033[0m")
+    print(f"\n\033[96m{'=' * 135}\033[0m")
     print(f"\033[96m🏛️ OLYMPUS Ensemble V2 Advanced Training Complete!\033[0m")
     print(f"\033[96m🏛️ Best V2 Advanced Performance: {best_performance:.2%}\033[0m")
     print(f"\033[96m🏛️ All 5 Specialists Advanced Coordinated and Ready for V3 Ultimate Training\033[0m")

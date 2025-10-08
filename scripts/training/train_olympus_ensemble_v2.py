@@ -240,8 +240,203 @@ class OlympusV2Loss(nn.Module):
         }
 
 
-# Use the same dataset as V1
-from train_olympus_ensemble_v1 import FoundationEnsembleDataset, foundation_collate_fn
+# Use augmented dataset combining approaches from all 5 specialists
+class OlympusV2AugmentedDataset(Dataset):
+    """Combined augmented dataset for OLYMPUS V2 ensemble training - integrates all 5 specialist approaches"""
+    def __init__(self, data_dir: str, max_grid_size: int, stage_config: Dict, augmentation_factor: int = 6):
+        self.data_dir = data_dir
+        self.max_grid_size = max_grid_size
+        self.stage_config = stage_config
+        self.augmentation_factor = augmentation_factor
+        
+        # Load data for ensemble training
+        self.samples = []
+        self._load_olympus_data()
+        
+        # Apply augmentation like individual specialists
+        if augmentation_factor > 1:
+            self._augment_olympus_data()
+        
+        print(f"\\033[96m🏛️ Loaded {len(self.samples)} augmented samples for OLYMPUS V2 training\\033[0m")
+    
+    def _load_olympus_data(self):
+        """Load ARC data with comprehensive coverage like all specialists"""
+        # Load training data (challenges + solutions) - DIRECT LOADING LIKE SPECIALISTS
+        challenges_path = os.path.join(self.data_dir, 'arc-agi_training_challenges.json')
+        solutions_path = os.path.join(self.data_dir, 'arc-agi_training_solutions.json')
+        
+        if os.path.exists(challenges_path) and os.path.exists(solutions_path):
+            with open(challenges_path, 'r') as f:
+                challenges = json.load(f)
+            with open(solutions_path, 'r') as f:
+                solutions = json.load(f)
+            
+            for task_id, task_data in challenges.items():
+                # Process ALL training examples directly
+                for example in task_data['train']:
+                    sample = self._create_olympus_sample(example, True)
+                    if sample:
+                        self.samples.append(sample)
+                
+                # Also process test examples if solutions exist
+                if task_id in solutions:
+                    for i, test_input in enumerate(task_data['test']):
+                        if i < len(solutions[task_id]):
+                            test_example = {
+                                'input': test_input['input'],
+                                'output': solutions[task_id][i]
+                            }
+                            sample = self._create_olympus_sample(test_example, True)
+                            if sample:
+                                self.samples.append(sample)
+        
+        # Load evaluation data for broader coverage
+        eval_path = os.path.join(self.data_dir, 'arc-agi_evaluation_challenges.json')
+        if os.path.exists(eval_path):
+            with open(eval_path, 'r') as f:
+                eval_data = json.load(f)
+            for task_id, task_data in eval_data.items():
+                # Process ALL training examples from evaluation set
+                for example in task_data['train']:
+                    sample = self._create_olympus_sample(example, True)
+                    if sample:
+                        self.samples.append(sample)
+    
+    def _create_olympus_sample(self, example: Dict, is_arc_task: bool) -> Optional[Dict]:
+        """Create sample for OLYMPUS ensemble training"""
+        input_grid = np.array(example['input'])
+        output_grid = np.array(example['output'])
+        
+        # Size filtering for current stage
+        if (max(input_grid.shape) > self.max_grid_size or 
+            max(output_grid.shape) > self.max_grid_size):
+            return None
+        
+        return {
+            'input': input_grid,
+            'output': output_grid,
+            'is_arc': is_arc_task,
+            'complexity': self.stage_config.get('complexity', 'ensemble')
+        }
+    
+    def _augment_olympus_data(self):
+        """Apply augmentation combining approaches from all 5 specialists"""
+        original_count = len(self.samples)
+        augmented_samples = []
+        
+        for sample in self.samples:
+            for _ in range(self.augmentation_factor - 1):  # -1 because original is already included
+                augmented = self._augment_single_sample(sample)
+                if augmented:
+                    augmented_samples.append(augmented)
+        
+        self.samples.extend(augmented_samples)
+        print(f"\\033[96m🏛️ Augmented from {original_count} to {len(self.samples)} samples ({self.augmentation_factor}x)\\033[0m")
+    
+    def _augment_single_sample(self, sample: Dict) -> Optional[Dict]:
+        """Augment single sample with transformations from all specialists"""
+        input_grid = sample['input'].copy()
+        output_grid = sample['output'].copy()
+        
+        # Combined augmentation from MINERVA + spatial/color considerations
+        aug_type = random.choice(['rotate', 'flip', 'transpose', 'color_permute', 'spatial_shift'])
+        
+        if aug_type == 'rotate':
+            # MINERVA approach - rotation
+            k = random.choice([1, 2, 3])
+            input_grid = np.rot90(input_grid, k).copy()
+            output_grid = np.rot90(output_grid, k).copy()
+        elif aug_type == 'flip':
+            # ATLAS spatial approach - flipping
+            axis = random.choice([0, 1])
+            input_grid = np.flip(input_grid, axis).copy()
+            output_grid = np.flip(output_grid, axis).copy()
+        elif aug_type == 'transpose':
+            # Spatial transformation - transpose for square grids
+            if input_grid.shape[0] == input_grid.shape[1] and output_grid.shape[0] == output_grid.shape[1]:
+                input_grid = input_grid.T.copy()
+                output_grid = output_grid.T.copy()
+        elif aug_type == 'color_permute':
+            # IRIS color approach - color permutation
+            if random.random() < 0.4:
+                colors = list(set(input_grid.flatten()) | set(output_grid.flatten()))
+                if len(colors) > 2:
+                    color_map = dict(zip(colors, np.random.permutation(colors)))
+                    input_grid = np.vectorize(color_map.get)(input_grid)
+                    output_grid = np.vectorize(color_map.get)(output_grid)
+        elif aug_type == 'spatial_shift':
+            # Light spatial shift for temporal/creative patterns
+            if random.random() < 0.3 and min(input_grid.shape) > 3:
+                shift_x = random.randint(-1, 1)
+                shift_y = random.randint(-1, 1)
+                input_grid = np.roll(input_grid, shift_x, axis=0)
+                input_grid = np.roll(input_grid, shift_y, axis=1)
+                output_grid = np.roll(output_grid, shift_x, axis=0)
+                output_grid = np.roll(output_grid, shift_y, axis=1)
+        
+        # Check size constraints after augmentation
+        if (max(input_grid.shape) > self.max_grid_size or 
+            max(output_grid.shape) > self.max_grid_size):
+            return None
+        
+        return {
+            'input': input_grid,
+            'output': output_grid,
+            'is_arc': sample['is_arc'],
+            'complexity': sample['complexity']
+        }
+    
+    def __len__(self) -> int:
+        return len(self.samples)
+    
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, Dict]:
+        sample = self.samples[idx]
+        
+        # Convert to tensors (copy to avoid negative stride issues)
+        input_tensor = torch.tensor(sample['input'].copy(), dtype=torch.long)
+        output_tensor = torch.tensor(sample['output'].copy(), dtype=torch.long)
+        
+        # Pad to consistent size
+        target_h = min(self.max_grid_size, max(input_tensor.shape[0], output_tensor.shape[0]))
+        target_w = min(self.max_grid_size, max(input_tensor.shape[1], output_tensor.shape[1]))
+        
+        input_padded = F.pad(input_tensor, (0, target_w - input_tensor.shape[1], 
+                                          0, target_h - input_tensor.shape[0]))
+        output_padded = F.pad(output_tensor, (0, target_w - output_tensor.shape[1], 
+                                            0, target_h - output_tensor.shape[0]))
+        
+        # Convert to one-hot
+        input_final = F.one_hot(input_padded, num_classes=10).float().permute(2, 0, 1)
+        output_final = F.one_hot(output_padded, num_classes=10).float().permute(2, 0, 1)
+        
+        metadata = {
+            'is_arc': sample['is_arc'],
+            'complexity': sample['complexity']
+        }
+        
+        return input_final, output_final, metadata
+
+
+def olympus_v2_augmented_collate_fn(batch: List) -> Tuple[torch.Tensor, torch.Tensor, List[Dict]]:
+    """Collate function for OLYMPUS V2 augmented training"""
+    inputs, outputs, metadata = zip(*batch)
+    
+    # Find maximum dimensions for padding
+    max_h = max(t.shape[1] for t in inputs + outputs)
+    max_w = max(t.shape[2] for t in inputs + outputs)
+    
+    # Pad all tensors to same size
+    inputs_padded = []
+    outputs_padded = []
+    
+    for inp, out in zip(inputs, outputs):
+        inp_padded = F.pad(inp, (0, max_w - inp.shape[2], 0, max_h - inp.shape[1]))
+        out_padded = F.pad(out, (0, max_w - out.shape[2], 0, max_h - out.shape[1]))
+        
+        inputs_padded.append(inp_padded)
+        outputs_padded.append(out_padded)
+    
+    return torch.stack(inputs_padded), torch.stack(outputs_padded), list(metadata)
 
 
 def train_olympus_ensemble_v2():
@@ -410,10 +605,11 @@ def train_olympus_ensemble_v2():
         print(f"\033[38;2;255;204;153m{'=' * 130}\033[0m")
         
         # Create advanced dataset for this stage
-        dataset = FoundationEnsembleDataset(
+        dataset = OlympusV2AugmentedDataset(
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',
             max_grid_size=stage_config['max_grid_size'],
-            stage_config=stage_config
+            stage_config=stage_config,
+            augmentation_factor=6  # 6x augmentation like specialists
         )
         
         # Create data loader
@@ -421,8 +617,8 @@ def train_olympus_ensemble_v2():
             dataset,
             batch_size=OLYMPUS_V2_CONFIG['batch_size'],
             shuffle=True,
-            collate_fn=foundation_collate_fn,
-            num_workers=12,  # Optimal multi-core data loading
+            collate_fn=olympus_v2_augmented_collate_fn,
+            num_workers=16,  # Maximum multi-core data loading
             pin_memory=True
         )
         

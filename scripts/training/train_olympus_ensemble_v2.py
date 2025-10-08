@@ -23,9 +23,9 @@ import random
 from collections import defaultdict
 
 # Add project paths
-sys.path.append('/mnt/d/opt/AutomataNexus_Olympus_AGI2')
-sys.path.append('/mnt/d/opt/AutomataNexus_Olympus_AGI2/src')
-sys.path.append('/mnt/d/opt/AutomataNexus_Olympus_AGI2/scripts/training')
+sys.path.append('/content/AutomataNexus_Olympus_AGI2')
+sys.path.append('/content/AutomataNexus_Olympus_AGI2/src')
+sys.path.append('/content/AutomataNexus_Olympus_AGI2/scripts/training')
 
 # Import OLYMPUS ensemble
 from src.models.olympus_ensemble import OlympusEnsemble, EnsembleDecision

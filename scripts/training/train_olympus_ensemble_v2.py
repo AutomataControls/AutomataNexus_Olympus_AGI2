@@ -35,9 +35,9 @@ OLYMPUS_V2_CONFIG = {
     # Core Training Parameters - Advanced Level (Memory Optimized)
     'batch_size': 256,  # Memory optimized for large grid advanced training
     'learning_rate': 0.0001,  # Lower rate for fine-tuning specialists
-    'num_epochs': 375,  # Advanced training: 15 stages x 25 epochs
+    'num_epochs': 450,  # Advanced training: 15 stages x 30 epochs
     'gradient_accumulation': 3,  # Increased to maintain effective batch size
-    'epochs_per_stage': 25,  # Extended epochs for deeper learning
+    'epochs_per_stage': 30,  # Extended epochs for deeper learning
     'curriculum_stages': 15,  # Advanced curriculum stages
     
     # Enhanced Loss Configuration
@@ -102,11 +102,11 @@ STAGE_CONFIG = [
 # Device setup
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-print(f"\033[96m{'=' * 125}\\033[0m")
-print(f"\033[96m🏛️ OLYMPUS Ensemble Training V2 - Advanced Multi-Specialist Coordination for ARC-AGI-2\\033[0m")
-print(f"\033[96mPartial Specialist Fine-Tuning + Advanced Fusion + Meta-Learning Coordination\\033[0m")
-print(f"\033[96mTarget: 90%+ Performance with Advanced Ensemble Synergy\\033[0m")
-print(f"\033[96m{'=' * 125}\\033[0m")
+print(f"\033[96m{'=' * 125}\033[0m")
+print(f"\033[96m🏛️ OLYMPUS Ensemble Training V2 - Advanced Multi-Specialist Coordination for ARC-AGI-2\033[0m")
+print(f"\033[96mPartial Specialist Fine-Tuning + Advanced Fusion + Meta-Learning Coordination\033[0m")
+print(f"\033[96mTarget: 90%+ Performance with Advanced Ensemble Synergy\033[0m")
+print(f"\033[96m{'=' * 125}\033[0m")
 
 
 class OlympusV2Loss(nn.Module):
@@ -246,7 +246,7 @@ from train_olympus_ensemble_v1 import FoundationEnsembleDataset, foundation_coll
 
 def train_olympus_ensemble_v2():
     """Main training function for OLYMPUS Ensemble V2"""
-    print(f"\033[96m🏛️ Initializing OLYMPUS Ensemble V2 Training...\\033[0m")
+    print(f"\033[96m🏛️ Initializing OLYMPUS Ensemble V2 Training...\033[0m")
     
     # Initialize OLYMPUS ensemble
     olympus = OlympusEnsemble(
@@ -256,47 +256,47 @@ def train_olympus_ensemble_v2():
     ).to(device)
     
     # Load V1 ensemble weights first (from the correct InputBestModels directory)
-    v1_model_path = '/mnt/d/opt/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt'
+    v1_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt'
     if os.path.exists(v1_model_path):
         try:
             v1_loaded_successfully = olympus.load_ensemble(v1_model_path)
             if v1_loaded_successfully:
-                print(f"\033[92m🏛️ Loaded V1 ensemble weights for V2 training - FUSION ENGINE LOADED\\033[0m")
+                print(f"\033[92m🏛️ Loaded V1 ensemble weights for V2 training - FUSION ENGINE LOADED\033[0m")
             else:
-                print(f"\033[91m⚠️  V1 fusion engine failed to load, loading individual specialists\\033[0m")
+                print(f"\033[91m⚠️  V1 fusion engine failed to load, loading individual specialists\033[0m")
                 # Fallback to individual specialist loading
-                weight_dir = '/mnt/d/opt/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
+                weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
                 load_results = olympus.load_all_specialists(weight_dir)
                 successful_loads = sum(load_results.values())
-                print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 specialist models\\033[0m")
+                print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 specialist models\033[0m")
         except Exception as e:
-            print(f"\033[93m⚠️  Could not load V1 weights, loading individual specialists: {e}\\033[0m")
+            print(f"\033[93m⚠️  Could not load V1 weights, loading individual specialists: {e}\033[0m")
             # Fallback to individual specialist loading
             weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
             load_results = olympus.load_all_specialists(weight_dir)
             successful_loads = sum(load_results.values())
-            print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 specialist models\\033[0m")
+            print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 specialist models\033[0m")
     else:
         # Load all specialist weights individually
         weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
         load_results = olympus.load_all_specialists(weight_dir)
         successful_loads = sum(load_results.values())
-        print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 specialist models\\033[0m")
+        print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 specialist models\033[0m")
     
     # Try to load existing V2 ensemble state if available
-    v2_model_path = '/mnt/d/opt/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v2_best.pt'
+    v2_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v2_best.pt'
     v2_saved_checkpoint = None
     if os.path.exists(v2_model_path):
         try:
             v2_saved_checkpoint = torch.load(v2_model_path, map_location=device)
             v2_loaded_successfully = olympus.load_ensemble(v2_model_path)
             if v2_loaded_successfully:
-                print(f"\033[92m🏛️ Loaded existing V2 ensemble state - INCREMENTAL V2 TRAINING READY\\033[0m")
+                print(f"\033[92m🏛️ Loaded existing V2 ensemble state - INCREMENTAL V2 TRAINING READY\033[0m")
             else:
-                print(f"\033[91m🏛️ V2 fusion engine failed to load, continuing with V1 foundation\\033[0m")
+                print(f"\033[91m🏛️ V2 fusion engine failed to load, continuing with V1 foundation\033[0m")
                 v2_saved_checkpoint = None
         except Exception as e:
-            print(f"\033[96m🏛️ Could not load V2 state, continuing with V1 foundation: {e}\\033[0m")
+            print(f"\033[96m🏛️ Could not load V2 state, continuing with V1 foundation: {e}\033[0m")
             v2_saved_checkpoint = None
     
     # V2: Partial specialist fine-tuning (not fully frozen)
@@ -317,7 +317,7 @@ def train_olympus_ensemble_v2():
                         param.requires_grad = False
                 else:
                     param.requires_grad = False
-        print(f"\033[96m🏛️ Specialist top layers unfrozen for partial fine-tuning\\033[0m")
+        print(f"\033[96m🏛️ Specialist top layers unfrozen for partial fine-tuning\033[0m")
     
     # Initialize advanced loss function
     criterion = OlympusV2Loss(OLYMPUS_V2_CONFIG)
@@ -344,7 +344,9 @@ def train_olympus_ensemble_v2():
         eps=1e-8
     ) if specialist_params else None
     
-    print(f"\033[96m🏛️ Training {len(fusion_params)} fusion parameters and {len(specialist_params)} specialist parameters\\033[0m")
+    total_fusion_params = sum(p.numel() for p in fusion_params)
+    total_specialist_params = sum(p.numel() for p in specialist_params)
+    print(f"\033[96m🏛️ Training {total_fusion_params:,} fusion + {total_specialist_params:,} specialist parameters ({len(fusion_params) + len(specialist_params)} total groups)\033[0m")
     
     # Learning rate schedulers
     fusion_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
@@ -366,30 +368,30 @@ def train_olympus_ensemble_v2():
         try:
             if 'fusion_optimizer_state_dict' in v2_saved_checkpoint:
                 fusion_optimizer.load_state_dict(v2_saved_checkpoint['fusion_optimizer_state_dict'])
-                print(f"\033[96m🏛️ Loaded fusion optimizer state from V2 checkpoint\\033[0m")
+                print(f"\033[96m🏛️ Loaded fusion optimizer state from V2 checkpoint\033[0m")
         except Exception as e:
-            print(f"\033[96m🏛️ Could not load fusion optimizer state: {e}\\033[0m")
+            print(f"\033[96m🏛️ Could not load fusion optimizer state: {e}\033[0m")
         
         try:
             if 'specialist_optimizer_state_dict' in v2_saved_checkpoint and specialist_optimizer:
                 specialist_optimizer.load_state_dict(v2_saved_checkpoint['specialist_optimizer_state_dict'])
-                print(f"\033[96m🏛️ Loaded specialist optimizer state from V2 checkpoint\\033[0m")
+                print(f"\033[96m🏛️ Loaded specialist optimizer state from V2 checkpoint\033[0m")
         except Exception as e:
-            print(f"\033[96m🏛️ Could not load specialist optimizer state: {e}\\033[0m")
+            print(f"\033[96m🏛️ Could not load specialist optimizer state: {e}\033[0m")
         
         try:
             if 'fusion_scheduler_state_dict' in v2_saved_checkpoint:
                 fusion_scheduler.load_state_dict(v2_saved_checkpoint['fusion_scheduler_state_dict'])
-                print(f"\033[96m🏛️ Loaded fusion scheduler state from V2 checkpoint\\033[0m")
+                print(f"\033[96m🏛️ Loaded fusion scheduler state from V2 checkpoint\033[0m")
         except Exception as e:
-            print(f"\033[96m🏛️ Could not load fusion scheduler state: {e}\\033[0m")
+            print(f"\033[96m🏛️ Could not load fusion scheduler state: {e}\033[0m")
         
         try:
             if 'specialist_scheduler_state_dict' in v2_saved_checkpoint and specialist_scheduler:
                 specialist_scheduler.load_state_dict(v2_saved_checkpoint['specialist_scheduler_state_dict'])
-                print(f"\033[96m🏛️ Loaded specialist scheduler state from V2 checkpoint\\033[0m")
+                print(f"\033[96m🏛️ Loaded specialist scheduler state from V2 checkpoint\033[0m")
         except Exception as e:
-            print(f"\033[96m🏛️ Could not load specialist scheduler state: {e}\\033[0m")
+            print(f"\033[96m🏛️ Could not load specialist scheduler state: {e}\033[0m")
     
     # Mixed precision training
     scaler = GradScaler()
@@ -398,14 +400,14 @@ def train_olympus_ensemble_v2():
     best_performance = v2_saved_checkpoint.get('best_performance', 0.0) if v2_saved_checkpoint else 0.0
     training_stats = defaultdict(list)
     
-    print(f"\033[96m🏛️ Starting Advanced Progressive Ensemble Training - 8 Advanced Coordination Stages\\033[0m")
+    print(f"\033[96m🏛️ Starting Advanced Progressive Ensemble Training - 15 Advanced Coordination Stages\033[0m")
     
     # Advanced progressive training through coordination stages
     for stage_idx, stage_config in enumerate(STAGE_CONFIG):
-        print(f"\n\\033[96m{'=' * 130}\\033[0m")
+        print(f"\n\\033[38;2;255;204;153m{'=' * 130}\033[0m")
         print(f"\033[38;2;255;204;153m🏛️ V2 Stage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
-              f"Complexity: {stage_config['complexity']} | Focus: {stage_config['focus']}\\033[0m")
-        print(f"\033[96m{'=' * 130}\\033[0m")
+              f"Complexity: {stage_config['complexity']} | Focus: {stage_config['focus']}\033[0m")
+        print(f"\033[38;2;255;204;153m{'=' * 130}\033[0m")
         
         # Create advanced dataset for this stage
         dataset = FoundationEnsembleDataset(
@@ -436,7 +438,7 @@ def train_olympus_ensemble_v2():
         if stage_performance > best_performance:
             best_performance = stage_performance
             # Save best OLYMPUS V2 model in InputBestModels directory
-            os.makedirs('/mnt/d/opt/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels', exist_ok=True)
+            os.makedirs('/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels', exist_ok=True)
             
             # Enhanced save with optimizer and scheduler state (similar to V1)
             ensemble_state = {
@@ -455,18 +457,18 @@ def train_olympus_ensemble_v2():
                 'performance_metrics': olympus.get_ensemble_state()
             }
             
-            torch.save(ensemble_state, '/mnt/d/opt/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v2_best.pt')
-            print(f"\033[96m🏛️ New best V2 ensemble performance: {best_performance:.2%} - OLYMPUS V2 saved!\\033[0m")
+            torch.save(ensemble_state, '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v2_best.pt')
+            print(f"\033[96m🏛️ New best V2 ensemble performance: {best_performance:.2%} - OLYMPUS V2 saved!\033[0m")
         
         # Memory cleanup
         torch.cuda.empty_cache()
         gc.collect()
     
-    print(f"\n\\033[96m{'=' * 135}\\033[0m")
-    print(f"\033[96m🏛️ OLYMPUS Ensemble V2 Advanced Training Complete!\\033[0m")
-    print(f"\033[96m🏛️ Best V2 Advanced Performance: {best_performance:.2%}\\033[0m")
-    print(f"\033[96m🏛️ All 5 Specialists Advanced Coordinated and Ready for V3 Ultimate Training\\033[0m")
-    print(f"\033[96m{'=' * 135}\\033[0m")
+    print(f"\n\\033[96m{'=' * 135}\033[0m")
+    print(f"\033[96m🏛️ OLYMPUS Ensemble V2 Advanced Training Complete!\033[0m")
+    print(f"\033[96m🏛️ Best V2 Advanced Performance: {best_performance:.2%}\033[0m")
+    print(f"\033[96m🏛️ All 5 Specialists Advanced Coordinated and Ready for V3 Ultimate Training\033[0m")
+    print(f"\033[96m{'=' * 135}\033[0m")
     
     return olympus, best_performance
 
@@ -492,7 +494,7 @@ def train_advanced_coordination_stage(olympus, dataloader, criterion,
         # Progress bar
         # Dynamic progress bar with stage focus (like ATLAS)
         stage_focus = stage_config['focus'].replace('_', ' ').title()
-        pbar = tqdm(dataloader, desc=f"\033[38;2;255;204;153m🏛️ Advanced {stage_focus} Stage {stage_idx} Epoch {epoch}\\033[0m")
+        pbar = tqdm(dataloader, desc=f"\033[38;2;255;204;153m🏛️ Advanced {stage_focus} Stage {stage_idx} Epoch {epoch}\033[0m")
         
         for batch_idx, (inputs, targets, metadata) in enumerate(pbar):
             inputs = inputs.to(device)
@@ -570,11 +572,11 @@ def train_advanced_coordination_stage(olympus, dataloader, criterion,
             avg_loss = epoch_losses['total']/len(dataloader)
             current_lr = fusion_scheduler.get_last_lr()[0]
             specialist_lr = specialist_scheduler.get_last_lr()[0] if specialist_scheduler else 0
-            print(f"\033[38;2;255;204;153m⏰ OLYMPUS V2 Stage {stage_idx}, Epoch {epoch} (Global: {stage_idx * OLYMPUS_V2_CONFIG['epochs_per_stage'] + epoch + 1}):\\033[0m")
-            print(f"\033[96m   🎯 Ensemble: {epoch_performance:.2%} exact, Loss: {avg_loss:.3f}\\033[0m")
-            print(f"\033[96m   📊 Fusion LR: {current_lr:.6f} | Specialist LR: {specialist_lr:.6f} | Grid: {stage_config['max_grid_size']}x{stage_config['max_grid_size']} | Consensus: {avg_consensus:.3f}\\033[0m")
+            print(f"\033[38;2;255;204;153m⏰ OLYMPUS V2 Stage {stage_idx}, Epoch {epoch} (Global: {stage_idx * OLYMPUS_V2_CONFIG['epochs_per_stage'] + epoch + 1}):\033[0m")
+            print(f"\033[96m   🎯 Ensemble: {epoch_performance:.2%} exact, Loss: {avg_loss:.3f}\033[0m")
+            print(f"\033[96m   📊 Fusion LR: {current_lr:.6f} | Specialist LR: {specialist_lr:.6f} | Grid: {stage_config['max_grid_size']}x{stage_config['max_grid_size']} | Consensus: {avg_consensus:.3f}\033[0m")
             if epoch == epochs_for_stage - 1:
-                print(f"\033[96m✅ Advanced Stage {stage_idx} complete! Final exact: {epoch_performance:.2%}\\033[0m")
+                print(f"\033[96m✅ Advanced Stage {stage_idx} complete! Final exact: {epoch_performance:.2%}\033[0m")
         
         # Memory cleanup
         torch.cuda.empty_cache()

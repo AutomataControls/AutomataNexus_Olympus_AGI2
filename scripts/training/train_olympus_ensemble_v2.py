@@ -422,7 +422,7 @@ def train_olympus_ensemble_v2():
             batch_size=OLYMPUS_V2_CONFIG['batch_size'],
             shuffle=True,
             collate_fn=foundation_collate_fn,
-            num_workers=16,  # Lightning-fast multi-core data loading
+            num_workers=12,  # Optimal multi-core data loading
             pin_memory=True
         )
         

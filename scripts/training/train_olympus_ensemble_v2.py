@@ -618,7 +618,7 @@ def train_olympus_ensemble_v2():
             batch_size=OLYMPUS_V2_CONFIG['batch_size'],
             shuffle=True,
             collate_fn=olympus_v2_augmented_collate_fn,
-            num_workers=12,  # Optimized worker count
+            num_workers=16,  # Optimized worker count
             pin_memory=True,
             prefetch_factor=4  # Speed up data loading
         )

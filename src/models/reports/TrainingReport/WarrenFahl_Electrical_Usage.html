@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electrical Usage & Cost Analysis - Heritage Pointe of Warren</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            @page {
+                margin: 0.5in;
+            }
+
+            body {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+
+        .data-table th,
+        .data-table td {
+            border: 1px solid #999;
+            padding: 6px;
+            text-align: left;
+        }
+
+        .data-table th {
+            background-color: #333;
+            color: white;
+            font-weight: bold;
+        }
+
+        .data-table tr:nth-child(even) {
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="w-full max-w-7xl mx-auto p-8 bg-white">
+        <!-- Header -->
+        <div class="border-b-4 border-black pb-6 mb-8">
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex-1">
+                    <div class="mb-4">
+                        <img src="https://imagedelivery.net/ucfhYgcd3yVeR4VZrVJ1uA/562b732d-7a1b-4b11-8b59-c75904cd2000/public"
+                            alt="Current Mechanical" style="max-height: 60px; width: auto;" />
+                    </div>
+                    <h1 class="text-4xl font-bold text-black mb-2">
+                        Electrical Usage & Cost Analysis
+                    </h1>
+                    <h2 class="text-2xl text-gray-700 mb-4">
+                        Heritage Pointe of Warren - Fahl Building
+                    </h2>
+                </div>
+                <div class="flex gap-6 items-center">
+                    <img src="https://imagedelivery.net/ucfhYgcd3yVeR4VZrVJ1uA/d5450cae-b4ab-49c1-3817-3590ad360300/public"
+                        alt="Heritage Pointe of Warren" style="max-height: 80px; width: auto;" />
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-6 mt-4 text-sm">
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="font-semibold text-gray-700">Account #:</span>
+                        <span class="text-black">32531-00</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-semibold text-gray-700">Rate Schedule:</span>
+                        <span class="text-black">Rate 17</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-semibold text-gray-700">Analysis Period:</span>
+                        <span class="text-black">January 2021 - August 2025</span>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="font-semibold text-gray-700">Total Usage:</span>
+                        <span class="text-black">7,684,279 kWh</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-semibold text-gray-700">Total Cost:</span>
+                        <span class="text-black">$1,021,254.80</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-semibold text-gray-700">Avg Cost/kWh:</span>
+                        <span class="text-black">$0.133</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Executive Summary -->
+        <div style="background-color: #E8F4F8;" class="border-l-4 border-black p-6 mb-8">
+            <h3 class="text-xl font-bold text-black mb-4">Executive Summary</h3>
+            <div class="grid grid-cols-4 gap-6">
+                <div>
+                    <p class="text-sm font-semibold text-gray-700 mb-2">Months Analyzed:</p>
+                    <p class="text-3xl font-bold text-black">56</p>
+                    <p class="text-sm text-gray-700 mt-1">Jan 2021 - Aug 2025</p>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-gray-700 mb-2">Average Monthly Usage:</p>
+                    <p class="text-3xl font-bold text-black">137,219 kWh</p>
+                    <p class="text-sm text-gray-700 mt-1">Per billing period</p>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-gray-700 mb-2">Average Monthly Cost:</p>
+                    <p class="text-3xl font-bold text-black">$18,236</p>
+                    <p class="text-sm text-gray-700 mt-1">Per billing period</p>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-gray-700 mb-2">Annual Estimate:</p>
+                    <p class="text-3xl font-bold text-black">$218,836</p>
+                    <p class="text-sm text-gray-700 mt-1">Based on 2024-2025 data</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Usage Trend Chart -->
+        <div class="mb-8">
+            <div style="background-color: #FAFAFA;" class="p-6 rounded-lg border border-gray-300">
+                <h4 class="text-lg font-bold text-black mb-4">Monthly Electricity Usage Trend (2021-2025)</h4>
+                <div
+                    style="position: relative; height: 400px; border: 1px solid #999; background-color: white; padding: 40px 30px 80px 80px;">
+                    <!-- Y-axis labels -->
+                    <div
+                        style="position: absolute; left: 5px; top: 40px; bottom: 80px; display: flex; flex-direction: column; justify-content: space-between; font-size: 10px; color: #333; text-align: right; width: 65px;">
+                        <div>250,000</div>
+                        <div>225,000</div>
+                        <div>200,000</div>
+                        <div>175,000</div>
+                        <div>150,000</div>
+                        <div>125,000</div>
+                        <div>100,000</div>
+                        <div>75,000</div>
+                        <div>50,000</div>
+                        <div>25,000</div>
+                        <div>0 kWh</div>
+                    </div>
+
+                    <!-- Chart area -->
+                    <div style="position: absolute; left: 80px; right: 30px; top: 40px; bottom: 80px;">
+                        <!-- Grid lines -->
+                        <div style="position: absolute; top: 0%; left: 0; right: 0; border-top: 1px solid #E5E7EB;">
+                        </div>
+                        <div style="position: absolute; top: 10%; left: 0; right: 0; border-top: 1px dashed #D1D5DB;">
+                        </div>
+                        <div style="position: absolute; top: 20%; left: 0; right: 0; border-top: 1px dashed #D1D5DB;">
+                        </div>
+                        <div style="position: absolute; top: 30%; left: 0; right: 0; border-top: 1px dashed #D1D5DB;">
+                        </div>
+                        <div style="position: absolute; top: 40%; left: 0; right: 0; border-top: 1px dashed #D1D5DB;">
+                        </div>
+                        <div style="position: absolute; top: 50%; left: 0; right: 0; border-top: 1px dashed #D1D5DB;">
+                        </div>
+                        <div style="position: absolute; top: 60%; left: 0; right: 0; border-top: 1px dashed #D1D5DB;">
+                        </div>
+                        <div style="position: absolute; top: 70%; left: 0; right: 0; border-top: 1px dashed #D1D5DB;">
+                        </div>
+                        <div style="position: absolute; top: 80%; left: 0; right: 0; border-top: 1px dashed #D1D5DB;">
+                        </div>
+                        <div style="position: absolute; top: 90%; left: 0; right: 0; border-top: 1px dashed #D1D5DB;">
+                        </div>
+
+                        <!-- Line chart SVG -->
+                        <svg width="100%" height="100%" viewBox="0 0 1200 300" preserveAspectRatio="none"
+                            style="position: absolute; inset: 0;">
+                            <!-- Summer peaks highlighted -->
+                            <rect x="120" y="0" width="80" height="300" fill="#FFF4E6" opacity="0.3" />
+                            <rect x="360" y="0" width="80" height="300" fill="#FFF4E6" opacity="0.3" />
+                            <rect x="600" y="0" width="80" height="300" fill="#FFF4E6" opacity="0.3" />
+                            <rect x="840" y="0" width="80" height="300" fill="#FFF4E6" opacity="0.3" />
+                            <rect x="1080" y="0" width="80" height="300" fill="#FFF4E6" opacity="0.3" />
+
+                            <!-- Usage line -->
+                            <polyline
+                                points="0,182 21,168 43,208 64,174 86,180 107,126 128,115 150,114 171,87 193,132 214,208 236,192 257,174 279,183 300,192 321,180 343,55 364,115 386,192 407,85 429,96 450,77 471,105 493,96 514,132 536,146 557,84 579,102 600,105 621,150 643,177 664,180 686,144 707,171 729,138 750,138 771,135 793,144 814,108 836,102 857,81 879,90 900,78 921,99 943,87 964,84 986,66 1007,75 1029,81 1050,66 1071,102 1093,48 1114,39 1136,18"
+                                fill="none" stroke="#4A90E2" stroke-width="2" vector-effect="non-scaling-stroke" />
+                        </svg>
+                    </div>
+
+                    <!-- X-axis labels -->
+                    <div
+                        style="position: absolute; left: 80px; right: 30px; bottom: 45px; display: flex; justify-content: space-between; font-size: 9px; color: #333;">
+                        <span>2021</span>
+                        <span>2022</span>
+                        <span>2023</span>
+                        <span>2024</span>
+                        <span>2025</span>
+                    </div>
+
+                    <div
+                        style="position: absolute; left: 80px; right: 30px; bottom: 25px; display: flex; justify-content: space-around; font-size: 9px; color: #666;">
+                        <span>Jan</span>
+                        <span>Apr</span>
+                        <span>Jul</span>
+                        <span>Oct</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: center; gap: 40px; margin-top: 20px; font-size: 13px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 40px; height: 3px; background-color: #4A90E2;"></div>
+                        <span>Monthly Usage (kWh)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 30px; height: 20px; background-color: #FFF4E6; border: 1px solid #FF8C42;">
+                        </div>
+                        <span>Summer Peak Periods</span>
+                    </div>
+                </div>
+
+                <p style="text-align: center; font-size: 13px; color: #666; margin-top: 15px;">
+                    Clear seasonal pattern with peak usage during summer months (June-September) and lower usage in
+                    winter
+                </p>
+            </div>
+        </div>
+
+        <!-- Cost per kWh Trend -->
+        <div class="mb-8">
+            <div style="background-color: #FAFAFA;" class="p-6 rounded-lg border border-gray-300">
+                <h4 class="text-lg font-bold text-black mb-4">Cost per kWh Trend (2021-2025)</h4>
+                <div
+                    style="position: relative; height: 350px; border: 1px solid #999; background-color: white; padding: 40px 30px 80px 80px;">
+                    <!-- Y-axis labels -->
+                    <div
+                        style="position: absolute; left: 5px; top: 40px; bottom: 80px; display: flex; flex-direction: column; justify-content: space-between; font-size: 10px; color: #333; text-align: right; width: 65px;">
+                        <div>$0.30</div>
+                        <div>$0.27</div>
+                        <div>$0.24</div>
+                        <div>$0.21</div>
+                        <div>$0.18</div>
+                        <div>$0.15</div>
+                        <div>$0.12</div>
+                        <div>$0.09</div>
+                        <div>$0.06</div>
+                        <div>$0.03</div>
+                        <div>$0.00</div>
+                    </div>
+
+                    <!-- Chart area -->
+                    <div
+                        style="position: absolute; left: 80px; right: 30px; top: 40px; bottom: 80px; background-color: #FEF2F2;">
+                        <!-- Grid lines -->
+                        <div style="position: absolute; top: 10%; left: 0; right: 0; border-top: 1px dashed #D1D5DB;">
+                        </div>
+                        <div style="position: absolute; top: 20%; left: 0; right: 0; border-top: 1px dashed #D1D5DB;">
+                        </div>
+                        <div style="position: absolute; top: 30%; left: 0; right: 0; border-top: 1px dashed #D1D5DB;">
+                        </div>
+                        <div style="position: absolute; top: 40%; left: 0; right: 0; border-top: 1px dashed #D1D5DB;">
+                        </div>
+                        <div style="position: absolute; top: 50%; left: 0; right: 0; border-top: 1px dashed #D1D5DB;">
+                        </div>
+                        <div style="position: absolute; top: 60%; left: 0; right: 0; border-top: 1px dashed #D1D5DB;">
+                        </div>
+                        <div style="position: absolute; top: 70%; left: 0; right: 0; border-top: 1px dashed #D1D5DB;">
+                        </div>
+                        <div style="position: absolute; top: 80%; left: 0; right: 0; border-top: 1px dashed #D1D5DB;">
+                        </div>
+                        <div style="position: absolute; top: 90%; left: 0; right: 0; border-top: 1px dashed #D1D5DB;">
+                        </div>
+
+                        <!-- Cost line SVG -->
+                        <svg width="100%" height="100%" viewBox="0 0 1200 300" preserveAspectRatio="none"
+                            style="position: absolute; inset: 0;">
+                            <polyline
+                                points="0,261 21,264 43,257 64,273 86,268 107,283 128,280 150,267 171,280 193,273 214,290 236,265 257,268 279,267 300,265 321,268 343,306 364,220 386,196 407,186 429,178 450,172 471,158 493,144 514,172 536,130 557,142 579,158 600,169 621,176 643,172 664,136 686,154 707,146 729,138 750,140 771,148 793,184 814,158 836,144 857,154 879,176 900,162 921,172 943,142 964,130 986,158 1007,166 1029,174 1050,170 1071,180 1093,78 1114,68 1136,72"
+                                fill="none" stroke="#DC2626" stroke-width="2.5" vector-effect="non-scaling-stroke" />
+                        </svg>
+                    </div>
+
+                    <!-- X-axis labels -->
+                    <div
+                        style="position: absolute; left: 80px; right: 30px; bottom: 45px; display: flex; justify-content: space-between; font-size: 9px; color: #333;">
+                        <span>2021</span>
+                        <span>2022</span>
+                        <span>2023</span>
+                        <span>2024</span>
+                        <span>2025</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: center; gap: 40px; margin-top: 20px; font-size: 13px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 40px; height: 3px; background-color: #DC2626;"></div>
+                        <span>Cost per kWh</span>
+                    </div>
+                </div>
+
+                <div
+                    style="background-color: #FEE2E2; border-left: 4px solid #DC2626; padding: 12px; margin-top: 20px; font-size: 13px;">
+                    <p class="font-bold text-black mb-2">⚠️ Significant Cost Increase in 2025</p>
+                    <p class="text-gray-800">Electricity costs have risen dramatically from an average of $0.12/kWh in
+                        2021-2024 to $0.19-0.23/kWh in 2025, representing a 58-92% increase in per-unit energy costs.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seasonal Analysis -->
+        <div class="mb-8">
+            <h3 class="text-2xl font-bold text-black mb-4">Seasonal Usage Patterns</h3>
+
+            <div class="grid grid-cols-3 gap-6 mb-6">
+                <div style="background-color: #FFF4E6;" class="border-2 border-black rounded-lg p-6">
+                    <h4 class="font-bold text-black mb-2">Summer (Jun-Sep)</h4>
+                    <p class="text-xs text-gray-700 mb-3">Peak cooling season</p>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-700">Avg Usage:</span>
+                            <span class="font-bold text-black">~195,000 kWh</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-700">Avg Cost:</span>
+                            <span class="font-bold text-black">~$22,000</span>
+                        </div>
+                        <div class="flex justify-between border-t pt-2">
+                            <span class="text-gray-700 font-semibold">% Above Average:</span>
+                            <span class="font-bold text-red-600">+42%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background-color: #E8F4F8;" class="border-2 border-black rounded-lg p-6">
+                    <h4 class="font-bold text-black mb-2">Shoulder (Apr-May, Oct-Nov)</h4>
+                    <p class="text-xs text-gray-700 mb-3">Moderate seasons</p>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-700">Avg Usage:</span>
+                            <span class="font-bold text-black">~125,000 kWh</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-700">Avg Cost:</span>
+                            <span class="font-bold text-black">~$16,500</span>
+                        </div>
+                        <div class="flex justify-between border-t pt-2">
+                            <span class="text-gray-700 font-semibold">% of Average:</span>
+                            <span class="font-bold text-black">-9%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background-color: #F5F5F5;" class="border-2 border-black rounded-lg p-6">
+                    <h4 class="font-bold text-black mb-2">Winter (Dec-Mar)</h4>
+                    <p class="text-xs text-gray-700 mb-3">Lower usage period</p>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-700">Avg Usage:</span>
+                            <span class="font-bold text-black">~100,000 kWh</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-700">Avg Cost:</span>
+                            <span class="font-bold text-black">~$16,000</span>
+                        </div>
+                        <div class="flex justify-between border-t pt-2">
+                            <span class="text-gray-700 font-semibold">% Below Average:</span>
+                            <span class="font-bold text-blue-600">-27%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Year-over-Year Comparison -->
+        <div class="mb-8">
+            <h3 class="text-2xl font-bold text-black mb-4">Year-over-Year Comparison</h3>
+
+            <div style="background-color: #FAFAFA;" class="p-6 rounded-lg border border-gray-300">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Year</th>
+                            <th>Total Usage (kWh)</th>
+                            <th>Total Cost</th>
+                            <th>Avg Monthly Usage</th>
+                            <th>Avg Monthly Cost</th>
+                            <th>Avg $/kWh</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="font-semibold">2021</td>
+                            <td>1,729,872</td>
+                            <td>$174,731</td>
+                            <td>144,156 kWh</td>
+                            <td>$14,561</td>
+                            <td>$0.101</td>
+                        </tr>
+                        <tr>
+                            <td class="font-semibold">2022</td>
+                            <td>1,459,800</td>
+                            <td>$187,708</td>
+                            <td>121,650 kWh</td>
+                            <td>$15,642</td>
+                            <td>$0.129</td>
+                        </tr>
+                        <tr>
+                            <td class="font-semibold">2023</td>
+                            <td>1,965,185</td>
+                            <td>$217,345</td>
+                            <td>163,765 kWh</td>
+                            <td>$18,112</td>
+                            <td>$0.111</td>
+                        </tr>
+                        <tr>
+                            <td class="font-semibold">2024</td>
+                            <td>1,845,900</td>
+                            <td>$211,883</td>
+                            <td>153,825 kWh</td>
+                            <td>$17,657</td>
+                            <td>$0.115</td>
+                        </tr>
+                        <tr style="background-color: #FEE2E2;">
+                            <td class="font-semibold">2025 (Jan-Aug)</td>
+                            <td>1,366,200</td>
+                            <td>$231,511</td>
+                            <td>170,775 kWh</td>
+                            <td>$28,939</td>
+                            <td class="font-bold text-red-600">$0.169</td>
+                        </tr>
+                        <tr style="background-color: #E8F5E9;" class="font-bold">
+                            <td>2025 (Projected Annual)</td>
+                            <td>2,049,300</td>
+                            <td>$347,268</td>
+                            <td>170,775 kWh</td>
+                            <td>$28,939</td>
+                            <td class="text-red-600">$0.169</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div
+                    style="background-color: #FEE2E2; border-left: 4px solid #DC2626; padding: 12px; margin-top: 20px; font-size: 13px;">
+                    <p class="font-bold text-black mb-2">📊 2025 Cost Projection</p>
+                    <p class="text-gray-800">If current 2025 rates continue, annual electricity costs are projected to
+                        reach <strong>$347,268</strong>, representing a <strong>64% increase</strong> over 2024 costs
+                        ($211,883), despite similar usage levels.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Findings -->
+        <div class="mb-8">
+            <h3 class="text-2xl font-bold text-black mb-4">Key Findings & Recommendations</h3>
+
+            <div class="space-y-4">
+                <div style="background-color: #E8F5E9;" class="border-l-4 border-black p-6">
+                    <h4 class="font-bold text-black mb-2 text-lg">✓ Consistent Usage Pattern</h4>
+                    <p class="text-gray-800 text-sm">
+                        The facility shows predictable seasonal usage patterns with summer peaks (195k kWh) and winter
+                        lows (100k kWh), averaging 137k kWh monthly over the 4.5-year period.
+                    </p>
+                </div>
+
+                <div style="background-color: #FEE2E2;" class="border-l-4 border-red-600 p-6">
+                    <h4 class="font-bold text-black mb-2 text-lg">⚠️ Dramatic Cost Escalation (2025)</h4>
+                    <p class="text-gray-800 text-sm mb-2">
+                        <strong>Critical Finding:</strong> Energy costs have increased 47-69% in 2025 compared to
+                        2021-2024 averages:
+                    </p>
+                    <ul class="text-sm text-gray-800 space-y-1 ml-4">
+                        <li>• 2021-2024 average: $0.114/kWh</li>
+                        <li>• 2025 average: $0.169/kWh</li>
+                        <li>• Peak 2025 rate: $0.233/kWh (April 2025)</li>
+                        <li>• Projected 2025 annual increase: <strong>+$135,385 over 2024</strong></li>
+                    </ul>
+                </div>
+
+                <div style="background-color: #FFF4E6;" class="border-l-4 border-black p-6">
+                    <h4 class="font-bold text-black mb-2 text-lg">💡 Energy Efficiency Priority</h4>
+                    <p class="text-gray-800 text-sm">
+                        Given rising costs, energy efficiency improvements have a <strong>significantly higher
+                            ROI</strong> than in previous years. Projects that reduce consumption by 10% would save
+                        approximately <strong>$34,700 annually</strong> at 2025 rates versus $21,200 at 2024 rates.
+                    </p>
+                </div>
+
+                <div style="background-color: #E8F4F8;" class="border-l-4 border-black p-6">
+                    <h4 class="font-bold text-black mb-2 text-lg">📋 Recommended Actions</h4>
+                    <div class="grid grid-cols-2 gap-4 text-sm mt-3">
+                        <div>
+                            <p class="font-semibold text-black mb-2">Immediate (0-3 months):</p>
+                            <ul class="text-gray-800 space-y-1">
+                                <li>• Review rate structure with utility</li>
+                                <li>• Audit HVAC systems (largest load)</li>
+                                <li>• Implement lighting upgrades</li>
+                                <li>• Install power factor correction</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-black mb-2">Strategic (3-12 months):</p>
+                            <ul class="text-gray-800 space-y-1">
+                                <li>• Consider demand response programs</li>
+                                <li>• Evaluate equipment replacements</li>
+                                <li>• Explore renewable energy options</li>
+                                <li>• Budget for continued cost increases</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="border-t-2 border-black pt-6 mt-8 text-sm text-gray-600">
+            <div class="grid grid-cols-2 gap-6 mb-4">
+                <div>
+                    <p class="font-semibold text-black mb-2">Report Prepared By:</p>
+                    <p class="text-base font-bold text-black">Andrew Jewell Sr.</p>
+                    <p>Energy Analysis - Heritage Pointe of Warren</p>
+                    <p>Report Date: October 2025</p>
+                    <div class="mt-4">
+                        <img src="https://imagedelivery.net/ucfhYgcd3yVeR4VZrVJ1uA/bf5f2482-a2ca-4b40-89e8-2c867eabd000/public"
+                            alt="Automata Nexus" style="max-height: 80px; width: auto;" />
+                    </div>
+                </div>
+                <div>
+                    <p class="font-semibold text-black mb-2">Data Source:</p>
+                    <p>Heritage Pointe of Warren</p>
+                    <p>Fahl Building - Account #32531-00</p>
+                    <p>Rate Schedule: Rate 17</p>
+                    <p>Analysis Period: Jan 2021 - Aug 2025 (56 months)</p>
+                </div>
+            </div>
+            <div style="background-color: #F5F5F5;" class="p-4 rounded text-xs">
+                <p class="font-semibold text-black mb-2">Notes & Methodology:</p>
+                <ul class="space-y-1 text-gray-700">
+                    <li>• Data based on utility billing records from Heritage Pointe of Warren</li>
+                    <li>• Load factors vary between 300 and 600 depending on billing period</li>
+                    <li>• Some months show zero usage due to meter reading issues or billing adjustments</li>
+                    <li>• 2025 projections based on average monthly usage and cost from Jan-Aug 2025</li>
+                    <li>• All costs exclude taxes which were $0.00 throughout the period</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

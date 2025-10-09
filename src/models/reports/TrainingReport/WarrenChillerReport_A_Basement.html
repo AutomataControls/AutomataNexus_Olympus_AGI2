@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chiller Energy Audit Report - Heritage Pointe of Warren</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            @page {
+                margin: 0.5in;
+            }
+
+            body {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="w-full max-w-7xl mx-auto p-8 bg-white">
+        <!-- Header -->
+        <div class="border-b-4 border-black pb-6 mb-8">
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex-1">
+                    <div class="mb-4">
+                        <img src="https://imagedelivery.net/ucfhYgcd3yVeR4VZrVJ1uA/562b732d-7a1b-4b11-8b59-c75904cd2000/public"
+                            alt="Current Mechanical" style="max-height: 60px; width: auto;" />
+                    </div>
+                    <h1 class="text-4xl font-bold text-black mb-2">
+                        Chiller Energy Audit Report
+                    </h1>
+                    <h2 class="text-2xl text-gray-700 mb-4">
+                        Heritage Pointe of Warren - "A" Basement Chiller
+                    </h2>
+                </div>
+                <div class="flex gap-6 items-center">
+                    <img src="https://imagedelivery.net/ucfhYgcd3yVeR4VZrVJ1uA/d5450cae-b4ab-49c1-3817-3590ad360300/public"
+                        alt="Heritage Pointe of Warren" style="max-height: 80px; width: auto;" />
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-6 mt-4 text-sm">
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="font-semibold text-gray-700">Account #:</span>
+                        <span class="text-black">32531-00</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-semibold text-gray-700">Monitoring Period:</span>
+                        <span class="text-black">1 Hour (240 samples @ 15 sec)</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-semibold text-gray-700">Outdoor Ambient:</span>
+                        <span class="text-black">80°F</span>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="font-semibold text-gray-700">Equipment:</span>
+                        <span class="text-black">Trane Air-Cooled Chiller</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-semibold text-gray-700">Model:</span>
+                        <span class="text-black">CACC801RDNJR60ACDFGTPR3</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-semibold text-gray-700">Serial:</span>
+                        <span class="text-black">L89C01146</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Equipment Specifications -->
+        <div style="background-color: #F5F5F5;" class="rounded-lg p-6 mb-8">
+            <h3 class="text-xl font-bold text-black mb-4">Equipment Specifications</h3>
+            <div class="grid grid-cols-4 gap-6">
+                <div>
+                    <p class="text-sm font-semibold text-gray-700 mb-2">Configuration</p>
+                    <ul class="text-sm space-y-1">
+                        <li>• Estimated Capacity: ~80 Tons</li>
+                        <li>• 2 Scroll Compressors (3-Phase)</li>
+                        <li>• Remote Air-Cooled Condenser</li>
+                        <li>• Condenser Location: Roof Mounted</li>
+                    </ul>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-gray-700 mb-2">Electrical Ratings</p>
+                    <ul class="text-sm space-y-1">
+                        <li>• Voltage: 440-460-480V</li>
+                        <li>• RLA per Compressor: 70.0A</li>
+                        <li>• LRA per Compressor: 315A</li>
+                        <li>• Total Max Load: ~39 kW</li>
+                    </ul>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-gray-700 mb-2">Age & Refrigerant</p>
+                    <ul class="text-sm space-y-1">
+                        <li>• <strong class="text-red-600">Age: 15+ Years</strong></li>
+                        <li>• <strong class="text-red-600">Refrigerant: R22</strong></li>
+                        <li>• Est. Remaining Life: 5-10 years</li>
+                        <li>• R22 Production: BANNED (2020)</li>
+                    </ul>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-gray-700 mb-2">Metering Equipment</p>
+                    <ul class="text-sm space-y-1">
+                        <li>• Selec EM4M Energy Meter</li>
+                        <li>• 3-Phase, 230/400V, 50Hz</li>
+                        <li>• Direct measurement</li>
+                        <li>• Real-time monitoring</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Critical Equipment Age Warning -->
+        <div style="background-color: #FFEBEE;" class="border-2 border-red-600 rounded-lg p-6 mb-8">
+            <div class="flex items-start">
+                <div class="flex-shrink-0 text-4xl mr-4">⚠️</div>
+                <div class="flex-1">
+                    <h3 class="text-xl font-bold text-black mb-3">CRITICAL: Equipment Age & R22 Refrigerant Risk</h3>
+                    <div class="grid grid-cols-2 gap-6">
+                        <div>
+                            <p class="text-sm text-black font-semibold mb-2">Equipment Lifecycle Status:</p>
+                            <ul class="text-sm text-gray-800 space-y-1">
+                                <li>• <strong>Current age:</strong> 15+ years old</li>
+                                <li>• <strong>Typical lifespan:</strong> 20-25 years</li>
+                                <li>• <strong>Status:</strong> Approaching end of useful life</li>
+                                <li>• <strong>Risk level:</strong> Increasing failure probability</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <p class="text-sm text-black font-semibold mb-2">R22 Refrigerant Crisis:</p>
+                            <ul class="text-sm text-gray-800 space-y-1">
+                                <li>• <strong>Production banned:</strong> January 1, 2020</li>
+                                <li>• <strong>Current R22 cost:</strong> $80-150/lb (was $10-20)</li>
+                                <li>• <strong>Major leak repair:</strong> $25,000-$45,000+</li>
+                                <li>• <strong>Supply:</strong> Reclaimed only, increasingly scarce</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-red-300">
+                        <p class="text-sm font-bold text-black">
+                            FINANCIAL RISK: A major refrigerant leak could cost $25,000-$45,000 to repair - approaching
+                            the cost of replacement.
+                            Given the age and R22 phaseout, begin planning for replacement within 3-5 years to avoid
+                            emergency situations.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Executive Summary -->
+        <div style="background-color: #E8F4F8;" class="border-l-4 border-black p-6 mb-8">
+            <h3 class="text-xl font-bold text-black mb-4">Executive Summary</h3>
+            <div class="grid grid-cols-3 gap-6">
+                <div>
+                    <p class="text-sm font-semibold text-gray-700 mb-2">Current Operating Load (80°F):</p>
+                    <p class="text-3xl font-bold text-black">13.63 kW</p>
+                    <p class="text-sm text-gray-700 mt-1">0.170 kW/ton - Excellent efficiency</p>
+                    <p class="text-sm text-gray-700">35% of rated capacity</p>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-gray-700 mb-2">Realistic Annual Cost:</p>
+                    <p class="text-3xl font-bold text-black">$30,786</p>
+                    <p class="text-sm text-gray-700 mt-1">Based on Indiana climate</p>
+                    <p class="text-sm text-gray-700">153,931 kWh/year</p>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-gray-700 mb-2">Building Load Impact:</p>
+                    <p class="text-3xl font-bold text-black">7.54%</p>
+                    <p class="text-sm text-gray-700 mt-1">Of annual building usage</p>
+                    <p class="text-sm text-gray-700">Significant optimization target</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Operating Conditions -->
+        <div class="mb-8">
+            <h3 class="text-2xl font-bold text-black mb-4">Current Operating Conditions (80°F Ambient)</h3>
+
+            <div class="grid grid-cols-2 gap-6 mb-6">
+                <!-- Compressor 1 Card -->
+                <div style="background-color: #E0F7F7;" class="border-2 border-black rounded-lg p-6">
+                    <h4 class="text-xl font-bold text-black mb-4">Compressor 1</h4>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700 font-semibold">Operating Current:</span>
+                            <span class="text-black font-bold">23.98 A</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700 text-sm">% of Rated (70A):</span>
+                            <span class="text-black font-bold">34.3%</span>
+                        </div>
+                        <div class="h-px bg-gray-400 my-2"></div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-700 font-semibold">Real Power:</span>
+                            <span class="text-black font-bold">6.651 kW</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-700 font-semibold">Apparent Power:</span>
+                            <span class="text-black">8.530 kVA</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-700 font-semibold">Reactive Power:</span>
+                            <span class="text-black">5.695 kVAr</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-700 font-semibold">Power Factor:</span>
+                            <span class="text-red-600 font-bold">0.618</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-700 font-semibold">Voltage (L-L):</span>
+                            <span class="text-black">485.7 V</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Compressor 2 Card -->
+                <div style="background-color: #FFF4E6;" class="border-2 border-black rounded-lg p-6">
+                    <h4 class="text-xl font-bold text-black mb-4">Compressor 2</h4>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700 font-semibold">Operating Current:</span>
+                            <span class="text-black font-bold">25.16 A</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700 text-sm">% of Rated (70A):</span>
+                            <span class="text-black font-bold">35.9%</span>
+                        </div>
+                        <div class="h-px bg-gray-400 my-2"></div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-700 font-semibold">Real Power:</span>
+                            <span class="text-black font-bold">6.978 kW</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-700 font-semibold">Apparent Power:</span>
+                            <span class="text-black">8.950 kVA</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-700 font-semibold">Reactive Power:</span>
+                            <span class="text-black">6.095 kVAr</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-700 font-semibold">Power Factor:</span>
+                            <span class="text-red-600 font-bold">0.606</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-700 font-semibold">Voltage (L-L):</span>
+                            <span class="text-black">490.5 V</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Draw Line Chart -->
+            <div style="background-color: #FAFAFA;" class="p-6 rounded-lg mb-6 border border-gray-300">
+                <h4 class="text-base font-bold text-black mb-4">Current Draw During 1-Hour Monitoring Period</h4>
+                <div
+                    style="position: relative; height: 300px; border: 1px solid #999; background-color: white; padding: 30px 30px 50px 70px;">
+                    <div
+                        style="position: absolute; left: 10px; top: 30px; bottom: 50px; display: flex; flex-direction: column; justify-content: space-between; font-size: 11px; color: #333;">
+                        <div>70A</div>
+                        <div>60A</div>
+                        <div>50A</div>
+                        <div>40A</div>
+                        <div>30A</div>
+                        <div>20A</div>
+                        <div>10A</div>
+                        <div>0A</div>
+                    </div>
+
+                    <div
+                        style="position: absolute; left: 70px; right: 30px; top: 30px; bottom: 50px; background-color: #F0F8FF;">
+                        <div style="position: absolute; top: 0; left: 0; right: 0; border-top: 2px dashed #666;"></div>
+                        <div
+                            style="position: absolute; top: -15px; right: 5px; font-size: 10px; background-color: white; padding: 0 4px;">
+                            Rated: 70A</div>
+
+                        <div
+                            style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 11px; color: #008B8B; font-weight: bold;">
+                            Light Load Zone (35%)</div>
+
+                        <svg style="position: absolute; inset: 0; width: 100%; height: 100%;" viewBox="0 0 100 100"
+                            preserveAspectRatio="none">
+                            <polyline
+                                points="0,66 10,65.5 20,66.5 30,66 40,66.2 50,66 60,65.8 70,66.3 80,66 90,66.5 100,66"
+                                fill="none" stroke="#00B4B4" stroke-width="0.5" vector-effect="non-scaling-stroke" />
+
+                            <polyline
+                                points="0,64 10,63.5 20,64.5 30,64 40,64.2 50,64 60,63.8 70,64.3 80,64 90,64.5 100,64"
+                                fill="none" stroke="#FF8C42" stroke-width="0.5" vector-effect="non-scaling-stroke" />
+                        </svg>
+                    </div>
+
+                    <div
+                        style="position: absolute; left: 70px; right: 30px; bottom: 20px; display: flex; justify-content: space-between; font-size: 11px; color: #333;">
+                        <span>0 min</span>
+                        <span>10</span>
+                        <span>20</span>
+                        <span>30</span>
+                        <span>40</span>
+                        <span>50</span>
+                        <span>60 min</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: center; gap: 30px; margin-top: 15px; font-size: 13px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 30px; height: 3px; background-color: #00B4B4;"></div>
+                        <span>Comp 1 (23.98A avg)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 30px; height: 3px; background-color: #FF8C42;"></div>
+                        <span>Comp 2 (25.16A avg)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 30px; height: 0px; border-top: 2px dashed #666;"></div>
+                        <span>Rated Capacity (70A)</span>
+                    </div>
+                </div>
+
+                <p style="text-align: center; font-size: 13px; color: #666; margin-top: 10px;">
+                    Both compressors operating at ~35% capacity - typical for 80°F ambient conditions
+                </p>
+            </div>
+
+            <div style="background-color: #E8F5E9;" class="border-l-4 border-black p-6">
+                <h4 class="text-lg font-bold text-black mb-3">✓ Current Efficiency Rating: EXCELLENT</h4>
+                <div class="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                        <p class="font-semibold text-gray-700">Efficiency at Test Conditions:</p>
+                        <p class="text-2xl font-bold text-black">0.170 kW/ton</p>
+                        <p class="text-gray-600">Outstanding part-load performance</p>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-700">Est. Full Load Efficiency:</p>
+                        <p class="text-2xl font-bold text-black">0.485 kW/ton</p>
+                        <p class="text-gray-600">At 95°F ambient, 70A per compressor</p>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-700">Industry Benchmark:</p>
+                        <p class="text-2xl font-bold text-gray-600">0.6-0.8 kW/ton</p>
+                        <p class="text-gray-600">Typical air-cooled chillers</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Radar Chart -->
+        <div class="mb-8">
+            <div style="background-color: #FAFAFA; padding: 30px; border-radius: 8px; border: 1px solid #ccc;">
+                <h4 style="font-size: 15px; font-weight: bold; margin-bottom: 20px;">Compressor Performance Profile</h4>
+
+                <div style="display: flex; justify-content: center; margin-bottom: 30px;">
+                    <div
+                        style="position: relative; width: 500px; height: 500px; background-color: white; border: 1px solid #999;">
+                        <svg width="500" height="500" viewBox="0 0 500 500">
+                            <circle cx="250" cy="250" r="180" fill="none" stroke="#ddd" stroke-width="1" />
+                            <circle cx="250" cy="250" r="135" fill="none" stroke="#ddd" stroke-width="1" />
+                            <circle cx="250" cy="250" r="90" fill="none" stroke="#ddd" stroke-width="1" />
+                            <circle cx="250" cy="250" r="45" fill="none" stroke="#ddd" stroke-width="1" />
+
+                            <line x1="250" y1="250" x2="250" y2="70" stroke="#999" stroke-width="1" />
+                            <line x1="250" y1="250" x2="421" y2="164" stroke="#999" stroke-width="1" />
+                            <line x1="250" y1="250" x2="360" y2="397" stroke="#999" stroke-width="1" />
+                            <line x1="250" y1="250" x2="140" y2="397" stroke="#999" stroke-width="1" />
+                            <line x1="250" y1="250" x2="79" y2="164" stroke="#999" stroke-width="1" />
+
+                            <polygon points="250,70 421,164 360,397 140,397 79,164" fill="none" stroke="#666"
+                                stroke-width="2" stroke-dasharray="6,4" opacity="0.4" />
+
+                            <polygon points="250,188 305,189 299,327 201,327 195,189" fill="#E0F7F7" stroke="#00B4B4"
+                                stroke-width="2.5" opacity="0.7" />
+
+                            <polygon points="250,185 307,188 299,327 201,327 193,188" fill="#FFF4E6" stroke="#FF8C42"
+                                stroke-width="2.5" opacity="0.7" />
+
+                            <circle cx="250" cy="188" r="5" fill="#00B4B4" />
+                            <circle cx="305" cy="189" r="5" fill="#00B4B4" />
+                            <circle cx="299" cy="327" r="5" fill="#00B4B4" />
+                            <circle cx="201" cy="327" r="5" fill="#00B4B4" />
+                            <circle cx="195" cy="189" r="5" fill="#00B4B4" />
+
+                            <circle cx="250" cy="250" r="4" fill="#000" />
+                            <text x="250" y="268" font-size="11" fill="#666" text-anchor="middle">0%</text>
+
+                            <text x="250" y="50" font-size="13" font-weight="bold" text-anchor="middle">Load %</text>
+                            <text x="250" y="65" font-size="11" text-anchor="middle">
+                                <tspan fill="#00B4B4">34.3%</tspan> | <tspan fill="#FF8C42">35.9%</tspan>
+                            </text>
+
+                            <text x="440" y="155" font-size="13" font-weight="bold" text-anchor="start">Power
+                                Factor</text>
+                            <text x="440" y="170" font-size="11" fill="#c00" text-anchor="start">61.8% | 60.6%</text>
+
+                            <text x="370" y="425" font-size="13" font-weight="bold" text-anchor="end">Efficiency</text>
+                            <text x="370" y="440" font-size="11" text-anchor="end">78% | 78%</text>
+
+                            <text x="130" y="425" font-size="13" font-weight="bold" text-anchor="start">Voltage</text>
+                            <text x="130" y="440" font-size="11" text-anchor="start">100% | 100%</text>
+
+                            <text x="60" y="155" font-size="13" font-weight="bold" text-anchor="end">Balance</text>
+                            <text x="60" y="170" font-size="11" text-anchor="end">85% | 85%</text>
+                        </svg>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: center; gap: 40px; font-size: 13px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 24px; height: 16px; background-color: #E0F7F7; border: 2px solid #00B4B4;">
+                        </div>
+                        <span>Compressor 1</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 24px; height: 16px; background-color: #FFF4E6; border: 2px solid #FF8C42;">
+                        </div>
+                        <span>Compressor 2</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 24px; height: 16px; border: 2px dashed #666;"></div>
+                        <span>Target (100%)</span>
+                    </div>
+                </div>
+
+                <p style="text-align: center; font-size: 13px; color: #666; margin-top: 15px;">
+                    Performance metrics compared to ideal targets. Power factor is the primary concern.
+                </p>
+            </div>
+        </div>
+
+        <!-- Seasonal Cost Analysis -->
+        <div class="mb-8">
+            <h3 class="text-2xl font-bold text-black mb-4">Seasonal Cost Analysis (Indiana Climate)</h3>
+
+            <div style="background-color: #FFF9E6;" class="border-l-4 border-black p-4 mb-6 text-sm">
+                <p class="font-semibold text-black">Note: Cooling loads vary significantly throughout the year.</p>
+                <p class="text-gray-700">This analysis provides realistic cost projections based on seasonal operation
+                    patterns.</p>
+            </div>
+
+            <!-- Wave Chart -->
+            <div
+                style="background-color: #FAFAFA; padding: 30px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 30px;">
+                <h4 style="font-size: 15px; font-weight: bold; margin-bottom: 20px;">Annual Energy Consumption by Season
+                </h4>
+                <div
+                    style="position: relative; height: 350px; border: 1px solid #999; background-color: white; padding: 30px 30px 60px 70px;">
+                    <div
+                        style="position: absolute; left: 10px; top: 30px; bottom: 60px; display: flex; flex-direction: column; justify-content: space-between; font-size: 11px; color: #333;">
+                        <div>25,000</div>
+                        <div>20,000</div>
+                        <div>15,000</div>
+                        <div>10,000</div>
+                        <div>5,000</div>
+                        <div>0 kWh</div>
+                    </div>
+
+                    <div style="position: absolute; left: 70px; right: 30px; top: 30px; bottom: 60px;">
+                        <svg width="100%" height="100%" viewBox="0 0 1200 270" preserveAspectRatio="none"
+                            style="display: block;">
+                            <path d="M 0,260 Q 50,258 100,260 Q 150,262 200,260 Q 250,258 300,260 L 300,270 L 0,270 Z"
+                                fill="#D3D3D3" stroke="#999" stroke-width="1" />
+                            <path d="M 1100,260 Q 1125,258 1150,260 Q 1175,262 1200,260 L 1200,270 L 1100,270 Z"
+                                fill="#D3D3D3" stroke="#999" stroke-width="1" />
+
+                            <path
+                                d="M 300,140 Q 325,138 350,140 Q 375,142 400,140 Q 425,138 450,140 L 450,270 L 300,270 Z"
+                                fill="#E8F4F8" stroke="#4A90E2" stroke-width="1.5" />
+                            <path
+                                d="M 900,140 Q 925,138 950,140 Q 975,142 1000,140 Q 1025,138 1050,140 Q 1075,142 1100,140 L 1100,270 L 900,270 Z"
+                                fill="#E8F4F8" stroke="#4A90E2" stroke-width="1.5" />
+
+                            <path
+                                d="M 450,15 Q 475,12 500,15 Q 525,18 550,15 Q 575,12 600,15 Q 625,18 650,15 Q 675,12 700,15 Q 725,18 750,15 Q 775,12 800,15 Q 825,18 850,15 Q 875,12 900,15 L 900,270 L 450,270 Z"
+                                fill="#FFF4E6" stroke="#FF8C42" stroke-width="2" />
+                        </svg>
+                    </div>
+
+                    <div
+                        style="position: absolute; left: 70px; right: 30px; bottom: 25px; display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; color: #333;">
+                        <span>Jan</span>
+                        <span>Feb</span>
+                        <span>Mar</span>
+                        <span>Apr</span>
+                        <span>May</span>
+                        <span>Jun</span>
+                        <span>Jul</span>
+                        <span>Aug</span>
+                        <span>Sep</span>
+                        <span>Oct</span>
+                        <span>Nov</span>
+                        <span>Dec</span>
+                    </div>
+
+                    <div
+                        style="position: absolute; left: 70px; right: 30px; bottom: 5px; display: flex; justify-content: space-around; font-size: 11px; color: #666;">
+                        <span>Summer (Peak)</span>
+                        <span>Shoulder (Moderate)</span>
+                        <span>Winter (Minimal)</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: center; gap: 40px; margin-top: 20px; font-size: 13px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 32px; height: 16px; background-color: #FFF4E6; border: 1.5px solid #FF8C42;">
+                        </div>
+                        <span>Summer (Peak)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 32px; height: 16px; background-color: #E8F4F8; border: 1.5px solid #4A90E2;">
+                        </div>
+                        <span>Shoulder (Moderate)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 32px; height: 16px; background-color: #D3D3D3; border: 1px solid #999;">
+                        </div>
+                        <span>Winter (Minimal)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-6 mb-6">
+                <div style="background-color: #FFF4E6;" class="border-2 border-black rounded-lg p-6">
+                    <h4 class="font-bold text-black mb-2">Summer Season</h4>
+                    <p class="text-xs text-gray-700 mb-3">June - September (4 months)</p>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-700">Avg Load:</span>
+                            <span class="font-bold text-black">33.0 kW</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-700">Energy:</span>
+                            <span class="font-bold text-black">95,054 kWh</span>
+                        </div>
+                        <div class="flex justify-between border-t pt-2">
+                            <span class="text-gray-700 font-semibold">Cost:</span>
+                            <span class="font-bold text-black">$19,011</span>
+                        </div>
+                        <p class="text-xs text-gray-600 mt-2">85% of full load - peak cooling demand</p>
+                    </div>
+                </div>
+
+                <div style="background-color: #E8F4F8;" class="border-2 border-black rounded-lg p-6">
+                    <h4 class="font-bold text-black mb-2">Shoulder Season</h4>
+                    <p class="text-xs text-gray-700 mb-3">Apr-May, Oct-Nov (4 months)</p>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-700">Avg Load:</span>
+                            <span class="font-bold text-black">16.4 kW</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-700">Energy:</span>
+                            <span class="font-bold text-black">47,102 kWh</span>
+                        </div>
+                        <div class="flex justify-between border-t pt-2">
+                            <span class="text-gray-700 font-semibold">Cost:</span>
+                            <span class="font-bold text-black">$9,420</span>
+                        </div>
+                        <p class="text-xs text-gray-600 mt-2">Moderate cooling loads</p>
+                    </div>
+                </div>
+
+                <div style="background-color: #F5F5F5;" class="border-2 border-black rounded-lg p-6">
+                    <h4 class="font-bold text-black mb-2">Winter Season</h4>
+                    <p class="text-xs text-gray-700 mb-3">December - March (4 months)</p>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-700">Avg Load:</span>
+                            <span class="font-bold text-black">4.1 kW</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-700">Energy:</span>
+                            <span class="font-bold text-black">11,775 kWh</span>
+                        </div>
+                        <div class="flex justify-between border-t pt-2">
+                            <span class="text-gray-700 font-semibold">Cost:</span>
+                            <span class="font-bold text-black">$2,355</span>
+                        </div>
+                        <p class="text-xs text-gray-600 mt-2">Minimal operation - server room cooling only</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background-color: #E8F5E9;" class="border-2 border-black rounded-lg p-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h4 class="text-xl font-bold text-black mb-2">Total Realistic Annual Cost</h4>
+                        <p class="text-sm text-gray-700">Based on seasonal load variation and Indiana climate</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-4xl font-bold text-black">$30,786</p>
+                        <p class="text-sm text-gray-700 mt-1">153,931 kWh/year</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Power Factor Issues -->
+        <div class="mb-8">
+            <h3 class="text-2xl font-bold text-black mb-4">Power Factor Analysis</h3>
+
+            <div style="background-color: #FFEBEE;" class="border-l-4 border-red-600 p-6 mb-6">
+                <h4 class="text-lg font-bold text-black mb-3">⚠️ Critical Issue: Low Power Factor</h4>
+                <div class="grid grid-cols-3 gap-6 text-sm">
+                    <div>
+                        <p class="font-semibold text-gray-700">Compressor 1 PF:</p>
+                        <p class="text-3xl font-bold text-red-600">0.618</p>
+                        <p class="text-gray-600">38.2% inefficiency</p>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-700">Compressor 2 PF:</p>
+                        <p class="text-3xl font-bold text-red-600">0.606</p>
+                        <p class="text-gray-600">39.4% inefficiency</p>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-700">Industry Target:</p>
+                        <p class="text-3xl font-bold text-black">0.95+</p>
+                        <p class="text-gray-600">Excellent performance</p>
+                    </div>
+                </div>
+                <p class="mt-4 text-sm text-gray-800">
+                    <strong>Impact:</strong> Low power factor causes higher current draw, increased line losses,
+                    potential utility penalties,
+                    and reduces the effective capacity of electrical infrastructure.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6">
+                <div style="background-color: #F5F5F5;" class="p-6 rounded-lg border-2 border-black">
+                    <h4 class="text-lg font-bold text-black mb-3">Reactive Power Waste</h4>
+                    <p class="text-gray-700 mb-4 text-sm">Both compressors drawing significant reactive power:</p>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700">Compressor 1:</span>
+                            <span class="font-bold text-red-600 text-lg">5.695 kVAr</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700">Compressor 2:</span>
+                            <span class="font-bold text-red-600 text-lg">6.095 kVAr</span>
+                        </div>
+                        <div class="flex justify-between items-center border-t-2 pt-2">
+                            <span class="font-semibold text-black">Total Reactive:</span>
+                            <span class="font-bold text-red-600 text-xl">11.790 kVAr</span>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t">
+                        <p class="text-xs text-gray-600">
+                            At full load (70A), reactive power could exceed <strong>25 kVAr</strong>, significantly
+                            increasing electrical infrastructure stress and potential demand charges.
+                        </p>
+                    </div>
+                </div>
+
+                <div style="background-color: #E8F5E9;" class="p-6 rounded-lg border-2 border-black">
+                    <h4 class="text-lg font-bold text-black mb-3">Benefits of PF Correction to 0.95</h4>
+                    <ul class="space-y-3 text-sm">
+                        <li class="flex items-start">
+                            <span class="text-black font-bold mr-2">✓</span>
+                            <span><strong>21.8% more useful power</strong> from same apparent power capacity</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-black font-bold mr-2">✓</span>
+                            <span><strong>Reduced current draw</strong> - less stress on electrical system</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-black font-bold mr-2">✓</span>
+                            <span><strong>Lower line losses</strong> - reduced I²R heating in conductors</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-black font-bold mr-2">✓</span>
+                            <span><strong>Avoid utility penalties</strong> - many utilities charge for low PF</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-black font-bold mr-2">✓</span>
+                            <span><strong>Extended equipment life</strong> - reduced thermal stress</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-black font-bold mr-2">✓</span>
+                            <span><strong>Est. savings:</strong> $4,500-$6,000 annually (15-20% reduction)</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recommendations -->
+        <div class="mb-8">
+            <h3 class="text-2xl font-bold text-black mb-4">Recommendations & Action Plan</h3>
+
+            <div class="space-y-4">
+                <div style="background-color: #FFEBEE;" class="border-l-4 border-red-600 p-6">
+                    <h4 class="font-bold text-black mb-2 text-lg">1. Equipment Replacement Planning (STRATEGIC PRIORITY)
+                    </h4>
+                    <p class="text-gray-800 text-sm mb-3">
+                        Begin replacement planning NOW for execution within 3-5 years. At 15+ years with R22, high risk
+                        for catastrophic failure.
+                    </p>
+                    <div class="grid grid-cols-3 gap-4 text-sm">
+                        <div style="background-color: white;" class="rounded p-3 border border-gray-300">
+                            <p class="text-xs font-semibold text-gray-700 mb-1">Replacement Cost:</p>
+                            <p class="text-lg font-bold text-black">$110,000</p>
+                            <p class="text-xs text-gray-600">New 80-ton R410A chiller</p>
+                        </div>
+                        <div style="background-color: white;" class="rounded p-3 border border-gray-300">
+                            <p class="text-xs font-semibold text-gray-700 mb-1">Major R22 Leak:</p>
+                            <p class="text-lg font-bold text-red-600">$26,000+</p>
+                            <p class="text-xs text-gray-600">Approaches replacement cost</p>
+                        </div>
+                        <div style="background-color: white;" class="rounded p-3 border border-gray-300">
+                            <p class="text-xs font-semibold text-gray-700 mb-1">Annual Savings:</p>
+                            <p class="text-lg font-bold text-black">$2,200</p>
+                            <p class="text-xs text-gray-600">7-10% efficiency improvement</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background-color: #FFF4E6;" class="border-l-4 border-black p-6">
+                    <h4 class="font-bold text-black mb-2 text-lg">2. Power Factor Correction (IMMEDIATE PRIORITY)</h4>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <p class="text-gray-800 mb-2">Investment: <strong>$4,000-$6,000</strong></p>
+                            <p class="text-gray-800 mb-2">Annual Savings: <strong>$4,500-$6,000</strong></p>
+                            <p class="text-gray-800 mb-2">ROI: <strong>12-16 months</strong></p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-700">Equipment can be transferred to replacement chiller.
+                                Provides immediate benefits while planning for long-term replacement.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background-color: #E8F4F8;" class="border-l-4 border-black p-6">
+                    <h4 class="font-bold text-black mb-2 text-lg">3. R22 Leak Monitoring (CRITICAL)</h4>
+                    <p class="text-gray-800 text-sm">
+                        Implement monthly visual inspections and quarterly electronic leak detection. Repair any leaks
+                        immediately - no top-offs.
+                        Even small leaks become expensive fast at current R22 prices ($80-150/lb).
+                    </p>
+                </div>
+
+                <div style="background-color: #E0F7F7;" class="border-l-4 border-black p-6">
+                    <h4 class="font-bold text-black mb-2 text-lg">4. Recommended Timeline</h4>
+                    <div class="grid grid-cols-4 gap-3 text-xs">
+                        <div style="background-color: white;" class="p-3 rounded border border-gray-300">
+                            <p class="font-semibold text-black mb-1">0-3 Months</p>
+                            <p class="text-gray-700">• Install PF correction<br />• Begin capital planning<br />• Leak
+                                monitoring protocol</p>
+                        </div>
+                        <div style="background-color: white;" class="p-3 rounded border border-gray-300">
+                            <p class="font-semibold text-black mb-1">3-12 Months</p>
+                            <p class="text-gray-700">• Get replacement quotes<br />• Secure budget approval<br />•
+                                Summer testing</p>
+                        </div>
+                        <div style="background-color: white;" class="p-3 rounded border border-gray-300">
+                            <p class="font-semibold text-black mb-1">1-3 Years</p>
+                            <p class="text-gray-700">• Issue RFP<br />• Select contractor<br />• Maintain aggressively
+                            </p>
+                        </div>
+                        <div style="background-color: white;" class="p-3 rounded border border-gray-300">
+                            <p class="font-semibold text-black mb-1">3-5 Years</p>
+                            <p class="text-gray-700">• Execute replacement<br />• Install R410A unit<br />• Transfer PF
+                                equipment</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cost Summary Table -->
+        <div class="mb-8">
+            <h3 class="text-2xl font-bold text-black mb-4">Cost Allocation Summary</h3>
+            <div style="background-color: #F5F5F5;" class="p-6 rounded-lg border-2 border-black">
+                <table class="w-full text-sm">
+                    <thead style="background-color: white;">
+                        <tr class="border-b-2 border-black">
+                            <th class="text-left p-3 font-bold">Time Period</th>
+                            <th class="text-right p-3 font-bold">Comp 1 (48.8%)</th>
+                            <th class="text-right p-3 font-bold">Comp 2 (51.2%)</th>
+                            <th class="text-right p-3 font-bold">Total Chiller</th>
+                            <th class="text-right p-3 font-bold">% of Building</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm">
+                        <tr class="border-b">
+                            <td class="p-3 font-semibold">Hourly (at test conditions)</td>
+                            <td class="text-right p-3">$1.33</td>
+                            <td class="text-right p-3">$1.40</td>
+                            <td class="text-right p-3 font-bold">$2.73</td>
+                            <td class="text-right p-3 text-gray-600">-</td>
+                        </tr>
+                        <tr class="border-b" style="background-color: white;">
+                            <td class="p-3 font-semibold">Summer Season (4 months)</td>
+                            <td class="text-right p-3">$9,277</td>
+                            <td class="text-right p-3">$9,734</td>
+                            <td class="text-right p-3 font-bold">$19,011</td>
+                            <td class="text-right p-3 text-gray-600">61.8%</td>
+                        </tr>
+                        <tr class="border-b">
+                            <td class="p-3 font-semibold">Shoulder Season (4 months)</td>
+                            <td class="text-right p-3">$4,597</td>
+                            <td class="text-right p-3">$4,823</td>
+                            <td class="text-right p-3 font-bold">$9,420</td>
+                            <td class="text-right p-3 text-gray-600">30.6%</td>
+                        </tr>
+                        <tr class="border-b" style="background-color: white;">
+                            <td class="p-3 font-semibold">Winter Season (4 months)</td>
+                            <td class="text-right p-3">$1,149</td>
+                            <td class="text-right p-3">$1,206</td>
+                            <td class="text-right p-3 font-bold">$2,355</td>
+                            <td class="text-right p-3 text-gray-600">7.6%</td>
+                        </tr>
+                        <tr style="background-color: #E0F7F7;" class="font-bold border-t-2 border-black">
+                            <td class="p-3">Annual Total (Realistic)</td>
+                            <td class="text-right p-3">$15,023</td>
+                            <td class="text-right p-3">$15,763</td>
+                            <td class="text-right p-3 text-black text-lg">$30,786</td>
+                            <td class="text-right p-3 text-black">7.54%</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="text-xs text-gray-600 mt-4">
+                    * Building percentage based on Fahl Building total usage of ~2,040,000 kWh/year<br />
+                    * Electricity rate: $0.20/kWh (based on recent Heritage Pointe billing data)
+                </p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="border-t-2 border-black pt-6 mt-8 text-sm text-gray-600">
+            <div class="grid grid-cols-2 gap-6 mb-4">
+                <div>
+                    <p class="font-semibold text-black mb-2">Report Prepared By:</p>
+                    <p class="text-base font-bold text-black">Andrew Jewell Sr.</p>
+                    <p>Energy Audit - Heritage Pointe of Warren</p>
+                    <p>Report Date: October 2025</p>
+                    <div class="mt-4">
+                        <img src="https://imagedelivery.net/ucfhYgcd3yVeR4VZrVJ1uA/bf5f2482-a2ca-4b40-89e8-2c867eabd000/public"
+                            alt="Automata Nexus" style="max-height: 80px; width: auto;" />
+                    </div>
+                </div>
+                <div>
+                    <p class="font-semibold text-black mb-2">Equipment Tested:</p>
+                    <p>Trane Air-Cooled Chiller</p>
+                    <p>Model: CACC801RDNJR60ACDFGTPR3</p>
+                    <p>Serial: L89C01146</p>
+                    <p class="text-red-600 font-semibold">Age: 15+ Years | Refrigerant: R22</p>
+                </div>
+            </div>
+            <div style="background-color: #F5F5F5;" class="p-4 rounded text-xs mb-4">
+                <p class="font-semibold text-black mb-2">Methodology & Assumptions:</p>
+                <ul class="space-y-1 ml-4 list-disc text-gray-700">
+                    <li>Data collected using Selec EM4M 3-phase energy meter over 1-hour period (240 samples at
+                        15-second intervals)</li>
+                    <li>Test conditions: 80°F outdoor ambient temperature, remote roof-mounted condenser</li>
+                    <li>Seasonal projections based on typical Indiana climate patterns and healthcare facility cooling
+                        requirements</li>
+                    <li>R22 refrigerant pricing based on current market conditions ($80-150/lb for reclaimed R22)</li>
+                </ul>
+            </div>
+            <div style="background-color: #FFF9E6;" class="border-l-4 border-black p-4 rounded text-xs">
+                <p class="font-semibold text-black mb-2">⚠️ Important Disclaimers:</p>
+                <ul class="space-y-1 ml-4 list-disc text-gray-700">
+                    <li><strong>Equipment Age Risk:</strong> At 15+ years old, this chiller is approaching end-of-life.
+                        Failure can occur without warning.</li>
+                    <li><strong>R22 Phaseout Impact:</strong> Any significant refrigerant leak will result in repair
+                        costs approaching replacement cost.</li>
+                    <li><strong>Emergency Replacement Risk:</strong> Unplanned failure typically costs 20-30% more than
+                        planned replacement.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

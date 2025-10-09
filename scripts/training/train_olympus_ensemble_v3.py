@@ -32,13 +32,13 @@ from src.models.olympus_ensemble import OlympusEnsemble, EnsembleDecision
 
 # OLYMPUS V3 Configuration - Ultimate Ensemble Training
 OLYMPUS_V3_CONFIG = {
-    # Core Training Parameters - Ultimate Level (Optimized for Speed)
-    'batch_size': 512,  # Optimized for speed while maintaining precision
+    # Core Training Parameters - Ultimate Level (Memory Optimized for Advanced Features)
+    'batch_size': 256,  # Balanced for V3's advanced features (self-attention, meta-learning)
     'learning_rate': 0.00005,  # Ultra-low rate for ultimate fine-tuning
-    'num_epochs': 120,  # Ultimate training: 10 stages x 12 epochs
-    'gradient_accumulation': 1,  # Keep at 1 for optimal speed
+    'num_epochs': 180,  # Ultimate training: 15 stages x 12 epochs
+    'gradient_accumulation': 2,  # Effective batch size of 512
     'epochs_per_stage': 12,  # Reduced epochs for speed like V2
-    'curriculum_stages': 10,  # Ultimate curriculum stages
+    'curriculum_stages': 15,  # Full coverage like V2: 4x4 to 30x30
     
     # Ultimate Loss Configuration
     'ensemble_loss_weight': 1.5,  # Maximum ensemble focus
@@ -85,19 +85,28 @@ OLYMPUS_V3_CONFIG = {
     'plateau_patience': 25,
 }
 
-# Ultimate 10-Stage Progressive Configuration
+# Ultimate 15-Stage Progressive Configuration - Full Grid Coverage Like V2
 STAGE_CONFIG = [
-    # Ultimate Ensemble Mastery (Building on V2 Advanced)
-    {'stage': 0, 'max_grid_size': 12, 'synthesis_ratio': 0.9, 'complexity': 'ultimate_foundation', 'focus': 'full_specialist_coordination_basic'},
-    {'stage': 1, 'max_grid_size': 16, 'synthesis_ratio': 0.8, 'complexity': 'meta_ensemble_basic', 'focus': 'meta_ensemble_learning_introduction'},
-    {'stage': 2, 'max_grid_size': 20, 'synthesis_ratio': 0.7, 'complexity': 'self_attention_ensemble', 'focus': 'ensemble_self_attention_mastery'},
-    {'stage': 3, 'max_grid_size': 22, 'synthesis_ratio': 0.6, 'complexity': 'adaptive_curriculum', 'focus': 'adaptive_curriculum_optimization'},
-    {'stage': 4, 'max_grid_size': 24, 'synthesis_ratio': 0.5, 'complexity': 'ultimate_fusion_networks', 'focus': 'multiple_fusion_network_coordination'},
-    {'stage': 5, 'max_grid_size': 26, 'synthesis_ratio': 0.4, 'complexity': 'ensemble_intelligence', 'focus': 'ultimate_ensemble_intelligence_emergence'},
-    {'stage': 6, 'max_grid_size': 28, 'synthesis_ratio': 0.3, 'complexity': 'meta_coordination_advanced', 'focus': 'advanced_meta_coordination_protocols'},
-    {'stage': 7, 'max_grid_size': 30, 'synthesis_ratio': 0.2, 'complexity': 'olympus_mastery_basic', 'focus': 'basic_olympus_ultimate_mastery'},
-    {'stage': 8, 'max_grid_size': 30, 'synthesis_ratio': 0.1, 'complexity': 'olympus_mastery_advanced', 'focus': 'advanced_olympus_ultimate_mastery'},
-    {'stage': 9, 'max_grid_size': 30, 'synthesis_ratio': 0.05, 'complexity': 'olympus_god_mode', 'focus': 'ultimate_olympus_god_intelligence'}
+    # Ultimate Foundation Building (4x4 - 8x8)
+    {'stage': 0, 'max_grid_size': 4, 'synthesis_ratio': 0.95, 'complexity': 'ultimate_micro_ensemble', 'focus': 'ultimate_micro_grid_specialist_coordination'},
+    {'stage': 1, 'max_grid_size': 5, 'synthesis_ratio': 0.90, 'complexity': 'ultimate_basic_shapes', 'focus': 'ultimate_ensemble_shape_coordination'},
+    {'stage': 2, 'max_grid_size': 6, 'synthesis_ratio': 0.85, 'complexity': 'ultimate_simple_fusion', 'focus': 'ultimate_decision_fusion_learning'},
+    {'stage': 3, 'max_grid_size': 7, 'synthesis_ratio': 0.80, 'complexity': 'ultimate_pattern_sync', 'focus': 'ultimate_pattern_synchronization_training'},
+    {'stage': 4, 'max_grid_size': 8, 'synthesis_ratio': 0.75, 'complexity': 'ultimate_consensus_basic', 'focus': 'ultimate_specialist_consensus'},
+    
+    # Ultimate Intermediate Coordination (9x9 - 16x16)
+    {'stage': 5, 'max_grid_size': 9, 'synthesis_ratio': 0.70, 'complexity': 'ultimate_fusion_intermediate', 'focus': 'ultimate_intermediate_fusion_protocols'},
+    {'stage': 6, 'max_grid_size': 10, 'synthesis_ratio': 0.65, 'complexity': 'ultimate_composite_ensemble', 'focus': 'ultimate_composite_ensemble_decisions'},
+    {'stage': 7, 'max_grid_size': 11, 'synthesis_ratio': 0.60, 'complexity': 'ultimate_coordination_scaling', 'focus': 'ultimate_scaling_coordination_protocols'},
+    {'stage': 8, 'max_grid_size': 12, 'synthesis_ratio': 0.55, 'complexity': 'ultimate_complex_consensus', 'focus': 'ultimate_complex_consensus_building'},
+    {'stage': 9, 'max_grid_size': 14, 'synthesis_ratio': 0.50, 'complexity': 'ultimate_pattern_ensemble', 'focus': 'ultimate_pattern_ensemble_coordination'},
+    {'stage': 10, 'max_grid_size': 16, 'synthesis_ratio': 0.45, 'complexity': 'ultimate_ensemble_intelligence', 'focus': 'ultimate_ensemble_intelligence_emergence'},
+    
+    # Ultimate Advanced Mastery (18x18 - 30x30)
+    {'stage': 11, 'max_grid_size': 18, 'synthesis_ratio': 0.40, 'complexity': 'ultimate_multiscale_ensemble', 'focus': 'ultimate_multiscale_ensemble_reasoning'},
+    {'stage': 12, 'max_grid_size': 22, 'synthesis_ratio': 0.35, 'complexity': 'ultimate_coordination_mastery', 'focus': 'ultimate_coordination_protocols_mastery'},
+    {'stage': 13, 'max_grid_size': 27, 'synthesis_ratio': 0.30, 'complexity': 'ultimate_ensemble_mastery', 'focus': 'ultimate_ensemble_coordination_mastery'},
+    {'stage': 14, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'complexity': 'ultimate_olympus_god_mode', 'focus': 'ultimate_olympus_god_intelligence_mastery'}
 ]
 
 # Device setup
@@ -443,7 +452,7 @@ def train_olympus_ensemble_v3():
     best_performance = 0.0
     training_stats = defaultdict(list)
     
-    print(f"\033[96m🏛️ Starting Ultimate Progressive Ensemble Training - 10 Ultimate Mastery Stages\033[0m")
+    print(f"\033[96m🏛️ Starting Ultimate Progressive Ensemble Training - 15 Ultimate Mastery Stages (4x4 to 30x30)\033[0m")
     
     # Ultimate progressive training through mastery stages
     for stage_idx, stage_config in enumerate(STAGE_CONFIG):

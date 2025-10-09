@@ -282,8 +282,8 @@ class OlympusV3Loss(nn.Module):
         }
 
 
-# Use the same dataset as V1/V2
-from train_olympus_ensemble_v1 import FoundationEnsembleDataset, foundation_collate_fn
+# Import V2's augmented dataset for V3
+from train_olympus_ensemble_v2 import OlympusV2AugmentedDataset as OlympusV3UltimateDataset, advanced_collate_fn as foundation_collate_fn
 
 
 def train_olympus_ensemble_v3():
@@ -461,17 +461,32 @@ def train_olympus_ensemble_v3():
               f"Complexity: {stage_config['complexity']} | Focus: {stage_config['focus']}\033[0m")
         print(f"\033[96m{'=' * 135}\033[0m")
         
-        # Create ultimate dataset for this stage
-        dataset = FoundationEnsembleDataset(
+        # Create ultimate augmented dataset for this stage (6x augmentation like V2)
+        dataset = OlympusV3UltimateDataset(
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',
             max_grid_size=stage_config['max_grid_size'],
-            stage_config=stage_config
+            stage_config=stage_config,
+            augmentation_factor=6  # 6x augmentation matching V2
         )
+        
+        # Dynamic batch size based on grid size for V3's memory-intensive features
+        if stage_config['max_grid_size'] <= 10:
+            batch_size = OLYMPUS_V3_CONFIG['batch_size']  # 256
+        elif stage_config['max_grid_size'] <= 16:
+            batch_size = OLYMPUS_V3_CONFIG['batch_size']  # 256
+        elif stage_config['max_grid_size'] <= 20:
+            batch_size = 192  # Reduce for medium-large grids
+        elif stage_config['max_grid_size'] <= 24:
+            batch_size = 128  # Further reduce for large grids
+        else:
+            batch_size = 64  # Minimal batch size for 27x27 and 30x30
+        
+        print(f"\033[96m🏛️ Using batch size {batch_size} for {stage_config['max_grid_size']}x{stage_config['max_grid_size']} grids\033[0m")
         
         # Create data loader
         dataloader = DataLoader(
             dataset,
-            batch_size=OLYMPUS_V3_CONFIG['batch_size'],
+            batch_size=batch_size,
             shuffle=True,
             collate_fn=foundation_collate_fn,
             num_workers=0,  # Keep 0 for OLYMPUS stability

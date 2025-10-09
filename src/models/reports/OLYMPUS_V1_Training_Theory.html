@@ -3,575 +3,674 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OLYMPUS V1 Training Theory - Mathematical and Theoretical Foundations</title>
+    <title>OLYMPUS V1 Training Theory | AutomataNexus LLC</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
-        body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            background-color: #ffffff;
-            color: #1a1a1a;
+        @page {
+            size: letter;
+            margin: 0.5in;
+        }
+
+        * {
             margin: 0;
             padding: 0;
-            line-height: 1.8;
+            box-sizing: border-box;
         }
-        .container {
+
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            background: #f0f0f0;
+            color: #1a1a1a;
+            line-height: 1.6;
+        }
+
+        .document {
             width: 95%;
             max-width: 1400px;
             margin: 0 auto;
-            padding: 40px 20px;
-        }
-        h1 {
-            color: #1a1a1a;
-            border-bottom: 3px solid #e0f7fa;
-            padding-bottom: 15px;
-            font-size: 2.5em;
-            margin-bottom: 30px;
-        }
-        h2 {
-            color: #1a1a1a;
-            background-color: #e0f7fa;
-            padding: 10px 20px;
-            border-radius: 5px;
-            margin-top: 40px;
-            font-size: 1.8em;
-        }
-        h3 {
-            color: #1a1a1a;
-            border-left: 4px solid #e0f7fa;
-            padding-left: 15px;
-            font-size: 1.4em;
-            margin-top: 25px;
-        }
-        .equation-block {
-            background-color: #f9f9f9;
-            border: 1px solid #e0f7fa;
+            background: white;
+            position: relative;
             padding: 20px;
-            margin: 20px 0;
-            border-radius: 8px;
-            overflow-x: auto;
+            min-height: 11in;
         }
-        .equation {
-            font-family: 'Courier New', monospace;
-            font-size: 1.1em;
-            line-height: 1.6;
+
+        .border {
+            border: 3px solid #808080;
+            border-radius: 15px;
+            height: 100%;
+            position: relative;
+            padding: 20px;
+        }
+
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 120px;
+            color: rgba(224, 247, 250, 0.3);
+            font-weight: bold;
+            z-index: 0;
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #808080;
+        }
+
+        .company {
+            font-size: 22px;
+            font-weight: bold;
+            color: #808080;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        .title {
+            font-size: 36px;
             color: #1a1a1a;
-        }
-        .code-section {
-            background-color: #f5f5f5;
-            border-left: 4px solid #e0f7fa;
-            padding: 15px 20px;
-            margin: 20px 0;
-            font-family: 'Courier New', monospace;
-            overflow-x: auto;
-            color: #1a1a1a;
-        }
-        .highlight {
-            background-color: #e0f7fa;
-            padding: 2px 6px;
-            border-radius: 3px;
+            margin-bottom: 8px;
             font-weight: bold;
         }
-        table {
+
+        .subtitle {
+            font-size: 16px;
+            color: #808080;
+            font-style: italic;
+        }
+
+        .theory-banner {
+            background: linear-gradient(135deg, #e0f7fa, #ffffff);
+            border-left: 6px solid #808080;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 8px;
+        }
+
+        .theory-text {
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            color: #1a1a1a;
+        }
+
+        .equation-highlight {
+            font-size: 24px;
+            color: #808080;
+            font-weight: bold;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 22px;
+            color: #1a1a1a;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #808080;
+            font-weight: bold;
+        }
+
+        .subsection-title {
+            font-size: 18px;
+            color: #808080;
+            margin: 20px 0 10px 0;
+            font-weight: bold;
+        }
+
+        .equation-box {
+            background: #f0f0f0;
+            border: 2px solid #808080;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+
+        .equation-label {
+            font-weight: bold;
+            color: #808080;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .theory-box {
+            background: linear-gradient(to bottom, #e0f7fa, white);
+            border-left: 4px solid #808080;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .loss-component {
+            background: white;
+            border: 1px solid #cccccc;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+
+        .loss-component-title {
+            font-weight: bold;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+
+        .stage-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .stage-card {
+            background: linear-gradient(135deg, #e0f7fa, #ffffff);
+            border: 1px solid #808080;
+            border-radius: 6px;
+            padding: 10px;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .stage-card.advanced {
+            background: linear-gradient(135deg, #e0f7fa, #808080);
+            color: white;
+            font-weight: bold;
+        }
+
+        .architecture-diagram {
+            background: #f0f0f0;
+            border: 2px solid #808080;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 25px 0;
+            position: relative;
+        }
+
+        .flow-diagram {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .flow-item {
+            background: white;
+            border: 2px solid #808080;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            flex: 1;
+            margin: 5px;
+            min-width: 150px;
+        }
+
+        .flow-arrow {
+            color: #808080;
+            font-size: 24px;
+            margin: 0 10px;
+        }
+
+        .parameter-table {
             width: 100%;
             border-collapse: collapse;
             margin: 20px 0;
         }
-        th, td {
-            border: 1px solid #cccccc;
-            padding: 12px;
+
+        .parameter-table th {
+            background: #808080;
+            color: white;
+            padding: 10px;
             text-align: left;
-        }
-        th {
-            background-color: #e0f7fa;
             font-weight: bold;
-            color: #1a1a1a;
         }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
+
+        .parameter-table td {
+            border: 1px solid #cccccc;
+            padding: 10px;
         }
-        .stage-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
+
+        .parameter-table tr:nth-child(even) {
+            background: #f0f0f0;
+        }
+
+        code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .highlight {
+            background: linear-gradient(to bottom, transparent 50%, #e0f7fa 50%);
+            padding: 0 4px;
+        }
+
+        .gradient-visual {
+            height: 40px;
+            background: linear-gradient(to right, #1a1a1a, #404040, #808080, #999999, #cccccc, #e8e8e8, #ffffff);
+            border-radius: 6px;
             margin: 20px 0;
-        }
-        .stage-card {
-            border: 2px solid #e0f7fa;
-            padding: 20px;
-            border-radius: 8px;
-            background-color: #f9f9f9;
-        }
-        .stage-card h4 {
-            margin-top: 0;
-            color: #1a1a1a;
-        }
-        .important-note {
-            background-color: #e0f7fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px 0;
-            border-left: 5px solid #808080;
-        }
-        .mathematical-section {
-            border: 2px solid #cccccc;
-            padding: 25px;
-            margin: 30px 0;
-            border-radius: 10px;
-            background-color: #ffffff;
-        }
-        .parameter-list {
-            list-style: none;
-            padding-left: 20px;
-        }
-        .parameter-list li {
-            margin: 10px 0;
-            padding-left: 20px;
             position: relative;
         }
-        .parameter-list li:before {
-            content: "→";
+
+        .gradient-label {
             position: absolute;
-            left: 0;
+            bottom: -20px;
+            font-size: 12px;
             color: #808080;
-            font-weight: bold;
         }
-        .footer {
+
+        .gradient-label.start {
+            left: 0;
+        }
+
+        .gradient-label.end {
+            right: 0;
+        }
+
+        .footer-info {
             text-align: center;
-            margin-top: 60px;
-            padding-top: 30px;
-            border-top: 2px solid #cccccc;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #808080;
             color: #808080;
-            font-size: 0.9em;
+            font-style: italic;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>OLYMPUS V1 Training Theory: Foundation Multi-Specialist Coordination</h1>
-        
-        <div class="important-note">
-            <strong>OLYMPUS V1 Foundation Training</strong><br>
-            The V1 trainer establishes fundamental fusion and coordination protocols between 5 pre-trained specialists.
-            Target: 85%+ performance with basic ensemble synergy through intelligent fusion learning.
-        </div>
+    <div class="document">
+        <div class="border">
+            <div class="watermark">OLYMPUS</div>
+            <div class="content">
+                <header class="header">
+                    <div class="company">AUTOMATANEXUS LLC</div>
+                    <h1 class="title">OLYMPUS V1 Training Theory</h1>
+                    <p class="subtitle">Foundation Ensemble Mathematics</p>
+                </header>
 
-        <h2>1. Mathematical Foundation: The OlympusV1Loss Function</h2>
-        
-        <div class="mathematical-section">
-            <h3>Complete Loss Function Definition</h3>
-            <div class="equation-block">
-                <div class="equation">
-                    L_total = L_ensemble + λ_exact·L_exact + λ_sync·L_sync + λ_consensus·L_consensus + λ_fusion·L_fusion + λ_transform·L_transform
+                <div class="theory-banner">
+                    <div class="theory-text">Foundation Training + Specialist Freezing + Ensemble Fusion</div>
+                    <div class="equation-highlight">Target: 85%+ Performance with Basic Ensemble Synergy</div>
+                </div>
+
+                <section class="section">
+                    <h2 class="section-title">1. Core Mathematical Framework</h2>
                     
-                    Where:
-                    - L_ensemble: Primary ensemble prediction loss (focal cross-entropy with label smoothing)
-                    - L_exact: ULTRA TEAL exact match bonus (negative loss for correct predictions)
-                    - L_sync: Specialist synchronization loss
-                    - L_consensus: Consensus building bonus (negative when specialists agree)
-                    - L_fusion: Fusion weight regularization (entropy-based diversity)
-                    - L_transform: Transformation penalty (prevents trivial copy solutions)
+                    <div class="subsection-title">1.1 OLYMPUS V1 Loss Function</div>
+                    
+                    <div class="equation-box">
+                        <div class="equation-label">Total Loss Function</div>
+                        <p>$$\mathcal{L}_{total} = \mathcal{L}_{ensemble} + \mathcal{L}_{exact} + \lambda_{sync} \mathcal{L}_{sync} + \lambda_{consensus} \mathcal{B}_{consensus} + \lambda_{fusion} \mathcal{R}_{fusion} + \lambda_{transform} \mathcal{P}_{transform}$$</p>
+                    </div>
+
+                    <div class="theory-box">
+                        <p><strong>Key Innovation:</strong> The V1 loss function introduces six critical components that enable ensemble learning while preserving specialist expertise through selective parameter freezing. The ULTRA TEAL exact match bonus drives precision while other components ensure coordination.</p>
+                    </div>
+
+                    <div class="subsection-title">1.2 Component Breakdown</div>
+
+                    <div class="loss-component">
+                        <div class="loss-component-title">Ensemble Loss (Focal Cross-Entropy with Label Smoothing)</div>
+                        <div class="equation-box">
+                            <p>$$\mathcal{L}_{ensemble} = -\sum_{i=1}^{B} \sum_{c=1}^{C} (1-p_i^c)^\gamma y_i^c \log(p_i^c)$$</p>
+                            <p>where $\gamma = 2.0$ (focal parameter) and label smoothing $\epsilon = 0.01$</p>
+                        </div>
+                    </div>
+
+                    <div class="loss-component">
+                        <div class="loss-component-title">ULTRA TEAL Exact Match Bonus</div>
+                        <div class="equation-box">
+                            <p>$$\mathcal{L}_{exact} = -\frac{1}{B} \sum_{i=1}^{B} \mathbb{1}[\hat{y}_i = y_i] \cdot \beta_{exact}$$</p>
+                            <p>where $\beta_{exact} = 8.0$ (foundation level bonus), clamped at $-6.0$</p>
+                        </div>
+                    </div>
+
+                    <div class="loss-component">
+                        <div class="loss-component-title">Specialist Synchronization Loss</div>
+                        <div class="equation-box">
+                            <p>$$\mathcal{L}_{sync} = \sum_{i,j \in \mathcal{S}, i < j} \text{MSE}(\mathbf{P}_i, \mathbf{P}_j)$$</p>
+                            <p>where $\mathcal{S}$ is the set of specialists and $\mathbf{P}_i$ is specialist $i$'s prediction</p>
+                        </div>
+                    </div>
+
+                    <div class="loss-component">
+                        <div class="loss-component-title">Consensus Score Bonus</div>
+                        <div class="equation-box">
+                            <p>$$\mathcal{B}_{consensus} = -\text{consensus\_score} \cdot \lambda_{consensus}$$</p>
+                            <p>where consensus_score $\in [0,1]$ measures specialist agreement</p>
+                        </div>
+                    </div>
+
+                    <div class="loss-component">
+                        <div class="loss-component-title">Fusion Weight Regularization</div>
+                        <div class="equation-box">
+                            <p>$$\mathcal{R}_{fusion} = -\mathcal{H}(\mathbf{w}) = \sum_{i} w_i \log(w_i + \epsilon)$$</p>
+                            <p>Entropy-based regularization for diverse weight distributions</p>
+                        </div>
+                    </div>
+
+                    <div class="loss-component">
+                        <div class="loss-component-title">Transformation Penalty</div>
+                        <div class="equation-box">
+                            <p>$$\mathcal{P}_{transform} = \text{MSE}(\text{pred\_flat}[:,:10], \text{input\_flat}[:,:10]) \cdot \lambda_{transform}$$</p>
+                            <p>where $\lambda_{transform} = 0.05$ (positive value to prevent trivial copying)</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="section">
+                    <h2 class="section-title">2. Specialist Weight Freezing Theory</h2>
+                    
+                    <div class="theory-box">
+                        <p><strong>Theoretical Foundation:</strong> V1 implements selective layer freezing to preserve pre-trained specialist knowledge while allowing adaptation to ensemble dynamics. Only top transformer layers and output heads are trainable.</p>
+                    </div>
+
+                    <div class="subsection-title">2.1 Layer Selection Strategy</div>
+                    
+                    <div class="equation-box">
+                        <div class="equation-label">Gradient Mask Function</div>
+                        <p>$$g(\theta) = \begin{cases}
+                        1 & \text{if } \theta \in \{\text{output, final, head, classifier, decoder}\} \\
+                        1 & \text{if } \theta \in \text{layer}_{i}, i \geq 6 \\
+                        0 & \text{otherwise}
+                        \end{cases}$$</p>
+                    </div>
+
+                    <div class="theory-box">
+                        <p><strong>Why This Works:</strong> Lower transformer layers (0-5) contain fundamental feature extractors that should remain stable. Upper layers (6+) learn task-specific representations that benefit from ensemble coordination. The output heads directly map to ensemble decisions and require adaptation.</p>
+                    </div>
+
+                    <div class="subsection-title">2.2 Parameter Distribution</div>
+                    
+                    <table class="parameter-table">
+                        <tr>
+                            <th>Component</th>
+                            <th>Parameters</th>
+                            <th>Status</th>
+                            <th>Purpose</th>
+                        </tr>
+                        <tr>
+                            <td>Fusion Engine</td>
+                            <td>~2.5M</td>
+                            <td>Fully Trainable</td>
+                            <td>Learn optimal specialist combination</td>
+                        </tr>
+                        <tr>
+                            <td>Specialist Top Layers</td>
+                            <td>~1.2M per specialist</td>
+                            <td>Trainable</td>
+                            <td>Adapt to ensemble coordination</td>
+                        </tr>
+                        <tr>
+                            <td>Specialist Core</td>
+                            <td>~8M per specialist</td>
+                            <td>Frozen</td>
+                            <td>Preserve pre-trained expertise</td>
+                        </tr>
+                    </table>
+                </section>
+
+                <section class="section">
+                    <h2 class="section-title">3. 15-Stage Progressive Curriculum Theory</h2>
+                    
+                    <div class="theory-box">
+                        <p><strong>Core Principle:</strong> The 15-stage curriculum progressively increases complexity across three dimensions: grid size (4→30), task complexity (micro→mastery), and ensemble coordination difficulty.</p>
+                    </div>
+
+                    <div class="subsection-title">3.1 Stage Progression Mathematics</div>
+                    
+                    <div class="equation-box">
+                        <div class="equation-label">Grid Size Progression</div>
+                        <p>$$G(s) = \begin{cases}
+                        4 + s & \text{for } s \in [0, 4] \\
+                        9 + \lfloor\frac{s-5}{2}\rfloor & \text{for } s \in [5, 10] \\
+                        16 + 2(s-10) & \text{for } s \in [11, 14]
+                        \end{cases}$$</p>
+                    </div>
+
+                    <div class="equation-box">
+                        <div class="equation-label">Synthesis Ratio Decay</div>
+                        <p>$$\rho(s) = 0.95 - 0.05s \quad \text{for } s \in [0, 14]$$</p>
+                    </div>
+
+                    <div class="subsection-title">3.2 Stage Visualization</div>
+                    
+                    <div class="stage-grid">
+                        <div class="stage-card">Stage 0-4<br>Foundation<br>Grid: 4-8</div>
+                        <div class="stage-card">Stage 5-10<br>Intermediate<br>Grid: 9-16</div>
+                        <div class="stage-card advanced">Stage 11-14<br>Advanced<br>Grid: 18-30</div>
+                    </div>
+
+                    <div class="gradient-visual">
+                        <span class="gradient-label start">Basic Coordination</span>
+                        <span class="gradient-label end">Foundation Mastery</span>
+                    </div>
+                </section>
+
+                <section class="section">
+                    <h2 class="section-title">4. Training Dynamics</h2>
+                    
+                    <div class="subsection-title">4.1 Learning Rate Schedule</div>
+                    
+                    <div class="equation-box">
+                        <div class="equation-label">Cosine Annealing with Warm Restarts</div>
+                        <p>$$\eta_t = \eta_{min} + \frac{1}{2}(\eta_{max} - \eta_{min})(1 + \cos(\frac{T_{cur}}{T_i}\pi))$$</p>
+                        <p>where $T_i = T_0 \times T_{mult}^i$ for restart $i$</p>
+                    </div>
+
+                    <div class="theory-box">
+                        <p><strong>Parameters:</strong> $T_0 = 10$ epochs (initial period), $T_{mult} = 1.2$ (restart multiplier), $\eta_{min} = 0.01 \times \eta_{max}$</p>
+                    </div>
+
+                    <div class="subsection-title">4.2 Gradient Accumulation</div>
+                    
+                    <div class="equation-box">
+                        <div class="equation-label">Effective Batch Size</div>
+                        <p>$$B_{eff} = B_{actual} \times \text{accumulation\_steps} = 256 \times 3 = 768$$</p>
+                    </div>
+                </section>
+
+                <section class="section">
+                    <h2 class="section-title">5. Foundation Dataset Design</h2>
+                    
+                    <div class="theory-box">
+                        <p><strong>Core Philosophy:</strong> V1 deliberately avoids data augmentation to preserve exact ARC task patterns and prevent distribution shift from original problems.</p>
+                    </div>
+
+                    <div class="subsection-title">5.1 Data Processing Pipeline</div>
+                    
+                    <div class="architecture-diagram">
+                        <div class="flow-diagram">
+                            <div class="flow-item">Load ARC<br>Challenges</div>
+                            <span class="flow-arrow">→</span>
+                            <div class="flow-item">Filter by<br>Grid Size</div>
+                            <span class="flow-arrow">→</span>
+                            <div class="flow-item">One-Hot<br>Encoding</div>
+                            <span class="flow-arrow">→</span>
+                            <div class="flow-item">Pad to<br>Consistent</div>
+                        </div>
+                    </div>
+
+                    <div class="subsection-title">5.2 Batch Collation Strategy</div>
+                    
+                    <div class="equation-box">
+                        <div class="equation-label">Dynamic Padding</div>
+                        <p>$$\text{pad\_dims} = (\max_i h_i, \max_i w_i) \quad \forall (h_i, w_i) \in \text{batch}$$</p>
+                    </div>
+                </section>
+
+                <section class="section">
+                    <h2 class="section-title">6. Fusion Engine Architecture</h2>
+                    
+                    <div class="subsection-title">6.1 Adaptive Weighting Mechanism</div>
+                    
+                    <div class="equation-box">
+                        <div class="equation-label">Fusion Function</div>
+                        <p>$$\mathbf{Y} = \sum_{s \in \mathcal{S}} w_s(\mathbf{x}) \cdot f_s(\mathbf{x})$$</p>
+                        <p>where $w_s(\mathbf{x})$ are learned input-dependent weights</p>
+                    </div>
+
+                    <div class="subsection-title">6.2 Consensus Building</div>
+                    
+                    <div class="equation-box">
+                        <div class="equation-label">Consensus Score</div>
+                        <p>$$C = \frac{1}{|\mathcal{S}|(|\mathcal{S}|-1)} \sum_{i,j \in \mathcal{S}, i \neq j} \text{sim}(\mathbf{P}_i, \mathbf{P}_j)$$</p>
+                    </div>
+                </section>
+
+                <section class="section">
+                    <h2 class="section-title">7. Training Optimizations</h2>
+                    
+                    <div class="theory-box">
+                        <p><strong>Mixed Precision:</strong> V1 uses automatic mixed precision (AMP) with GradScaler for 2x faster training and 50% memory reduction.</p>
+                    </div>
+
+                    <div class="subsection-title">7.1 Performance Metrics</div>
+                    
+                    <table class="parameter-table">
+                        <tr>
+                            <th>Metric</th>
+                            <th>Target</th>
+                            <th>Purpose</th>
+                        </tr>
+                        <tr>
+                            <td>Exact Match Rate</td>
+                            <td>85%+</td>
+                            <td>Primary performance metric</td>
+                        </tr>
+                        <tr>
+                            <td>Consensus Score</td>
+                            <td>0.6-0.8</td>
+                            <td>Coordination quality</td>
+                        </tr>
+                        <tr>
+                            <td>Fusion Entropy</td>
+                            <td>1.0-1.5</td>
+                            <td>Weight diversity</td>
+                        </tr>
+                        <tr>
+                            <td>Transform Penalty</td>
+                            <td>&lt; 0.1</td>
+                            <td>Non-trivial solutions</td>
+                        </tr>
+                    </table>
+                </section>
+
+                <section class="section">
+                    <h2 class="section-title">8. Key Innovations in V1</h2>
+                    
+                    <div class="architecture-diagram">
+                        <h3 style="text-align: center; margin-bottom: 20px;">V1 Training Flow</h3>
+                        
+                        <div class="flow-diagram">
+                            <div class="flow-item">Load Pre-trained<br>Specialists</div>
+                            <span class="flow-arrow">→</span>
+                            <div class="flow-item">Freeze Core<br>Layers</div>
+                            <span class="flow-arrow">→</span>
+                            <div class="flow-item">15-Stage<br>Curriculum</div>
+                            <span class="flow-arrow">→</span>
+                            <div class="flow-item">85%+ Target<br>Performance</div>
+                        </div>
+                    </div>
+
+                    <div class="subsection-title">Foundation Principles</div>
+                    
+                    <ul style="margin-left: 20px; line-height: 1.8;">
+                        <li><span class="highlight">Selective Freezing:</span> Only ~6M of ~50M parameters trained, preserving specialist knowledge</li>
+                        <li><span class="highlight">ULTRA TEAL Loss:</span> 85% IoU weighting with 15% strict matching balances accuracy</li>
+                        <li><span class="highlight">Progressive Curriculum:</span> 15 stages ensure robust learning from simple to complex</li>
+                        <li><span class="highlight">Entropy Regularization:</span> Encourages diverse yet coordinated specialist contributions</li>
+                        <li><span class="highlight">No Augmentation:</span> Preserves exact ARC patterns for authentic learning</li>
+                    </ul>
+                </section>
+
+                <section class="section">
+                    <h2 class="section-title">9. Comparison with V2</h2>
+                    
+                    <table class="parameter-table">
+                        <tr>
+                            <th>Aspect</th>
+                            <th>V1 (Foundation)</th>
+                            <th>V2 (Advanced)</th>
+                        </tr>
+                        <tr>
+                            <td>Specialist Weights</td>
+                            <td>Mostly frozen</td>
+                            <td>Partially unfrozen</td>
+                        </tr>
+                        <tr>
+                            <td>Data Augmentation</td>
+                            <td>None</td>
+                            <td>5 types unified</td>
+                        </tr>
+                        <tr>
+                            <td>Batch Size</td>
+                            <td>256</td>
+                            <td>512</td>
+                        </tr>
+                        <tr>
+                            <td>Loss Components</td>
+                            <td>6 components</td>
+                            <td>9 components</td>
+                        </tr>
+                        <tr>
+                            <td>Target Performance</td>
+                            <td>85%</td>
+                            <td>90%+</td>
+                        </tr>
+                    </table>
+                </section>
+
+                <section class="section">
+                    <h2 class="section-title">10. Implementation Best Practices</h2>
+                    
+                    <div class="theory-box">
+                        <p><strong>Memory Optimization:</strong> Batch size 256, gradient accumulation 3 steps, mixed precision always enabled, regular cache clearing between stages.</p>
+                    </div>
+
+                    <div class="subsection-title">Training Stability</div>
+                    
+                    <ul style="margin-left: 20px; line-height: 1.8;">
+                        <li>Gradient clipping: 0.5 (prevents explosions)</li>
+                        <li>Weight decay: 2e-6 (light regularization)</li>
+                        <li>Label smoothing: 0.01 (prevents overconfidence)</li>
+                        <li>Warm restarts: Escape local minima</li>
+                        <li>Early stopping patience: 25 epochs</li>
+                    </ul>
+                </section>
+
+                <div class="footer-info">
+                    <p><strong>AutomataNexus</strong> - OLYMPUS V1 Foundation Training Theory</p>
+                    <p>AI Systems Engineer: Andrew G. Jewell Sr. | AGI Research & Development</p>
+                    <p>Document Generated: October 2025 | System Status: Foundation Training</p>
                 </div>
             </div>
-
-            <h3>Component Breakdown</h3>
-            
-            <h4>1.1 Ensemble Loss (L_ensemble)</h4>
-            <div class="equation-block">
-                <div class="equation">
-                    L_ensemble = FocalCrossEntropy(pred_flat, target_flat, label_smoothing=0.01)
-                    
-                    Where pred_flat ∈ ℝ^(B×10) and target_flat ∈ ℕ^B
-                    
-                    The focal loss with label smoothing helps:
-                    - Focus on hard examples
-                    - Prevent overconfidence
-                    - Smooth probability distributions
-                </div>
-            </div>
-
-            <h4>1.2 ULTRA TEAL Exact Match Bonus</h4>
-            <div class="equation-block">
-                <div class="equation">
-                    exact_matches = 𝟙[argmax(pred_flat) == target_flat]
-                    L_exact = -mean(exact_matches) × λ_exact_bonus
-                    L_exact = clamp(L_exact, min=-6.0)
-                    
-                    Where:
-                    - λ_exact_bonus = 8.0 (foundation level bonus)
-                    - Negative loss rewards exact matches
-                    - Clamping prevents extreme negative values
-                </div>
-            </div>
-
-            <h4>1.3 Specialist Synchronization Loss</h4>
-            <div class="equation-block">
-                <div class="equation">
-                    L_sync = Σ_i Σ_j>i MSE(pred_i, pred_j) for all specialist pairs
-                    
-                    This encourages specialists to converge on similar predictions while
-                    maintaining their unique perspectives through partial weight freezing.
-                </div>
-            </div>
-
-            <h4>1.4 Consensus Score Bonus</h4>
-            <div class="equation-block">
-                <div class="equation">
-                    L_consensus = -consensus_score × λ_consensus
-                    
-                    Where consensus_score ∈ [0,1] measures agreement among specialists
-                    Higher consensus → more negative loss → better optimization
-                </div>
-            </div>
-
-            <h4>1.5 Fusion Weight Regularization</h4>
-            <div class="equation-block">
-                <div class="equation">
-                    H(fusion_weights) = -Σ_i w_i × log(w_i + ε)
-                    L_fusion = -H(fusion_weights) × λ_fusion
-                    
-                    Entropy-based regularization encourages:
-                    - Diverse weight distributions (not uniform)
-                    - Balanced specialist contributions
-                    - Adaptive fusion based on input
-                </div>
-            </div>
-
-            <h4>1.6 Transformation Penalty</h4>
-            <div class="equation-block">
-                <div class="equation">
-                    L_transform = MSE(pred_flat[:,:10], input_flat[:,:10]) × λ_transform
-                    
-                    Where λ_transform = 0.05 (positive value)
-                    
-                    This penalty prevents the model from simply copying inputs,
-                    encouraging genuine transformations and pattern understanding.
-                </div>
-            </div>
-        </div>
-
-        <h2>2. V1 Training Architecture</h2>
-        
-        <div class="mathematical-section">
-            <h3>2.1 Specialist Weight Freezing Strategy</h3>
-            <p>V1 implements <span class="highlight">selective freezing</span> of specialist parameters:</p>
-            
-            <ul class="parameter-list">
-                <li><strong>Frozen:</strong> Bottom transformer layers (0-5), embedding layers, core feature extractors</li>
-                <li><strong>Trainable:</strong> Top transformer layers (6-7+), output layers, final heads, classifiers, decoders</li>
-                <li><strong>Rationale:</strong> Preserve specialist expertise while allowing adaptation to ensemble coordination</li>
-            </ul>
-
-            <div class="code-section">
-# V1 Freezing Logic
-if 'output' or 'final' or 'head' or 'classifier' or 'decoder' in param_name:
-    param.requires_grad = True  # Train output layers
-elif 'layer' in param_name and layer_num >= 6:
-    param.requires_grad = True  # Train top transformer layers
-else:
-    param.requires_grad = False  # Freeze core specialist knowledge
-            </div>
-
-            <h3>2.2 Training Parameter Distribution</h3>
-            <table>
-                <tr>
-                    <th>Component</th>
-                    <th>Parameter Count</th>
-                    <th>Training Status</th>
-                    <th>Purpose</th>
-                </tr>
-                <tr>
-                    <td>Fusion Engine</td>
-                    <td>~2.5M</td>
-                    <td>Fully Trainable</td>
-                    <td>Learn optimal specialist combination</td>
-                </tr>
-                <tr>
-                    <td>Specialist Top Layers</td>
-                    <td>~1.2M per specialist</td>
-                    <td>Trainable</td>
-                    <td>Adapt to ensemble coordination</td>
-                </tr>
-                <tr>
-                    <td>Specialist Core</td>
-                    <td>~8M per specialist</td>
-                    <td>Frozen</td>
-                    <td>Preserve pre-trained expertise</td>
-                </tr>
-            </table>
-        </div>
-
-        <h2>3. Progressive Curriculum Design</h2>
-
-        <h3>3.1 15-Stage Foundation Training</h3>
-        <p>V1 implements a comprehensive 15-stage curriculum from 4×4 to 30×30 grids:</p>
-
-        <div class="stage-grid">
-            <div class="stage-card">
-                <h4>Foundation Stages (0-4)</h4>
-                <p><strong>Grid Sizes:</strong> 4×4 to 8×8</p>
-                <p><strong>Focus:</strong> Micro-grid coordination, basic shapes, simple fusion</p>
-                <p><strong>Synthesis Ratio:</strong> 0.95 → 0.75</p>
-            </div>
-            <div class="stage-card">
-                <h4>Intermediate Stages (5-10)</h4>
-                <p><strong>Grid Sizes:</strong> 9×9 to 16×16</p>
-                <p><strong>Focus:</strong> Composite decisions, scaling protocols, pattern ensemble</p>
-                <p><strong>Synthesis Ratio:</strong> 0.70 → 0.45</p>
-            </div>
-            <div class="stage-card">
-                <h4>Advanced Stages (11-14)</h4>
-                <p><strong>Grid Sizes:</strong> 18×18 to 30×30</p>
-                <p><strong>Focus:</strong> Multiscale reasoning, advanced coordination, foundation intelligence</p>
-                <p><strong>Synthesis Ratio:</strong> 0.40 → 0.25</p>
-            </div>
-        </div>
-
-        <h3>3.2 Stage Configuration Theory</h3>
-        <div class="equation-block">
-            <div class="equation">
-                For each stage s ∈ {0, 1, ..., 14}:
-                
-                - max_grid_size(s) = progressive scaling function
-                - synthesis_ratio(s) = 0.95 - 0.05×s (decreasing synthetic data)
-                - complexity(s) = categorical progression
-                - epochs_per_stage = 25 (fixed for deep learning)
-                
-                Total epochs = 15 stages × 25 epochs/stage = 375 epochs
-            </div>
-        </div>
-
-        <h2>4. Foundation Ensemble Dataset Design</h2>
-
-        <div class="mathematical-section">
-            <h3>4.1 No Augmentation Philosophy</h3>
-            <p>V1 deliberately avoids data augmentation to:</p>
-            <ul class="parameter-list">
-                <li>Preserve exact ARC task patterns</li>
-                <li>Prevent distribution shift from original problems</li>
-                <li>Allow specialists to see consistent representations</li>
-                <li>Focus on fusion learning rather than data diversity</li>
-            </ul>
-
-            <h3>4.2 Data Processing Pipeline</h3>
-            <div class="code-section">
-FoundationEnsembleDataset:
-    1. Load ARC training challenges + solutions
-    2. Load ARC evaluation challenges (without solutions)
-    3. Filter by max_grid_size for current stage
-    4. Convert to one-hot encoded tensors
-    5. Pad to consistent dimensions
-    6. Return (input, output, metadata) tuples
-            </div>
-
-            <h3>4.3 Batch Collation Strategy</h3>
-            <div class="equation-block">
-                <div class="equation">
-                    For batch B = {(x₁, y₁), ..., (xₙ, yₙ)}:
-                    
-                    1. max_h = max(height(xᵢ), height(yᵢ)) for all i
-                    2. max_w = max(width(xᵢ), width(yᵢ)) for all i
-                    3. Pad all tensors to (10, max_h, max_w)
-                    4. Stack into batch tensors
-                    
-                    This ensures consistent tensor dimensions across varying grid sizes.
-                </div>
-            </div>
-        </div>
-
-        <h2>5. Training Dynamics and Optimization</h2>
-
-        <div class="mathematical-section">
-            <h3>5.1 Learning Rate Schedule</h3>
-            <div class="equation-block">
-                <div class="equation">
-                    CosineAnnealingWarmRestarts with:
-                    - T₀ = 10 epochs (initial period)
-                    - T_mult = 1.2 (period multiplier)
-                    - η_min = 0.000001 (1% of initial LR)
-                    
-                    LR(t) = η_min + (η_max - η_min) × 0.5 × (1 + cos(π × t_cur / T_i))
-                    
-                    Where t_cur is current epoch in period, T_i is current period length
-                </div>
-            </div>
-
-            <h3>5.2 Gradient Accumulation</h3>
-            <div class="equation-block">
-                <div class="equation">
-                    Effective batch size = batch_size × gradient_accumulation
-                    = 256 × 3 = 768 samples
-                    
-                    This allows training on larger effective batches despite memory constraints.
-                </div>
-            </div>
-
-            <h3>5.3 Mixed Precision Training</h3>
-            <p>V1 uses automatic mixed precision (AMP) with GradScaler for:</p>
-            <ul class="parameter-list">
-                <li>2x faster training on compatible GPUs</li>
-                <li>Reduced memory usage allowing larger batch sizes</li>
-                <li>Maintained numerical stability through loss scaling</li>
-            </ul>
-        </div>
-
-        <h2>6. Theoretical Foundation: Why V1 Works</h2>
-
-        <div class="important-note">
-            <h3>6.1 Frozen Specialist Principle</h3>
-            <p>By freezing core specialist weights while training only top layers and fusion:</p>
-            <ul>
-                <li><strong>Preservation:</strong> Specialist expertise remains intact</li>
-                <li><strong>Adaptation:</strong> Top layers learn ensemble coordination</li>
-                <li><strong>Efficiency:</strong> Reduced parameter count speeds training</li>
-                <li><strong>Stability:</strong> Prevents catastrophic forgetting</li>
-            </ul>
-        </div>
-
-        <h3>6.2 Fusion Engine Training Theory</h3>
-        <div class="equation-block">
-            <div class="equation">
-                The fusion engine learns:
-                F: (S₁, S₂, S₃, S₄, S₅) → Y
-                
-                Where:
-                - Sᵢ = specialist i output
-                - Y = ensemble prediction
-                - F = learned fusion function
-                
-                The fusion engine discovers optimal weighting:
-                Y = Σᵢ wᵢ(x) × Sᵢ(x)
-                
-                Where wᵢ(x) are input-dependent weights
-            </div>
-        </div>
-
-        <h3>6.3 Consensus Building Mechanism</h3>
-        <p>V1's consensus scoring encourages specialists to agree while maintaining diversity:</p>
-        <div class="equation-block">
-            <div class="equation">
-                consensus_score = 1/N × Σᵢⱼ similarity(Sᵢ, Sⱼ)
-                
-                High consensus → Lower loss → Better coordination
-                But fusion regularization prevents collapse to uniformity
-            </div>
-        </div>
-
-        <h2>7. Performance Metrics and Monitoring</h2>
-
-        <table>
-            <tr>
-                <th>Metric</th>
-                <th>Formula</th>
-                <th>Target Range</th>
-                <th>Purpose</th>
-            </tr>
-            <tr>
-                <td>Exact Match Rate</td>
-                <td>count(pred == target) / total</td>
-                <td>85%+</td>
-                <td>Primary performance metric</td>
-            </tr>
-            <tr>
-                <td>Consensus Score</td>
-                <td>mean(specialist_agreement)</td>
-                <td>0.6-0.8</td>
-                <td>Coordination quality</td>
-            </tr>
-            <tr>
-                <td>Fusion Entropy</td>
-                <td>-Σ wᵢ log(wᵢ)</td>
-                <td>1.0-1.5</td>
-                <td>Weight diversity</td>
-            </tr>
-            <tr>
-                <td>Transform Penalty</td>
-                <td>MSE(output, input)</td>
-                <td>&lt; 0.1</td>
-                <td>Non-trivial solutions</td>
-            </tr>
-        </table>
-
-        <h2>8. Key Innovations in V1</h2>
-
-        <div class="stage-grid">
-            <div class="stage-card">
-                <h4>ULTRA TEAL Loss Integration</h4>
-                <p>85% IoU weighting with 15% strict matching balances accuracy with generalization.</p>
-            </div>
-            <div class="stage-card">
-                <h4>Selective Parameter Training</h4>
-                <p>Only ~6M of ~50M total parameters trained, preserving specialist knowledge.</p>
-            </div>
-            <div class="stage-card">
-                <h4>Progressive Curriculum</h4>
-                <p>15-stage progression matches specialist training for consistent learning.</p>
-            </div>
-            <div class="stage-card">
-                <h4>Entropy-Based Fusion</h4>
-                <p>Encourages diverse yet coordinated specialist contributions.</p>
-            </div>
-        </div>
-
-        <h2>9. Comparison with V2 and Beyond</h2>
-
-        <div class="mathematical-section">
-            <table>
-                <tr>
-                    <th>Aspect</th>
-                    <th>V1 (Foundation)</th>
-                    <th>V2 (Advanced)</th>
-                </tr>
-                <tr>
-                    <td>Specialist Weights</td>
-                    <td>Mostly frozen</td>
-                    <td>Fully trainable</td>
-                </tr>
-                <tr>
-                    <td>Data Augmentation</td>
-                    <td>None</td>
-                    <td>Advanced synthesis</td>
-                </tr>
-                <tr>
-                    <td>Curriculum Stages</td>
-                    <td>15 stages</td>
-                    <td>8 stages (accelerated)</td>
-                </tr>
-                <tr>
-                    <td>Target Performance</td>
-                    <td>85%</td>
-                    <td>92%+</td>
-                </tr>
-                <tr>
-                    <td>Focus</td>
-                    <td>Fusion learning</td>
-                    <td>End-to-end optimization</td>
-                </tr>
-            </table>
-        </div>
-
-        <h2>10. Implementation Best Practices</h2>
-
-        <div class="important-note">
-            <h3>Memory Optimization</h3>
-            <ul class="parameter-list">
-                <li>Batch size: 256 (reduced for large grids)</li>
-                <li>Gradient accumulation: 3 steps</li>
-                <li>Mixed precision: Always enabled</li>
-                <li>Regular cache clearing between stages</li>
-            </ul>
-
-            <h3>Training Stability</h3>
-            <ul class="parameter-list">
-                <li>Gradient clipping: 0.5 (prevents explosions)</li>
-                <li>Weight decay: 2e-6 (light regularization)</li>
-                <li>Label smoothing: 0.01 (prevents overconfidence)</li>
-                <li>Warm restarts: Escape local minima</li>
-            </ul>
-        </div>
-
-        <div class="footer">
-            <p><strong>OLYMPUS V1 Training Theory</strong> - Foundation Multi-Specialist Coordination for ARC-AGI-2</p>
-            <p>AutomataNexus • Andrew Jewell Sr.</p>
         </div>
     </div>
+
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            }
+        };
+    </script>
 </body>
 </html>

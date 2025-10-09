@@ -283,7 +283,7 @@ class OlympusV3Loss(nn.Module):
 
 
 # Import V2's augmented dataset for V3
-from train_olympus_ensemble_v2 import OlympusV2AugmentedDataset as OlympusV3UltimateDataset, advanced_collate_fn as foundation_collate_fn
+from train_olympus_ensemble_v2 import OlympusV2AugmentedDataset as OlympusV3UltimateDataset, olympus_v2_augmented_collate_fn as foundation_collate_fn
 
 
 def train_olympus_ensemble_v3():

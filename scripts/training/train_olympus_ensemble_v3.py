@@ -34,10 +34,10 @@ from src.models.olympus_ensemble import OlympusEnsemble, EnsembleDecision
 OLYMPUS_V3_CONFIG = {
     # Core Training Parameters - Ultimate Level (Memory Optimized for Advanced Features)
     'batch_size': 256,  # Balanced for V3's advanced features (self-attention, meta-learning)
-    'learning_rate': 0.00005,  # Ultra-low rate for ultimate fine-tuning
-    'num_epochs': 180,  # Ultimate training: 15 stages x 12 epochs
+    'learning_rate': 0.00008,  # Base learning rate (will be increased for lower stages)
+    'num_epochs': 240,  # Ultimate training: Extended for lower stages
     'gradient_accumulation': 2,  # Effective batch size of 512
-    'epochs_per_stage': 12,  # Reduced epochs for speed like V2
+    'epochs_per_stage': 12,  # Base epochs (will be increased for lower stages)
     'curriculum_stages': 15,  # Full coverage like V2: 4x4 to 30x30
     
     # Ultimate Loss Configuration
@@ -469,19 +469,33 @@ def train_olympus_ensemble_v3():
             augmentation_factor=6  # 6x augmentation matching V2
         )
         
-        # Dynamic batch size based on grid size for V3's memory-intensive features
-        if stage_config['max_grid_size'] <= 10:
-            batch_size = OLYMPUS_V3_CONFIG['batch_size']  # 256
+        # Dynamic batch size and epochs based on grid size for optimal training
+        if stage_config['max_grid_size'] <= 6:
+            batch_size = 64  # Smaller batches = more iterations for lower stages
+            epochs_multiplier = 2.0  # Double epochs for 4x4-6x6
+        elif stage_config['max_grid_size'] <= 8:
+            batch_size = 128  # Medium batches for 7x7-8x8
+            epochs_multiplier = 1.5  # 50% more epochs
+        elif stage_config['max_grid_size'] <= 10:
+            batch_size = 256  # Full batch size for 9x9-10x10
+            epochs_multiplier = 1.0  # Normal epochs
         elif stage_config['max_grid_size'] <= 16:
-            batch_size = OLYMPUS_V3_CONFIG['batch_size']  # 256
+            batch_size = 256  # Full batch size for medium grids
+            epochs_multiplier = 1.0
         elif stage_config['max_grid_size'] <= 20:
             batch_size = 192  # Reduce for medium-large grids
+            epochs_multiplier = 1.0
         elif stage_config['max_grid_size'] <= 24:
             batch_size = 128  # Further reduce for large grids
+            epochs_multiplier = 1.0
         else:
             batch_size = 64  # Minimal batch size for 27x27 and 30x30
+            epochs_multiplier = 1.0
         
-        print(f"\033[96m🏛️ Using batch size {batch_size} for {stage_config['max_grid_size']}x{stage_config['max_grid_size']} grids\033[0m")
+        # Calculate actual epochs for this stage
+        stage_epochs = int(OLYMPUS_V3_CONFIG['epochs_per_stage'] * epochs_multiplier)
+        
+        print(f"\033[96m🏛️ Stage {stage_idx}: Batch size {batch_size}, {stage_epochs} epochs for {stage_config['max_grid_size']}x{stage_config['max_grid_size']} grids\033[0m")
         
         # Create data loader
         dataloader = DataLoader(
@@ -493,12 +507,12 @@ def train_olympus_ensemble_v3():
             pin_memory=True
         )
         
-        # Stage-specific training
+        # Stage-specific training with dynamic epochs
         stage_performance = train_ultimate_mastery_stage(
             olympus, dataloader, criterion, 
             fusion_optimizer, specialist_output_optimizer, specialist_core_optimizer,
             fusion_scheduler, specialist_output_scheduler, specialist_core_scheduler,
-            scaler, stage_idx, stage_config, training_stats
+            scaler, stage_idx, stage_config, training_stats, stage_epochs
         )
         
         # Update best performance
@@ -545,11 +559,11 @@ def train_olympus_ensemble_v3():
 def train_ultimate_mastery_stage(olympus, dataloader, criterion, 
                                 fusion_optimizer, specialist_output_optimizer, specialist_core_optimizer,
                                 fusion_scheduler, specialist_output_scheduler, specialist_core_scheduler,
-                                scaler, stage_idx, stage_config, training_stats):
+                                scaler, stage_idx, stage_config, training_stats, stage_epochs):
     """Train a single ultimate mastery ensemble stage"""
     olympus.train()
     
-    epochs_for_stage = OLYMPUS_V3_CONFIG['epochs_per_stage']
+    epochs_for_stage = stage_epochs  # Use the dynamic epochs passed in
     accumulation_steps = OLYMPUS_V3_CONFIG['gradient_accumulation']
     
     best_stage_performance = 0.0

@@ -33,10 +33,10 @@ from src.models.olympus_ensemble import OlympusEnsemble, EnsembleDecision
 # OLYMPUS V2 Configuration - Advanced Ensemble Training
 OLYMPUS_V2_CONFIG = {
     # Core Training Parameters - Advanced Level (Memory Optimized)
-    'batch_size': 512,  # Doubled for speed with available GPU memory
+    'batch_size': 1024,  # Increased for faster training with available GPU memory
     'learning_rate': 0.0001,  # Lower rate for fine-tuning specialists
     'num_epochs': 225,  # Advanced training: 15 stages x 15 epochs
-    'gradient_accumulation': 1,  # Reduced since batch size doubled
+    'gradient_accumulation': 1,  # Keep at 1 with larger batch size
     'epochs_per_stage': 12,  # Reduced epochs for speed
     'curriculum_stages': 15,  # Advanced curriculum stages
     

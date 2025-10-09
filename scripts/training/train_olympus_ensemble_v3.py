@@ -288,44 +288,76 @@ def train_olympus_ensemble_v3():
         device=device
     ).to(device)
     
-    # Load V2 ensemble weights first
-    v2_model_path = '/content/AutomataNexus_Olympus_AGI2/models/olympus_v2_best.pt'
+    # Load V2 ensemble weights first (from the correct InputBestModels directory)
+    v2_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v2_best.pt'
     if os.path.exists(v2_model_path):
         try:
-            ensemble_state = torch.load(v2_model_path, map_location=device)
-            olympus.load_state_dict(ensemble_state['ensemble_state_dict'])
-            print(f"\033[96m🏛️ Loaded V2 ensemble weights for V3 ultimate training\\033[0m")
+            v2_loaded_successfully = olympus.load_ensemble(v2_model_path)
+            if v2_loaded_successfully:
+                print(f"\033[92m🏛️ Loaded V2 ensemble weights for V3 ultimate training - FUSION ENGINE LOADED\\033[0m")
+            else:
+                print(f"\033[91m⚠️  V2 fusion engine failed to load, trying V1\\033[0m")
+                # Fallback to V1
+                v1_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt'
+                if os.path.exists(v1_model_path):
+                    try:
+                        v1_loaded_successfully = olympus.load_ensemble(v1_model_path)
+                        if v1_loaded_successfully:
+                            print(f"\033[96m🏛️ Loaded V1 ensemble weights for V3 training\\033[0m")
+                        else:
+                            # Final fallback
+                            weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
+                            load_results = olympus.load_all_specialists(weight_dir)
+                            successful_loads = sum(load_results.values())
+                            print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 individual specialist models\\033[0m")
+                    except Exception as e:
+                        print(f"\033[93m⚠️  Could not load V1 weights: {e}\\033[0m")
+                        weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
+                        load_results = olympus.load_all_specialists(weight_dir)
+                        successful_loads = sum(load_results.values())
+                        print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 individual specialist models\\033[0m")
         except Exception as e:
             print(f"\033[93m⚠️  Could not load V2 weights, trying V1: {e}\\033[0m")
             # Fallback to V1
-            v1_model_path = '/content/AutomataNexus_Olympus_AGI2/models/olympus_v1_best.pt'
+            v1_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt'
             if os.path.exists(v1_model_path):
                 try:
-                    ensemble_state = torch.load(v1_model_path, map_location=device)
-                    olympus.load_state_dict(ensemble_state['ensemble_state_dict'])
-                    print(f"\033[96m🏛️ Loaded V1 ensemble weights for V3 training\\033[0m")
+                    v1_loaded_successfully = olympus.load_ensemble(v1_model_path)
+                    if v1_loaded_successfully:
+                        print(f"\033[96m🏛️ Loaded V1 ensemble weights for V3 training\\033[0m")
+                    else:
+                        # Final fallback
+                        weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
+                        load_results = olympus.load_all_specialists(weight_dir)
+                        successful_loads = sum(load_results.values())
+                        print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 individual specialist models\\033[0m")
                 except:
                     # Final fallback
-                    weight_dir = '/content/AutomataNexus_Olympus_AGI2/models'
+                    weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
                     load_results = olympus.load_all_specialists(weight_dir)
                     successful_loads = sum(load_results.values())
                     print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 individual specialist models\\033[0m")
     else:
         # Try V1 fallback
-        v1_model_path = '/content/AutomataNexus_Olympus_AGI2/models/olympus_v1_best.pt'
+        v1_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt'
         if os.path.exists(v1_model_path):
             try:
-                ensemble_state = torch.load(v1_model_path, map_location=device)
-                olympus.load_state_dict(ensemble_state['ensemble_state_dict'])
-                print(f"\033[96m🏛️ Loaded V1 ensemble weights for V3 training\\033[0m")
+                v1_loaded_successfully = olympus.load_ensemble(v1_model_path)
+                if v1_loaded_successfully:
+                    print(f"\033[96m🏛️ Loaded V1 ensemble weights for V3 training\\033[0m")
+                else:
+                    weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
+                    load_results = olympus.load_all_specialists(weight_dir)
+                    successful_loads = sum(load_results.values())
+                    print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 individual specialist models\\033[0m")
             except:
-                weight_dir = '/content/AutomataNexus_Olympus_AGI2/models'
+                weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
                 load_results = olympus.load_all_specialists(weight_dir)
                 successful_loads = sum(load_results.values())
                 print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 individual specialist models\\033[0m")
         else:
             # Load individual specialists
-            weight_dir = '/content/AutomataNexus_Olympus_AGI2/models'
+            weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
             load_results = olympus.load_all_specialists(weight_dir)
             successful_loads = sum(load_results.values())
             print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 individual specialist models\\033[0m")
@@ -448,9 +480,29 @@ def train_olympus_ensemble_v3():
         # Update best performance
         if stage_performance > best_performance:
             best_performance = stage_performance
-            # Save best OLYMPUS V3 model
-            os.makedirs('/content/AutomataNexus_Olympus_AGI2/models', exist_ok=True)
-            olympus.save_ensemble('/content/AutomataNexus_Olympus_AGI2/models/olympus_v3_best.pt')
+            # Save best OLYMPUS V3 model in InputBestModels directory
+            os.makedirs('/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels', exist_ok=True)
+            
+            # Enhanced save with optimizer and scheduler state (similar to V2)
+            ensemble_state = {
+                'ensemble_state_dict': olympus.state_dict(),
+                'fusion_optimizer_state_dict': fusion_optimizer.state_dict(),
+                'specialist_output_optimizer_state_dict': specialist_output_optimizer.state_dict() if specialist_output_optimizer else None,
+                'specialist_core_optimizer_state_dict': specialist_core_optimizer.state_dict() if specialist_core_optimizer else None,
+                'fusion_scheduler_state_dict': fusion_scheduler.state_dict(),
+                'specialist_output_scheduler_state_dict': specialist_output_scheduler.state_dict() if specialist_output_scheduler else None,
+                'specialist_core_scheduler_state_dict': specialist_core_scheduler.state_dict() if specialist_core_scheduler else None,
+                'best_performance': best_performance,
+                'stage': stage_idx,
+                'ensemble_config': {
+                    'max_grid_size': olympus.max_grid_size,
+                    'd_model': olympus.d_model,
+                    'device': olympus.device_name
+                },
+                'performance_metrics': olympus.get_ensemble_state()
+            }
+            
+            torch.save(ensemble_state, '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v3_best.pt')
             print(f"\033[96m🏛️ New best V3 ultimate performance: {best_performance:.2%} - OLYMPUS V3 ULTIMATE saved!\\033[0m")
         
         # Memory cleanup

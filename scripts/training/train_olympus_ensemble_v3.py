@@ -34,7 +34,7 @@ from src.models.olympus_ensemble import OlympusEnsemble, EnsembleDecision
 OLYMPUS_V3_CONFIG = {
     # Core Training Parameters - Ultimate Level (Memory Optimized for Advanced Features)
     'batch_size': 256,  # Balanced for V3's advanced features (self-attention, meta-learning)
-    'learning_rate': 0.00008,  # Base learning rate (will be increased for lower stages)
+    'learning_rate': 0.00012,  # Higher base learning rate for better lower grid performance
     'num_epochs': 240,  # Ultimate training: Extended for lower stages
     'gradient_accumulation': 2,  # Effective batch size of 512
     'epochs_per_stage': 12,  # Base epochs (will be increased for lower stages)
@@ -461,24 +461,33 @@ def train_olympus_ensemble_v3():
               f"Complexity: {stage_config['complexity']} | Focus: {stage_config['focus']}\033[0m")
         print(f"\033[96m{'=' * 135}\033[0m")
         
-        # Create ultimate augmented dataset for this stage (6x augmentation like V2)
+        # Create ultimate augmented dataset for this stage
+        # REDUCED AUGMENTATION for larger grids to save memory and time
+        if stage_idx >= 10:  # Stage 10 = 16x16 grids and above
+            augmentation_factor = 4  # 4x augmentation for 16x16+
+        else:
+            augmentation_factor = 6  # 6x augmentation for smaller grids
+        
         dataset = OlympusV3UltimateDataset(
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',
             max_grid_size=stage_config['max_grid_size'],
             stage_config=stage_config,
-            augmentation_factor=6  # 6x augmentation matching V2
+            augmentation_factor=augmentation_factor
         )
         
-        # Dynamic batch size and epochs based on grid size for optimal training
-        if stage_config['max_grid_size'] <= 6:
-            batch_size = 64  # Smaller batches = more iterations for lower stages
-            epochs_multiplier = 2.0  # Double epochs for 4x4-6x6
+        # AGGRESSIVE batch size and epochs for lower grids - CRITICAL FOR PERFORMANCE
+        if stage_config['max_grid_size'] <= 4:
+            batch_size = 32  # ULTRA small batches = 8x more gradient updates!
+            epochs_multiplier = 4.0  # QUADRUPLE epochs for 4x4 (48 epochs total)
+        elif stage_config['max_grid_size'] <= 6:
+            batch_size = 48  # Very small batches for 5x5-6x6
+            epochs_multiplier = 3.0  # TRIPLE epochs (36 epochs total)
         elif stage_config['max_grid_size'] <= 8:
-            batch_size = 128  # Medium batches for 7x7-8x8
-            epochs_multiplier = 1.5  # 50% more epochs
+            batch_size = 64  # Small batches for 7x7-8x8
+            epochs_multiplier = 2.5  # 2.5x epochs (30 epochs total)
         elif stage_config['max_grid_size'] <= 10:
-            batch_size = 256  # Full batch size for 9x9-10x10
-            epochs_multiplier = 1.0  # Normal epochs
+            batch_size = 128  # Medium batch size for 9x9-10x10
+            epochs_multiplier = 1.5  # 50% more epochs (18 epochs)
         elif stage_config['max_grid_size'] <= 16:
             batch_size = 256  # Full batch size for medium grids
             epochs_multiplier = 1.0
@@ -495,7 +504,27 @@ def train_olympus_ensemble_v3():
         # Calculate actual epochs for this stage
         stage_epochs = int(OLYMPUS_V3_CONFIG['epochs_per_stage'] * epochs_multiplier)
         
-        print(f"\033[96m🏛️ Stage {stage_idx}: Batch size {batch_size}, {stage_epochs} epochs for {stage_config['max_grid_size']}x{stage_config['max_grid_size']} grids\033[0m")
+        # DYNAMIC LEARNING RATE BOOST for lower grids!
+        if stage_config['max_grid_size'] <= 4:
+            lr_multiplier = 2.0  # DOUBLE learning rate for 4x4
+        elif stage_config['max_grid_size'] <= 6:
+            lr_multiplier = 1.5  # 1.5x learning rate for 5x5-6x6
+        elif stage_config['max_grid_size'] <= 8:
+            lr_multiplier = 1.2  # 1.2x learning rate for 7x7-8x8
+        else:
+            lr_multiplier = 1.0  # Normal learning rate for larger grids
+        
+        # Adjust learning rates for this stage
+        for param_group in fusion_optimizer.param_groups:
+            param_group['lr'] = OLYMPUS_V3_CONFIG['learning_rate'] * lr_multiplier
+        if specialist_output_optimizer:
+            for param_group in specialist_output_optimizer.param_groups:
+                param_group['lr'] = OLYMPUS_V3_CONFIG['specialist_learning_rate'] * lr_multiplier
+        if specialist_core_optimizer:
+            for param_group in specialist_core_optimizer.param_groups:
+                param_group['lr'] = OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.5 * lr_multiplier
+        
+        print(f"\033[96m🏛️ Stage {stage_idx}: Batch={batch_size}, Epochs={stage_epochs}, LR_mult={lr_multiplier}x, Aug={augmentation_factor}x for {stage_config['max_grid_size']}x{stage_config['max_grid_size']} grids\033[0m")
         
         # Create data loader
         dataloader = DataLoader(
@@ -566,6 +595,15 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
     epochs_for_stage = stage_epochs  # Use the dynamic epochs passed in
     accumulation_steps = OLYMPUS_V3_CONFIG['gradient_accumulation']
     
+    # WARMUP STRATEGY for lower grids
+    warmup_epochs = 0
+    if stage_config['max_grid_size'] <= 4:
+        warmup_epochs = 3  # 3 epoch warmup for 4x4
+    elif stage_config['max_grid_size'] <= 6:
+        warmup_epochs = 2  # 2 epoch warmup for 5x5-6x6
+    elif stage_config['max_grid_size'] <= 8:
+        warmup_epochs = 1  # 1 epoch warmup for 7x7-8x8
+    
     best_stage_performance = 0.0
     
     for epoch in range(epochs_for_stage):
@@ -574,10 +612,24 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
         total_samples = 0
         total_consensus = 0.0
         
+        # Apply warmup learning rate scaling
+        if epoch < warmup_epochs:
+            warmup_factor = (epoch + 1) / warmup_epochs
+            # Scale down learning rates during warmup
+            for param_group in fusion_optimizer.param_groups:
+                param_group['lr'] = param_group['lr'] * warmup_factor
+            if specialist_output_optimizer:
+                for param_group in specialist_output_optimizer.param_groups:
+                    param_group['lr'] = param_group['lr'] * warmup_factor
+            if specialist_core_optimizer:
+                for param_group in specialist_core_optimizer.param_groups:
+                    param_group['lr'] = param_group['lr'] * warmup_factor
+        
         # Progress bar
         # Dynamic progress bar with stage focus (like ATLAS)
         stage_focus = stage_config['focus'].replace('_', ' ').title()
-        pbar = tqdm(dataloader, desc=f"\033[38;2;255;204;153m🏛️ {stage_focus} Stage {stage_idx} Epoch {epoch}\033[0m")
+        warmup_str = f" (Warmup {epoch+1}/{warmup_epochs})" if epoch < warmup_epochs else ""
+        pbar = tqdm(dataloader, desc=f"\033[38;2;255;204;153m🏛️ {stage_focus} Stage {stage_idx} Epoch {epoch}{warmup_str}\033[0m")
         
         for batch_idx, (inputs, targets, metadata) in enumerate(pbar):
             inputs = inputs.to(device)

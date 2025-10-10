@@ -319,7 +319,28 @@ def train_olympus_ensemble_v3():
                 if v2_loaded_successfully:
                     print(f"\033[92m🏛️ Loaded V2 ensemble weights for V3 ultimate training - FUSION ENGINE LOADED\033[0m")
                 else:
-                print(f"\033[91m⚠️  V2 fusion engine failed to load, trying V1\033[0m")
+                    print(f"\033[91m⚠️  V2 fusion engine failed to load, trying V1\033[0m")
+                    # Fallback to V1
+                    v1_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt'
+                    if os.path.exists(v1_model_path):
+                        try:
+                            v1_loaded_successfully = olympus.load_ensemble(v1_model_path)
+                            if v1_loaded_successfully:
+                                print(f"\033[96m🏛️ Loaded V1 ensemble weights for V3 training\033[0m")
+                            else:
+                                # Final fallback
+                                weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
+                                load_results = olympus.load_all_specialists(weight_dir)
+                                successful_loads = sum(load_results.values())
+                                print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 individual specialist models\033[0m")
+                        except Exception as e:
+                            print(f"\033[93m⚠️  Could not load V1 weights: {e}\033[0m")
+                            weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
+                            load_results = olympus.load_all_specialists(weight_dir)
+                            successful_loads = sum(load_results.values())
+                            print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 individual specialist models\033[0m")
+            except Exception as e:
+                print(f"\033[93m⚠️  Could not load V2 weights, trying V1: {e}\033[0m")
                 # Fallback to V1
                 v1_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt'
                 if os.path.exists(v1_model_path):
@@ -333,33 +354,12 @@ def train_olympus_ensemble_v3():
                             load_results = olympus.load_all_specialists(weight_dir)
                             successful_loads = sum(load_results.values())
                             print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 individual specialist models\033[0m")
-                    except Exception as e:
-                        print(f"\033[93m⚠️  Could not load V1 weights: {e}\033[0m")
-                        weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
-                        load_results = olympus.load_all_specialists(weight_dir)
-                        successful_loads = sum(load_results.values())
-                        print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 individual specialist models\033[0m")
-        except Exception as e:
-            print(f"\033[93m⚠️  Could not load V2 weights, trying V1: {e}\033[0m")
-            # Fallback to V1
-            v1_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt'
-            if os.path.exists(v1_model_path):
-                try:
-                    v1_loaded_successfully = olympus.load_ensemble(v1_model_path)
-                    if v1_loaded_successfully:
-                        print(f"\033[96m🏛️ Loaded V1 ensemble weights for V3 training\033[0m")
-                    else:
+                    except:
                         # Final fallback
                         weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
                         load_results = olympus.load_all_specialists(weight_dir)
                         successful_loads = sum(load_results.values())
                         print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 individual specialist models\033[0m")
-                except:
-                    # Final fallback
-                    weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
-                    load_results = olympus.load_all_specialists(weight_dir)
-                    successful_loads = sum(load_results.values())
-                    print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 individual specialist models\033[0m")
     else:
         # Try V1 fallback
         v1_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt'

@@ -298,23 +298,27 @@ def train_olympus_ensemble_v3():
     ).to(device)
     
     # Try to load V3 first if it exists (to continue training)
+    v3_loaded = False
     v3_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v3_best.pt'
     if os.path.exists(v3_model_path):
         try:
             checkpoint = torch.load(v3_model_path, map_location=device)
             olympus.load_state_dict(checkpoint['ensemble_state_dict'])
-            print(f"\033[92m🏛️ OLYMPUS V3 RESUMED from {checkpoint.get('best_performance', 0):.2%} performance!\033[0m")
-        except:
-            pass  # Fall through to V2 loading
+            print(f"\033[92m🏛️ OLYMPUS V3 LOADED from checkpoint: {checkpoint.get('best_performance', 0):.2%} performance!\033[0m")
+            print(f"\033[92m🏛️ Continuing V3 training from previous best model\033[0m")
+            v3_loaded = True
+        except Exception as e:
+            print(f"\033[93m⚠️ Could not load V3 checkpoint: {e}\033[0m")
     
-    # Load V2 ensemble weights as fallback (from the correct InputBestModels directory)
-    v2_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v2_best.pt'
-    if os.path.exists(v2_model_path):
-        try:
-            v2_loaded_successfully = olympus.load_ensemble(v2_model_path)
-            if v2_loaded_successfully:
-                print(f"\033[92m🏛️ Loaded V2 ensemble weights for V3 ultimate training - FUSION ENGINE LOADED\033[0m")
-            else:
+    # Only load V2 if V3 was not loaded
+    if not v3_loaded:
+        v2_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v2_best.pt'
+        if os.path.exists(v2_model_path):
+            try:
+                v2_loaded_successfully = olympus.load_ensemble(v2_model_path)
+                if v2_loaded_successfully:
+                    print(f"\033[92m🏛️ Loaded V2 ensemble weights for V3 ultimate training - FUSION ENGINE LOADED\033[0m")
+                else:
                 print(f"\033[91m⚠️  V2 fusion engine failed to load, trying V1\033[0m")
                 # Fallback to V1
                 v1_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt'

@@ -302,11 +302,12 @@ def train_olympus_ensemble_v3():
     v3_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v3_best.pt'
     if os.path.exists(v3_model_path):
         try:
-            checkpoint = torch.load(v3_model_path, map_location=device)
-            olympus.load_state_dict(checkpoint['ensemble_state_dict'])
-            print(f"\033[92m🏛️ OLYMPUS V3 LOADED from checkpoint: {checkpoint.get('best_performance', 0):.2%} performance!\033[0m")
-            print(f"\033[92m🏛️ Continuing V3 training from previous best model\033[0m")
-            v3_loaded = True
+            v3_loaded_successfully = olympus.load_ensemble(v3_model_path)
+            if v3_loaded_successfully:
+                print(f"\033[92m🏛️ OLYMPUS V3 LOADED from checkpoint - continuing training from previous best!\033[0m")
+                v3_loaded = True
+            else:
+                print(f"\033[93m⚠️ V3 checkpoint exists but failed to load properly\033[0m")
         except Exception as e:
             print(f"\033[93m⚠️ Could not load V3 checkpoint: {e}\033[0m")
     
@@ -360,30 +361,6 @@ def train_olympus_ensemble_v3():
                         load_results = olympus.load_all_specialists(weight_dir)
                         successful_loads = sum(load_results.values())
                         print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 individual specialist models\033[0m")
-    else:
-        # Try V1 fallback
-        v1_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt'
-        if os.path.exists(v1_model_path):
-            try:
-                v1_loaded_successfully = olympus.load_ensemble(v1_model_path)
-                if v1_loaded_successfully:
-                    print(f"\033[96m🏛️ Loaded V1 ensemble weights for V3 training\033[0m")
-                else:
-                    weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
-                    load_results = olympus.load_all_specialists(weight_dir)
-                    successful_loads = sum(load_results.values())
-                    print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 individual specialist models\033[0m")
-            except:
-                weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
-                load_results = olympus.load_all_specialists(weight_dir)
-                successful_loads = sum(load_results.values())
-                print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 individual specialist models\033[0m")
-        else:
-            # Load individual specialists
-            weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
-            load_results = olympus.load_all_specialists(weight_dir)
-            successful_loads = sum(load_results.values())
-            print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 individual specialist models\033[0m")
     
     # V3: Full specialist fine-tuning (ultimate coordination)
     if not OLYMPUS_V3_CONFIG['freeze_specialists']:

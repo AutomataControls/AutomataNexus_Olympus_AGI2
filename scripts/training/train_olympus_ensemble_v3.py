@@ -297,7 +297,17 @@ def train_olympus_ensemble_v3():
         device=device
     ).to(device)
     
-    # Load V2 ensemble weights first (from the correct InputBestModels directory)
+    # Try to load V3 first if it exists (to continue training)
+    v3_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v3_best.pt'
+    if os.path.exists(v3_model_path):
+        try:
+            checkpoint = torch.load(v3_model_path, map_location=device)
+            olympus.load_state_dict(checkpoint['ensemble_state_dict'])
+            print(f"\033[92m🏛️ OLYMPUS V3 RESUMED from {checkpoint.get('best_performance', 0):.2%} performance!\033[0m")
+        except:
+            pass  # Fall through to V2 loading
+    
+    # Load V2 ensemble weights as fallback (from the correct InputBestModels directory)
     v2_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v2_best.pt'
     if os.path.exists(v2_model_path):
         try:

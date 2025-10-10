@@ -463,8 +463,12 @@ def train_olympus_ensemble_v3():
         
         # Create ultimate augmented dataset for this stage
         # REDUCED AUGMENTATION for larger grids to save memory and time
-        if stage_idx >= 10:  # Stage 10 = 16x16 grids and above
-            augmentation_factor = 4  # 4x augmentation for 16x16+
+        if stage_idx >= 12:  # Stage 12+ = 22x22 and above
+            augmentation_factor = 2  # MINIMAL 2x augmentation for huge grids
+        elif stage_idx >= 10:  # Stage 10-11 = 16x16-18x18
+            augmentation_factor = 3  # 3x augmentation for large grids
+        elif stage_idx >= 8:  # Stage 8-9 = 12x12-14x14
+            augmentation_factor = 4  # 4x augmentation for medium-large
         else:
             augmentation_factor = 6  # 6x augmentation for smaller grids
         
@@ -494,12 +498,15 @@ def train_olympus_ensemble_v3():
         elif stage_config['max_grid_size'] <= 20:
             batch_size = 192  # Reduce for medium-large grids
             epochs_multiplier = 1.0
-        elif stage_config['max_grid_size'] <= 24:
-            batch_size = 128  # Further reduce for large grids
-            epochs_multiplier = 1.0
+        elif stage_config['max_grid_size'] <= 22:
+            batch_size = 96  # AGGRESSIVE reduction for 22x22
+            epochs_multiplier = 0.8  # Reduce epochs too
+        elif stage_config['max_grid_size'] <= 27:
+            batch_size = 48  # ULTRA aggressive for 27x27
+            epochs_multiplier = 0.7  # Even fewer epochs
         else:
-            batch_size = 64  # Minimal batch size for 27x27 and 30x30
-            epochs_multiplier = 1.0
+            batch_size = 32  # MINIMAL batch size for 30x30
+            epochs_multiplier = 0.6  # Minimal epochs
         
         # Calculate actual epochs for this stage
         stage_epochs = int(OLYMPUS_V3_CONFIG['epochs_per_stage'] * epochs_multiplier)
@@ -593,7 +600,16 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
     olympus.train()
     
     epochs_for_stage = stage_epochs  # Use the dynamic epochs passed in
-    accumulation_steps = OLYMPUS_V3_CONFIG['gradient_accumulation']
+    
+    # Dynamic gradient accumulation for memory management
+    if stage_config['max_grid_size'] >= 27:
+        accumulation_steps = 8  # 8x accumulation for 27x27 and 30x30
+    elif stage_config['max_grid_size'] >= 22:
+        accumulation_steps = 6  # 6x accumulation for 22x22
+    elif stage_config['max_grid_size'] >= 18:
+        accumulation_steps = 4  # 4x accumulation for 18x18
+    else:
+        accumulation_steps = OLYMPUS_V3_CONFIG['gradient_accumulation']  # Default 2x
     
     # WARMUP STRATEGY for lower grids
     warmup_epochs = 0

@@ -21,6 +21,7 @@ from tqdm import tqdm
 from typing import Dict, List, Optional, Tuple
 import random
 from collections import defaultdict
+import argparse
 
 # Add project paths
 sys.path.append('/content/AutomataNexus_Olympus_AGI2')
@@ -286,9 +287,15 @@ class OlympusV3Loss(nn.Module):
 from train_olympus_ensemble_v2 import OlympusV2AugmentedDataset as OlympusV3UltimateDataset, olympus_v2_augmented_collate_fn as foundation_collate_fn
 
 
-def train_olympus_ensemble_v3():
-    """Main training function for OLYMPUS Ensemble V3"""
+def train_olympus_ensemble_v3(stage_start=0, stage_end=14):
+    """Main training function for OLYMPUS Ensemble V3
+    
+    Args:
+        stage_start: Starting stage index (0-14)
+        stage_end: Ending stage index (0-14)
+    """
     print(f"\033[96m🏛️ Initializing OLYMPUS Ensemble V3 Ultimate Training...\033[0m")
+    print(f"\033[92m🏛️ Training stages {stage_start} to {stage_end} (grids {STAGE_CONFIG[stage_start]['max_grid_size']}x{STAGE_CONFIG[stage_start]['max_grid_size']} to {STAGE_CONFIG[stage_end]['max_grid_size']}x{STAGE_CONFIG[stage_end]['max_grid_size']})\033[0m")
     
     # Initialize OLYMPUS ensemble
     olympus = OlympusEnsemble(
@@ -444,10 +451,11 @@ def train_olympus_ensemble_v3():
     best_performance = 0.0
     training_stats = defaultdict(list)
     
-    print(f"\033[96m🏛️ Starting Ultimate Progressive Ensemble Training - 15 Ultimate Mastery Stages (4x4 to 30x30)\033[0m")
+    print(f"\033[96m🏛️ Starting Ultimate Progressive Ensemble Training - Stages {stage_start} to {stage_end}\033[0m")
     
-    # Ultimate progressive training through mastery stages
-    for stage_idx, stage_config in enumerate(STAGE_CONFIG):
+    # Ultimate progressive training through selected mastery stages
+    for stage_idx in range(stage_start, stage_end + 1):
+        stage_config = STAGE_CONFIG[stage_idx]
         print(f"\n\033[96m{'=' * 135}\033[0m")
         print(f"\033[38;2;255;204;153m🏛️ V3 Ultimate Stage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
               f"Complexity: {stage_config['complexity']} | Focus: {stage_config['focus']}\033[0m")
@@ -560,6 +568,7 @@ def train_olympus_ensemble_v3():
                 'specialist_core_scheduler_state_dict': specialist_core_scheduler.state_dict() if specialist_core_scheduler else None,
                 'best_performance': best_performance,
                 'stage': stage_idx,
+                'stage_range_trained': {'start': stage_start, 'end': stage_end},  # Track which stages were trained
                 'ensemble_config': {
                     'max_grid_size': olympus.max_grid_size,
                     'd_model': olympus.d_model,
@@ -577,6 +586,7 @@ def train_olympus_ensemble_v3():
     
     print(f"\n\033[96m{'=' * 140}\033[0m")
     print(f"\033[96m🏛️ OLYMPUS Ensemble V3 ULTIMATE Training Complete!\033[0m")
+    print(f"\033[96m🏛️ Trained stages {stage_start} to {stage_end} (grids {STAGE_CONFIG[stage_start]['max_grid_size']}x{STAGE_CONFIG[stage_start]['max_grid_size']} to {STAGE_CONFIG[stage_end]['max_grid_size']}x{STAGE_CONFIG[stage_end]['max_grid_size']})\033[0m")
     print(f"\033[96m🏛️ Best V3 ULTIMATE Performance: {best_performance:.2%}\033[0m")
     print(f"\033[96m🏛️ OLYMPUS Ultimate Intelligence Achieved - Ready for ARC-AGI-2 Challenge!\033[0m")
     print(f"\033[96m{'=' * 140}\033[0m")
@@ -762,10 +772,41 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
 
 
 if __name__ == "__main__":
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description='Train OLYMPUS V3 Ensemble with stage selection')
+    parser.add_argument('--lower-stages-only', action='store_true',
+                        help='Train only lower stages (0-5, grids 4x4-9x9)')
+    parser.add_argument('--upper-stages-only', action='store_true', 
+                        help='Train only upper stages (6-14, grids 10x10-30x30)')
+    parser.add_argument('--start-stage', type=int, default=None,
+                        help='Start from specific stage (0-14)')
+    parser.add_argument('--end-stage', type=int, default=None,
+                        help='End at specific stage (0-14)')
+    args = parser.parse_args()
+    
     # Set seeds for reproducibility
     torch.manual_seed(42)
     np.random.seed(42)
     random.seed(42)
     
-    # Train OLYMPUS V3 Ultimate
-    olympus, best_performance = train_olympus_ensemble_v3()
+    # Determine stage range
+    stage_start = 0
+    stage_end = 14
+    
+    if args.lower_stages_only:
+        stage_start = 0
+        stage_end = 5
+        print(f"\033[92m🏛️ Training LOWER STAGES ONLY (0-5, grids 4x4-9x9)\033[0m")
+    elif args.upper_stages_only:
+        stage_start = 6
+        stage_end = 14
+        print(f"\033[92m🏛️ Training UPPER STAGES ONLY (6-14, grids 10x10-30x30)\033[0m")
+    
+    # Override with specific stage range if provided
+    if args.start_stage is not None:
+        stage_start = args.start_stage
+    if args.end_stage is not None:
+        stage_end = args.end_stage
+        
+    # Train OLYMPUS V3 Ultimate with selected stages
+    olympus, best_performance = train_olympus_ensemble_v3(stage_start, stage_end)

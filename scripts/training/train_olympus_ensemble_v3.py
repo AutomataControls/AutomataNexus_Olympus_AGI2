@@ -754,8 +754,6 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
     # Additional cleanup between stages for large grids
     if stage_idx >= 10:
         # Force cleanup for large grids
-        del dataloader
-        del dataset
         torch.cuda.empty_cache()
         gc.collect()
         time.sleep(1)  # Give GPU time to release memory

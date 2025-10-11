@@ -36,8 +36,8 @@ OLYMPUS_V3_CONFIG = {
     'batch_size': 256,  # Balanced for V3's advanced features (self-attention, meta-learning)
     'learning_rate': 0.00012,  # Higher base learning rate for better lower grid performance
     'num_epochs': 240,  # Ultimate training: Extended for lower stages
-    'gradient_accumulation': 2,  # Effective batch size of 512
-    'epochs_per_stage': 12,  # Base epochs (will be increased for lower stages)
+    'gradient_accumulation': 1,  # No accumulation for speed
+    'epochs_per_stage': 8,  # Reduced base epochs for faster training
     'curriculum_stages': 15,  # Full coverage like V2: 4x4 to 30x30
     
     # Ultimate Loss Configuration
@@ -418,21 +418,21 @@ def train_olympus_ensemble_v3():
     # Set T_0 to epochs_per_stage for more stable learning
     fusion_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
         fusion_optimizer,
-        T_0=OLYMPUS_V3_CONFIG['epochs_per_stage'],  # Restart every stage
+        T_0=8,  # Restart every stage (8 epochs)
         T_mult=1,  # Keep constant restart interval
         eta_min=OLYMPUS_V3_CONFIG['learning_rate'] * 0.01
     )
     
     specialist_output_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
         specialist_output_optimizer,
-        T_0=OLYMPUS_V3_CONFIG['epochs_per_stage'],  # Restart every stage
+        T_0=8,  # Restart every stage (8 epochs)
         T_mult=1,  # Keep constant restart interval
         eta_min=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.01
     ) if specialist_output_optimizer else None
     
     specialist_core_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
         specialist_core_optimizer,
-        T_0=OLYMPUS_V3_CONFIG['epochs_per_stage'],  # Restart every stage
+        T_0=8,  # Restart every stage (8 epochs)
         T_mult=1,  # Keep constant restart interval
         eta_min=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.5 * 0.01
     ) if specialist_core_optimizer else None
@@ -454,15 +454,15 @@ def train_olympus_ensemble_v3():
         print(f"\033[96m{'=' * 135}\033[0m")
         
         # Create ultimate augmented dataset for this stage
-        # REDUCED AUGMENTATION for larger grids to save memory and time
+        # REDUCED AUGMENTATION for faster training
         if stage_idx >= 12:  # Stage 12+ = 22x22 and above
-            augmentation_factor = 2  # MINIMAL 2x augmentation for huge grids
+            augmentation_factor = 1  # NO augmentation for huge grids
         elif stage_idx >= 10:  # Stage 10-11 = 16x16-18x18
-            augmentation_factor = 3  # 3x augmentation for large grids
+            augmentation_factor = 2  # Minimal augmentation
         elif stage_idx >= 8:  # Stage 8-9 = 12x12-14x14
-            augmentation_factor = 4  # 4x augmentation for medium-large
+            augmentation_factor = 3  # Reduced from 4
         else:
-            augmentation_factor = 6  # 6x augmentation for smaller grids
+            augmentation_factor = 4  # Reduced from 6 for smaller grids
         
         dataset = OlympusV3UltimateDataset(
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',
@@ -471,34 +471,34 @@ def train_olympus_ensemble_v3():
             augmentation_factor=augmentation_factor
         )
         
-        # AGGRESSIVE batch size and epochs for lower grids - CRITICAL FOR PERFORMANCE
+        # OPTIMIZED batch sizes and epochs for SPEED without OOM
         if stage_config['max_grid_size'] <= 4:
-            batch_size = 32  # ULTRA small batches = 8x more gradient updates!
-            epochs_multiplier = 4.0  # QUADRUPLE epochs for 4x4 (48 epochs total)
+            batch_size = 64  # Doubled from 32 for 2x speed
+            epochs_multiplier = 2.5  # Reduced from 4.0 but still strong
         elif stage_config['max_grid_size'] <= 6:
-            batch_size = 48  # Very small batches for 5x5-6x6
-            epochs_multiplier = 3.0  # TRIPLE epochs (36 epochs total)
+            batch_size = 96  # Doubled from 48 for speed
+            epochs_multiplier = 2.0  # Reduced from 3.0
         elif stage_config['max_grid_size'] <= 8:
-            batch_size = 64  # Small batches for 7x7-8x8
-            epochs_multiplier = 2.5  # 2.5x epochs (30 epochs total)
+            batch_size = 128  # Doubled from 64
+            epochs_multiplier = 1.5  # Reduced from 2.5
         elif stage_config['max_grid_size'] <= 10:
-            batch_size = 128  # Medium batch size for 9x9-10x10
-            epochs_multiplier = 1.5  # 50% more epochs (18 epochs)
+            batch_size = 256  # Doubled from 128
+            epochs_multiplier = 1.0  # Reduced from 1.5
         elif stage_config['max_grid_size'] <= 16:
-            batch_size = 256  # Full batch size for medium grids
-            epochs_multiplier = 1.0
+            batch_size = 384  # Increased for speed
+            epochs_multiplier = 0.8  # Slightly reduced
         elif stage_config['max_grid_size'] <= 20:
-            batch_size = 192  # Reduce for medium-large grids
-            epochs_multiplier = 1.0
+            batch_size = 256  # Increased from 192
+            epochs_multiplier = 0.7  # Reduced
         elif stage_config['max_grid_size'] <= 22:
-            batch_size = 96  # AGGRESSIVE reduction for 22x22
-            epochs_multiplier = 0.8  # Reduce epochs too
+            batch_size = 192  # Doubled from 96
+            epochs_multiplier = 0.6  # Reduced further
         elif stage_config['max_grid_size'] <= 27:
-            batch_size = 48  # ULTRA aggressive for 27x27
-            epochs_multiplier = 0.7  # Even fewer epochs
+            batch_size = 128  # Increased from 48 (2.7x)
+            epochs_multiplier = 0.5  # Reduced from 0.7
         else:
-            batch_size = 32  # MINIMAL batch size for 30x30
-            epochs_multiplier = 0.6  # Minimal epochs
+            batch_size = 96  # Tripled from 32
+            epochs_multiplier = 0.4  # Reduced from 0.6
         
         # Calculate actual epochs for this stage
         stage_epochs = int(OLYMPUS_V3_CONFIG['epochs_per_stage'] * epochs_multiplier)

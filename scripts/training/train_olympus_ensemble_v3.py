@@ -491,14 +491,14 @@ def train_olympus_ensemble_v3():
             batch_size = 256  # Increased from 192
             epochs_multiplier = 0.7  # Reduced
         elif stage_config['max_grid_size'] <= 22:
-            batch_size = 192  # Doubled from 96
-            epochs_multiplier = 0.6  # Reduced further
+            batch_size = 64  # REDUCED for OOM fix
+            epochs_multiplier = 0.5  # Reduced further
         elif stage_config['max_grid_size'] <= 27:
-            batch_size = 128  # Increased from 48 (2.7x)
-            epochs_multiplier = 0.5  # Reduced from 0.7
+            batch_size = 48  # REDUCED for OOM fix
+            epochs_multiplier = 0.4  # Reduced further
         else:
-            batch_size = 96  # Tripled from 32
-            epochs_multiplier = 0.4  # Reduced from 0.6
+            batch_size = 32  # MINIMAL for 30x30
+            epochs_multiplier = 0.3  # Minimal epochs
         
         # Calculate actual epochs for this stage
         stage_epochs = int(OLYMPUS_V3_CONFIG['epochs_per_stage'] * epochs_multiplier)
@@ -750,6 +750,15 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
         # Memory cleanup
         torch.cuda.empty_cache()
         gc.collect()
+    
+    # Additional cleanup between stages for large grids
+    if stage_idx >= 10:
+        # Force cleanup for large grids
+        del dataloader
+        del dataset
+        torch.cuda.empty_cache()
+        gc.collect()
+        time.sleep(1)  # Give GPU time to release memory
     
     return best_stage_performance
 

@@ -415,25 +415,26 @@ def train_olympus_ensemble_v3():
     print(f"\033[96m🏛️ Ultimate Training: {len(fusion_params)} fusion, {len(specialist_output_params)} specialist output, {len(specialist_core_params)} specialist core parameters\033[0m")
     
     # Learning rate schedulers for all optimizers
+    # Set T_0 to epochs_per_stage for more stable learning
     fusion_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
         fusion_optimizer,
-        T_0=OLYMPUS_V3_CONFIG['warmup_epochs'],
-        T_mult=int(OLYMPUS_V3_CONFIG['restart_multiplier']),
-        eta_min=OLYMPUS_V3_CONFIG['learning_rate'] * 0.005
+        T_0=OLYMPUS_V3_CONFIG['epochs_per_stage'],  # Restart every stage
+        T_mult=1,  # Keep constant restart interval
+        eta_min=OLYMPUS_V3_CONFIG['learning_rate'] * 0.01
     )
     
     specialist_output_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
         specialist_output_optimizer,
-        T_0=OLYMPUS_V3_CONFIG['warmup_epochs'],
-        T_mult=int(OLYMPUS_V3_CONFIG['restart_multiplier']),
-        eta_min=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.005
+        T_0=OLYMPUS_V3_CONFIG['epochs_per_stage'],  # Restart every stage
+        T_mult=1,  # Keep constant restart interval
+        eta_min=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.01
     ) if specialist_output_optimizer else None
     
     specialist_core_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
         specialist_core_optimizer,
-        T_0=OLYMPUS_V3_CONFIG['warmup_epochs'],
-        T_mult=int(OLYMPUS_V3_CONFIG['restart_multiplier']),
-        eta_min=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.5 * 0.005
+        T_0=OLYMPUS_V3_CONFIG['epochs_per_stage'],  # Restart every stage
+        T_mult=1,  # Keep constant restart interval
+        eta_min=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.5 * 0.01
     ) if specialist_core_optimizer else None
     
     # Mixed precision training
@@ -619,18 +620,24 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
         total_samples = 0
         total_consensus = 0.0
         
-        # Apply warmup learning rate scaling
+        # Apply warmup learning rate scaling with COSINE warmup
         if epoch < warmup_epochs:
-            warmup_factor = (epoch + 1) / warmup_epochs
-            # Scale down learning rates during warmup
+            # Use cosine warmup for smoother transitions
+            warmup_factor = 0.5 * (1 + np.cos(np.pi * (warmup_epochs - epoch - 1) / warmup_epochs))
+            # Get base learning rates from schedulers
+            base_fusion_lr = fusion_scheduler.get_last_lr()[0]
+            base_output_lr = specialist_output_scheduler.get_last_lr()[0] if specialist_output_scheduler else 0
+            base_core_lr = specialist_core_scheduler.get_last_lr()[0] if specialist_core_scheduler else 0
+            
+            # Apply warmup factor to base rates
             for param_group in fusion_optimizer.param_groups:
-                param_group['lr'] = param_group['lr'] * warmup_factor
+                param_group['lr'] = base_fusion_lr * warmup_factor
             if specialist_output_optimizer:
                 for param_group in specialist_output_optimizer.param_groups:
-                    param_group['lr'] = param_group['lr'] * warmup_factor
+                    param_group['lr'] = base_output_lr * warmup_factor
             if specialist_core_optimizer:
                 for param_group in specialist_core_optimizer.param_groups:
-                    param_group['lr'] = param_group['lr'] * warmup_factor
+                    param_group['lr'] = base_core_lr * warmup_factor
         
         # Progress bar
         # Dynamic progress bar with stage focus (like ATLAS)
@@ -692,13 +699,6 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
                     specialist_output_optimizer.zero_grad()
                 if specialist_core_optimizer is not None:
                     specialist_core_optimizer.zero_grad()
-                
-                # Update learning rates
-                fusion_scheduler.step()
-                if specialist_output_scheduler is not None:
-                    specialist_output_scheduler.step()
-                if specialist_core_scheduler is not None:
-                    specialist_core_scheduler.step()
             
             # Accumulate metrics
             for key, value in loss_dict.items():
@@ -739,6 +739,13 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
             print(f"\033[96m   📊 Fusion: {fusion_lr:.6f} | Output: {output_lr:.6f} | Core: {core_lr:.6f} | Grid: {stage_config['max_grid_size']}x{stage_config['max_grid_size']} | Consensus: {avg_consensus:.3f}\033[0m")
             if epoch == epochs_for_stage - 1:
                 print(f"\033[96m✅ Ultimate Stage {stage_idx} complete! Final exact: {epoch_performance:.2%}\033[0m")
+        
+        # Step schedulers at END of epoch (not per batch!)
+        fusion_scheduler.step()
+        if specialist_output_scheduler is not None:
+            specialist_output_scheduler.step()
+        if specialist_core_scheduler is not None:
+            specialist_core_scheduler.step()
         
         # Memory cleanup
         torch.cuda.empty_cache()

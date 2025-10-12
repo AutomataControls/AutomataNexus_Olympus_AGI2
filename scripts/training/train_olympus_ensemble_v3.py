@@ -294,10 +294,94 @@ class OlympusV3Loss(nn.Module):
 
 
 # Import V2's augmented dataset for V3
-from train_olympus_ensemble_v2 import OlympusV2AugmentedDataset as OlympusV3UltimateDataset, olympus_v2_augmented_collate_fn as foundation_collate_fn
+from train_olympus_ensemble_v2 import OlympusV2AugmentedDataset, olympus_v2_augmented_collate_fn as foundation_collate_fn
+
+# Extended dataset class for V3 that includes tiny grids
+class OlympusV3UltimateDataset(OlympusV2AugmentedDataset):
+    """Extended dataset for V3 that ensures tiny grids (2x2, 3x3) are included"""
+    
+    def __init__(self, data_dir: str, max_grid_size: int, stage_config: Dict, augmentation_factor: int = 6):
+        # Initialize with parent class
+        super().__init__(data_dir, max_grid_size, stage_config, augmentation_factor)
+        
+        # For tiny grids, add synthetic examples if we have too few
+        if max_grid_size <= 3 and len(self.samples) < 100:
+            print(f"\033[93m⚠️ Only {len(self.samples)} samples found for {max_grid_size}x{max_grid_size} grids\033[0m")
+            self._add_synthetic_tiny_grid_samples()
+    
+    def _add_synthetic_tiny_grid_samples(self):
+        """Add synthetic samples for tiny grids to ensure we have enough data"""
+        original_count = len(self.samples)
+        target_samples = 200  # Minimum samples needed
+        
+        if self.max_grid_size == 2:
+            # Create simple 2x2 pattern examples
+            patterns = [
+                # Diagonal patterns
+                ([[1, 0], [0, 1]], [[0, 1], [1, 0]]),  # Flip diagonal
+                ([[2, 0], [0, 2]], [[0, 2], [2, 0]]),  # Flip diagonal color 2
+                # Fill patterns
+                ([[1, 1], [0, 0]], [[0, 0], [1, 1]]),  # Top/bottom swap
+                ([[1, 0], [1, 0]], [[0, 1], [0, 1]]),  # Left/right swap
+                # Color change patterns
+                ([[1, 1], [1, 1]], [[2, 2], [2, 2]]),  # Change color
+                ([[3, 3], [3, 0]], [[0, 0], [0, 3]]),  # Partial color change
+                # Rotation patterns
+                ([[1, 2], [0, 0]], [[0, 1], [0, 2]]),  # 90 degree rotation
+                ([[1, 2], [3, 4]], [[3, 1], [4, 2]]),  # Complex rotation
+            ]
+        elif self.max_grid_size == 3:
+            # Create simple 3x3 pattern examples
+            patterns = [
+                # Center patterns
+                ([[0, 0, 0], [0, 1, 0], [0, 0, 0]], [[1, 1, 1], [1, 0, 1], [1, 1, 1]]),  # Invert center
+                ([[1, 1, 1], [1, 0, 1], [1, 1, 1]], [[0, 0, 0], [0, 1, 0], [0, 0, 0]]),  # Fill center
+                # Line patterns  
+                ([[1, 0, 0], [1, 0, 0], [1, 0, 0]], [[0, 0, 1], [0, 0, 1], [0, 0, 1]]),  # Vertical line move
+                ([[1, 1, 1], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [1, 1, 1]]),  # Horizontal line move
+                # Rotation patterns
+                ([[1, 2, 3], [0, 0, 0], [0, 0, 0]], [[1, 0, 0], [2, 0, 0], [3, 0, 0]]),  # 90 degree rotation
+                # Color patterns
+                ([[1, 1, 1], [2, 2, 2], [3, 3, 3]], [[3, 3, 3], [2, 2, 2], [1, 1, 1]]),  # Row swap
+            ]
+        else:
+            patterns = []
+        
+        # Add patterns multiple times with variations
+        while len(self.samples) < target_samples and patterns:
+            for inp, out in patterns:
+                if len(self.samples) >= target_samples:
+                    break
+                    
+                # Add original
+                sample = {
+                    'input': np.array(inp),
+                    'output': np.array(out),
+                    'is_arc': True,
+                    'complexity': self.stage_config.get('complexity', 'ensemble')
+                }
+                self.samples.append(sample)
+                
+                # Add with random color permutations
+                if len(self.samples) < target_samples:
+                    colors = list(set(np.array(inp).flatten()) | set(np.array(out).flatten()))
+                    if len(colors) > 1:
+                        color_map = dict(zip(colors, np.random.permutation(colors)))
+                        inp_perm = np.vectorize(color_map.get)(np.array(inp))
+                        out_perm = np.vectorize(color_map.get)(np.array(out))
+                        sample_perm = {
+                            'input': inp_perm,
+                            'output': out_perm,
+                            'is_arc': True,
+                            'complexity': self.stage_config.get('complexity', 'ensemble')
+                        }
+                        self.samples.append(sample_perm)
+        
+        print(f"\033[92m✅ Added {len(self.samples) - original_count} synthetic samples for {self.max_grid_size}x{self.max_grid_size} grids\033[0m")
+        print(f"\033[92m✅ Total samples now: {len(self.samples)}\033[0m")
 
 
-def train_olympus_ensemble_v3(stage_start=0, stage_end=14):
+def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
     """Main training function for OLYMPUS Ensemble V3
     
     Args:

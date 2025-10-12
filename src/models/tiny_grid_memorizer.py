@@ -89,14 +89,15 @@ class TinyGridMemorizer(nn.Module):
     def add_to_memory(self, inputs, outputs):
         """Add new examples to memory during training"""
         B = inputs.shape[0]
-        encoded = self.encode_input(inputs)
-        
-        for i in range(B):
-            idx = self.memory_ptr % self.memory_size
-            self.memory_inputs[idx] = encoded[i]
-            self.memory_outputs[idx] = outputs[i]
-            self.memory_valid[idx] = True
-            self.memory_ptr += 1
+        with torch.no_grad():  # Don't track gradients for memory updates
+            encoded = self.encode_input(inputs)
+            
+            for i in range(B):
+                idx = self.memory_ptr % self.memory_size
+                self.memory_inputs[idx] = encoded[i].detach()
+                self.memory_outputs[idx] = outputs[i].detach()
+                self.memory_valid[idx] = True
+                self.memory_ptr = (self.memory_ptr + 1) % self.memory_size
             
     def forward(self, x, target=None, mode='eval'):
         """
@@ -110,7 +111,14 @@ class TinyGridMemorizer(nn.Module):
         # During training, also add to memory
         if mode == 'train' and target is not None:
             target_grid = target.argmax(dim=1) if target.dim() == 4 else target
-            self.add_to_memory(x, target_grid)
+            # Pass already encoded features to avoid recomputing
+            with torch.no_grad():
+                for i in range(x.shape[0]):
+                    idx = self.memory_ptr % self.memory_size
+                    self.memory_inputs[idx] = encoded[i].detach()
+                    self.memory_outputs[idx] = target_grid[i].detach()
+                    self.memory_valid[idx] = True
+                    self.memory_ptr = (self.memory_ptr + 1) % self.memory_size
         
         # Find k nearest neighbors in memory
         k = min(50, self.memory_valid.sum().item())

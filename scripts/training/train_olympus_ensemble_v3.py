@@ -33,34 +33,34 @@ from src.models.olympus_ensemble import OlympusEnsemble, EnsembleDecision
 
 # OLYMPUS V3 Configuration - Ultimate Ensemble Training
 OLYMPUS_V3_CONFIG = {
-    # Core Training Parameters - Ultimate Level (Memory Optimized for Advanced Features)
+    # Core Training Parameters - AGGRESSIVE 85%+ TARGET
     'batch_size': 256,  # Balanced for V3's advanced features (self-attention, meta-learning)
-    'learning_rate': 0.00012,  # Higher base learning rate for better lower grid performance
+    'learning_rate': 0.0003,  # 2.5x HIGHER for aggressive learning
     'num_epochs': 240,  # Ultimate training: Extended for lower stages
     'gradient_accumulation': 1,  # No accumulation for speed
     'epochs_per_stage': 8,  # Reduced base epochs for faster training
     'curriculum_stages': 15,  # Full coverage like V2: 4x4 to 30x30
     
-    # Ultimate Loss Configuration
-    'ensemble_loss_weight': 1.5,  # Maximum ensemble focus
-    'specialist_sync_weight': 0.5,  # Ultimate synchronization
-    'consensus_weight': 0.4,  # Maximum consensus building
-    'fusion_regularization': 0.2,  # Ultimate fusion sophistication
-    'transform_penalty': 0.12,  # Encourage ultimate transformations
-    'exact_match_bonus': 15.0,  # Ultimate precision bonus
-    'gradient_clip': 0.3,  # Ultimate gradient control
-    'weight_decay': 4e-6,  # Ultimate regularization
+    # Ultimate Loss Configuration - AGGRESSIVE FOR 85%+
+    'ensemble_loss_weight': 2.5,  # INCREASED ensemble focus
+    'specialist_sync_weight': 0.8,  # INCREASED synchronization
+    'consensus_weight': 0.6,  # INCREASED consensus building
+    'fusion_regularization': 0.1,  # REDUCED to allow more flexibility
+    'transform_penalty': 0.05,  # REDUCED penalty for more exploration
+    'exact_match_bonus': 25.0,  # MASSIVE precision bonus for 85%+
+    'gradient_clip': 0.5,  # Increased for aggressive updates
+    'weight_decay': 2e-6,  # Reduced regularization
     
     # ULTRA TEAL Enhanced (proven formula)
     'ultra_teal_iou_weight': 0.85,  # 85% IoU weighting
     'strict_match_weight': 0.15,   # 15% strict matching
     
-    # OLYMPUS V3-Specific Ultimate Settings
+    # OLYMPUS V3-Specific Ultimate Settings - AGGRESSIVE 85%+
     'freeze_specialists': False,  # Allow full specialist fine-tuning
     'fusion_training_only': False,  # Train everything together
-    'specialist_learning_rate': 0.00002,  # Ultra-low for ultimate fine-tuning
-    'consensus_threshold': 0.8,  # Ultimate consensus for confidence
-    'specialist_dropout': 0.1,  # Moderate dropout for ultimate robustness
+    'specialist_learning_rate': 0.00008,  # 4x HIGHER for aggressive updates
+    'consensus_threshold': 0.6,  # LOWER threshold for more exploration
+    'specialist_dropout': 0.05,  # REDUCED dropout for more signal
     'ensemble_coordination': True,  # Ultimate coordination protocols
     'adaptive_weights': True,  # Ultimate dynamic weighting
     'meta_ensemble_learning': True,  # NEW: Meta-ensemble optimization
@@ -79,11 +79,13 @@ OLYMPUS_V3_CONFIG = {
     'adaptive_curriculum': True,  # NEW: Adaptive curriculum based on performance
     'ultimate_fusion_networks': True,  # NEW: Multiple fusion networks
     
-    # Learning Rate Scheduling
-    'warmup_epochs': 20,  # Ultimate warmup
+    # Learning Rate Scheduling - AGGRESSIVE CYCLING
+    'warmup_epochs': 5,  # FAST warmup for quick adaptation
     'cosine_restarts': True,
-    'restart_multiplier': 1.5,
-    'plateau_patience': 25,
+    'restart_multiplier': 1.0,  # Constant restarts for exploration
+    'plateau_patience': 10,  # Quick adaptation
+    'lr_cycle_mult': 2.0,  # Learning rate cycling multiplier
+    'min_lr_ratio': 0.001,  # Minimum LR as ratio of base
 }
 
 # Ultimate 15-Stage Progressive Configuration - Full Grid Coverage Like V2
@@ -421,28 +423,37 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=14):
     
     print(f"\033[96m🏛️ Ultimate Training: {len(fusion_params)} fusion, {len(specialist_output_params)} specialist output, {len(specialist_core_params)} specialist core parameters\033[0m")
     
-    # Learning rate schedulers for all optimizers
-    # Set T_0 to epochs_per_stage for more stable learning
-    fusion_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
-        fusion_optimizer,
-        T_0=8,  # Restart every stage (8 epochs)
-        T_mult=1,  # Keep constant restart interval
-        eta_min=OLYMPUS_V3_CONFIG['learning_rate'] * 0.01
-    )
+    # AGGRESSIVE SCHEDULERS for 85%+ target
+    # Using OneCycleLR for aggressive training on lower stages
+    use_onecycle = True  # Flag to switch between schedulers
     
-    specialist_output_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
-        specialist_output_optimizer,
-        T_0=8,  # Restart every stage (8 epochs)
-        T_mult=1,  # Keep constant restart interval
-        eta_min=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.01
-    ) if specialist_output_optimizer else None
-    
-    specialist_core_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
-        specialist_core_optimizer,
-        T_0=8,  # Restart every stage (8 epochs)
-        T_mult=1,  # Keep constant restart interval
-        eta_min=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.5 * 0.01
-    ) if specialist_core_optimizer else None
+    if use_onecycle:
+        # We'll create these per-stage for OneCycleLR
+        fusion_scheduler = None
+        specialist_output_scheduler = None
+        specialist_core_scheduler = None
+    else:
+        # Original schedulers as fallback
+        fusion_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            fusion_optimizer,
+            T_0=4,  # FASTER restarts for exploration
+            T_mult=1,  # Keep constant restart interval
+            eta_min=OLYMPUS_V3_CONFIG['learning_rate'] * 0.001
+        )
+        
+        specialist_output_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            specialist_output_optimizer,
+            T_0=4,  # FASTER restarts
+            T_mult=1,  # Keep constant restart interval
+            eta_min=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.001
+        ) if specialist_output_optimizer else None
+        
+        specialist_core_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            specialist_core_optimizer,
+            T_0=4,  # FASTER restarts
+            T_mult=1,  # Keep constant restart interval
+            eta_min=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.5 * 0.001
+        ) if specialist_core_optimizer else None
     
     # Mixed precision training
     scaler = GradScaler()
@@ -462,15 +473,17 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=14):
         print(f"\033[96m{'=' * 135}\033[0m")
         
         # Create ultimate augmented dataset for this stage
-        # REDUCED AUGMENTATION for faster training
+        # AGGRESSIVE AUGMENTATION for 85%+ on lower stages
         if stage_idx >= 12:  # Stage 12+ = 22x22 and above
             augmentation_factor = 1  # NO augmentation for huge grids
         elif stage_idx >= 10:  # Stage 10-11 = 16x16-18x18
             augmentation_factor = 2  # Minimal augmentation
         elif stage_idx >= 8:  # Stage 8-9 = 12x12-14x14
             augmentation_factor = 3  # Reduced from 4
+        elif stage_idx <= 5:  # LOWER STAGES - AGGRESSIVE FOR 85%+
+            augmentation_factor = 8  # DOUBLE augmentation for lower grids
         else:
-            augmentation_factor = 4  # Reduced from 6 for smaller grids
+            augmentation_factor = 4  # Normal for middle stages
         
         dataset = OlympusV3UltimateDataset(
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',
@@ -479,19 +492,22 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=14):
             augmentation_factor=augmentation_factor
         )
         
-        # OPTIMIZED batch sizes and epochs for SPEED without OOM
+        # MAXIMIZE GPU USAGE for 85%+ on lower stages (80GB available!)
         if stage_config['max_grid_size'] <= 4:
-            batch_size = 64  # Doubled from 32 for 2x speed
-            epochs_multiplier = 2.5  # Reduced from 4.0 but still strong
+            batch_size = 512  # MASSIVE batch for GPU utilization
+            epochs_multiplier = 8.0  # 8x epochs for 85%+
+        elif stage_config['max_grid_size'] <= 5:
+            batch_size = 384  # Large batch for 5x5
+            epochs_multiplier = 7.0  # 7x epochs for 85%+
         elif stage_config['max_grid_size'] <= 6:
-            batch_size = 96  # Doubled from 48 for speed
-            epochs_multiplier = 2.0  # Reduced from 3.0
+            batch_size = 256  # Large batch for 6x6
+            epochs_multiplier = 6.0  # 6x epochs for 85%+
         elif stage_config['max_grid_size'] <= 8:
-            batch_size = 128  # Doubled from 64
-            epochs_multiplier = 1.5  # Reduced from 2.5
+            batch_size = 192  # Good batch size for 8x8
+            epochs_multiplier = 5.0  # 5x epochs for 85%+
         elif stage_config['max_grid_size'] <= 10:
-            batch_size = 256  # Doubled from 128
-            epochs_multiplier = 1.0  # Reduced from 1.5
+            batch_size = 256  # Larger batch size
+            epochs_multiplier = 3.0  # 3x epochs
         elif stage_config['max_grid_size'] <= 16:
             batch_size = 384  # Increased for speed
             epochs_multiplier = 0.8  # Slightly reduced
@@ -511,13 +527,15 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=14):
         # Calculate actual epochs for this stage
         stage_epochs = int(OLYMPUS_V3_CONFIG['epochs_per_stage'] * epochs_multiplier)
         
-        # DYNAMIC LEARNING RATE BOOST for lower grids!
+        # EXTREME LEARNING RATE BOOST for 85%+ on lower grids!
         if stage_config['max_grid_size'] <= 4:
-            lr_multiplier = 2.0  # DOUBLE learning rate for 4x4
+            lr_multiplier = 3.0  # TRIPLE learning rate for 4x4
+        elif stage_config['max_grid_size'] <= 5:
+            lr_multiplier = 2.5  # 2.5x learning rate for 5x5
         elif stage_config['max_grid_size'] <= 6:
-            lr_multiplier = 1.5  # 1.5x learning rate for 5x5-6x6
+            lr_multiplier = 2.0  # DOUBLE learning rate for 6x6
         elif stage_config['max_grid_size'] <= 8:
-            lr_multiplier = 1.2  # 1.2x learning rate for 7x7-8x8
+            lr_multiplier = 1.5  # 1.5x learning rate for 7x7-8x8
         else:
             lr_multiplier = 1.0  # Normal learning rate for larger grids
         
@@ -543,12 +561,49 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=14):
             pin_memory=True
         )
         
+        # Create OneCycleLR schedulers per stage for lower stages
+        if use_onecycle and stage_idx <= 5:
+            steps_per_epoch = len(dataloader)
+            total_steps = steps_per_epoch * stage_epochs
+            
+            # AGGRESSIVE OneCycleLR for lower stages
+            fusion_scheduler = optim.lr_scheduler.OneCycleLR(
+                fusion_optimizer,
+                max_lr=OLYMPUS_V3_CONFIG['learning_rate'] * lr_multiplier * 3,  # 3x peak
+                total_steps=total_steps,
+                pct_start=0.3,  # 30% warmup
+                anneal_strategy='cos',
+                div_factor=25.0,  # Start at max_lr/25
+                final_div_factor=1000.0  # End at max_lr/1000
+            )
+            
+            specialist_output_scheduler = optim.lr_scheduler.OneCycleLR(
+                specialist_output_optimizer,
+                max_lr=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * lr_multiplier * 3,
+                total_steps=total_steps,
+                pct_start=0.3,
+                anneal_strategy='cos',
+                div_factor=25.0,
+                final_div_factor=1000.0
+            ) if specialist_output_optimizer else None
+            
+            specialist_core_scheduler = optim.lr_scheduler.OneCycleLR(
+                specialist_core_optimizer,
+                max_lr=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.5 * lr_multiplier * 3,
+                total_steps=total_steps,
+                pct_start=0.3,
+                anneal_strategy='cos',
+                div_factor=25.0,
+                final_div_factor=1000.0
+            ) if specialist_core_optimizer else None
+        
         # Stage-specific training with dynamic epochs
         stage_performance = train_ultimate_mastery_stage(
             olympus, dataloader, criterion, 
             fusion_optimizer, specialist_output_optimizer, specialist_core_optimizer,
             fusion_scheduler, specialist_output_scheduler, specialist_core_scheduler,
-            scaler, stage_idx, stage_config, training_stats, stage_epochs
+            scaler, stage_idx, stage_config, training_stats, stage_epochs,
+            use_onecycle=(use_onecycle and stage_idx <= 5)
         )
         
         # Update best performance
@@ -597,30 +652,35 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=14):
 def train_ultimate_mastery_stage(olympus, dataloader, criterion, 
                                 fusion_optimizer, specialist_output_optimizer, specialist_core_optimizer,
                                 fusion_scheduler, specialist_output_scheduler, specialist_core_scheduler,
-                                scaler, stage_idx, stage_config, training_stats, stage_epochs):
+                                scaler, stage_idx, stage_config, training_stats, stage_epochs,
+                                use_onecycle=False):
     """Train a single ultimate mastery ensemble stage"""
     olympus.train()
     
     epochs_for_stage = stage_epochs  # Use the dynamic epochs passed in
     
-    # Dynamic gradient accumulation for memory management
+    # Dynamic gradient accumulation - AGGRESSIVE for lower stages
     if stage_config['max_grid_size'] >= 27:
         accumulation_steps = 8  # 8x accumulation for 27x27 and 30x30
     elif stage_config['max_grid_size'] >= 22:
         accumulation_steps = 6  # 6x accumulation for 22x22
     elif stage_config['max_grid_size'] >= 18:
         accumulation_steps = 4  # 4x accumulation for 18x18
+    elif stage_config['max_grid_size'] <= 9:
+        accumulation_steps = 4  # 4x accumulation for EFFECTIVE huge batches
     else:
-        accumulation_steps = OLYMPUS_V3_CONFIG['gradient_accumulation']  # Default 2x
+        accumulation_steps = OLYMPUS_V3_CONFIG['gradient_accumulation']  # Default
     
-    # WARMUP STRATEGY for lower grids
+    # AGGRESSIVE WARMUP + RESTARTS for lower grids
     warmup_epochs = 0
     if stage_config['max_grid_size'] <= 4:
-        warmup_epochs = 3  # 3 epoch warmup for 4x4
+        warmup_epochs = 4  # 4 epoch warmup for 4x4
+    elif stage_config['max_grid_size'] <= 5:
+        warmup_epochs = 3  # 3 epoch warmup for 5x5
     elif stage_config['max_grid_size'] <= 6:
-        warmup_epochs = 2  # 2 epoch warmup for 5x5-6x6
+        warmup_epochs = 2  # 2 epoch warmup for 6x6
     elif stage_config['max_grid_size'] <= 8:
-        warmup_epochs = 1  # 1 epoch warmup for 7x7-8x8
+        warmup_epochs = 2  # 2 epoch warmup for 7x7-8x8
     
     best_stage_performance = 0.0
     
@@ -702,6 +762,14 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
                     scaler.step(specialist_core_optimizer)
                 
                 scaler.update()
+                
+                # Step OneCycleLR per batch
+                if use_onecycle:
+                    fusion_scheduler.step()
+                    if specialist_output_scheduler is not None:
+                        specialist_output_scheduler.step()
+                    if specialist_core_scheduler is not None:
+                        specialist_core_scheduler.step()
                 
                 # Zero gradients
                 fusion_optimizer.zero_grad()

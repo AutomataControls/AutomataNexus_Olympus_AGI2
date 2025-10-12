@@ -42,7 +42,7 @@ OLYMPUS_V3_CONFIG = {
     'learning_rate': 0.0003,  # 2.5x HIGHER for aggressive learning
     'num_epochs': 240,  # Ultimate training: Extended for lower stages
     'gradient_accumulation': 1,  # No accumulation for speed
-    'epochs_per_stage': 8,  # Reduced base epochs for faster training
+    'epochs_per_stage': 4,  # ULTRA reduced base epochs - we multiply for tiny grids
     'curriculum_stages': 15,  # Full coverage like V2: 4x4 to 30x30
     
     # Ultimate Loss Configuration - AGGRESSIVE FOR 85%+
@@ -50,8 +50,8 @@ OLYMPUS_V3_CONFIG = {
     'specialist_sync_weight': 0.8,  # INCREASED synchronization
     'consensus_weight': 0.6,  # INCREASED consensus building
     'fusion_regularization': 0.1,  # REDUCED to allow more flexibility
-    'transform_penalty': 0.05,  # REDUCED penalty for more exploration
-    'exact_match_bonus': 25.0,  # MASSIVE precision bonus for 85%+
+    'transform_penalty': 0.01,  # ULTRA LOW penalty for tiny grid exploration
+    'exact_match_bonus': 50.0,  # ULTRA MASSIVE precision bonus for tiny grids
     'gradient_clip': 0.5,  # Increased for aggressive updates
     'weight_decay': 2e-6,  # Reduced regularization
     
@@ -304,15 +304,15 @@ class OlympusV3UltimateDataset(OlympusV2AugmentedDataset):
         # Initialize with parent class
         super().__init__(data_dir, max_grid_size, stage_config, augmentation_factor)
         
-        # For tiny grids, add synthetic examples if we have too few
-        if max_grid_size <= 3 and len(self.samples) < 100:
+        # For tiny grids, ALWAYS add synthetic examples
+        if max_grid_size <= 5:  # Extended to 5x5!
             print(f"\033[93m⚠️ Only {len(self.samples)} samples found for {max_grid_size}x{max_grid_size} grids\033[0m")
             self._add_synthetic_tiny_grid_samples()
     
     def _add_synthetic_tiny_grid_samples(self):
         """Add synthetic samples for tiny grids to ensure we have enough data"""
         original_count = len(self.samples)
-        target_samples = 500  # Increased target samples for better training
+        target_samples = 2000  # MASSIVELY INCREASED for better training on tiny grids
         
         if self.max_grid_size == 2:
             # Create comprehensive 2x2 pattern examples
@@ -413,12 +413,43 @@ class OlympusV3UltimateDataset(OlympusV2AugmentedDataset):
                 ([[1, 1, 1], [1, 0, 1], [1, 1, 1]], [[0, 0, 0], [0, 1, 0], [0, 0, 0]]),  # Frame to center
                 ([[0, 0, 0], [0, 1, 0], [0, 0, 0]], [[1, 1, 1], [1, 0, 1], [1, 1, 1]]),  # Center to frame
             ]
+        elif self.max_grid_size == 4:
+            # Create 4x4 pattern examples for better training
+            patterns = [
+                # Simple fills
+                ([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], 
+                 [[0, 0, 1, 1], [0, 0, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]]),  # Move square
+                ([[0, 0, 0, 0], [0, 1, 1, 0], [0, 1, 1, 0], [0, 0, 0, 0]], 
+                 [[1, 1, 1, 1], [1, 0, 0, 1], [1, 0, 0, 1], [1, 1, 1, 1]]),  # Invert center
+                # Line patterns
+                ([[1, 0, 0, 0], [1, 0, 0, 0], [1, 0, 0, 0], [1, 0, 0, 0]], 
+                 [[0, 0, 0, 1], [0, 0, 0, 1], [0, 0, 0, 1], [0, 0, 0, 1]]),  # Move line
+                # Diagonal patterns
+                ([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], 
+                 [[0, 0, 0, 1], [0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 0]]),  # Flip diagonal
+                # Checkerboard
+                ([[1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1]], 
+                 [[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]]),  # Invert checker
+            ]
+        elif self.max_grid_size == 5:
+            # Create 5x5 pattern examples
+            patterns = [
+                # Cross pattern
+                ([[0, 0, 1, 0, 0], [0, 0, 1, 0, 0], [1, 1, 1, 1, 1], [0, 0, 1, 0, 0], [0, 0, 1, 0, 0]], 
+                 [[1, 1, 0, 1, 1], [1, 1, 0, 1, 1], [0, 0, 0, 0, 0], [1, 1, 0, 1, 1], [1, 1, 0, 1, 1]]),  # Invert cross
+                # Center patterns
+                ([[0, 0, 0, 0, 0], [0, 1, 1, 1, 0], [0, 1, 0, 1, 0], [0, 1, 1, 1, 0], [0, 0, 0, 0, 0]], 
+                 [[1, 1, 1, 1, 1], [1, 0, 0, 0, 1], [1, 0, 1, 0, 1], [1, 0, 0, 0, 1], [1, 1, 1, 1, 1]]),  # Frame/center swap
+                # Corner patterns
+                ([[1, 0, 0, 0, 2], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [3, 0, 0, 0, 4]], 
+                 [[4, 0, 0, 0, 3], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [2, 0, 0, 0, 1]]),  # Rotate corners
+            ]
         else:
             patterns = []
         
         # Add patterns multiple times with variations
         variation_count = 0
-        max_variations_per_pattern = 10  # Generate multiple variations per pattern
+        max_variations_per_pattern = 50  # MASSIVELY INCREASED variations per pattern
         
         while len(self.samples) < target_samples and patterns:
             for inp, out in patterns:
@@ -713,17 +744,17 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
         
         # MAXIMIZE GPU USAGE for 85%+ on lower stages (80GB available!)
         if stage_config['max_grid_size'] <= 2:
-            batch_size = 1024  # ULTRA MASSIVE batch for tiny 2x2
-            epochs_multiplier = 10.0  # 10x epochs for 85%+
+            batch_size = 2048  # ULTRA MEGA batch for tiny 2x2
+            epochs_multiplier = 20.0  # 20x epochs for tiny grids!
         elif stage_config['max_grid_size'] <= 3:
-            batch_size = 768  # HUGE batch for 3x3
-            epochs_multiplier = 9.0  # 9x epochs for 85%+
+            batch_size = 1536  # MEGA batch for 3x3
+            epochs_multiplier = 18.0  # 18x epochs for tiny grids!
         elif stage_config['max_grid_size'] <= 4:
-            batch_size = 640  # Increased from 512 for 4x4
-            epochs_multiplier = 8.0  # 8x epochs for 85%+
+            batch_size = 1024  # Large batch for 4x4
+            epochs_multiplier = 15.0  # 15x epochs for small grids!
         elif stage_config['max_grid_size'] <= 5:
-            batch_size = 576  # Increased from 384 for 5x5
-            epochs_multiplier = 7.0  # 7x epochs for 85%+
+            batch_size = 768  # Large batch for 5x5
+            epochs_multiplier = 12.0  # 12x epochs for small grids!
         elif stage_config['max_grid_size'] <= 6:
             batch_size = 512  # DOUBLED from 256 for 6x6
             epochs_multiplier = 6.0  # 6x epochs for 85%+
@@ -754,13 +785,13 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
         
         # EXTREME LEARNING RATE BOOST for 85%+ on lower grids!
         if stage_config['max_grid_size'] <= 2:
-            lr_multiplier = 4.0  # 4x learning rate for 2x2
+            lr_multiplier = 10.0  # 10X INSANE learning rate for 2x2
         elif stage_config['max_grid_size'] <= 3:
-            lr_multiplier = 3.5  # 3.5x learning rate for 3x3
+            lr_multiplier = 8.0  # 8X learning rate for 3x3
         elif stage_config['max_grid_size'] <= 4:
-            lr_multiplier = 3.0  # TRIPLE learning rate for 4x4
+            lr_multiplier = 6.0  # 6X learning rate for 4x4
         elif stage_config['max_grid_size'] <= 5:
-            lr_multiplier = 2.5  # 2.5x learning rate for 5x5
+            lr_multiplier = 5.0  # 5X learning rate for 5x5
         elif stage_config['max_grid_size'] <= 6:
             lr_multiplier = 2.0  # DOUBLE learning rate for 6x6
         elif stage_config['max_grid_size'] <= 8:
@@ -1082,6 +1113,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train OLYMPUS V3 Ensemble with stage selection')
     parser.add_argument('--lower-stages-only', action='store_true',
                         help='Train only lower stages (0-7, grids 2x2-8x8)')
+    parser.add_argument('--tiny-grids-only', action='store_true',
+                        help='FOCUS ONLY on tiny grids (0-3, grids 2x2-5x5) with AGGRESSIVE settings')
     parser.add_argument('--upper-stages-only', action='store_true', 
                         help='Train only upper stages (8-16, grids 9x9-30x30)')
     parser.add_argument('--start-stage', type=int, default=None,
@@ -1099,9 +1132,13 @@ if __name__ == "__main__":
     stage_start = 0
     stage_end = 16  # Updated for 17 total stages
     
-    if args.lower_stages_only:
+    if args.tiny_grids_only:
         stage_start = 0
-        stage_end = 7  # Updated to include up to 8x8 (was 5)
+        stage_end = 3  # FOCUS ONLY ON 2x2-5x5!
+        print(f"\033[91m🔥 AGGRESSIVE TINY GRIDS TRAINING (0-3, grids 2x2-5x5) - MAXIMUM FOCUS!\033[0m")
+    elif args.lower_stages_only:
+        stage_start = 0
+        stage_end = 7  # 2x2-8x8
         print(f"\033[92m🏛️ Training LOWER STAGES ONLY (0-7, grids 2x2-8x8)\033[0m")
     elif args.upper_stages_only:
         stage_start = 8  # Updated from 6

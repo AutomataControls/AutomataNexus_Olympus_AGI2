@@ -17,29 +17,29 @@ class TinyGridMemorizer(nn.Module):
     3. Uses nearest neighbor matching with learned similarity
     """
     
-    def __init__(self, max_grid_size=5, memory_size=50000):
+    def __init__(self, max_grid_size=5, memory_size=10000):  # Reduced from 50k to 10k
         super().__init__()
         self.max_grid_size = max_grid_size
         self.memory_size = memory_size
         
-        # Tiny encoder - just 1M parameters total!
+        # Tiny encoder - even smaller to avoid OOM
         self.encoder = nn.Sequential(
-            # Input: 10 channels (one-hot) -> 64 channels
-            nn.Conv2d(10, 64, 3, padding=1),
+            # Input: 10 channels (one-hot) -> 32 channels
+            nn.Conv2d(10, 32, 3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, 3, padding=1),
             nn.ReLU(),
             nn.Conv2d(64, 128, 3, padding=1),
             nn.ReLU(),
-            nn.Conv2d(128, 256, 3, padding=1),
-            nn.ReLU(),
             # Global pooling to fixed size
-            nn.AdaptiveAvgPool2d((3, 3)),
+            nn.AdaptiveAvgPool2d((2, 2)),  # Smaller pooling
             # Final encoding
-            nn.Conv2d(256, 512, 3, padding=1),
+            nn.Conv2d(128, 256, 2, padding=0),  # Smaller kernel
             nn.ReLU(),
         )
         
         # Flatten to vector
-        self.flatten_size = 512 * 3 * 3  # 4608
+        self.flatten_size = 256 * 1 * 1  # 256 (much smaller!)
         
         # Memory banks - store encoded inputs and their outputs
         self.register_buffer('memory_inputs', torch.zeros(memory_size, self.flatten_size))
@@ -66,8 +66,8 @@ class TinyGridMemorizer(nn.Module):
     def encode_input(self, x):
         """Encode input grid to compact representation"""
         # x: B x 10 x H x W
-        encoded = self.encoder(x)  # B x 512 x 3 x 3
-        return encoded.flatten(1)  # B x 4608
+        encoded = self.encoder(x)  # B x 256 x 1 x 1
+        return encoded.flatten(1)  # B x 256
         
     def compute_similarity(self, query, keys):
         """Compute learned similarity between query and keys"""
@@ -76,13 +76,24 @@ class TinyGridMemorizer(nn.Module):
         B, D = query.shape
         N = keys.shape[0]
         
-        # Expand for pairwise comparison
-        query_exp = query.unsqueeze(1).expand(B, N, D)  # B x N x D
-        keys_exp = keys.unsqueeze(0).expand(B, N, D)    # B x N x D
+        # Process in smaller chunks to avoid OOM
+        chunk_size = 1000
+        similarities = []
         
-        # Concatenate and compute similarity
-        combined = torch.cat([query_exp, keys_exp], dim=2)  # B x N x 2D
-        similarity = self.similarity_net(combined).squeeze(-1)  # B x N
+        for i in range(0, N, chunk_size):
+            end_idx = min(i + chunk_size, N)
+            keys_chunk = keys[i:end_idx]
+            
+            # Expand for pairwise comparison
+            query_exp = query.unsqueeze(1).expand(B, end_idx - i, D)  # B x chunk x D
+            keys_exp = keys_chunk.unsqueeze(0).expand(B, end_idx - i, D)    # B x chunk x D
+            
+            # Concatenate and compute similarity
+            combined = torch.cat([query_exp, keys_exp], dim=2)  # B x chunk x 2D
+            sim_chunk = self.similarity_net(combined).squeeze(-1)  # B x chunk
+            similarities.append(sim_chunk)
+        
+        similarity = torch.cat(similarities, dim=1)  # B x N
         
         return similarity
         
@@ -121,7 +132,7 @@ class TinyGridMemorizer(nn.Module):
                     self.memory_ptr = (self.memory_ptr + 1) % self.memory_size
         
         # Find k nearest neighbors in memory
-        k = min(50, self.memory_valid.sum().item())
+        k = min(20, self.memory_valid.sum().item())  # Reduced from 50 to 20
         
         if k > 0:
             # Get valid memory entries

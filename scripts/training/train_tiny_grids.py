@@ -16,7 +16,7 @@ TINY_GRID_CONFIG = {
     'batch_size': 256,  # Much smaller batch - we're memorizing patterns
     'learning_rate': 0.01,  # Higher LR for faster learning
     'epochs': 50,
-    'memory_size': 100000,  # Store up to 100k patterns
+    'memory_size': 10000,  # Reduced to 10k patterns to avoid OOM
 }
 
 def main():

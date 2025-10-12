@@ -312,70 +312,193 @@ class OlympusV3UltimateDataset(OlympusV2AugmentedDataset):
     def _add_synthetic_tiny_grid_samples(self):
         """Add synthetic samples for tiny grids to ensure we have enough data"""
         original_count = len(self.samples)
-        target_samples = 200  # Minimum samples needed
+        target_samples = 500  # Increased target samples for better training
         
         if self.max_grid_size == 2:
-            # Create simple 2x2 pattern examples
+            # Create comprehensive 2x2 pattern examples
             patterns = [
                 # Diagonal patterns
                 ([[1, 0], [0, 1]], [[0, 1], [1, 0]]),  # Flip diagonal
                 ([[2, 0], [0, 2]], [[0, 2], [2, 0]]),  # Flip diagonal color 2
+                ([[3, 0], [0, 3]], [[0, 3], [3, 0]]),  # Flip diagonal color 3
+                ([[4, 0], [0, 4]], [[0, 4], [4, 0]]),  # Flip diagonal color 4
+                
                 # Fill patterns
                 ([[1, 1], [0, 0]], [[0, 0], [1, 1]]),  # Top/bottom swap
                 ([[1, 0], [1, 0]], [[0, 1], [0, 1]]),  # Left/right swap
+                ([[2, 2], [0, 0]], [[0, 0], [2, 2]]),  # Top/bottom swap color 2
+                ([[3, 0], [3, 0]], [[0, 3], [0, 3]]),  # Left/right swap color 3
+                
                 # Color change patterns
-                ([[1, 1], [1, 1]], [[2, 2], [2, 2]]),  # Change color
-                ([[3, 3], [3, 0]], [[0, 0], [0, 3]]),  # Partial color change
+                ([[1, 1], [1, 1]], [[2, 2], [2, 2]]),  # Change color 1->2
+                ([[2, 2], [2, 2]], [[3, 3], [3, 3]]),  # Change color 2->3
+                ([[3, 3], [3, 3]], [[4, 4], [4, 4]]),  # Change color 3->4
+                ([[4, 4], [4, 4]], [[1, 1], [1, 1]]),  # Change color 4->1
+                
+                # Partial fills
+                ([[1, 0], [0, 0]], [[1, 1], [1, 0]]),  # Expand from corner
+                ([[0, 1], [0, 0]], [[1, 1], [0, 1]]),  # Expand from corner
+                ([[0, 0], [1, 0]], [[0, 1], [1, 1]]),  # Expand from corner
+                ([[0, 0], [0, 1]], [[1, 0], [1, 1]]),  # Expand from corner
+                
                 # Rotation patterns
                 ([[1, 2], [0, 0]], [[0, 1], [0, 2]]),  # 90 degree rotation
+                ([[0, 0], [1, 2]], [[2, 0], [1, 0]]),  # 90 degree rotation
                 ([[1, 2], [3, 4]], [[3, 1], [4, 2]]),  # Complex rotation
+                ([[5, 6], [7, 8]], [[7, 5], [8, 6]]),  # Complex rotation
+                
+                # Inversion patterns
+                ([[1, 0], [0, 0]], [[0, 1], [1, 1]]),  # Invert
+                ([[0, 1], [0, 0]], [[1, 0], [1, 1]]),  # Invert
+                ([[0, 0], [1, 0]], [[1, 1], [0, 1]]),  # Invert
+                ([[0, 0], [0, 1]], [[1, 1], [1, 0]]),  # Invert
+                
+                # Mixed color patterns
+                ([[1, 2], [2, 1]], [[2, 1], [1, 2]]),  # Swap colors
+                ([[3, 4], [4, 3]], [[4, 3], [3, 4]]),  # Swap colors
+                ([[1, 2], [3, 4]], [[4, 3], [2, 1]]),  # Full rotation
+                ([[5, 6], [7, 8]], [[8, 7], [6, 5]]),  # Full rotation
+                
+                # Single pixel changes
+                ([[1, 0], [0, 0]], [[0, 0], [0, 0]]),  # Remove single pixel
+                ([[0, 0], [0, 0]], [[0, 1], [0, 0]]),  # Add single pixel
+                ([[1, 0], [0, 1]], [[0, 1], [1, 0]]),  # Swap pixels
+                ([[2, 0], [0, 3]], [[0, 3], [2, 0]]),  # Swap different colors
+                
+                # Pattern completion
+                ([[1, 0], [0, 0]], [[1, 0], [0, 1]]),  # Complete diagonal
+                ([[0, 2], [0, 0]], [[0, 2], [2, 0]]),  # Complete diagonal
+                ([[1, 1], [0, 0]], [[1, 1], [1, 1]]),  # Complete fill
+                ([[0, 0], [2, 2]], [[2, 2], [2, 2]]),  # Complete fill
             ]
         elif self.max_grid_size == 3:
-            # Create simple 3x3 pattern examples
+            # Create comprehensive 3x3 pattern examples
             patterns = [
                 # Center patterns
                 ([[0, 0, 0], [0, 1, 0], [0, 0, 0]], [[1, 1, 1], [1, 0, 1], [1, 1, 1]]),  # Invert center
                 ([[1, 1, 1], [1, 0, 1], [1, 1, 1]], [[0, 0, 0], [0, 1, 0], [0, 0, 0]]),  # Fill center
+                ([[0, 0, 0], [0, 2, 0], [0, 0, 0]], [[2, 2, 2], [2, 0, 2], [2, 2, 2]]),  # Invert center color 2
+                ([[2, 2, 2], [2, 0, 2], [2, 2, 2]], [[0, 0, 0], [0, 2, 0], [0, 0, 0]]),  # Fill center color 2
+                
                 # Line patterns  
                 ([[1, 0, 0], [1, 0, 0], [1, 0, 0]], [[0, 0, 1], [0, 0, 1], [0, 0, 1]]),  # Vertical line move
+                ([[0, 1, 0], [0, 1, 0], [0, 1, 0]], [[1, 0, 0], [1, 0, 0], [1, 0, 0]]),  # Vertical line move
                 ([[1, 1, 1], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [1, 1, 1]]),  # Horizontal line move
+                ([[0, 0, 0], [1, 1, 1], [0, 0, 0]], [[1, 1, 1], [0, 0, 0], [0, 0, 0]]),  # Horizontal line move
+                
+                # Diagonal patterns
+                ([[1, 0, 0], [0, 1, 0], [0, 0, 1]], [[0, 0, 1], [0, 1, 0], [1, 0, 0]]),  # Flip diagonal
+                ([[0, 0, 1], [0, 1, 0], [1, 0, 0]], [[1, 0, 0], [0, 1, 0], [0, 0, 1]]),  # Flip diagonal
+                ([[2, 0, 0], [0, 2, 0], [0, 0, 2]], [[0, 0, 2], [0, 2, 0], [2, 0, 0]]),  # Flip diagonal color 2
+                
                 # Rotation patterns
                 ([[1, 2, 3], [0, 0, 0], [0, 0, 0]], [[1, 0, 0], [2, 0, 0], [3, 0, 0]]),  # 90 degree rotation
+                ([[0, 0, 0], [4, 5, 6], [0, 0, 0]], [[0, 4, 0], [0, 5, 0], [0, 6, 0]]),  # 90 degree rotation
+                ([[1, 2, 3], [4, 5, 6], [7, 8, 9]], [[7, 4, 1], [8, 5, 2], [9, 6, 3]]),  # Full 90 rotation
+                
                 # Color patterns
                 ([[1, 1, 1], [2, 2, 2], [3, 3, 3]], [[3, 3, 3], [2, 2, 2], [1, 1, 1]]),  # Row swap
+                ([[1, 2, 3], [1, 2, 3], [1, 2, 3]], [[3, 2, 1], [3, 2, 1], [3, 2, 1]]),  # Column swap
+                ([[1, 1, 1], [1, 1, 1], [1, 1, 1]], [[2, 2, 2], [2, 2, 2], [2, 2, 2]]),  # Color change
+                
+                # Corner patterns
+                ([[1, 0, 2], [0, 0, 0], [3, 0, 4]], [[4, 0, 3], [0, 0, 0], [2, 0, 1]]),  # Rotate corners
+                ([[1, 0, 1], [0, 0, 0], [1, 0, 1]], [[0, 1, 0], [1, 0, 1], [0, 1, 0]]),  # Swap corners/edges
+                
+                # Cross patterns
+                ([[0, 1, 0], [1, 1, 1], [0, 1, 0]], [[1, 0, 1], [0, 0, 0], [1, 0, 1]]),  # Cross to corners
+                ([[1, 0, 1], [0, 0, 0], [1, 0, 1]], [[0, 1, 0], [1, 1, 1], [0, 1, 0]]),  # Corners to cross
+                
+                # Frame patterns
+                ([[1, 1, 1], [1, 0, 1], [1, 1, 1]], [[0, 0, 0], [0, 1, 0], [0, 0, 0]]),  # Frame to center
+                ([[0, 0, 0], [0, 1, 0], [0, 0, 0]], [[1, 1, 1], [1, 0, 1], [1, 1, 1]]),  # Center to frame
             ]
         else:
             patterns = []
         
         # Add patterns multiple times with variations
+        variation_count = 0
+        max_variations_per_pattern = 10  # Generate multiple variations per pattern
+        
         while len(self.samples) < target_samples and patterns:
             for inp, out in patterns:
                 if len(self.samples) >= target_samples:
                     break
-                    
-                # Add original
-                sample = {
-                    'input': np.array(inp),
-                    'output': np.array(out),
-                    'is_arc': True,
-                    'complexity': self.stage_config.get('complexity', 'ensemble')
-                }
-                self.samples.append(sample)
                 
-                # Add with random color permutations
-                if len(self.samples) < target_samples:
-                    colors = list(set(np.array(inp).flatten()) | set(np.array(out).flatten()))
-                    if len(colors) > 1:
-                        color_map = dict(zip(colors, np.random.permutation(colors)))
-                        inp_perm = np.vectorize(color_map.get)(np.array(inp))
-                        out_perm = np.vectorize(color_map.get)(np.array(out))
-                        sample_perm = {
-                            'input': inp_perm,
-                            'output': out_perm,
+                # Generate multiple variations of each pattern
+                for _ in range(max_variations_per_pattern):
+                    if len(self.samples) >= target_samples:
+                        break
+                        
+                    # Decide which variation to apply
+                    variation_type = variation_count % 5
+                    
+                    if variation_type == 0:
+                        # Add original
+                        sample = {
+                            'input': np.array(inp),
+                            'output': np.array(out),
                             'is_arc': True,
                             'complexity': self.stage_config.get('complexity', 'ensemble')
                         }
-                        self.samples.append(sample_perm)
+                        self.samples.append(sample)
+                    
+                    elif variation_type == 1:
+                        # Add with random color permutations
+                        colors = list(set(np.array(inp).flatten()) | set(np.array(out).flatten()))
+                        if len(colors) > 1:
+                            # Generate random permutation
+                            color_map = dict(zip(colors, np.random.permutation(colors)))
+                            inp_perm = np.vectorize(color_map.get)(np.array(inp))
+                            out_perm = np.vectorize(color_map.get)(np.array(out))
+                            sample_perm = {
+                                'input': inp_perm,
+                                'output': out_perm,
+                                'is_arc': True,
+                                'complexity': self.stage_config.get('complexity', 'ensemble')
+                            }
+                            self.samples.append(sample_perm)
+                    
+                    elif variation_type == 2:
+                        # Add rotated version (if square)
+                        inp_arr = np.array(inp)
+                        out_arr = np.array(out)
+                        if inp_arr.shape[0] == inp_arr.shape[1] and out_arr.shape[0] == out_arr.shape[1]:
+                            k = np.random.randint(1, 4)  # 90, 180, or 270 degrees
+                            sample_rot = {
+                                'input': np.rot90(inp_arr, k),
+                                'output': np.rot90(out_arr, k),
+                                'is_arc': True,
+                                'complexity': self.stage_config.get('complexity', 'ensemble')
+                            }
+                            self.samples.append(sample_rot)
+                    
+                    elif variation_type == 3:
+                        # Add flipped version
+                        inp_arr = np.array(inp)
+                        out_arr = np.array(out)
+                        axis = np.random.randint(0, 2)  # Horizontal or vertical flip
+                        sample_flip = {
+                            'input': np.flip(inp_arr, axis),
+                            'output': np.flip(out_arr, axis),
+                            'is_arc': True,
+                            'complexity': self.stage_config.get('complexity', 'ensemble')
+                        }
+                        self.samples.append(sample_flip)
+                    
+                    elif variation_type == 4:
+                        # Add with color shift (all colors +1 mod 10)
+                        inp_arr = np.array(inp)
+                        out_arr = np.array(out)
+                        sample_shift = {
+                            'input': (inp_arr + np.random.randint(1, 10)) % 10,
+                            'output': (out_arr + np.random.randint(1, 10)) % 10,
+                            'is_arc': True,
+                            'complexity': self.stage_config.get('complexity', 'ensemble')
+                        }
+                        self.samples.append(sample_shift)
+                    
+                    variation_count += 1
         
         print(f"\033[92m✅ Added {len(self.samples) - original_count} synthetic samples for {self.max_grid_size}x{self.max_grid_size} grids\033[0m")
         print(f"\033[92m✅ Total samples now: {len(self.samples)}\033[0m")
@@ -875,7 +998,7 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
                 scaler.update()
                 
                 # Step OneCycleLR per batch (AFTER optimizer.step())
-                if use_onecycle:
+                if use_onecycle and not first_batch:
                     fusion_scheduler.step()
                     if specialist_output_scheduler is not None:
                         specialist_output_scheduler.step()
@@ -932,11 +1055,13 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
                 print(f"\033[96m✅ Ultimate Stage {stage_idx} complete! Final exact: {epoch_performance:.2%}\033[0m")
         
         # Step schedulers at END of epoch (not per batch!)
-        fusion_scheduler.step()
-        if specialist_output_scheduler is not None:
-            specialist_output_scheduler.step()
-        if specialist_core_scheduler is not None:
-            specialist_core_scheduler.step()
+        # For OneCycleLR, we already step per batch, so skip here
+        if not use_onecycle:
+            fusion_scheduler.step()
+            if specialist_output_scheduler is not None:
+                specialist_output_scheduler.step()
+            if specialist_core_scheduler is not None:
+                specialist_core_scheduler.step()
         
         # Memory cleanup
         torch.cuda.empty_cache()

@@ -22,6 +22,10 @@ from typing import Dict, List, Optional, Tuple
 import random
 from collections import defaultdict
 import argparse
+import warnings
+
+# Suppress the specific scheduler warning for OneCycleLR
+warnings.filterwarnings("ignore", message="Detected call of `lr_scheduler.step()` before `optimizer.step()`")
 
 # Add project paths
 sys.path.append('/content/AutomataNexus_Olympus_AGI2')
@@ -765,7 +769,7 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
                 scaler.update()
                 
                 # Step OneCycleLR per batch (AFTER optimizer.step())
-                if use_onecycle and not first_batch:  # Skip first batch to avoid warning
+                if use_onecycle:
                     fusion_scheduler.step()
                     if specialist_output_scheduler is not None:
                         specialist_output_scheduler.step()
@@ -801,7 +805,7 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
                 'Consensus': f"{avg_consensus:.3f}",
                 'SelfAtt': f"{loss_dict.get('self_attention', 0):.4f}",
                 'UltCoord': f"{loss_dict.get('ultimate_coordination', 0):.4f}",
-                'FusionLR': f"{fusion_scheduler.get_last_lr()[0] if not first_batch else fusion_optimizer.param_groups[0]['lr']:.6f}"
+                'FusionLR': f"{fusion_optimizer.param_groups[0]['lr']:.6f}"
             })
         
         # Calculate epoch performance

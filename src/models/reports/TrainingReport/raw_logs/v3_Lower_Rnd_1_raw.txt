@@ -1,0 +1,230 @@
+🏛️ Starting OLYMPUS V3 Ultimate Ensemble Training...
+==================================================================================================================================
+🏛️ OLYMPUS Ensemble Training V3 - Ultimate Multi-Specialist Mastery for ARC-AGI-2
+Full Specialist Coordination + Ultimate Meta-Learning + Ensemble Self-Attention
+Target: 95%+ Performance with Ultimate Ensemble Mastery
+==================================================================================================================================
+=============================================================================================================================
+🏛️ OLYMPUS Ensemble Training V2 - Advanced Multi-Specialist Coordination for ARC-AGI-2
+Partial Specialist Fine-Tuning + Advanced Fusion + Meta-Learning Coordination
+Target: 90%+ Performance with Advanced Ensemble Synergy
+=============================================================================================================================
+🏛️ Training LOWER STAGES ONLY (0-5, grids 4x4-9x9)
+🏛️ Initializing OLYMPUS Ensemble V3 Ultimate Training...
+🏛️ Training stages 0 to 5 (grids 4x4 to 9x9)
+🏛️ Initializing OLYMPUS Ensemble - Ultimate AGI2 System
+🏛️ OLYMPUS initialized with 102,315,677 total parameters across all specialists
+🏛️ FUSION ENGINE: 32 loaded, 0 missing/mismatched
+🏛️ SUCCESS: All 32 fusion engine weights loaded successfully!
+🏛️ OLYMPUS ensemble loaded from /content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v3_best.pt
+🏛️ OLYMPUS V3 LOADED from checkpoint - continuing training from previous best!
+🏛️ All specialist parameters unfrozen for ultimate fine-tuning
+🏛️ Ultimate Training: 32 fusion, 40 specialist output, 1058 specialist core parameters
+🏛️ Starting Ultimate Progressive Ensemble Training - Stages 0 to 5
+
+=======================================================================================================================================
+🏛️ V3 Ultimate Stage 0: Grid Size 4 | Complexity: ultimate_micro_ensemble | Focus: ultimate_micro_grid_specialist_coordination
+=======================================================================================================================================
+🏛️ Augmented from 180 to 720 samples (4x)
+🏛️ Loaded 720 augmented samples for OLYMPUS V2 training
+🏛️ Stage 0: Batch=64, Epochs=20, LR_mult=2.0x, Aug=4x for 4x4 grids
+🏛️ Ultimate Micro Grid Specialist Coordination Stage 0 Epoch 0 (Warmup 1/3): 100% 12/12 [00:08<00:00,  1.46it/s, Loss=11.3949, Performance=58.8%, Consensus=0.585, SelfAtt=0.0812, UltCoord=0.0001, FusionLR=0.000120]
+⏰ OLYMPUS V3 Ultimate Stage 0, Epoch 0 (Global: 1):
+   🎯 Ultimate Ensemble: 58.75% exact, Loss: 19.793
+   📊 Fusion: 0.000120 | Output: 0.000020 | Core: 0.000010 | Grid: 4x4 | Consensus: 0.585
+🏛️ Ultimate Micro Grid Specialist Coordination Stage 0 Epoch 1 (Warmup 2/3): 100% 12/12 [00:05<00:00,  2.22it/s, Loss=4.4995, Performance=58.2%, Consensus=0.369, SelfAtt=0.0339, UltCoord=0.0001, FusionLR=0.000115]
+🏛️ Ultimate Micro Grid Specialist Coordination Stage 0 Epoch 2 (Warmup 3/3): 100% 12/12 [00:04<00:00,  2.86it/s, Loss=7.5017, Performance=60.0%, Consensus=0.545, SelfAtt=0.0166, UltCoord=0.0001, FusionLR=0.000103]
+🏛️ Ultimate Micro Grid Specialist Coordination Stage 0 Epoch 3: 100% 12/12 [00:04<00:00,  2.90it/s, Loss=5.9402, Performance=57.4%, Consensus=0.651, SelfAtt=0.0255, UltCoord=0.0001, FusionLR=0.000083]
+🏛️ Ultimate Micro Grid Specialist Coordination Stage 0 Epoch 4: 100% 12/12 [00:04<00:00,  2.89it/s, Loss=4.2647, Performance=56.9%, Consensus=0.379, SelfAtt=0.0115, UltCoord=0.0001, FusionLR=0.000061]
+🏛️ Ultimate Micro Grid Specialist Coordination Stage 0 Epoch 5: 100% 12/12 [00:04<00:00,  2.89it/s, Loss=7.7575, Performance=56.0%, Consensus=0.489, SelfAtt=0.0168, UltCoord=0.0001, FusionLR=0.000038]
+🏛️ Ultimate Micro Grid Specialist Coordination Stage 0 Epoch 6: 100% 12/12 [00:04<00:00,  2.93it/s, Loss=2.5017, Performance=57.5%, Consensus=0.527, SelfAtt=0.0119, UltCoord=0.0001, FusionLR=0.000019]
+⏰ OLYMPUS V3 Ultimate Stage 0, Epoch 6 (Global: 7):
+   🎯 Ultimate Ensemble: 57.50% exact, Loss: 9.095
+   📊 Fusion: 0.000019 | Output: 0.000003 | Core: 0.000002 | Grid: 4x4 | Consensus: 0.527
+🏛️ Ultimate Micro Grid Specialist Coordination Stage 0 Epoch 7: 100% 12/12 [00:04<00:00,  2.89it/s, Loss=3.2300, Performance=59.2%, Consensus=0.526, SelfAtt=0.0118, UltCoord=0.0001, FusionLR=0.000006]
+🏛️ Ultimate Micro Grid Specialist Coordination Stage 0 Epoch 8: 100% 12/12 [00:04<00:00,  2.92it/s, Loss=3.1472, Performance=61.4%, Consensus=0.485, SelfAtt=0.0107, UltCoord=0.0001, FusionLR=0.000120]
+🏛️ Ultimate Micro Grid Specialist Coordination Stage 0 Epoch 9: 100% 12/12 [00:04<00:00,  2.94it/s, Loss=2.7535, Performance=58.9%, Consensus=0.460, SelfAtt=0.0081, UltCoord=0.0001, FusionLR=0.000115]
+🏛️ Ultimate Micro Grid Specialist Coordination Stage 0 Epoch 10: 100% 12/12 [00:04<00:00,  2.88it/s, Loss=0.9030, Performance=58.6%, Consensus=0.478, SelfAtt=0.0064, UltCoord=0.0001, FusionLR=0.000103]
+🏛️ Ultimate Micro Grid Specialist Coordination Stage 0 Epoch 11: 100% 12/12 [00:04<00:00,  2.94it/s, Loss=3.6721, Performance=58.3%, Consensus=0.382, SelfAtt=0.0066, UltCoord=0.0001, FusionLR=0.000083]
+🏛️ Ultimate Micro Grid Specialist Coordination Stage 0 Epoch 12: 100% 12/12 [00:04<00:00,  2.95it/s, Loss=2.1048, Performance=59.0%, Consensus=0.367, SelfAtt=0.0056, UltCoord=0.0001, FusionLR=0.000061]
+⏰ OLYMPUS V3 Ultimate Stage 0, Epoch 12 (Global: 13):
+   🎯 Ultimate Ensemble: 59.03% exact, Loss: 6.321
+   📊 Fusion: 0.000061 | Output: 0.000010 | Core: 0.000005 | Grid: 4x4 | Consensus: 0.367
+🏛️ Ultimate Micro Grid Specialist Coordination Stage 0 Epoch 13: 100% 12/12 [00:04<00:00,  2.90it/s, Loss=1.5700, Performance=58.3%, Consensus=0.396, SelfAtt=0.0066, UltCoord=0.0001, FusionLR=0.000038]
+🏛️ Ultimate Micro Grid Specialist Coordination Stage 0 Epoch 14: 100% 12/12 [00:04<00:00,  2.93it/s, Loss=2.1561, Performance=57.8%, Consensus=0.450, SelfAtt=0.0064, UltCoord=0.0001, FusionLR=0.000019]
+🏛️ Ultimate Micro Grid Specialist Coordination Stage 0 Epoch 15: 100% 12/12 [00:04<00:00,  2.92it/s, Loss=1.7849, Performance=60.6%, Consensus=0.413, SelfAtt=0.0058, UltCoord=0.0000, FusionLR=0.000006]
+🏛️ Ultimate Micro Grid Specialist Coordination Stage 0 Epoch 16: 100% 12/12 [00:04<00:00,  2.94it/s, Loss=1.2745, Performance=59.4%, Consensus=0.588, SelfAtt=0.0068, UltCoord=0.0001, FusionLR=0.000120]
+🏛️ Ultimate Micro Grid Specialist Coordination Stage 0 Epoch 17: 100% 12/12 [00:04<00:00,  2.94it/s, Loss=2.7260, Performance=57.5%, Consensus=0.384, SelfAtt=0.0065, UltCoord=0.0000, FusionLR=0.000115]
+🏛️ Ultimate Micro Grid Specialist Coordination Stage 0 Epoch 18: 100% 12/12 [00:04<00:00,  2.91it/s, Loss=-0.4760, Performance=56.9%, Consensus=0.375, SelfAtt=0.0073, UltCoord=0.0001, FusionLR=0.000103]
+⏰ OLYMPUS V3 Ultimate Stage 0, Epoch 18 (Global: 19):
+   🎯 Ultimate Ensemble: 56.94% exact, Loss: 4.975
+   📊 Fusion: 0.000103 | Output: 0.000017 | Core: 0.000009 | Grid: 4x4 | Consensus: 0.375
+🏛️ Ultimate Micro Grid Specialist Coordination Stage 0 Epoch 19: 100% 12/12 [00:04<00:00,  2.95it/s, Loss=-1.4962, Performance=56.8%, Consensus=0.450, SelfAtt=0.0065, UltCoord=0.0001, FusionLR=0.000083]
+⏰ OLYMPUS V3 Ultimate Stage 0, Epoch 19 (Global: 20):
+   🎯 Ultimate Ensemble: 56.81% exact, Loss: 4.639
+   📊 Fusion: 0.000083 | Output: 0.000014 | Core: 0.000007 | Grid: 4x4 | Consensus: 0.450
+✅ Ultimate Stage 0 complete! Final exact: 56.81%
+🏛️ New best V3 ultimate performance: 61.39% - OLYMPUS V3 ULTIMATE saved!
+
+=======================================================================================================================================
+🏛️ V3 Ultimate Stage 1: Grid Size 5 | Complexity: ultimate_basic_shapes | Focus: ultimate_ensemble_shape_coordination
+=======================================================================================================================================
+🏛️ Augmented from 299 to 1196 samples (4x)
+🏛️ Loaded 1196 augmented samples for OLYMPUS V2 training
+🏛️ Stage 1: Batch=96, Epochs=16, LR_mult=1.5x, Aug=4x for 5x5 grids
+🏛️ Ultimate Ensemble Shape Coordination Stage 1 Epoch 0 (Warmup 1/2): 100% 13/13 [00:07<00:00,  1.71it/s, Loss=5.0480, Performance=61.1%, Consensus=1.000, SelfAtt=0.0072, UltCoord=0.0001, FusionLR=0.000061]
+⏰ OLYMPUS V3 Ultimate Stage 1, Epoch 0 (Global: 9):
+   🎯 Ultimate Ensemble: 61.12% exact, Loss: 8.027
+   📊 Fusion: 0.000061 | Output: 0.000010 | Core: 0.000005 | Grid: 5x5 | Consensus: 1.000
+🏛️ Ultimate Ensemble Shape Coordination Stage 1 Epoch 1 (Warmup 2/2): 100% 13/13 [00:05<00:00,  2.24it/s, Loss=3.1891, Performance=58.7%, Consensus=1.000, SelfAtt=0.0068, UltCoord=0.0001, FusionLR=0.000038]
+🏛️ Ultimate Ensemble Shape Coordination Stage 1 Epoch 2: 100% 13/13 [00:05<00:00,  2.26it/s, Loss=2.3780, Performance=60.5%, Consensus=1.000, SelfAtt=0.0063, UltCoord=0.0001, FusionLR=0.000019]
+🏛️ Ultimate Ensemble Shape Coordination Stage 1 Epoch 3: 100% 13/13 [00:05<00:00,  2.26it/s, Loss=2.9022, Performance=62.7%, Consensus=1.000, SelfAtt=0.0069, UltCoord=0.0001, FusionLR=0.000006]
+🏛️ Ultimate Ensemble Shape Coordination Stage 1 Epoch 4: 100% 13/13 [00:05<00:00,  2.24it/s, Loss=0.9424, Performance=62.9%, Consensus=1.000, SelfAtt=0.0081, UltCoord=0.0001, FusionLR=0.000120]
+🏛️ Ultimate Ensemble Shape Coordination Stage 1 Epoch 5: 100% 13/13 [00:05<00:00,  2.26it/s, Loss=2.6320, Performance=63.0%, Consensus=1.000, SelfAtt=0.0115, UltCoord=0.0001, FusionLR=0.000115]
+🏛️ Ultimate Ensemble Shape Coordination Stage 1 Epoch 6: 100% 13/13 [00:05<00:00,  2.24it/s, Loss=1.9879, Performance=61.1%, Consensus=1.000, SelfAtt=0.0139, UltCoord=0.0001, FusionLR=0.000103]
+⏰ OLYMPUS V3 Ultimate Stage 1, Epoch 6 (Global: 15):
+   🎯 Ultimate Ensemble: 61.12% exact, Loss: 3.623
+   📊 Fusion: 0.000103 | Output: 0.000017 | Core: 0.000009 | Grid: 5x5 | Consensus: 1.000
+🏛️ Ultimate Ensemble Shape Coordination Stage 1 Epoch 7: 100% 13/13 [00:05<00:00,  2.25it/s, Loss=-1.4233, Performance=61.9%, Consensus=1.000, SelfAtt=0.0139, UltCoord=0.0001, FusionLR=0.000083]
+🏛️ Ultimate Ensemble Shape Coordination Stage 1 Epoch 8: 100% 13/13 [00:05<00:00,  2.26it/s, Loss=1.1613, Performance=61.8%, Consensus=1.000, SelfAtt=0.0135, UltCoord=0.0001, FusionLR=0.000061]
+🏛️ Ultimate Ensemble Shape Coordination Stage 1 Epoch 9: 100% 13/13 [00:05<00:00,  2.27it/s, Loss=-0.3097, Performance=61.9%, Consensus=1.000, SelfAtt=0.0144, UltCoord=0.0001, FusionLR=0.000038]
+🏛️ Ultimate Ensemble Shape Coordination Stage 1 Epoch 10: 100% 13/13 [00:05<00:00,  2.25it/s, Loss=0.1448, Performance=62.0%, Consensus=1.000, SelfAtt=0.0146, UltCoord=0.0001, FusionLR=0.000019]
+🏛️ Ultimate Ensemble Shape Coordination Stage 1 Epoch 11: 100% 13/13 [00:05<00:00,  2.26it/s, Loss=2.0798, Performance=64.0%, Consensus=1.000, SelfAtt=0.0153, UltCoord=0.0001, FusionLR=0.000006]
+🏛️ Ultimate Ensemble Shape Coordination Stage 1 Epoch 12: 100% 13/13 [00:05<00:00,  2.25it/s, Loss=-1.1153, Performance=63.3%, Consensus=1.000, SelfAtt=0.0165, UltCoord=0.0001, FusionLR=0.000120]
+⏰ OLYMPUS V3 Ultimate Stage 1, Epoch 12 (Global: 21):
+   🎯 Ultimate Ensemble: 63.29% exact, Loss: 1.822
+   📊 Fusion: 0.000120 | Output: 0.000020 | Core: 0.000010 | Grid: 5x5 | Consensus: 1.000
+🏛️ Ultimate Ensemble Shape Coordination Stage 1 Epoch 13: 100% 13/13 [00:05<00:00,  2.25it/s, Loss=-0.7709, Performance=64.5%, Consensus=1.000, SelfAtt=0.0156, UltCoord=0.0001, FusionLR=0.000115]
+🏛️ Ultimate Ensemble Shape Coordination Stage 1 Epoch 14: 100% 13/13 [00:05<00:00,  2.25it/s, Loss=-2.4278, Performance=63.7%, Consensus=1.000, SelfAtt=0.0180, UltCoord=0.0001, FusionLR=0.000103]
+🏛️ Ultimate Ensemble Shape Coordination Stage 1 Epoch 15: 100% 13/13 [00:05<00:00,  2.23it/s, Loss=1.2719, Performance=63.9%, Consensus=1.000, SelfAtt=0.0171, UltCoord=0.0001, FusionLR=0.000083]
+⏰ OLYMPUS V3 Ultimate Stage 1, Epoch 15 (Global: 24):
+   🎯 Ultimate Ensemble: 63.88% exact, Loss: 0.528
+   📊 Fusion: 0.000083 | Output: 0.000014 | Core: 0.000007 | Grid: 5x5 | Consensus: 1.000
+✅ Ultimate Stage 1 complete! Final exact: 63.88%
+🏛️ New best V3 ultimate performance: 64.55% - OLYMPUS V3 ULTIMATE saved!
+
+=======================================================================================================================================
+🏛️ V3 Ultimate Stage 2: Grid Size 6 | Complexity: ultimate_simple_fusion | Focus: ultimate_decision_fusion_learning
+=======================================================================================================================================
+🏛️ Augmented from 505 to 2020 samples (4x)
+🏛️ Loaded 2020 augmented samples for OLYMPUS V2 training
+🏛️ Stage 2: Batch=96, Epochs=16, LR_mult=1.5x, Aug=4x for 6x6 grids
+🏛️ Ultimate Decision Fusion Learning Stage 2 Epoch 0 (Warmup 1/2): 100% 22/22 [00:14<00:00,  1.48it/s, Loss=-7.0087, Performance=61.7%, Consensus=1.000, SelfAtt=0.0150, UltCoord=0.0001, FusionLR=0.000061]
+⏰ OLYMPUS V3 Ultimate Stage 2, Epoch 0 (Global: 17):
+   🎯 Ultimate Ensemble: 61.73% exact, Loss: 1.961
+   📊 Fusion: 0.000061 | Output: 0.000010 | Core: 0.000005 | Grid: 6x6 | Consensus: 1.000
+🏛️ Ultimate Decision Fusion Learning Stage 2 Epoch 1 (Warmup 2/2): 100% 22/22 [00:12<00:00,  1.83it/s, Loss=-7.0061, Performance=62.0%, Consensus=1.000, SelfAtt=0.0177, UltCoord=0.0001, FusionLR=0.000038]
+🏛️ Ultimate Decision Fusion Learning Stage 2 Epoch 2: 100% 22/22 [00:12<00:00,  1.83it/s, Loss=-6.3221, Performance=61.8%, Consensus=1.000, SelfAtt=0.0161, UltCoord=0.0001, FusionLR=0.000019]
+🏛️ Ultimate Decision Fusion Learning Stage 2 Epoch 3: 100% 22/22 [00:11<00:00,  1.84it/s, Loss=-3.4616, Performance=63.2%, Consensus=1.000, SelfAtt=0.0148, UltCoord=0.0001, FusionLR=0.000006]
+🏛️ Ultimate Decision Fusion Learning Stage 2 Epoch 4: 100% 22/22 [00:11<00:00,  1.84it/s, Loss=-7.0676, Performance=63.2%, Consensus=1.000, SelfAtt=0.0167, UltCoord=0.0001, FusionLR=0.000120]
+🏛️ Ultimate Decision Fusion Learning Stage 2 Epoch 5: 100% 22/22 [00:12<00:00,  1.83it/s, Loss=-4.0492, Performance=61.4%, Consensus=1.000, SelfAtt=0.0148, UltCoord=0.0001, FusionLR=0.000115]
+🏛️ Ultimate Decision Fusion Learning Stage 2 Epoch 6: 100% 22/22 [00:12<00:00,  1.83it/s, Loss=1.9283, Performance=62.0%, Consensus=1.000, SelfAtt=0.0185, UltCoord=0.0000, FusionLR=0.000103]
+⏰ OLYMPUS V3 Ultimate Stage 2, Epoch 6 (Global: 23):
+   🎯 Ultimate Ensemble: 62.03% exact, Loss: -0.062
+   📊 Fusion: 0.000103 | Output: 0.000017 | Core: 0.000009 | Grid: 6x6 | Consensus: 1.000
+🏛️ Ultimate Decision Fusion Learning Stage 2 Epoch 7: 100% 22/22 [00:11<00:00,  1.83it/s, Loss=0.4091, Performance=62.8%, Consensus=1.000, SelfAtt=0.0176, UltCoord=0.0001, FusionLR=0.000083]
+🏛️ Ultimate Decision Fusion Learning Stage 2 Epoch 8: 100% 22/22 [00:13<00:00,  1.67it/s, Loss=-7.4514, Performance=63.2%, Consensus=0.977, SelfAtt=0.0225, UltCoord=0.0001, FusionLR=0.000061]
+🏛️ Ultimate Decision Fusion Learning Stage 2 Epoch 9: 100% 22/22 [00:12<00:00,  1.83it/s, Loss=-9.3889, Performance=63.2%, Consensus=1.000, SelfAtt=0.0230, UltCoord=0.0001, FusionLR=0.000038]
+🏛️ Ultimate Decision Fusion Learning Stage 2 Epoch 10: 100% 22/22 [00:11<00:00,  1.84it/s, Loss=-8.6788, Performance=62.9%, Consensus=1.000, SelfAtt=0.0161, UltCoord=0.0001, FusionLR=0.000019]
+🏛️ Ultimate Decision Fusion Learning Stage 2 Epoch 11: 100% 22/22 [00:12<00:00,  1.83it/s, Loss=-8.4620, Performance=64.0%, Consensus=1.000, SelfAtt=0.0172, UltCoord=0.0001, FusionLR=0.000006]
+🏛️ Ultimate Decision Fusion Learning Stage 2 Epoch 12: 100% 22/22 [00:12<00:00,  1.83it/s, Loss=-7.7106, Performance=63.8%, Consensus=1.000, SelfAtt=0.0174, UltCoord=0.0000, FusionLR=0.000120]
+⏰ OLYMPUS V3 Ultimate Stage 2, Epoch 12 (Global: 29):
+   🎯 Ultimate Ensemble: 63.81% exact, Loss: -1.511
+   📊 Fusion: 0.000120 | Output: 0.000020 | Core: 0.000010 | Grid: 6x6 | Consensus: 1.000
+🏛️ Ultimate Decision Fusion Learning Stage 2 Epoch 13: 100% 22/22 [00:13<00:00,  1.66it/s, Loss=-7.2058, Performance=63.6%, Consensus=1.000, SelfAtt=0.0129, UltCoord=0.0001, FusionLR=0.000115]
+🏛️ Ultimate Decision Fusion Learning Stage 2 Epoch 14: 100% 22/22 [00:12<00:00,  1.82it/s, Loss=-8.8920, Performance=64.1%, Consensus=1.000, SelfAtt=0.0136, UltCoord=0.0000, FusionLR=0.000103]
+🏛️ Ultimate Decision Fusion Learning Stage 2 Epoch 15: 100% 22/22 [00:12<00:00,  1.82it/s, Loss=-7.3205, Performance=63.6%, Consensus=1.000, SelfAtt=0.0131, UltCoord=0.0001, FusionLR=0.000083]
+⏰ OLYMPUS V3 Ultimate Stage 2, Epoch 15 (Global: 32):
+   🎯 Ultimate Ensemble: 63.56% exact, Loss: -2.089
+   📊 Fusion: 0.000083 | Output: 0.000014 | Core: 0.000007 | Grid: 6x6 | Consensus: 1.000
+✅ Ultimate Stage 2 complete! Final exact: 63.56%
+
+=======================================================================================================================================
+🏛️ V3 Ultimate Stage 3: Grid Size 7 | Complexity: ultimate_pattern_sync | Focus: ultimate_pattern_synchronization_training
+=======================================================================================================================================
+🏛️ Augmented from 674 to 2696 samples (4x)
+🏛️ Loaded 2696 augmented samples for OLYMPUS V2 training
+🏛️ Stage 3: Batch=128, Epochs=12, LR_mult=1.2x, Aug=4x for 7x7 grids
+🏛️ Ultimate Pattern Synchronization Training Stage 3 Epoch 0 (Warmup 1/1): 100% 22/22 [00:18<00:00,  1.18it/s, Loss=-3.0607, Performance=53.9%, Consensus=1.000, SelfAtt=0.0152, UltCoord=0.0001, FusionLR=0.000061]
+⏰ OLYMPUS V3 Ultimate Stage 3, Epoch 0 (Global: 25):
+   🎯 Ultimate Ensemble: 53.93% exact, Loss: 0.980
+   📊 Fusion: 0.000061 | Output: 0.000010 | Core: 0.000005 | Grid: 7x7 | Consensus: 1.000
+🏛️ Ultimate Pattern Synchronization Training Stage 3 Epoch 1: 100% 22/22 [00:16<00:00,  1.33it/s, Loss=-1.8590, Performance=55.3%, Consensus=1.000, SelfAtt=0.0152, UltCoord=0.0001, FusionLR=0.000038]
+🏛️ Ultimate Pattern Synchronization Training Stage 3 Epoch 2: 100% 22/22 [00:18<00:00,  1.21it/s, Loss=-3.3783, Performance=56.1%, Consensus=1.000, SelfAtt=0.0214, UltCoord=0.0001, FusionLR=0.000019]
+🏛️ Ultimate Pattern Synchronization Training Stage 3 Epoch 3: 100% 22/22 [00:16<00:00,  1.34it/s, Loss=-4.7309, Performance=57.7%, Consensus=1.000, SelfAtt=0.0145, UltCoord=0.0001, FusionLR=0.000006]
+🏛️ Ultimate Pattern Synchronization Training Stage 3 Epoch 4: 100% 22/22 [00:16<00:00,  1.33it/s, Loss=-5.4660, Performance=57.7%, Consensus=1.000, SelfAtt=0.0169, UltCoord=0.0001, FusionLR=0.000120]
+🏛️ Ultimate Pattern Synchronization Training Stage 3 Epoch 5: 100% 22/22 [00:16<00:00,  1.33it/s, Loss=-6.1504, Performance=57.6%, Consensus=1.000, SelfAtt=0.0149, UltCoord=0.0001, FusionLR=0.000115]
+🏛️ Ultimate Pattern Synchronization Training Stage 3 Epoch 6: 100% 22/22 [00:18<00:00,  1.21it/s, Loss=-0.1838, Performance=57.5%, Consensus=1.000, SelfAtt=0.0113, UltCoord=0.0001, FusionLR=0.000103]
+⏰ OLYMPUS V3 Ultimate Stage 3, Epoch 6 (Global: 31):
+   🎯 Ultimate Ensemble: 57.46% exact, Loss: -0.988
+   📊 Fusion: 0.000103 | Output: 0.000017 | Core: 0.000009 | Grid: 7x7 | Consensus: 1.000
+🏛️ Ultimate Pattern Synchronization Training Stage 3 Epoch 7: 100% 22/22 [00:16<00:00,  1.33it/s, Loss=-3.0257, Performance=58.2%, Consensus=1.000, SelfAtt=0.0137, UltCoord=0.0001, FusionLR=0.000083]
+🏛️ Ultimate Pattern Synchronization Training Stage 3 Epoch 8: 100% 22/22 [00:16<00:00,  1.34it/s, Loss=-4.3768, Performance=57.0%, Consensus=1.000, SelfAtt=0.0241, UltCoord=0.0001, FusionLR=0.000061]
+🏛️ Ultimate Pattern Synchronization Training Stage 3 Epoch 9: 100% 22/22 [00:16<00:00,  1.33it/s, Loss=-1.0176, Performance=59.3%, Consensus=1.000, SelfAtt=0.0154, UltCoord=0.0001, FusionLR=0.000038]
+🏛️ Ultimate Pattern Synchronization Training Stage 3 Epoch 10: 100% 22/22 [00:16<00:00,  1.33it/s, Loss=-5.6909, Performance=59.7%, Consensus=1.000, SelfAtt=0.0183, UltCoord=0.0001, FusionLR=0.000019]
+🏛️ Ultimate Pattern Synchronization Training Stage 3 Epoch 11: 100% 22/22 [00:16<00:00,  1.33it/s, Loss=-9.1543, Performance=60.1%, Consensus=1.000, SelfAtt=0.0196, UltCoord=0.0001, FusionLR=0.000006]
+⏰ OLYMPUS V3 Ultimate Stage 3, Epoch 11 (Global: 36):
+   🎯 Ultimate Ensemble: 60.09% exact, Loss: -2.273
+   📊 Fusion: 0.000006 | Output: 0.000001 | Core: 0.000000 | Grid: 7x7 | Consensus: 1.000
+✅ Ultimate Stage 3 complete! Final exact: 60.09%
+
+=======================================================================================================================================
+🏛️ V3 Ultimate Stage 4: Grid Size 8 | Complexity: ultimate_consensus_basic | Focus: ultimate_specialist_consensus
+=======================================================================================================================================
+🏛️ Augmented from 852 to 3408 samples (4x)
+🏛️ Loaded 3408 augmented samples for OLYMPUS V2 training
+🏛️ Stage 4: Batch=128, Epochs=12, LR_mult=1.2x, Aug=4x for 8x8 grids
+🏛️ Ultimate Specialist Consensus Stage 4 Epoch 0 (Warmup 1/1): 100% 27/27 [00:27<00:00,  1.02s/it, Loss=-1.7563, Performance=53.6%, Consensus=1.000, SelfAtt=0.0132, UltCoord=0.0001, FusionLR=0.000120]
+⏰ OLYMPUS V3 Ultimate Stage 4, Epoch 0 (Global: 33):
+   🎯 Ultimate Ensemble: 53.64% exact, Loss: -0.237
+   📊 Fusion: 0.000120 | Output: 0.000020 | Core: 0.000010 | Grid: 8x8 | Consensus: 1.000
+🏛️ Ultimate Specialist Consensus Stage 4 Epoch 1: 100% 27/27 [00:27<00:00,  1.01s/it, Loss=-2.5757, Performance=53.6%, Consensus=1.000, SelfAtt=0.0132, UltCoord=0.0001, FusionLR=0.000115]
+🏛️ Ultimate Specialist Consensus Stage 4 Epoch 2: 100% 27/27 [00:27<00:00,  1.01s/it, Loss=-2.0270, Performance=54.9%, Consensus=1.000, SelfAtt=0.0127, UltCoord=0.0001, FusionLR=0.000103]
+🏛️ Ultimate Specialist Consensus Stage 4 Epoch 3: 100% 27/27 [00:27<00:00,  1.01s/it, Loss=-2.6124, Performance=56.2%, Consensus=1.000, SelfAtt=0.0123, UltCoord=0.0001, FusionLR=0.000083]
+🏛️ Ultimate Specialist Consensus Stage 4 Epoch 4: 100% 27/27 [00:27<00:00,  1.01s/it, Loss=-2.7996, Performance=56.7%, Consensus=1.000, SelfAtt=0.0139, UltCoord=0.0001, FusionLR=0.000061]
+🏛️ Ultimate Specialist Consensus Stage 4 Epoch 5: 100% 27/27 [00:27<00:00,  1.01s/it, Loss=-3.2587, Performance=57.2%, Consensus=1.000, SelfAtt=0.0126, UltCoord=0.0001, FusionLR=0.000038]
+🏛️ Ultimate Specialist Consensus Stage 4 Epoch 6: 100% 27/27 [00:27<00:00,  1.00s/it, Loss=-3.1994, Performance=57.8%, Consensus=1.000, SelfAtt=0.0117, UltCoord=0.0001, FusionLR=0.000019]
+⏰ OLYMPUS V3 Ultimate Stage 4, Epoch 6 (Global: 39):
+   🎯 Ultimate Ensemble: 57.78% exact, Loss: -2.254
+   📊 Fusion: 0.000019 | Output: 0.000003 | Core: 0.000002 | Grid: 8x8 | Consensus: 1.000
+🏛️ Ultimate Specialist Consensus Stage 4 Epoch 7: 100% 27/27 [00:27<00:00,  1.01s/it, Loss=-3.7427, Performance=58.7%, Consensus=1.000, SelfAtt=0.0116, UltCoord=0.0001, FusionLR=0.000006]
+🏛️ Ultimate Specialist Consensus Stage 4 Epoch 8: 100% 27/27 [00:27<00:00,  1.00s/it, Loss=-1.7746, Performance=57.5%, Consensus=1.000, SelfAtt=0.0123, UltCoord=0.0001, FusionLR=0.000120]
+🏛️ Ultimate Specialist Consensus Stage 4 Epoch 9: 100% 27/27 [00:27<00:00,  1.00s/it, Loss=-3.5913, Performance=57.3%, Consensus=1.000, SelfAtt=0.0110, UltCoord=0.0001, FusionLR=0.000115]
+🏛️ Ultimate Specialist Consensus Stage 4 Epoch 10: 100% 27/27 [00:27<00:00,  1.00s/it, Loss=-3.4755, Performance=57.9%, Consensus=1.000, SelfAtt=0.0125, UltCoord=0.0001, FusionLR=0.000103]
+🏛️ Ultimate Specialist Consensus Stage 4 Epoch 11: 100% 27/27 [00:27<00:00,  1.01s/it, Loss=-6.0145, Performance=58.8%, Consensus=1.000, SelfAtt=0.0112, UltCoord=0.0001, FusionLR=0.000083]
+⏰ OLYMPUS V3 Ultimate Stage 4, Epoch 11 (Global: 44):
+   🎯 Ultimate Ensemble: 58.80% exact, Loss: -2.910
+   📊 Fusion: 0.000083 | Output: 0.000014 | Core: 0.000007 | Grid: 8x8 | Consensus: 1.000
+✅ Ultimate Stage 4 complete! Final exact: 58.80%
+
+=======================================================================================================================================
+🏛️ V3 Ultimate Stage 5: Grid Size 9 | Complexity: ultimate_fusion_intermediate | Focus: ultimate_intermediate_fusion_protocols
+=======================================================================================================================================
+🏛️ Augmented from 1208 to 4832 samples (4x)
+🏛️ Loaded 4832 augmented samples for OLYMPUS V2 training
+🏛️ Stage 5: Batch=256, Epochs=8, LR_mult=1.0x, Aug=4x for 9x9 grids
+🏛️ Ultimate Intermediate Fusion Protocols Stage 5 Epoch 0: 100% 19/19 [00:22<00:00,  1.21s/it, Loss=2.1377, Performance=50.5%, Consensus=1.000, SelfAtt=0.0154, UltCoord=0.0001, FusionLR=0.000061]
+⏰ OLYMPUS V3 Ultimate Stage 5, Epoch 0 (Global: 41):
+   🎯 Ultimate Ensemble: 50.52% exact, Loss: 2.471
+   📊 Fusion: 0.000061 | Output: 0.000010 | Core: 0.000005 | Grid: 9x9 | Consensus: 1.000
+🏛️ Ultimate Intermediate Fusion Protocols Stage 5 Epoch 1: 100% 19/19 [00:22<00:00,  1.19s/it, Loss=1.5438, Performance=51.4%, Consensus=0.996, SelfAtt=0.0138, UltCoord=0.0001, FusionLR=0.000038]
+🏛️ Ultimate Intermediate Fusion Protocols Stage 5 Epoch 2: 100% 19/19 [00:22<00:00,  1.19s/it, Loss=0.6130, Performance=51.9%, Consensus=0.989, SelfAtt=0.0140, UltCoord=0.0001, FusionLR=0.000019]
+🏛️ Ultimate Intermediate Fusion Protocols Stage 5 Epoch 3: 100% 19/19 [00:22<00:00,  1.19s/it, Loss=0.8200, Performance=53.1%, Consensus=0.987, SelfAtt=0.0140, UltCoord=0.0001, FusionLR=0.000006]
+🏛️ Ultimate Intermediate Fusion Protocols Stage 5 Epoch 4: 100% 19/19 [00:22<00:00,  1.19s/it, Loss=-0.4169, Performance=51.7%, Consensus=0.999, SelfAtt=0.0140, UltCoord=0.0001, FusionLR=0.000120]
+🏛️ Ultimate Intermediate Fusion Protocols Stage 5 Epoch 5: 100% 19/19 [00:22<00:00,  1.19s/it, Loss=-1.3225, Performance=51.5%, Consensus=1.000, SelfAtt=0.0131, UltCoord=0.0001, FusionLR=0.000115]
+🏛️ Ultimate Intermediate Fusion Protocols Stage 5 Epoch 6: 100% 19/19 [00:22<00:00,  1.19s/it, Loss=0.4951, Performance=52.2%, Consensus=1.000, SelfAtt=0.0136, UltCoord=0.0001, FusionLR=0.000103]
+⏰ OLYMPUS V3 Ultimate Stage 5, Epoch 6 (Global: 47):
+   🎯 Ultimate Ensemble: 52.21% exact, Loss: -0.058
+   📊 Fusion: 0.000103 | Output: 0.000017 | Core: 0.000009 | Grid: 9x9 | Consensus: 1.000
+🏛️ Ultimate Intermediate Fusion Protocols Stage 5 Epoch 7: 100% 19/19 [00:22<00:00,  1.19s/it, Loss=-0.2953, Performance=52.7%, Consensus=1.000, SelfAtt=0.0123, UltCoord=0.0001, FusionLR=0.000083]
+⏰ OLYMPUS V3 Ultimate Stage 5, Epoch 7 (Global: 48):
+   🎯 Ultimate Ensemble: 52.69% exact, Loss: -0.294
+   📊 Fusion: 0.000083 | Output: 0.000014 | Core: 0.000007 | Grid: 9x9 | Consensus: 1.000
+✅ Ultimate Stage 5 complete! Final exact: 52.69%
+
+============================================================================================================================================
+🏛️ OLYMPUS Ensemble V3 ULTIMATE Training Complete!
+🏛️ Trained stages 0 to 5 (grids 4x4 to 9x9)
+🏛️ Best V3 ULTIMATE Performance: 64.55%
+🏛️ OLYMPUS Ultimate Intelligence Achieved - Ready for ARC-AGI-2 Challenge!
+============================================================================================================================================

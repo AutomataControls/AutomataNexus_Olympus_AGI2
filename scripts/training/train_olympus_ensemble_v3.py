@@ -92,28 +92,32 @@ OLYMPUS_V3_CONFIG = {
     'min_lr_ratio': 0.001,  # Minimum LR as ratio of base
 }
 
-# Ultimate 15-Stage Progressive Configuration - Full Grid Coverage Like V2
+# Ultimate 17-Stage Progressive Configuration - Now includes 2x2 and 3x3!
 STAGE_CONFIG = [
-    # Ultimate Foundation Building (4x4 - 8x8)
-    {'stage': 0, 'max_grid_size': 4, 'synthesis_ratio': 0.95, 'complexity': 'ultimate_micro_ensemble', 'focus': 'ultimate_micro_grid_specialist_coordination'},
-    {'stage': 1, 'max_grid_size': 5, 'synthesis_ratio': 0.90, 'complexity': 'ultimate_basic_shapes', 'focus': 'ultimate_ensemble_shape_coordination'},
-    {'stage': 2, 'max_grid_size': 6, 'synthesis_ratio': 0.85, 'complexity': 'ultimate_simple_fusion', 'focus': 'ultimate_decision_fusion_learning'},
-    {'stage': 3, 'max_grid_size': 7, 'synthesis_ratio': 0.80, 'complexity': 'ultimate_pattern_sync', 'focus': 'ultimate_pattern_synchronization_training'},
-    {'stage': 4, 'max_grid_size': 8, 'synthesis_ratio': 0.75, 'complexity': 'ultimate_consensus_basic', 'focus': 'ultimate_specialist_consensus'},
+    # NEW: Ultra-micro grids for foundational learning (2x2 - 3x3)
+    {'stage': 0, 'max_grid_size': 2, 'synthesis_ratio': 0.98, 'complexity': 'ultimate_nano_ensemble', 'focus': 'ultimate_nano_grid_fundamental_patterns'},
+    {'stage': 1, 'max_grid_size': 3, 'synthesis_ratio': 0.96, 'complexity': 'ultimate_tiny_ensemble', 'focus': 'ultimate_tiny_grid_basic_transformations'},
+    
+    # Ultimate Foundation Building (4x4 - 8x8) 
+    {'stage': 2, 'max_grid_size': 4, 'synthesis_ratio': 0.95, 'complexity': 'ultimate_micro_ensemble', 'focus': 'ultimate_micro_grid_specialist_coordination'},
+    {'stage': 3, 'max_grid_size': 5, 'synthesis_ratio': 0.90, 'complexity': 'ultimate_basic_shapes', 'focus': 'ultimate_ensemble_shape_coordination'},
+    {'stage': 4, 'max_grid_size': 6, 'synthesis_ratio': 0.85, 'complexity': 'ultimate_simple_fusion', 'focus': 'ultimate_decision_fusion_learning'},
+    {'stage': 5, 'max_grid_size': 7, 'synthesis_ratio': 0.80, 'complexity': 'ultimate_pattern_sync', 'focus': 'ultimate_pattern_synchronization_training'},
+    {'stage': 6, 'max_grid_size': 8, 'synthesis_ratio': 0.75, 'complexity': 'ultimate_consensus_basic', 'focus': 'ultimate_specialist_consensus'},
     
     # Ultimate Intermediate Coordination (9x9 - 16x16)
-    {'stage': 5, 'max_grid_size': 9, 'synthesis_ratio': 0.70, 'complexity': 'ultimate_fusion_intermediate', 'focus': 'ultimate_intermediate_fusion_protocols'},
-    {'stage': 6, 'max_grid_size': 10, 'synthesis_ratio': 0.65, 'complexity': 'ultimate_composite_ensemble', 'focus': 'ultimate_composite_ensemble_decisions'},
-    {'stage': 7, 'max_grid_size': 11, 'synthesis_ratio': 0.60, 'complexity': 'ultimate_coordination_scaling', 'focus': 'ultimate_scaling_coordination_protocols'},
-    {'stage': 8, 'max_grid_size': 12, 'synthesis_ratio': 0.55, 'complexity': 'ultimate_complex_consensus', 'focus': 'ultimate_complex_consensus_building'},
-    {'stage': 9, 'max_grid_size': 14, 'synthesis_ratio': 0.50, 'complexity': 'ultimate_pattern_ensemble', 'focus': 'ultimate_pattern_ensemble_coordination'},
-    {'stage': 10, 'max_grid_size': 16, 'synthesis_ratio': 0.45, 'complexity': 'ultimate_ensemble_intelligence', 'focus': 'ultimate_ensemble_intelligence_emergence'},
+    {'stage': 7, 'max_grid_size': 9, 'synthesis_ratio': 0.70, 'complexity': 'ultimate_fusion_intermediate', 'focus': 'ultimate_intermediate_fusion_protocols'},
+    {'stage': 8, 'max_grid_size': 10, 'synthesis_ratio': 0.65, 'complexity': 'ultimate_composite_ensemble', 'focus': 'ultimate_composite_ensemble_decisions'},
+    {'stage': 9, 'max_grid_size': 11, 'synthesis_ratio': 0.60, 'complexity': 'ultimate_coordination_scaling', 'focus': 'ultimate_scaling_coordination_protocols'},
+    {'stage': 10, 'max_grid_size': 12, 'synthesis_ratio': 0.55, 'complexity': 'ultimate_complex_consensus', 'focus': 'ultimate_complex_consensus_building'},
+    {'stage': 11, 'max_grid_size': 14, 'synthesis_ratio': 0.50, 'complexity': 'ultimate_pattern_ensemble', 'focus': 'ultimate_pattern_ensemble_coordination'},
+    {'stage': 12, 'max_grid_size': 16, 'synthesis_ratio': 0.45, 'complexity': 'ultimate_ensemble_intelligence', 'focus': 'ultimate_ensemble_intelligence_emergence'},
     
     # Ultimate Advanced Mastery (18x18 - 30x30)
-    {'stage': 11, 'max_grid_size': 18, 'synthesis_ratio': 0.40, 'complexity': 'ultimate_multiscale_ensemble', 'focus': 'ultimate_multiscale_ensemble_reasoning'},
-    {'stage': 12, 'max_grid_size': 22, 'synthesis_ratio': 0.35, 'complexity': 'ultimate_coordination_mastery', 'focus': 'ultimate_coordination_protocols_mastery'},
-    {'stage': 13, 'max_grid_size': 27, 'synthesis_ratio': 0.30, 'complexity': 'ultimate_ensemble_mastery', 'focus': 'ultimate_ensemble_coordination_mastery'},
-    {'stage': 14, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'complexity': 'ultimate_olympus_god_mode', 'focus': 'ultimate_olympus_god_intelligence_mastery'}
+    {'stage': 13, 'max_grid_size': 18, 'synthesis_ratio': 0.40, 'complexity': 'ultimate_multiscale_ensemble', 'focus': 'ultimate_multiscale_ensemble_reasoning'},
+    {'stage': 14, 'max_grid_size': 22, 'synthesis_ratio': 0.35, 'complexity': 'ultimate_coordination_mastery', 'focus': 'ultimate_coordination_protocols_mastery'},
+    {'stage': 15, 'max_grid_size': 27, 'synthesis_ratio': 0.30, 'complexity': 'ultimate_ensemble_mastery', 'focus': 'ultimate_ensemble_coordination_mastery'},
+    {'stage': 16, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'complexity': 'ultimate_olympus_god_mode', 'focus': 'ultimate_olympus_god_intelligence_mastery'}
 ]
 
 # Device setup
@@ -478,16 +482,20 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=14):
         
         # Create ultimate augmented dataset for this stage
         # AGGRESSIVE AUGMENTATION for 85%+ on lower stages
-        if stage_idx >= 12:  # Stage 12+ = 22x22 and above
+        if stage_config['max_grid_size'] <= 3:  # 2x2-3x3 grids
+            augmentation_factor = 20  # MASSIVE 20x augmentation for tiny grids
+        elif stage_config['max_grid_size'] <= 6:  # 4x4-6x6 grids  
+            augmentation_factor = 15  # 15x augmentation for small grids
+        elif stage_config['max_grid_size'] <= 8:  # 7x7-8x8 grids
+            augmentation_factor = 10  # 10x augmentation for medium-small grids
+        elif stage_idx >= 14:  # Stage 14+ = 22x22 and above
             augmentation_factor = 1  # NO augmentation for huge grids
-        elif stage_idx >= 10:  # Stage 10-11 = 16x16-18x18
+        elif stage_idx >= 12:  # Stage 12-13 = 16x16-18x18
             augmentation_factor = 2  # Minimal augmentation
-        elif stage_idx >= 8:  # Stage 8-9 = 12x12-14x14
-            augmentation_factor = 3  # Reduced from 4
-        elif stage_idx <= 5:  # LOWER STAGES - AGGRESSIVE FOR 85%+
-            augmentation_factor = 8  # DOUBLE augmentation for lower grids
-        else:
-            augmentation_factor = 4  # Normal for middle stages
+        elif stage_idx >= 10:  # Stage 10-11 = 12x12-14x14
+            augmentation_factor = 3  # Reduced augmentation
+        else:  # 9x9-11x11
+            augmentation_factor = 6  # Moderate augmentation for intermediate
         
         dataset = OlympusV3UltimateDataset(
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',
@@ -497,17 +505,23 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=14):
         )
         
         # MAXIMIZE GPU USAGE for 85%+ on lower stages (80GB available!)
-        if stage_config['max_grid_size'] <= 4:
-            batch_size = 512  # MASSIVE batch for GPU utilization
+        if stage_config['max_grid_size'] <= 2:
+            batch_size = 1024  # ULTRA MASSIVE batch for tiny 2x2
+            epochs_multiplier = 10.0  # 10x epochs for 85%+
+        elif stage_config['max_grid_size'] <= 3:
+            batch_size = 768  # HUGE batch for 3x3
+            epochs_multiplier = 9.0  # 9x epochs for 85%+
+        elif stage_config['max_grid_size'] <= 4:
+            batch_size = 640  # Increased from 512 for 4x4
             epochs_multiplier = 8.0  # 8x epochs for 85%+
         elif stage_config['max_grid_size'] <= 5:
-            batch_size = 384  # Large batch for 5x5
+            batch_size = 576  # Increased from 384 for 5x5
             epochs_multiplier = 7.0  # 7x epochs for 85%+
         elif stage_config['max_grid_size'] <= 6:
-            batch_size = 256  # Large batch for 6x6
+            batch_size = 512  # DOUBLED from 256 for 6x6
             epochs_multiplier = 6.0  # 6x epochs for 85%+
         elif stage_config['max_grid_size'] <= 8:
-            batch_size = 192  # Good batch size for 8x8
+            batch_size = 512  # Increased to 512 minimum
             epochs_multiplier = 5.0  # 5x epochs for 85%+
         elif stage_config['max_grid_size'] <= 10:
             batch_size = 256  # Larger batch size
@@ -532,7 +546,11 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=14):
         stage_epochs = int(OLYMPUS_V3_CONFIG['epochs_per_stage'] * epochs_multiplier)
         
         # EXTREME LEARNING RATE BOOST for 85%+ on lower grids!
-        if stage_config['max_grid_size'] <= 4:
+        if stage_config['max_grid_size'] <= 2:
+            lr_multiplier = 4.0  # 4x learning rate for 2x2
+        elif stage_config['max_grid_size'] <= 3:
+            lr_multiplier = 3.5  # 3.5x learning rate for 3x3
+        elif stage_config['max_grid_size'] <= 4:
             lr_multiplier = 3.0  # TRIPLE learning rate for 4x4
         elif stage_config['max_grid_size'] <= 5:
             lr_multiplier = 2.5  # 2.5x learning rate for 5x5
@@ -566,7 +584,7 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=14):
         )
         
         # Create OneCycleLR schedulers per stage for lower stages
-        if use_onecycle and stage_idx <= 5:
+        if use_onecycle and stage_idx <= 7:  # Updated to include all stages up to 8x8
             steps_per_epoch = len(dataloader)
             total_steps = steps_per_epoch * stage_epochs
             
@@ -607,7 +625,7 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=14):
             fusion_optimizer, specialist_output_optimizer, specialist_core_optimizer,
             fusion_scheduler, specialist_output_scheduler, specialist_core_scheduler,
             scaler, stage_idx, stage_config, training_stats, stage_epochs,
-            use_onecycle=(use_onecycle and stage_idx <= 5)
+            use_onecycle=(use_onecycle and stage_idx <= 7)  # Updated for new stages
         )
         
         # Update best performance
@@ -677,7 +695,11 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
     
     # AGGRESSIVE WARMUP + RESTARTS for lower grids
     warmup_epochs = 0
-    if stage_config['max_grid_size'] <= 4:
+    if stage_config['max_grid_size'] <= 2:
+        warmup_epochs = 6  # 6 epoch warmup for 2x2
+    elif stage_config['max_grid_size'] <= 3:
+        warmup_epochs = 5  # 5 epoch warmup for 3x3
+    elif stage_config['max_grid_size'] <= 4:
         warmup_epochs = 4  # 4 epoch warmup for 4x4
     elif stage_config['max_grid_size'] <= 5:
         warmup_epochs = 3  # 3 epoch warmup for 5x5
@@ -837,7 +859,7 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
         gc.collect()
     
     # Additional cleanup between stages for large grids
-    if stage_idx >= 10:
+    if stage_idx >= 12:  # Updated threshold due to new stages
         # Force cleanup for large grids
         torch.cuda.empty_cache()
         gc.collect()
@@ -850,13 +872,13 @@ if __name__ == "__main__":
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description='Train OLYMPUS V3 Ensemble with stage selection')
     parser.add_argument('--lower-stages-only', action='store_true',
-                        help='Train only lower stages (0-5, grids 4x4-9x9)')
+                        help='Train only lower stages (0-7, grids 2x2-8x8)')
     parser.add_argument('--upper-stages-only', action='store_true', 
-                        help='Train only upper stages (6-14, grids 10x10-30x30)')
+                        help='Train only upper stages (8-16, grids 9x9-30x30)')
     parser.add_argument('--start-stage', type=int, default=None,
-                        help='Start from specific stage (0-14)')
+                        help='Start from specific stage (0-16)')
     parser.add_argument('--end-stage', type=int, default=None,
-                        help='End at specific stage (0-14)')
+                        help='End at specific stage (0-16)')
     args = parser.parse_args()
     
     # Set seeds for reproducibility
@@ -866,16 +888,16 @@ if __name__ == "__main__":
     
     # Determine stage range
     stage_start = 0
-    stage_end = 14
+    stage_end = 16  # Updated for 17 total stages
     
     if args.lower_stages_only:
         stage_start = 0
-        stage_end = 5
-        print(f"\033[92m🏛️ Training LOWER STAGES ONLY (0-5, grids 4x4-9x9)\033[0m")
+        stage_end = 7  # Updated to include up to 8x8 (was 5)
+        print(f"\033[92m🏛️ Training LOWER STAGES ONLY (0-7, grids 2x2-8x8)\033[0m")
     elif args.upper_stages_only:
-        stage_start = 6
-        stage_end = 14
-        print(f"\033[92m🏛️ Training UPPER STAGES ONLY (6-14, grids 10x10-30x30)\033[0m")
+        stage_start = 8  # Updated from 6
+        stage_end = 16  # Updated from 14
+        print(f"\033[92m🏛️ Training UPPER STAGES ONLY (8-16, grids 9x9-30x30)\033[0m")
     
     # Override with specific stage range if provided
     if args.start_stage is not None:

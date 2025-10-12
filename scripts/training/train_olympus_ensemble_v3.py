@@ -94,30 +94,29 @@ OLYMPUS_V3_CONFIG = {
 
 # Ultimate 17-Stage Progressive Configuration - Now includes 2x2 and 3x3!
 STAGE_CONFIG = [
-    # NEW: Ultra-micro grids for foundational learning (2x2 - 3x3)
-    {'stage': 0, 'max_grid_size': 2, 'synthesis_ratio': 0.98, 'complexity': 'ultimate_nano_ensemble', 'focus': 'ultimate_nano_grid_fundamental_patterns'},
-    {'stage': 1, 'max_grid_size': 3, 'synthesis_ratio': 0.96, 'complexity': 'ultimate_tiny_ensemble', 'focus': 'ultimate_tiny_grid_basic_transformations'},
+    # Start with 3x3 - skip 2x2 since real ARC doesn't have 2x2→2x2 transformations
+    {'stage': 0, 'max_grid_size': 3, 'synthesis_ratio': 0.98, 'complexity': 'ultimate_tiny_ensemble', 'focus': 'ultimate_tiny_grid_basic_transformations'},
     
     # Ultimate Foundation Building (4x4 - 8x8) 
-    {'stage': 2, 'max_grid_size': 4, 'synthesis_ratio': 0.95, 'complexity': 'ultimate_micro_ensemble', 'focus': 'ultimate_micro_grid_specialist_coordination'},
-    {'stage': 3, 'max_grid_size': 5, 'synthesis_ratio': 0.90, 'complexity': 'ultimate_basic_shapes', 'focus': 'ultimate_ensemble_shape_coordination'},
-    {'stage': 4, 'max_grid_size': 6, 'synthesis_ratio': 0.85, 'complexity': 'ultimate_simple_fusion', 'focus': 'ultimate_decision_fusion_learning'},
-    {'stage': 5, 'max_grid_size': 7, 'synthesis_ratio': 0.80, 'complexity': 'ultimate_pattern_sync', 'focus': 'ultimate_pattern_synchronization_training'},
-    {'stage': 6, 'max_grid_size': 8, 'synthesis_ratio': 0.75, 'complexity': 'ultimate_consensus_basic', 'focus': 'ultimate_specialist_consensus'},
+    {'stage': 1, 'max_grid_size': 4, 'synthesis_ratio': 0.95, 'complexity': 'ultimate_micro_ensemble', 'focus': 'ultimate_micro_grid_specialist_coordination'},
+    {'stage': 2, 'max_grid_size': 5, 'synthesis_ratio': 0.90, 'complexity': 'ultimate_basic_shapes', 'focus': 'ultimate_ensemble_shape_coordination'},
+    {'stage': 3, 'max_grid_size': 6, 'synthesis_ratio': 0.85, 'complexity': 'ultimate_simple_fusion', 'focus': 'ultimate_decision_fusion_learning'},
+    {'stage': 4, 'max_grid_size': 7, 'synthesis_ratio': 0.80, 'complexity': 'ultimate_pattern_sync', 'focus': 'ultimate_pattern_synchronization_training'},
+    {'stage': 5, 'max_grid_size': 8, 'synthesis_ratio': 0.75, 'complexity': 'ultimate_consensus_basic', 'focus': 'ultimate_specialist_consensus'},
     
     # Ultimate Intermediate Coordination (9x9 - 16x16)
-    {'stage': 7, 'max_grid_size': 9, 'synthesis_ratio': 0.70, 'complexity': 'ultimate_fusion_intermediate', 'focus': 'ultimate_intermediate_fusion_protocols'},
-    {'stage': 8, 'max_grid_size': 10, 'synthesis_ratio': 0.65, 'complexity': 'ultimate_composite_ensemble', 'focus': 'ultimate_composite_ensemble_decisions'},
-    {'stage': 9, 'max_grid_size': 11, 'synthesis_ratio': 0.60, 'complexity': 'ultimate_coordination_scaling', 'focus': 'ultimate_scaling_coordination_protocols'},
-    {'stage': 10, 'max_grid_size': 12, 'synthesis_ratio': 0.55, 'complexity': 'ultimate_complex_consensus', 'focus': 'ultimate_complex_consensus_building'},
-    {'stage': 11, 'max_grid_size': 14, 'synthesis_ratio': 0.50, 'complexity': 'ultimate_pattern_ensemble', 'focus': 'ultimate_pattern_ensemble_coordination'},
-    {'stage': 12, 'max_grid_size': 16, 'synthesis_ratio': 0.45, 'complexity': 'ultimate_ensemble_intelligence', 'focus': 'ultimate_ensemble_intelligence_emergence'},
+    {'stage': 6, 'max_grid_size': 9, 'synthesis_ratio': 0.70, 'complexity': 'ultimate_fusion_intermediate', 'focus': 'ultimate_intermediate_fusion_protocols'},
+    {'stage': 7, 'max_grid_size': 10, 'synthesis_ratio': 0.65, 'complexity': 'ultimate_composite_ensemble', 'focus': 'ultimate_composite_ensemble_decisions'},
+    {'stage': 8, 'max_grid_size': 11, 'synthesis_ratio': 0.60, 'complexity': 'ultimate_coordination_scaling', 'focus': 'ultimate_scaling_coordination_protocols'},
+    {'stage': 9, 'max_grid_size': 12, 'synthesis_ratio': 0.55, 'complexity': 'ultimate_complex_consensus', 'focus': 'ultimate_complex_consensus_building'},
+    {'stage': 10, 'max_grid_size': 14, 'synthesis_ratio': 0.50, 'complexity': 'ultimate_pattern_ensemble', 'focus': 'ultimate_pattern_ensemble_coordination'},
+    {'stage': 11, 'max_grid_size': 16, 'synthesis_ratio': 0.45, 'complexity': 'ultimate_ensemble_intelligence', 'focus': 'ultimate_ensemble_intelligence_emergence'},
     
     # Ultimate Advanced Mastery (18x18 - 30x30)
-    {'stage': 13, 'max_grid_size': 18, 'synthesis_ratio': 0.40, 'complexity': 'ultimate_multiscale_ensemble', 'focus': 'ultimate_multiscale_ensemble_reasoning'},
-    {'stage': 14, 'max_grid_size': 22, 'synthesis_ratio': 0.35, 'complexity': 'ultimate_coordination_mastery', 'focus': 'ultimate_coordination_protocols_mastery'},
-    {'stage': 15, 'max_grid_size': 27, 'synthesis_ratio': 0.30, 'complexity': 'ultimate_ensemble_mastery', 'focus': 'ultimate_ensemble_coordination_mastery'},
-    {'stage': 16, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'complexity': 'ultimate_olympus_god_mode', 'focus': 'ultimate_olympus_god_intelligence_mastery'}
+    {'stage': 12, 'max_grid_size': 18, 'synthesis_ratio': 0.40, 'complexity': 'ultimate_multiscale_ensemble', 'focus': 'ultimate_multiscale_ensemble_reasoning'},
+    {'stage': 13, 'max_grid_size': 22, 'synthesis_ratio': 0.35, 'complexity': 'ultimate_coordination_mastery', 'focus': 'ultimate_coordination_protocols_mastery'},
+    {'stage': 14, 'max_grid_size': 27, 'synthesis_ratio': 0.30, 'complexity': 'ultimate_ensemble_mastery', 'focus': 'ultimate_ensemble_coordination_mastery'},
+    {'stage': 15, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'complexity': 'ultimate_olympus_god_mode', 'focus': 'ultimate_olympus_god_intelligence_mastery'}
 ]
 
 # Device setup
@@ -315,62 +314,8 @@ class OlympusV3UltimateDataset(OlympusV2AugmentedDataset):
         target_samples = 2000  # MASSIVELY INCREASED for better training on tiny grids
         
         if self.max_grid_size == 2:
-            # Create comprehensive 2x2 pattern examples
-            patterns = [
-                # Diagonal patterns
-                ([[1, 0], [0, 1]], [[0, 1], [1, 0]]),  # Flip diagonal
-                ([[2, 0], [0, 2]], [[0, 2], [2, 0]]),  # Flip diagonal color 2
-                ([[3, 0], [0, 3]], [[0, 3], [3, 0]]),  # Flip diagonal color 3
-                ([[4, 0], [0, 4]], [[0, 4], [4, 0]]),  # Flip diagonal color 4
-                
-                # Fill patterns
-                ([[1, 1], [0, 0]], [[0, 0], [1, 1]]),  # Top/bottom swap
-                ([[1, 0], [1, 0]], [[0, 1], [0, 1]]),  # Left/right swap
-                ([[2, 2], [0, 0]], [[0, 0], [2, 2]]),  # Top/bottom swap color 2
-                ([[3, 0], [3, 0]], [[0, 3], [0, 3]]),  # Left/right swap color 3
-                
-                # Color change patterns
-                ([[1, 1], [1, 1]], [[2, 2], [2, 2]]),  # Change color 1->2
-                ([[2, 2], [2, 2]], [[3, 3], [3, 3]]),  # Change color 2->3
-                ([[3, 3], [3, 3]], [[4, 4], [4, 4]]),  # Change color 3->4
-                ([[4, 4], [4, 4]], [[1, 1], [1, 1]]),  # Change color 4->1
-                
-                # Partial fills
-                ([[1, 0], [0, 0]], [[1, 1], [1, 0]]),  # Expand from corner
-                ([[0, 1], [0, 0]], [[1, 1], [0, 1]]),  # Expand from corner
-                ([[0, 0], [1, 0]], [[0, 1], [1, 1]]),  # Expand from corner
-                ([[0, 0], [0, 1]], [[1, 0], [1, 1]]),  # Expand from corner
-                
-                # Rotation patterns
-                ([[1, 2], [0, 0]], [[0, 1], [0, 2]]),  # 90 degree rotation
-                ([[0, 0], [1, 2]], [[2, 0], [1, 0]]),  # 90 degree rotation
-                ([[1, 2], [3, 4]], [[3, 1], [4, 2]]),  # Complex rotation
-                ([[5, 6], [7, 8]], [[7, 5], [8, 6]]),  # Complex rotation
-                
-                # Inversion patterns
-                ([[1, 0], [0, 0]], [[0, 1], [1, 1]]),  # Invert
-                ([[0, 1], [0, 0]], [[1, 0], [1, 1]]),  # Invert
-                ([[0, 0], [1, 0]], [[1, 1], [0, 1]]),  # Invert
-                ([[0, 0], [0, 1]], [[1, 1], [1, 0]]),  # Invert
-                
-                # Mixed color patterns
-                ([[1, 2], [2, 1]], [[2, 1], [1, 2]]),  # Swap colors
-                ([[3, 4], [4, 3]], [[4, 3], [3, 4]]),  # Swap colors
-                ([[1, 2], [3, 4]], [[4, 3], [2, 1]]),  # Full rotation
-                ([[5, 6], [7, 8]], [[8, 7], [6, 5]]),  # Full rotation
-                
-                # Single pixel changes
-                ([[1, 0], [0, 0]], [[0, 0], [0, 0]]),  # Remove single pixel
-                ([[0, 0], [0, 0]], [[0, 1], [0, 0]]),  # Add single pixel
-                ([[1, 0], [0, 1]], [[0, 1], [1, 0]]),  # Swap pixels
-                ([[2, 0], [0, 3]], [[0, 3], [2, 0]]),  # Swap different colors
-                
-                # Pattern completion
-                ([[1, 0], [0, 0]], [[1, 0], [0, 1]]),  # Complete diagonal
-                ([[0, 2], [0, 0]], [[0, 2], [2, 0]]),  # Complete diagonal
-                ([[1, 1], [0, 0]], [[1, 1], [1, 1]]),  # Complete fill
-                ([[0, 0], [2, 2]], [[2, 2], [2, 2]]),  # Complete fill
-            ]
+            # Skip 2x2 - not in real ARC data
+            patterns = []
         elif self.max_grid_size == 3:
             # Create comprehensive 3x3 pattern examples
             patterns = [
@@ -1130,20 +1075,20 @@ if __name__ == "__main__":
     
     # Determine stage range
     stage_start = 0
-    stage_end = 16  # Updated for 17 total stages
+    stage_end = 15  # Now 16 total stages (0-15)
     
     if args.tiny_grids_only:
         stage_start = 0
-        stage_end = 3  # FOCUS ONLY ON 2x2-5x5!
-        print(f"\033[91m🔥 AGGRESSIVE TINY GRIDS TRAINING (0-3, grids 2x2-5x5) - MAXIMUM FOCUS!\033[0m")
+        stage_end = 2  # 3x3-5x5 (stages 0-2)
+        print(f"\033[91m🔥 AGGRESSIVE TINY GRIDS TRAINING (0-2, grids 3x3-5x5) - NO 2x2!\033[0m")
     elif args.lower_stages_only:
         stage_start = 0
-        stage_end = 7  # 2x2-8x8
-        print(f"\033[92m🏛️ Training LOWER STAGES ONLY (0-7, grids 2x2-8x8)\033[0m")
+        stage_end = 5  # 3x3-8x8 (stages 0-5)
+        print(f"\033[92m🏛️ Training LOWER STAGES ONLY (0-5, grids 3x3-8x8)\033[0m")
     elif args.upper_stages_only:
-        stage_start = 8  # Updated from 6
-        stage_end = 16  # Updated from 14
-        print(f"\033[92m🏛️ Training UPPER STAGES ONLY (8-16, grids 9x9-30x30)\033[0m")
+        stage_start = 6
+        stage_end = 15
+        print(f"\033[92m🏛️ Training UPPER STAGES ONLY (6-15, grids 9x9-30x30)\033[0m")
     
     # Override with specific stage range if provided
     if args.start_stage is not None:

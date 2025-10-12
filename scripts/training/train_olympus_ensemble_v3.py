@@ -42,7 +42,7 @@ OLYMPUS_V3_CONFIG = {
     'learning_rate': 0.0003,  # 2.5x HIGHER for aggressive learning
     'num_epochs': 240,  # Ultimate training: Extended for lower stages
     'gradient_accumulation': 1,  # No accumulation for speed
-    'epochs_per_stage': 4,  # ULTRA reduced base epochs - we multiply for tiny grids
+    'epochs_per_stage': 2,  # MINIMAL base - we multiply 20-30x for tiny grids!
     'curriculum_stages': 15,  # Full coverage like V2: 4x4 to 30x30
     
     # Ultimate Loss Configuration - AGGRESSIVE FOR 85%+
@@ -311,7 +311,7 @@ class OlympusV3UltimateDataset(OlympusV2AugmentedDataset):
     def _add_synthetic_tiny_grid_samples(self):
         """Add synthetic samples for tiny grids to ensure we have enough data"""
         original_count = len(self.samples)
-        target_samples = 2000  # MASSIVELY INCREASED for better training on tiny grids
+        target_samples = 20000  # ULTRA MASSIVE - we have 80GB to fill!
         
         if self.max_grid_size == 2:
             # Skip 2x2 - not in real ARC data
@@ -394,7 +394,7 @@ class OlympusV3UltimateDataset(OlympusV2AugmentedDataset):
         
         # Add patterns multiple times with variations
         variation_count = 0
-        max_variations_per_pattern = 50  # MASSIVELY INCREASED variations per pattern
+        max_variations_per_pattern = 500  # INSANE variations - fill that GPU!
         
         while len(self.samples) < target_samples and patterns:
             for inp, out in patterns:
@@ -665,12 +665,16 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
         
         # Create ultimate augmented dataset for this stage
         # AGGRESSIVE AUGMENTATION for 85%+ on lower stages
-        if stage_config['max_grid_size'] <= 3:  # 2x2-3x3 grids
-            augmentation_factor = 20  # MASSIVE 20x augmentation for tiny grids
-        elif stage_config['max_grid_size'] <= 6:  # 4x4-6x6 grids  
-            augmentation_factor = 15  # 15x augmentation for small grids
+        if stage_config['max_grid_size'] <= 3:  # 3x3 grids
+            augmentation_factor = 50  # INSANE 50x augmentation - fill the GPU!
+        elif stage_config['max_grid_size'] <= 4:  # 4x4 grids
+            augmentation_factor = 40  # 40x augmentation
+        elif stage_config['max_grid_size'] <= 5:  # 5x5 grids  
+            augmentation_factor = 30  # 30x augmentation
+        elif stage_config['max_grid_size'] <= 6:  # 6x6 grids
+            augmentation_factor = 20  # 20x augmentation
         elif stage_config['max_grid_size'] <= 8:  # 7x7-8x8 grids
-            augmentation_factor = 10  # 10x augmentation for medium-small grids
+            augmentation_factor = 15  # 15x augmentation for medium-small grids
         elif stage_idx >= 14:  # Stage 14+ = 22x22 and above
             augmentation_factor = 1  # NO augmentation for huge grids
         elif stage_idx >= 12:  # Stage 12-13 = 16x16-18x18
@@ -689,17 +693,17 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
         
         # MAXIMIZE GPU USAGE for 85%+ on lower stages (80GB available!)
         if stage_config['max_grid_size'] <= 2:
-            batch_size = 2048  # ULTRA MEGA batch for tiny 2x2
+            batch_size = 8192  # SKIP but keeping for compatibility
             epochs_multiplier = 20.0  # 20x epochs for tiny grids!
         elif stage_config['max_grid_size'] <= 3:
-            batch_size = 1536  # MEGA batch for 3x3
-            epochs_multiplier = 18.0  # 18x epochs for tiny grids!
+            batch_size = 8192  # INSANE batch for 3x3 - USE THAT A100!
+            epochs_multiplier = 30.0  # 30x epochs for maximum training!
         elif stage_config['max_grid_size'] <= 4:
-            batch_size = 1024  # Large batch for 4x4
-            epochs_multiplier = 15.0  # 15x epochs for small grids!
+            batch_size = 6144  # HUGE batch for 4x4
+            epochs_multiplier = 25.0  # 25x epochs for intense training!
         elif stage_config['max_grid_size'] <= 5:
-            batch_size = 768  # Large batch for 5x5
-            epochs_multiplier = 12.0  # 12x epochs for small grids!
+            batch_size = 4096  # MASSIVE batch for 5x5
+            epochs_multiplier = 20.0  # 20x epochs for thorough training!
         elif stage_config['max_grid_size'] <= 6:
             batch_size = 512  # DOUBLED from 256 for 6x6
             epochs_multiplier = 6.0  # 6x epochs for 85%+
@@ -756,14 +760,16 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
         
         print(f"\033[96m🏛️ Stage {stage_idx}: Batch={batch_size}, Epochs={stage_epochs}, LR_mult={lr_multiplier}x, Aug={augmentation_factor}x for {stage_config['max_grid_size']}x{stage_config['max_grid_size']} grids\033[0m")
         
-        # Create data loader
+        # Create data loader with MORE WORKERS
         dataloader = DataLoader(
             dataset,
             batch_size=batch_size,
             shuffle=True,
             collate_fn=foundation_collate_fn,
-            num_workers=0,  # Keep 0 for OLYMPUS stability
-            pin_memory=True
+            num_workers=8,  # Use multiple workers to load data faster!
+            pin_memory=True,
+            persistent_workers=True,  # Keep workers alive
+            prefetch_factor=4  # Prefetch more batches
         )
         
         # Create OneCycleLR schedulers per stage for lower stages
@@ -871,6 +877,8 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
         accumulation_steps = 6  # 6x accumulation for 22x22
     elif stage_config['max_grid_size'] >= 18:
         accumulation_steps = 4  # 4x accumulation for 18x18
+    elif stage_config['max_grid_size'] <= 5:
+        accumulation_steps = 8  # 8x for MASSIVE effective batch on tiny grids!
     elif stage_config['max_grid_size'] <= 9:
         accumulation_steps = 4  # 4x accumulation for EFFECTIVE huge batches
     else:
@@ -929,8 +937,8 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
             inputs = inputs.to(device)
             targets = targets.to(device)
             
-            # Forward pass with mixed precision
-            with autocast(device_type='cuda'):
+            # Forward pass with mixed precision - MORE AGGRESSIVE
+            with autocast(device_type='cuda', dtype=torch.float16):
                 # OLYMPUS ensemble forward pass
                 ensemble_decision = olympus(inputs, targets, mode='train')
                 loss_dict = criterion(ensemble_decision, targets, inputs)

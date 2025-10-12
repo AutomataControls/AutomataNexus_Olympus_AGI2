@@ -683,6 +683,7 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
         warmup_epochs = 2  # 2 epoch warmup for 7x7-8x8
     
     best_stage_performance = 0.0
+    first_batch = True  # Track first batch to avoid scheduler warning
     
     for epoch in range(epochs_for_stage):
         epoch_losses = defaultdict(float)
@@ -691,13 +692,13 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
         total_consensus = 0.0
         
         # Apply warmup learning rate scaling with COSINE warmup
-        if epoch < warmup_epochs:
+        if epoch < warmup_epochs and not use_onecycle:  # OneCycleLR has its own warmup
             # Use cosine warmup for smoother transitions
             warmup_factor = 0.5 * (1 + np.cos(np.pi * (warmup_epochs - epoch - 1) / warmup_epochs))
             # Get base learning rates from schedulers
-            base_fusion_lr = fusion_scheduler.get_last_lr()[0]
-            base_output_lr = specialist_output_scheduler.get_last_lr()[0] if specialist_output_scheduler else 0
-            base_core_lr = specialist_core_scheduler.get_last_lr()[0] if specialist_core_scheduler else 0
+            base_fusion_lr = fusion_scheduler.get_last_lr()[0] if not first_batch else OLYMPUS_V3_CONFIG['learning_rate']
+            base_output_lr = specialist_output_scheduler.get_last_lr()[0] if specialist_output_scheduler and not first_batch else OLYMPUS_V3_CONFIG['specialist_learning_rate']
+            base_core_lr = specialist_core_scheduler.get_last_lr()[0] if specialist_core_scheduler and not first_batch else OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.5
             
             # Apply warmup factor to base rates
             for param_group in fusion_optimizer.param_groups:
@@ -763,13 +764,15 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
                 
                 scaler.update()
                 
-                # Step OneCycleLR per batch
-                if use_onecycle:
+                # Step OneCycleLR per batch (AFTER optimizer.step())
+                if use_onecycle and not first_batch:  # Skip first batch to avoid warning
                     fusion_scheduler.step()
                     if specialist_output_scheduler is not None:
                         specialist_output_scheduler.step()
                     if specialist_core_scheduler is not None:
                         specialist_core_scheduler.step()
+                
+                first_batch = False  # No longer first batch
                 
                 # Zero gradients
                 fusion_optimizer.zero_grad()
@@ -798,7 +801,7 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
                 'Consensus': f"{avg_consensus:.3f}",
                 'SelfAtt': f"{loss_dict.get('self_attention', 0):.4f}",
                 'UltCoord': f"{loss_dict.get('ultimate_coordination', 0):.4f}",
-                'FusionLR': f"{fusion_scheduler.get_last_lr()[0]:.6f}"
+                'FusionLR': f"{fusion_scheduler.get_last_lr()[0] if not first_batch else fusion_optimizer.param_groups[0]['lr']:.6f}"
             })
         
         # Calculate epoch performance
@@ -809,9 +812,9 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
         # Log detailed progress with ultra light honey/amber for stage headers
         if epoch % 6 == 0 or epoch == epochs_for_stage - 1:
             avg_loss = epoch_losses['total']/len(dataloader)
-            fusion_lr = fusion_scheduler.get_last_lr()[0]
-            output_lr = specialist_output_scheduler.get_last_lr()[0] if specialist_output_scheduler else 0
-            core_lr = specialist_core_scheduler.get_last_lr()[0] if specialist_core_scheduler else 0
+            fusion_lr = fusion_scheduler.get_last_lr()[0] if fusion_scheduler else fusion_optimizer.param_groups[0]['lr']
+            output_lr = specialist_output_scheduler.get_last_lr()[0] if specialist_output_scheduler else specialist_output_optimizer.param_groups[0]['lr'] if specialist_output_optimizer else 0
+            core_lr = specialist_core_scheduler.get_last_lr()[0] if specialist_core_scheduler else specialist_core_optimizer.param_groups[0]['lr'] if specialist_core_optimizer else 0
             print(f"\033[38;2;255;204;153m⏰ OLYMPUS V3 Ultimate Stage {stage_idx}, Epoch {epoch} (Global: {stage_idx * OLYMPUS_V3_CONFIG['epochs_per_stage'] + epoch + 1}):\033[0m")
             print(f"\033[96m   🎯 Ultimate Ensemble: {epoch_performance:.2%} exact, Loss: {avg_loss:.3f}\033[0m")
             print(f"\033[96m   📊 Fusion: {fusion_lr:.6f} | Output: {output_lr:.6f} | Core: {core_lr:.6f} | Grid: {stage_config['max_grid_size']}x{stage_config['max_grid_size']} | Consensus: {avg_consensus:.3f}\033[0m")

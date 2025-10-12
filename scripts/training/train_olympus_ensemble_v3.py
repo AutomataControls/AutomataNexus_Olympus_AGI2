@@ -693,16 +693,16 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
         
         # MAXIMIZE GPU USAGE for 85%+ on lower stages (80GB available!)
         if stage_config['max_grid_size'] <= 2:
-            batch_size = 8192  # SKIP but keeping for compatibility
+            batch_size = 16384  # 2X MORE - SKIP but keeping for compatibility
             epochs_multiplier = 20.0  # 20x epochs for tiny grids!
         elif stage_config['max_grid_size'] <= 3:
-            batch_size = 8192  # INSANE batch for 3x3 - USE THAT A100!
+            batch_size = 16384  # 2X MORE - INSANE batch for 3x3 - USE THAT A100!
             epochs_multiplier = 30.0  # 30x epochs for maximum training!
         elif stage_config['max_grid_size'] <= 4:
-            batch_size = 6144  # HUGE batch for 4x4
+            batch_size = 12288  # 2X MORE - HUGE batch for 4x4
             epochs_multiplier = 25.0  # 25x epochs for intense training!
         elif stage_config['max_grid_size'] <= 5:
-            batch_size = 4096  # MASSIVE batch for 5x5
+            batch_size = 8192  # 2X MORE - MASSIVE batch for 5x5
             epochs_multiplier = 20.0  # 20x epochs for thorough training!
         elif stage_config['max_grid_size'] <= 6:
             batch_size = 512  # DOUBLED from 256 for 6x6

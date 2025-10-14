@@ -772,10 +772,26 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
             prefetch_factor=4  # Prefetch more batches
         )
         
+        # Dynamic gradient accumulation - AGGRESSIVE for lower stages
+        if stage_config['max_grid_size'] >= 27:
+            accumulation_steps = 8  # 8x accumulation for 27x27 and 30x30
+        elif stage_config['max_grid_size'] >= 22:
+            accumulation_steps = 6  # 6x accumulation for 22x22
+        elif stage_config['max_grid_size'] >= 18:
+            accumulation_steps = 4  # 4x accumulation for 18x18
+        elif stage_config['max_grid_size'] <= 5:
+            accumulation_steps = 8  # 8x for MASSIVE effective batch on tiny grids!
+        elif stage_config['max_grid_size'] <= 9:
+            accumulation_steps = 4  # 4x accumulation for EFFECTIVE huge batches
+        else:
+            accumulation_steps = OLYMPUS_V3_CONFIG['gradient_accumulation']  # Default
+        
         # Create OneCycleLR schedulers per stage for lower stages
         if use_onecycle and stage_idx <= 7:  # Updated to include all stages up to 8x8
             steps_per_epoch = len(dataloader)
-            total_steps = steps_per_epoch * stage_epochs
+            # FIX: Account for gradient accumulation - only step after accumulation_steps batches
+            steps_per_epoch_adjusted = (steps_per_epoch + accumulation_steps - 1) // accumulation_steps
+            total_steps = steps_per_epoch_adjusted * stage_epochs
             
             # AGGRESSIVE OneCycleLR for lower stages
             fusion_scheduler = optim.lr_scheduler.OneCycleLR(
@@ -814,7 +830,8 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
             fusion_optimizer, specialist_output_optimizer, specialist_core_optimizer,
             fusion_scheduler, specialist_output_scheduler, specialist_core_scheduler,
             scaler, stage_idx, stage_config, training_stats, stage_epochs,
-            use_onecycle=(use_onecycle and stage_idx <= 7)  # Updated for new stages
+            use_onecycle=(use_onecycle and stage_idx <= 7),  # Updated for new stages
+            accumulation_steps=accumulation_steps  # Pass accumulation steps
         )
         
         # Update best performance
@@ -829,7 +846,7 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
                 'fusion_optimizer_state_dict': fusion_optimizer.state_dict(),
                 'specialist_output_optimizer_state_dict': specialist_output_optimizer.state_dict() if specialist_output_optimizer else None,
                 'specialist_core_optimizer_state_dict': specialist_core_optimizer.state_dict() if specialist_core_optimizer else None,
-                'fusion_scheduler_state_dict': fusion_scheduler.state_dict(),
+                'fusion_scheduler_state_dict': fusion_scheduler.state_dict() if fusion_scheduler else None,
                 'specialist_output_scheduler_state_dict': specialist_output_scheduler.state_dict() if specialist_output_scheduler else None,
                 'specialist_core_scheduler_state_dict': specialist_core_scheduler.state_dict() if specialist_core_scheduler else None,
                 'best_performance': best_performance,
@@ -864,25 +881,11 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
                                 fusion_optimizer, specialist_output_optimizer, specialist_core_optimizer,
                                 fusion_scheduler, specialist_output_scheduler, specialist_core_scheduler,
                                 scaler, stage_idx, stage_config, training_stats, stage_epochs,
-                                use_onecycle=False):
+                                use_onecycle=False, accumulation_steps=1):
     """Train a single ultimate mastery ensemble stage"""
     olympus.train()
     
     epochs_for_stage = stage_epochs  # Use the dynamic epochs passed in
-    
-    # Dynamic gradient accumulation - AGGRESSIVE for lower stages
-    if stage_config['max_grid_size'] >= 27:
-        accumulation_steps = 8  # 8x accumulation for 27x27 and 30x30
-    elif stage_config['max_grid_size'] >= 22:
-        accumulation_steps = 6  # 6x accumulation for 22x22
-    elif stage_config['max_grid_size'] >= 18:
-        accumulation_steps = 4  # 4x accumulation for 18x18
-    elif stage_config['max_grid_size'] <= 5:
-        accumulation_steps = 8  # 8x for MASSIVE effective batch on tiny grids!
-    elif stage_config['max_grid_size'] <= 9:
-        accumulation_steps = 4  # 4x accumulation for EFFECTIVE huge batches
-    else:
-        accumulation_steps = OLYMPUS_V3_CONFIG['gradient_accumulation']  # Default
     
     # AGGRESSIVE WARMUP + RESTARTS for lower grids
     warmup_epochs = 0
@@ -913,7 +916,7 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
             # Use cosine warmup for smoother transitions
             warmup_factor = 0.5 * (1 + np.cos(np.pi * (warmup_epochs - epoch - 1) / warmup_epochs))
             # Get base learning rates from schedulers
-            base_fusion_lr = fusion_scheduler.get_last_lr()[0] if not first_batch else OLYMPUS_V3_CONFIG['learning_rate']
+            base_fusion_lr = fusion_scheduler.get_last_lr()[0] if fusion_scheduler and not first_batch else OLYMPUS_V3_CONFIG['learning_rate']
             base_output_lr = specialist_output_scheduler.get_last_lr()[0] if specialist_output_scheduler and not first_batch else OLYMPUS_V3_CONFIG['specialist_learning_rate']
             base_core_lr = specialist_core_scheduler.get_last_lr()[0] if specialist_core_scheduler and not first_batch else OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.5
             
@@ -981,12 +984,14 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
                 
                 scaler.update()
                 
-                # Step OneCycleLR per batch (AFTER optimizer.step())
+                # Step OneCycleLR per batch (AFTER optimizer.step()) with safety check
                 if use_onecycle and not first_batch:
-                    fusion_scheduler.step()
-                    if specialist_output_scheduler is not None:
+                    # FIX: Safety check to prevent stepping beyond total_steps
+                    if fusion_scheduler and fusion_scheduler._step_count < fusion_scheduler.total_steps:
+                        fusion_scheduler.step()
+                    if specialist_output_scheduler is not None and specialist_output_scheduler._step_count < specialist_output_scheduler.total_steps:
                         specialist_output_scheduler.step()
-                    if specialist_core_scheduler is not None:
+                    if specialist_core_scheduler is not None and specialist_core_scheduler._step_count < specialist_core_scheduler.total_steps:
                         specialist_core_scheduler.step()
                 
                 first_batch = False  # No longer first batch
@@ -1041,7 +1046,8 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
         # Step schedulers at END of epoch (not per batch!)
         # For OneCycleLR, we already step per batch, so skip here
         if not use_onecycle:
-            fusion_scheduler.step()
+            if fusion_scheduler:
+                fusion_scheduler.step()
             if specialist_output_scheduler is not None:
                 specialist_output_scheduler.step()
             if specialist_core_scheduler is not None:

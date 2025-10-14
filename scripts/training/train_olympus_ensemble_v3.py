@@ -1123,3 +1123,50 @@ if __name__ == "__main__":
         
     # Train OLYMPUS V3 Ultimate with selected stages
     olympus, best_performance = train_olympus_ensemble_v3(stage_start, stage_end)
+
+
+if __name__ == "__main__":
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description='Train OLYMPUS V3 Ensemble with stage selection')
+    parser.add_argument('--lower-stages-only', action='store_true',
+                        help='Train only lower stages (0-7, grids 2x2-8x8)')
+    parser.add_argument('--tiny-grids-only', action='store_true',
+                        help='FOCUS ONLY on tiny grids (0-3, grids 2x2-5x5) with AGGRESSIVE settings')
+    parser.add_argument('--upper-stages-only', action='store_true', 
+                        help='Train only upper stages (8-16, grids 9x9-30x30)')
+    parser.add_argument('--start-stage', type=int, default=None,
+                        help='Start from specific stage (0-16)')
+    parser.add_argument('--end-stage', type=int, default=None,
+                        help='End at specific stage (0-16)')
+    args = parser.parse_args()
+    
+    # Set seeds for reproducibility
+    torch.manual_seed(42)
+    np.random.seed(42)
+    random.seed(42)
+    
+    # Determine stage range
+    stage_start = 0
+    stage_end = 15  # Now 16 total stages (0-15)
+    
+    if args.tiny_grids_only:
+        stage_start = 0
+        stage_end = 2  # 3x3-5x5 (stages 0-2)
+        print(f"\033[91m🔥 AGGRESSIVE TINY GRIDS TRAINING (0-2, grids 3x3-5x5) - NO 2x2!\033[0m")
+    elif args.lower_stages_only:
+        stage_start = 0
+        stage_end = 5  # 3x3-8x8 (stages 0-5)
+        print(f"\033[92m🏛️ Training LOWER STAGES ONLY (0-5, grids 3x3-8x8)\033[0m")
+    elif args.upper_stages_only:
+        stage_start = 6
+        stage_end = 15
+        print(f"\033[92m🏛️ Training UPPER STAGES ONLY (6-15, grids 9x9-30x30)\033[0m")
+    
+    # Override with specific stage range if provided
+    if args.start_stage is not None:
+        stage_start = args.start_stage
+    if args.end_stage is not None:
+        stage_end = args.end_stage
+        
+    # Train OLYMPUS V3 Ultimate with selected stages
+    olympus, best_performance = train_olympus_ensemble_v3(stage_start, stage_end)

@@ -1046,12 +1046,23 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
         # Step schedulers at END of epoch (not per batch!)
         # For OneCycleLR, we already step per batch, so skip here
         if not use_onecycle:
-            if fusion_scheduler:
-                fusion_scheduler.step()
+            # Only step if schedulers exist (they're created as None for OneCycle stages initially)
+            if fusion_scheduler is not None:
+                try:
+                    fusion_scheduler.step()
+                except ValueError as e:
+                    # Catch scheduler step overflow errors
+                    print(f"Warning: Fusion scheduler step error: {e}")
             if specialist_output_scheduler is not None:
-                specialist_output_scheduler.step()
+                try:
+                    specialist_output_scheduler.step()
+                except ValueError as e:
+                    print(f"Warning: Output scheduler step error: {e}")
             if specialist_core_scheduler is not None:
-                specialist_core_scheduler.step()
+                try:
+                    specialist_core_scheduler.step()
+                except ValueError as e:
+                    print(f"Warning: Core scheduler step error: {e}")
         
         # Memory cleanup
         torch.cuda.empty_cache()

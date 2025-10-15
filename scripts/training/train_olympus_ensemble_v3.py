@@ -614,38 +614,6 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
     
     print(f"\033[96m🏛️ Ultimate Training: {len(fusion_params)} fusion, {len(specialist_output_params)} specialist output, {len(specialist_core_params)} specialist core parameters\033[0m")
     
-    # AGGRESSIVE SCHEDULERS for 85%+ target
-    # Using OneCycleLR for aggressive training on lower stages
-    use_onecycle = True  # Flag to switch between schedulers
-    
-    if use_onecycle:
-        # We'll create these per-stage for OneCycleLR
-        fusion_scheduler = None
-        specialist_output_scheduler = None
-        specialist_core_scheduler = None
-    else:
-        # Original schedulers as fallback
-        fusion_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
-            fusion_optimizer,
-            T_0=4,  # FASTER restarts for exploration
-            T_mult=1,  # Keep constant restart interval
-            eta_min=OLYMPUS_V3_CONFIG['learning_rate'] * 0.001
-        )
-        
-        specialist_output_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
-            specialist_output_optimizer,
-            T_0=4,  # FASTER restarts
-            T_mult=1,  # Keep constant restart interval
-            eta_min=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.001
-        ) if specialist_output_optimizer else None
-        
-        specialist_core_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
-            specialist_core_optimizer,
-            T_0=4,  # FASTER restarts
-            T_mult=1,  # Keep constant restart interval
-            eta_min=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.5 * 0.001
-        ) if specialist_core_optimizer else None
-    
     # Mixed precision training
     scaler = GradScaler()
     
@@ -653,6 +621,9 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
     best_performance = 0.0
     training_stats = defaultdict(list)
     
+    ### FIX 2: Initialize a running epoch counter for accurate global epoch logging
+    global_epoch_counter = 0
+
     print(f"\033[96m🏛️ Starting Ultimate Progressive Ensemble Training - Stages {stage_start} to {stage_end}\033[0m")
     
     # Ultimate progressive training through selected mastery stages
@@ -665,7 +636,6 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
         
         # Create ultimate augmented dataset for this stage
         # AGGRESSIVE AUGMENTATION for 85%+ on lower stages
-        # CHANGE 3: Increase augmentation for mid-size grids
         if stage_config['max_grid_size'] <= 3:
             augmentation_factor = 50
         elif stage_config['max_grid_size'] <= 4:
@@ -679,9 +649,9 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
         elif stage_idx >= 14:  # 27x27+
             augmentation_factor = 1
         elif stage_idx >= 12:  # 18x18-22x22
-            augmentation_factor = 3  # INCREASE from 2
+            augmentation_factor = 3
         elif stage_idx >= 10:  # 14x14-16x16
-            augmentation_factor = 5  # INCREASE from 3 ⭐ THIS IS YOUR RANGE
+            augmentation_factor = 5
         else:  # 9x9-12x12
             augmentation_factor = 6
         
@@ -693,7 +663,6 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
         )
         
         # MAXIMIZE GPU USAGE for 85%+ on lower stages (80GB available!)
-        # CHANGE 2: Adjust epochs multipliers for better training
         if stage_config['max_grid_size'] <= 2:
             batch_size = 16384
             epochs_multiplier = 20.0
@@ -713,42 +682,42 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
             batch_size = 512
             epochs_multiplier = 5.0
         elif stage_config['max_grid_size'] <= 10:
-            batch_size = 384  # INCREASE from 256
-            epochs_multiplier = 4.0  # INCREASE from 3.0 (was giving you only 1 epoch!)
+            batch_size = 384
+            epochs_multiplier = 4.0
         elif stage_config['max_grid_size'] <= 16:
             batch_size = 384
-            epochs_multiplier = 3.0  # INCREASE from 0.8 (THIS WAS YOUR PROBLEM!)
+            epochs_multiplier = 3.0
         elif stage_config['max_grid_size'] <= 20:
             batch_size = 256
-            epochs_multiplier = 2.0  # INCREASE from 0.7
+            epochs_multiplier = 2.0
         elif stage_config['max_grid_size'] <= 22:
             batch_size = 64
-            epochs_multiplier = 1.5  # INCREASE from 0.5
+            epochs_multiplier = 1.5
         elif stage_config['max_grid_size'] <= 27:
             batch_size = 48
-            epochs_multiplier = 1.0  # INCREASE from 0.4
+            epochs_multiplier = 1.0
         else:
             batch_size = 32
-            epochs_multiplier = 0.8  # INCREASE from 0.3
+            epochs_multiplier = 0.8
         
         # Calculate actual epochs for this stage
         stage_epochs = int(OLYMPUS_V3_CONFIG['epochs_per_stage'] * epochs_multiplier)
         
         # EXTREME LEARNING RATE BOOST for 85%+ on lower grids!
         if stage_config['max_grid_size'] <= 2:
-            lr_multiplier = 10.0  # 10X INSANE learning rate for 2x2
+            lr_multiplier = 10.0
         elif stage_config['max_grid_size'] <= 3:
-            lr_multiplier = 8.0  # 8X learning rate for 3x3
+            lr_multiplier = 8.0
         elif stage_config['max_grid_size'] <= 4:
-            lr_multiplier = 6.0  # 6X learning rate for 4x4
+            lr_multiplier = 6.0
         elif stage_config['max_grid_size'] <= 5:
-            lr_multiplier = 5.0  # 5X learning rate for 5x5
+            lr_multiplier = 5.0
         elif stage_config['max_grid_size'] <= 6:
-            lr_multiplier = 2.0  # DOUBLE learning rate for 6x6
+            lr_multiplier = 2.0
         elif stage_config['max_grid_size'] <= 8:
-            lr_multiplier = 1.5  # 1.5x learning rate for 7x7-8x8
+            lr_multiplier = 1.5
         else:
-            lr_multiplier = 1.0  # Normal learning rate for larger grids
+            lr_multiplier = 1.0
         
         # Adjust learning rates for this stage
         for param_group in fusion_optimizer.param_groups:
@@ -768,84 +737,88 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
             batch_size=batch_size,
             shuffle=True,
             collate_fn=foundation_collate_fn,
-            num_workers=8,  # Use multiple workers to load data faster!
+            num_workers=8,
             pin_memory=True,
-            persistent_workers=True,  # Keep workers alive
-            prefetch_factor=4  # Prefetch more batches
+            persistent_workers=True,
+            prefetch_factor=4
         )
         
-        # Dynamic gradient accumulation - AGGRESSIVE for lower stages
-        # CHANGE 4: Add more aggressive gradient accumulation for mid grids
+        # Dynamic gradient accumulation
         if stage_config['max_grid_size'] >= 27:
             accumulation_steps = 8
         elif stage_config['max_grid_size'] >= 22:
             accumulation_steps = 6
         elif stage_config['max_grid_size'] >= 18:
             accumulation_steps = 4
-        elif stage_config['max_grid_size'] >= 14:  # ⭐ YOUR RANGE
-            accumulation_steps = 4  # INCREASE from default
+        elif stage_config['max_grid_size'] >= 14:
+            accumulation_steps = 4
         elif stage_config['max_grid_size'] <= 5:
             accumulation_steps = 8
         elif stage_config['max_grid_size'] <= 9:
             accumulation_steps = 4
         else:
-            accumulation_steps = 2  # Default for remaining
+            accumulation_steps = 2
         
-        # Create OneCycleLR schedulers per stage for lower stages
-        if use_onecycle and stage_idx <= 7:  # Updated to include all stages up to 8x8
+        # AGGRESSIVE SCHEDULERS for 85%+ target
+        use_onecycle = True
+        
+        ### FIX 1: Move scheduler creation INSIDE the stage loop to ensure they are re-initialized for each stage.
+        if use_onecycle and stage_idx <= 7:
             steps_per_epoch = len(dataloader)
-            # FIX: Account for gradient accumulation - only step after accumulation_steps batches
             steps_per_epoch_adjusted = (steps_per_epoch + accumulation_steps - 1) // accumulation_steps
             total_steps = steps_per_epoch_adjusted * stage_epochs
             
-            # AGGRESSIVE OneCycleLR for lower stages
             fusion_scheduler = optim.lr_scheduler.OneCycleLR(
                 fusion_optimizer,
-                max_lr=OLYMPUS_V3_CONFIG['learning_rate'] * lr_multiplier * 3,  # 3x peak
+                max_lr=OLYMPUS_V3_CONFIG['learning_rate'] * lr_multiplier * 3,
                 total_steps=total_steps,
-                pct_start=0.3,  # 30% warmup
-                anneal_strategy='cos',
-                div_factor=25.0,  # Start at max_lr/25
-                final_div_factor=1000.0  # End at max_lr/1000
+                pct_start=0.3, anneal_strategy='cos', div_factor=25.0, final_div_factor=1000.0
             )
-            
             specialist_output_scheduler = optim.lr_scheduler.OneCycleLR(
                 specialist_output_optimizer,
                 max_lr=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * lr_multiplier * 3,
                 total_steps=total_steps,
-                pct_start=0.3,
-                anneal_strategy='cos',
-                div_factor=25.0,
-                final_div_factor=1000.0
+                pct_start=0.3, anneal_strategy='cos', div_factor=25.0, final_div_factor=1000.0
             ) if specialist_output_optimizer else None
-            
             specialist_core_scheduler = optim.lr_scheduler.OneCycleLR(
                 specialist_core_optimizer,
                 max_lr=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.5 * lr_multiplier * 3,
                 total_steps=total_steps,
-                pct_start=0.3,
-                anneal_strategy='cos',
-                div_factor=25.0,
-                final_div_factor=1000.0
+                pct_start=0.3, anneal_strategy='cos', div_factor=25.0, final_div_factor=1000.0
             ) if specialist_core_optimizer else None
-        
+        else:
+            # Fallback to CosineAnnealing for higher stages, ensuring they are fresh for each stage
+            fusion_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+                fusion_optimizer, T_0=max(stage_epochs // 3, 1), T_mult=1,
+                eta_min=OLYMPUS_V3_CONFIG['learning_rate'] * 0.001
+            )
+            specialist_output_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+                specialist_output_optimizer, T_0=max(stage_epochs // 3, 1), T_mult=1,
+                eta_min=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.001
+            ) if specialist_output_optimizer else None
+            specialist_core_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+                specialist_core_optimizer, T_0=max(stage_epochs // 3, 1), T_mult=1,
+                eta_min=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.5 * 0.001
+            ) if specialist_core_optimizer else None
+
         # Stage-specific training with dynamic epochs
         stage_performance = train_ultimate_mastery_stage(
             olympus, dataloader, criterion, 
             fusion_optimizer, specialist_output_optimizer, specialist_core_optimizer,
             fusion_scheduler, specialist_output_scheduler, specialist_core_scheduler,
             scaler, stage_idx, stage_config, training_stats, stage_epochs,
-            use_onecycle=(use_onecycle and stage_idx <= 7),  # Updated for new stages
-            accumulation_steps=accumulation_steps  # Pass accumulation steps
+            use_onecycle=(use_onecycle and stage_idx <= 7),
+            accumulation_steps=accumulation_steps,
+            global_epoch_counter=global_epoch_counter ### FIX 2: Pass the running counter
         )
         
+        ### FIX 2: Update the running epoch counter after the stage is complete
+        global_epoch_counter += stage_epochs
+
         # Update best performance
         if stage_performance > best_performance:
             best_performance = stage_performance
-            # Save best OLYMPUS V3 model in InputBestModels directory
             os.makedirs('/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels', exist_ok=True)
-            
-            # Enhanced save with optimizer and scheduler state (similar to V2)
             ensemble_state = {
                 'ensemble_state_dict': olympus.state_dict(),
                 'fusion_optimizer_state_dict': fusion_optimizer.state_dict(),
@@ -856,7 +829,7 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
                 'specialist_core_scheduler_state_dict': specialist_core_scheduler.state_dict() if specialist_core_scheduler else None,
                 'best_performance': best_performance,
                 'stage': stage_idx,
-                'stage_range_trained': {'start': stage_start, 'end': stage_end},  # Track which stages were trained
+                'stage_range_trained': {'start': stage_start, 'end': stage_end},
                 'ensemble_config': {
                     'max_grid_size': olympus.max_grid_size,
                     'd_model': olympus.d_model,
@@ -864,11 +837,9 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
                 },
                 'performance_metrics': olympus.get_ensemble_state()
             }
-            
             torch.save(ensemble_state, '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v3_best.pt')
             print(f"\033[96m🏛️ New best V3 ultimate performance: {best_performance:.2%} - OLYMPUS V3 ULTIMATE saved!\033[0m")
         
-        # Memory cleanup
         torch.cuda.empty_cache()
         gc.collect()
     
@@ -886,29 +857,27 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
                                 fusion_optimizer, specialist_output_optimizer, specialist_core_optimizer,
                                 fusion_scheduler, specialist_output_scheduler, specialist_core_scheduler,
                                 scaler, stage_idx, stage_config, training_stats, stage_epochs,
-                                use_onecycle=False, accumulation_steps=1):
+                                use_onecycle=False, accumulation_steps=1, global_epoch_counter=0): ### FIX 2: Accept the counter
     """Train a single ultimate mastery ensemble stage"""
     olympus.train()
     
-    epochs_for_stage = stage_epochs  # Use the dynamic epochs passed in
+    epochs_for_stage = stage_epochs
     
     # AGGRESSIVE WARMUP + RESTARTS for lower grids
     warmup_epochs = 0
     if stage_config['max_grid_size'] <= 2:
-        warmup_epochs = 6  # 6 epoch warmup for 2x2
+        warmup_epochs = 6
     elif stage_config['max_grid_size'] <= 3:
-        warmup_epochs = 5  # 5 epoch warmup for 3x3
+        warmup_epochs = 5
     elif stage_config['max_grid_size'] <= 4:
-        warmup_epochs = 4  # 4 epoch warmup for 4x4
+        warmup_epochs = 4
     elif stage_config['max_grid_size'] <= 5:
-        warmup_epochs = 3  # 3 epoch warmup for 5x5
-    elif stage_config['max_grid_size'] <= 6:
-        warmup_epochs = 2  # 2 epoch warmup for 6x6
+        warmup_epochs = 3
     elif stage_config['max_grid_size'] <= 8:
-        warmup_epochs = 2  # 2 epoch warmup for 7x7-8x8
+        warmup_epochs = 2
     
     best_stage_performance = 0.0
-    first_batch = True  # Track first batch to avoid scheduler warning
+    first_batch = True
     
     for epoch in range(epochs_for_stage):
         epoch_losses = defaultdict(float)
@@ -916,16 +885,12 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
         total_samples = 0
         total_consensus = 0.0
         
-        # Apply warmup learning rate scaling with COSINE warmup
-        if epoch < warmup_epochs and not use_onecycle:  # OneCycleLR has its own warmup
-            # Use cosine warmup for smoother transitions
+        if epoch < warmup_epochs and not use_onecycle:
             warmup_factor = 0.5 * (1 + np.cos(np.pi * (warmup_epochs - epoch - 1) / warmup_epochs))
-            # Get base learning rates from schedulers
             base_fusion_lr = fusion_scheduler.get_last_lr()[0] if fusion_scheduler and not first_batch else OLYMPUS_V3_CONFIG['learning_rate']
             base_output_lr = specialist_output_scheduler.get_last_lr()[0] if specialist_output_scheduler and not first_batch else OLYMPUS_V3_CONFIG['specialist_learning_rate']
             base_core_lr = specialist_core_scheduler.get_last_lr()[0] if specialist_core_scheduler and not first_batch else OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.5
             
-            # Apply warmup factor to base rates
             for param_group in fusion_optimizer.param_groups:
                 param_group['lr'] = base_fusion_lr * warmup_factor
             if specialist_output_optimizer:
@@ -935,66 +900,39 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
                 for param_group in specialist_core_optimizer.param_groups:
                     param_group['lr'] = base_core_lr * warmup_factor
         
-        # Progress bar
-        # Dynamic progress bar with stage focus (like ATLAS)
         stage_focus = stage_config['focus'].replace('_', ' ').title()
-        warmup_str = f" (Warmup {epoch+1}/{warmup_epochs})" if epoch < warmup_epochs else ""
+        warmup_str = f" (Warmup {epoch+1}/{warmup_epochs})" if epoch < warmup_epochs and not use_onecycle else ""
         pbar = tqdm(dataloader, desc=f"\033[38;2;255;204;153m🏛️ {stage_focus} Stage {stage_idx} Epoch {epoch}{warmup_str}\033[0m")
         
         for batch_idx, (inputs, targets, metadata) in enumerate(pbar):
             inputs = inputs.to(device)
             targets = targets.to(device)
             
-            # Forward pass with mixed precision - MORE AGGRESSIVE
             with autocast(device_type='cuda', dtype=torch.float16):
-                # OLYMPUS ensemble forward pass
                 ensemble_decision = olympus(inputs, targets, mode='train')
                 loss_dict = criterion(ensemble_decision, targets, inputs)
                 loss = loss_dict['total'] / accumulation_steps
             
-            # Backward pass
             scaler.scale(loss).backward()
             
-            # >>>>>>>>>>>>>>>>>>>> THE FIX IS HERE <<<<<<<<<<<<<<<<<<<<<<<
-            # Update weights with ultimate control
-            # This condition ensures an update happens on the final batch of the epoch
             if (batch_idx + 1) % accumulation_steps == 0 or (batch_idx + 1) == len(dataloader):
-            # >>>>>>>>>>>>>>>>>>>> END OF FIX <<<<<<<<<<<<<<<<<<<<<<<<<<<<
-                # Update fusion parameters
                 scaler.unscale_(fusion_optimizer)
-                torch.nn.utils.clip_grad_norm_(
-                    [p for p in olympus.fusion_engine.parameters()], 
-                    OLYMPUS_V3_CONFIG['gradient_clip']
-                )
+                torch.nn.utils.clip_grad_norm_([p for p in olympus.fusion_engine.parameters()], OLYMPUS_V3_CONFIG['gradient_clip'])
                 scaler.step(fusion_optimizer)
                 
-                # Update specialist output parameters
                 if specialist_output_optimizer is not None:
                     scaler.unscale_(specialist_output_optimizer)
-                    torch.nn.utils.clip_grad_norm_(
-                        [p for specialist in olympus.specialists.values() 
-                         for param_name, p in specialist.named_parameters() 
-                         if p.requires_grad and any(layer in param_name for layer in ['output', 'final', 'head', 'classifier'])], 
-                        OLYMPUS_V3_CONFIG['gradient_clip']
-                    )
+                    torch.nn.utils.clip_grad_norm_([p for specialist in olympus.specialists.values() for param_name, p in specialist.named_parameters() if p.requires_grad and any(layer in param_name for layer in ['output', 'final', 'head', 'classifier'])], OLYMPUS_V3_CONFIG['gradient_clip'])
                     scaler.step(specialist_output_optimizer)
                 
-                # Update specialist core parameters
                 if specialist_core_optimizer is not None:
                     scaler.unscale_(specialist_core_optimizer)
-                    torch.nn.utils.clip_grad_norm_(
-                        [p for specialist in olympus.specialists.values() 
-                         for param_name, p in specialist.named_parameters() 
-                         if p.requires_grad and not any(layer in param_name for layer in ['output', 'final', 'head', 'classifier'])], 
-                        OLYMPUS_V3_CONFIG['gradient_clip'] * 0.8  # Tighter clipping for core
-                    )
+                    torch.nn.utils.clip_grad_norm_([p for specialist in olympus.specialists.values() for param_name, p in specialist.named_parameters() if p.requires_grad and not any(layer in param_name for layer in ['output', 'final', 'head', 'classifier'])], OLYMPUS_V3_CONFIG['gradient_clip'] * 0.8)
                     scaler.step(specialist_core_optimizer)
                 
                 scaler.update()
                 
-                # Step OneCycleLR per batch (AFTER optimizer.step()) with safety check
                 if use_onecycle and not first_batch:
-                    # FIX: Safety check to prevent stepping beyond total_steps
                     if fusion_scheduler and fusion_scheduler._step_count < fusion_scheduler.total_steps:
                         fusion_scheduler.step()
                     if specialist_output_scheduler is not None and specialist_output_scheduler._step_count < specialist_output_scheduler.total_steps:
@@ -1002,132 +940,87 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
                     if specialist_core_scheduler is not None and specialist_core_scheduler._step_count < specialist_core_scheduler.total_steps:
                         specialist_core_scheduler.step()
                 
-                first_batch = False  # No longer first batch
+                first_batch = False
                 
-                # Zero gradients
                 fusion_optimizer.zero_grad()
-                if specialist_output_optimizer is not None:
-                    specialist_output_optimizer.zero_grad()
-                if specialist_core_optimizer is not None:
-                    specialist_core_optimizer.zero_grad()
+                if specialist_output_optimizer is not None: specialist_output_optimizer.zero_grad()
+                if specialist_core_optimizer is not None: specialist_core_optimizer.zero_grad()
             
-            # Accumulate metrics
             for key, value in loss_dict.items():
-                if torch.is_tensor(value):
-                    epoch_losses[key] += value.item()
-                elif isinstance(value, (int, float)):
-                    epoch_losses[key] += value
+                if torch.is_tensor(value): epoch_losses[key] += value.item()
+                elif isinstance(value, (int, float)): epoch_losses[key] += value
             
             total_exact_matches += loss_dict['exact_count'].item()
             total_samples += inputs.shape[0]
             total_consensus += loss_dict['consensus_score']
             
-            # Update progress bar
             current_performance = total_exact_matches / max(total_samples, 1) * 100
             avg_consensus = total_consensus / max(batch_idx + 1, 1)
             pbar.set_postfix({
-                'Loss': f"{loss_dict['total'].item():.4f}",
-                'Performance': f"{current_performance:.1f}%",
-                'Consensus': f"{avg_consensus:.3f}",
-                'SelfAtt': f"{loss_dict.get('self_attention', 0):.4f}",
-                'UltCoord': f"{loss_dict.get('ultimate_coordination', 0):.4f}",
+                'Loss': f"{loss_dict['total'].item():.4f}", 'Performance': f"{current_performance:.1f}%", 'Consensus': f"{avg_consensus:.3f}",
+                'SelfAtt': f"{loss_dict.get('self_attention', 0):.4f}", 'UltCoord': f"{loss_dict.get('ultimate_coordination', 0):.4f}",
                 'FusionLR': f"{fusion_optimizer.param_groups[0]['lr']:.6f}"
             })
         
-        # Calculate epoch performance
         epoch_performance = total_exact_matches / max(total_samples, 1)
         best_stage_performance = max(best_stage_performance, epoch_performance)
         avg_consensus = total_consensus / len(dataloader)
         
-        # Log detailed progress with ultra light honey/amber for stage headers
         if epoch % 6 == 0 or epoch == epochs_for_stage - 1:
             avg_loss = epoch_losses['total']/len(dataloader)
-            fusion_lr = fusion_scheduler.get_last_lr()[0] if fusion_scheduler else fusion_optimizer.param_groups[0]['lr']
-            output_lr = specialist_output_scheduler.get_last_lr()[0] if specialist_output_scheduler else specialist_output_optimizer.param_groups[0]['lr'] if specialist_output_optimizer else 0
-            core_lr = specialist_core_scheduler.get_last_lr()[0] if specialist_core_scheduler else specialist_core_optimizer.param_groups[0]['lr'] if specialist_core_optimizer else 0
-            print(f"\033[38;2;255;204;153m⏰ OLYMPUS V3 Ultimate Stage {stage_idx}, Epoch {epoch} (Global: {stage_idx * OLYMPUS_V3_CONFIG['epochs_per_stage'] + epoch + 1}):\033[0m")
+            fusion_lr = fusion_scheduler.get_last_lr()[0] if fusion_scheduler and not first_batch else fusion_optimizer.param_groups[0]['lr']
+            output_lr = specialist_output_scheduler.get_last_lr()[0] if specialist_output_scheduler and not first_batch and specialist_output_optimizer else 0
+            core_lr = specialist_core_scheduler.get_last_lr()[0] if specialist_core_scheduler and not first_batch and specialist_core_optimizer else 0
+            ### FIX 2: Use the running counter for the global epoch printout
+            print(f"\033[38;2;255;204;153m⏰ OLYMPUS V3 Ultimate Stage {stage_idx}, Epoch {epoch} (Global: {global_epoch_counter + epoch + 1}):\033[0m")
             print(f"\033[96m   🎯 Ultimate Ensemble: {epoch_performance:.2%} exact, Loss: {avg_loss:.3f}\033[0m")
             print(f"\033[96m   📊 Fusion: {fusion_lr:.6f} | Output: {output_lr:.6f} | Core: {core_lr:.6f} | Grid: {stage_config['max_grid_size']}x{stage_config['max_grid_size']} | Consensus: {avg_consensus:.3f}\033[0m")
             if epoch == epochs_for_stage - 1:
                 print(f"\033[96m✅ Ultimate Stage {stage_idx} complete! Final exact: {epoch_performance:.2%}\033[0m")
         
-        # Step schedulers at END of epoch (not per batch!)
-        # For OneCycleLR, we already step per batch, so skip here
         if not use_onecycle:
-            # Only step if schedulers exist (they're created as None for OneCycle stages initially)
-            if fusion_scheduler is not None:
-                try:
-                    fusion_scheduler.step()
-                except ValueError as e:
-                    # Catch scheduler step overflow errors
-                    print(f"Warning: Fusion scheduler step error: {e}")
-            if specialist_output_scheduler is not None:
-                try:
-                    specialist_output_scheduler.step()
-                except ValueError as e:
-                    print(f"Warning: Output scheduler step error: {e}")
-            if specialist_core_scheduler is not None:
-                try:
-                    specialist_core_scheduler.step()
-                except ValueError as e:
-                    print(f"Warning: Core scheduler step error: {e}")
+            if fusion_scheduler is not None: fusion_scheduler.step()
+            if specialist_output_scheduler is not None: specialist_output_scheduler.step()
+            if specialist_core_scheduler is not None: specialist_core_scheduler.step()
         
-        # Memory cleanup
         torch.cuda.empty_cache()
         gc.collect()
     
-    # Additional cleanup between stages for large grids
-    if stage_idx >= 12:  # Updated threshold due to new stages
-        # Force cleanup for large grids
+    if stage_idx >= 12:
         torch.cuda.empty_cache()
         gc.collect()
-        time.sleep(1)  # Give GPU time to release memory
+        time.sleep(1)
     
     return best_stage_performance
 
 
 if __name__ == "__main__":
-    # Parse command-line arguments
     parser = argparse.ArgumentParser(description='Train OLYMPUS V3 Ensemble with stage selection')
-    parser.add_argument('--lower-stages-only', action='store_true',
-                        help='Train only lower stages (0-7, grids 2x2-8x8)')
-    parser.add_argument('--tiny-grids-only', action='store_true',
-                        help='FOCUS ONLY on tiny grids (0-3, grids 2x2-5x5) with AGGRESSIVE settings')
-    parser.add_argument('--upper-stages-only', action='store_true', 
-                        help='Train only upper stages (8-16, grids 9x9-30x30)')
-    parser.add_argument('--start-stage', type=int, default=None,
-                        help='Start from specific stage (0-16)')
-    parser.add_argument('--end-stage', type=int, default=None,
-                        help='End at specific stage (0-16)')
+    parser.add_argument('--lower-stages-only', action='store_true', help='Train only lower stages (0-7, grids 2x2-8x8)')
+    parser.add_argument('--tiny-grids-only', action='store_true', help='FOCUS ONLY on tiny grids (0-3, grids 2x2-5x5) with AGGRESSIVE settings')
+    parser.add_argument('--upper-stages-only', action='store_true', help='Train only upper stages (8-16, grids 9x9-30x30)')
+    parser.add_argument('--start-stage', type=int, default=None, help='Start from specific stage (0-16)')
+    parser.add_argument('--end-stage', type=int, default=None, help='End at specific stage (0-16)')
     args = parser.parse_args()
     
-    # Set seeds for reproducibility
     torch.manual_seed(42)
     np.random.seed(42)
     random.seed(42)
     
-    # Determine stage range
     stage_start = 0
-    stage_end = 15  # Now 16 total stages (0-15)
+    stage_end = 15
     
     if args.tiny_grids_only:
-        stage_start = 0
-        stage_end = 2  # 3x3-5x5 (stages 0-2)
+        stage_start, stage_end = 0, 2
         print(f"\033[91m🔥 AGGRESSIVE TINY GRIDS TRAINING (0-2, grids 3x3-5x5) - NO 2x2!\033[0m")
     elif args.lower_stages_only:
-        stage_start = 0
-        stage_end = 5  # 3x3-8x8 (stages 0-5)
+        stage_start, stage_end = 0, 5
         print(f"\033[92m🏛️ Training LOWER STAGES ONLY (0-5, grids 3x3-8x8)\033[0m")
     elif args.upper_stages_only:
-        stage_start = 6
-        stage_end = 15
+        stage_start, stage_end = 6, 15
         print(f"\033[92m🏛️ Training UPPER STAGES ONLY (6-15, grids 9x9-30x30)\033[0m")
     
-    # Override with specific stage range if provided
-    if args.start_stage is not None:
-        stage_start = args.start_stage
-    if args.end_stage is not None:
-        stage_end = args.end_stage
+    if args.start_stage is not None: stage_start = args.start_stage
+    if args.end_stage is not None: stage_end = args.end_stage
         
-    # Train OLYMPUS V3 Ultimate with selected stages
     olympus, best_performance = train_olympus_ensemble_v3(stage_start, stage_end)

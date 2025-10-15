@@ -42,7 +42,7 @@ OLYMPUS_V3_CONFIG = {
     'learning_rate': 0.0003,  # 2.5x HIGHER for aggressive learning
     'num_epochs': 240,  # Ultimate training: Extended for lower stages
     'gradient_accumulation': 1,  # No accumulation for speed
-    'epochs_per_stage': 2,  # MINIMAL base - we multiply 20-30x for tiny grids!
+    'epochs_per_stage': 5,  # INCREASE from 2 to 5 (base will be 5-15 epochs per stage)
     'curriculum_stages': 15,  # Full coverage like V2: 4x4 to 30x30
     
     # Ultimate Loss Configuration - AGGRESSIVE FOR 85%+
@@ -665,24 +665,25 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
         
         # Create ultimate augmented dataset for this stage
         # AGGRESSIVE AUGMENTATION for 85%+ on lower stages
-        if stage_config['max_grid_size'] <= 3:  # 3x3 grids
-            augmentation_factor = 50  # INSANE 50x augmentation - fill the GPU!
-        elif stage_config['max_grid_size'] <= 4:  # 4x4 grids
-            augmentation_factor = 40  # 40x augmentation
-        elif stage_config['max_grid_size'] <= 5:  # 5x5 grids  
-            augmentation_factor = 30  # 30x augmentation
-        elif stage_config['max_grid_size'] <= 6:  # 6x6 grids
-            augmentation_factor = 20  # 20x augmentation
-        elif stage_config['max_grid_size'] <= 8:  # 7x7-8x8 grids
-            augmentation_factor = 15  # 15x augmentation for medium-small grids
-        elif stage_idx >= 14:  # Stage 14+ = 22x22 and above
-            augmentation_factor = 1  # NO augmentation for huge grids
-        elif stage_idx >= 12:  # Stage 12-13 = 16x16-18x18
-            augmentation_factor = 2  # Minimal augmentation
-        elif stage_idx >= 10:  # Stage 10-11 = 12x12-14x14
-            augmentation_factor = 3  # Reduced augmentation
-        else:  # 9x9-11x11
-            augmentation_factor = 6  # Moderate augmentation for intermediate
+        # CHANGE 3: Increase augmentation for mid-size grids
+        if stage_config['max_grid_size'] <= 3:
+            augmentation_factor = 50
+        elif stage_config['max_grid_size'] <= 4:
+            augmentation_factor = 40
+        elif stage_config['max_grid_size'] <= 5:
+            augmentation_factor = 30
+        elif stage_config['max_grid_size'] <= 6:
+            augmentation_factor = 20
+        elif stage_config['max_grid_size'] <= 8:
+            augmentation_factor = 15
+        elif stage_idx >= 14:  # 27x27+
+            augmentation_factor = 1
+        elif stage_idx >= 12:  # 18x18-22x22
+            augmentation_factor = 3  # INCREASE from 2
+        elif stage_idx >= 10:  # 14x14-16x16
+            augmentation_factor = 5  # INCREASE from 3 ⭐ THIS IS YOUR RANGE
+        else:  # 9x9-12x12
+            augmentation_factor = 6
         
         dataset = OlympusV3UltimateDataset(
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',
@@ -692,42 +693,43 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
         )
         
         # MAXIMIZE GPU USAGE for 85%+ on lower stages (80GB available!)
+        # CHANGE 2: Adjust epochs multipliers for better training
         if stage_config['max_grid_size'] <= 2:
-            batch_size = 16384  # 2X MORE - SKIP but keeping for compatibility
-            epochs_multiplier = 20.0  # 20x epochs for tiny grids!
+            batch_size = 16384
+            epochs_multiplier = 20.0
         elif stage_config['max_grid_size'] <= 3:
-            batch_size = 16384  # 2X MORE - INSANE batch for 3x3 - USE THAT A100!
-            epochs_multiplier = 30.0  # 30x epochs for maximum training!
+            batch_size = 16384
+            epochs_multiplier = 30.0
         elif stage_config['max_grid_size'] <= 4:
-            batch_size = 12288  # 2X MORE - HUGE batch for 4x4
-            epochs_multiplier = 25.0  # 25x epochs for intense training!
+            batch_size = 12288
+            epochs_multiplier = 25.0
         elif stage_config['max_grid_size'] <= 5:
-            batch_size = 8192  # 2X MORE - MASSIVE batch for 5x5
-            epochs_multiplier = 20.0  # 20x epochs for thorough training!
+            batch_size = 8192
+            epochs_multiplier = 20.0
         elif stage_config['max_grid_size'] <= 6:
-            batch_size = 512  # DOUBLED from 256 for 6x6
-            epochs_multiplier = 6.0  # 6x epochs for 85%+
+            batch_size = 512
+            epochs_multiplier = 6.0
         elif stage_config['max_grid_size'] <= 8:
-            batch_size = 512  # Increased to 512 minimum
-            epochs_multiplier = 5.0  # 5x epochs for 85%+
+            batch_size = 512
+            epochs_multiplier = 5.0
         elif stage_config['max_grid_size'] <= 10:
-            batch_size = 256  # Larger batch size
-            epochs_multiplier = 3.0  # 3x epochs
+            batch_size = 384  # INCREASE from 256
+            epochs_multiplier = 4.0  # INCREASE from 3.0 (was giving you only 1 epoch!)
         elif stage_config['max_grid_size'] <= 16:
-            batch_size = 384  # Increased for speed
-            epochs_multiplier = 0.8  # Slightly reduced
+            batch_size = 384
+            epochs_multiplier = 3.0  # INCREASE from 0.8 (THIS WAS YOUR PROBLEM!)
         elif stage_config['max_grid_size'] <= 20:
-            batch_size = 256  # Increased from 192
-            epochs_multiplier = 0.7  # Reduced
+            batch_size = 256
+            epochs_multiplier = 2.0  # INCREASE from 0.7
         elif stage_config['max_grid_size'] <= 22:
-            batch_size = 64  # REDUCED for OOM fix
-            epochs_multiplier = 0.5  # Reduced further
+            batch_size = 64
+            epochs_multiplier = 1.5  # INCREASE from 0.5
         elif stage_config['max_grid_size'] <= 27:
-            batch_size = 48  # REDUCED for OOM fix
-            epochs_multiplier = 0.4  # Reduced further
+            batch_size = 48
+            epochs_multiplier = 1.0  # INCREASE from 0.4
         else:
-            batch_size = 32  # MINIMAL for 30x30
-            epochs_multiplier = 0.3  # Minimal epochs
+            batch_size = 32
+            epochs_multiplier = 0.8  # INCREASE from 0.3
         
         # Calculate actual epochs for this stage
         stage_epochs = int(OLYMPUS_V3_CONFIG['epochs_per_stage'] * epochs_multiplier)
@@ -773,18 +775,21 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
         )
         
         # Dynamic gradient accumulation - AGGRESSIVE for lower stages
+        # CHANGE 4: Add more aggressive gradient accumulation for mid grids
         if stage_config['max_grid_size'] >= 27:
-            accumulation_steps = 8  # 8x accumulation for 27x27 and 30x30
+            accumulation_steps = 8
         elif stage_config['max_grid_size'] >= 22:
-            accumulation_steps = 6  # 6x accumulation for 22x22
+            accumulation_steps = 6
         elif stage_config['max_grid_size'] >= 18:
-            accumulation_steps = 4  # 4x accumulation for 18x18
+            accumulation_steps = 4
+        elif stage_config['max_grid_size'] >= 14:  # ⭐ YOUR RANGE
+            accumulation_steps = 4  # INCREASE from default
         elif stage_config['max_grid_size'] <= 5:
-            accumulation_steps = 8  # 8x for MASSIVE effective batch on tiny grids!
+            accumulation_steps = 8
         elif stage_config['max_grid_size'] <= 9:
-            accumulation_steps = 4  # 4x accumulation for EFFECTIVE huge batches
+            accumulation_steps = 4
         else:
-            accumulation_steps = OLYMPUS_V3_CONFIG['gradient_accumulation']  # Default
+            accumulation_steps = 2  # Default for remaining
         
         # Create OneCycleLR schedulers per stage for lower stages
         if use_onecycle and stage_idx <= 7:  # Updated to include all stages up to 8x8
@@ -1076,53 +1081,6 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
         time.sleep(1)  # Give GPU time to release memory
     
     return best_stage_performance
-
-
-if __name__ == "__main__":
-    # Parse command-line arguments
-    parser = argparse.ArgumentParser(description='Train OLYMPUS V3 Ensemble with stage selection')
-    parser.add_argument('--lower-stages-only', action='store_true',
-                        help='Train only lower stages (0-7, grids 2x2-8x8)')
-    parser.add_argument('--tiny-grids-only', action='store_true',
-                        help='FOCUS ONLY on tiny grids (0-3, grids 2x2-5x5) with AGGRESSIVE settings')
-    parser.add_argument('--upper-stages-only', action='store_true', 
-                        help='Train only upper stages (8-16, grids 9x9-30x30)')
-    parser.add_argument('--start-stage', type=int, default=None,
-                        help='Start from specific stage (0-16)')
-    parser.add_argument('--end-stage', type=int, default=None,
-                        help='End at specific stage (0-16)')
-    args = parser.parse_args()
-    
-    # Set seeds for reproducibility
-    torch.manual_seed(42)
-    np.random.seed(42)
-    random.seed(42)
-    
-    # Determine stage range
-    stage_start = 0
-    stage_end = 15  # Now 16 total stages (0-15)
-    
-    if args.tiny_grids_only:
-        stage_start = 0
-        stage_end = 2  # 3x3-5x5 (stages 0-2)
-        print(f"\033[91m🔥 AGGRESSIVE TINY GRIDS TRAINING (0-2, grids 3x3-5x5) - NO 2x2!\033[0m")
-    elif args.lower_stages_only:
-        stage_start = 0
-        stage_end = 5  # 3x3-8x8 (stages 0-5)
-        print(f"\033[92m🏛️ Training LOWER STAGES ONLY (0-5, grids 3x3-8x8)\033[0m")
-    elif args.upper_stages_only:
-        stage_start = 6
-        stage_end = 15
-        print(f"\033[92m🏛️ Training UPPER STAGES ONLY (6-15, grids 9x9-30x30)\033[0m")
-    
-    # Override with specific stage range if provided
-    if args.start_stage is not None:
-        stage_start = args.start_stage
-    if args.end_stage is not None:
-        stage_end = args.end_stage
-        
-    # Train OLYMPUS V3 Ultimate with selected stages
-    olympus, best_performance = train_olympus_ensemble_v3(stage_start, stage_end)
 
 
 if __name__ == "__main__":

@@ -955,8 +955,11 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
             # Backward pass
             scaler.scale(loss).backward()
             
+            # >>>>>>>>>>>>>>>>>>>> THE FIX IS HERE <<<<<<<<<<<<<<<<<<<<<<<
             # Update weights with ultimate control
-            if (batch_idx + 1) % accumulation_steps == 0:
+            # This condition ensures an update happens on the final batch of the epoch
+            if (batch_idx + 1) % accumulation_steps == 0 or (batch_idx + 1) == len(dataloader):
+            # >>>>>>>>>>>>>>>>>>>> END OF FIX <<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 # Update fusion parameters
                 scaler.unscale_(fusion_optimizer)
                 torch.nn.utils.clip_grad_norm_(

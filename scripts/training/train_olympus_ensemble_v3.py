@@ -490,6 +490,10 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
     print(f"\033[96m🏛️ Initializing OLYMPUS Ensemble V3 Ultimate Training...\033[0m")
     print(f"\033[92m🏛️ Training stages {stage_start} to {stage_end} (grids {STAGE_CONFIG[stage_start]['max_grid_size']}x{STAGE_CONFIG[stage_start]['max_grid_size']} to {STAGE_CONFIG[stage_end]['max_grid_size']}x{STAGE_CONFIG[stage_end]['max_grid_size']})\033[0m")
     
+    # Clear GPU memory before starting
+    torch.cuda.empty_cache()
+    gc.collect()
+    
     # Initialize OLYMPUS ensemble
     olympus = OlympusEnsemble(
         max_grid_size=30,
@@ -497,9 +501,19 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
         device=device
     ).to(device)
     
-    # Skip V3 loading - it's broken at 37.21%
+    # Try to load V3 first if it exists (to continue training)
     v3_loaded = False
-    print(f"\033[93m🏛️ Skipping V3 checkpoint - starting fresh from V2 to break out of 37.21% plateau\033[0m")
+    v3_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v3_best.pt'
+    if os.path.exists(v3_model_path):
+        try:
+            v3_loaded_successfully = olympus.load_ensemble(v3_model_path)
+            if v3_loaded_successfully:
+                print(f"\033[92m🏛️ OLYMPUS V3 LOADED from checkpoint - continuing training from previous best!\033[0m")
+                v3_loaded = True
+            else:
+                print(f"\033[93m⚠️ V3 checkpoint exists but failed to load properly\033[0m")
+        except Exception as e:
+            print(f"\033[93m⚠️ Could not load V3 checkpoint: {e}\033[0m")
     
     # Reset specialists if stuck at low performance
     if v3_loaded and stage_start >= 6:  # For stages 6+, reset if needed
@@ -698,7 +712,7 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
             batch_size = 512
             epochs_multiplier = 5.0
         elif stage_config['max_grid_size'] <= 10:
-            batch_size = 384
+            batch_size = 256  # Reduced from 384 to avoid OOM
             epochs_multiplier = 4.0
         elif stage_config['max_grid_size'] <= 16:
             batch_size = 384

@@ -497,19 +497,9 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
         device=device
     ).to(device)
     
-    # Try to load V3 first if it exists (to continue training)
+    # Skip V3 loading - it's broken at 37.21%
     v3_loaded = False
-    v3_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v3_best.pt'
-    if os.path.exists(v3_model_path):
-        try:
-            v3_loaded_successfully = olympus.load_ensemble(v3_model_path)
-            if v3_loaded_successfully:
-                print(f"\033[92m🏛️ OLYMPUS V3 LOADED from checkpoint - continuing training from previous best!\033[0m")
-                v3_loaded = True
-            else:
-                print(f"\033[93m⚠️ V3 checkpoint exists but failed to load properly\033[0m")
-        except Exception as e:
-            print(f"\033[93m⚠️ Could not load V3 checkpoint: {e}\033[0m")
+    print(f"\033[93m🏛️ Skipping V3 checkpoint - starting fresh from V2 to break out of 37.21% plateau\033[0m")
     
     # Reset specialists if stuck at low performance
     if v3_loaded and stage_start >= 6:  # For stages 6+, reset if needed
@@ -935,6 +925,15 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
             targets = targets.to(device)
             
             with autocast(device_type='cuda', dtype=torch.float16):
+                # Add specialist-specific dropout to force diversity
+                if epoch < 10 and stage_config['max_grid_size'] >= 6:  # Only for problematic stages
+                    for idx, (name, specialist) in enumerate(olympus.specialists.items()):
+                        # Apply different dropout rates to each specialist
+                        dropout_rate = 0.1 + idx * 0.05  # 0.1, 0.15, 0.2, 0.25, 0.3
+                        for module in specialist.modules():
+                            if isinstance(module, nn.Dropout):
+                                module.p = dropout_rate
+                
                 ensemble_decision = olympus(inputs, targets, mode='train')
                 loss_dict = criterion(ensemble_decision, targets, inputs)
                 loss = loss_dict['total'] / accumulation_steps

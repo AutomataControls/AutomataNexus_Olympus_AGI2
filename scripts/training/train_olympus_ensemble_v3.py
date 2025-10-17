@@ -47,8 +47,8 @@ OLYMPUS_V3_CONFIG = {
     
     # Ultimate Loss Configuration - AGGRESSIVE FOR 85%+
     'ensemble_loss_weight': 2.5,  # INCREASED ensemble focus
-    'specialist_sync_weight': -0.2,  # NEGATIVE to force diversity
-    'consensus_weight': -0.3,  # NEGATIVE to encourage diversity
+    'specialist_sync_weight': 0.1,  # Small positive weight
+    'consensus_weight': 0.0,  # No consensus penalty for now
     'fusion_regularization': 0.1,  # REDUCED to allow more flexibility
     'transform_penalty': 0.01,  # ULTRA LOW penalty for tiny grid exploration
     'exact_match_bonus': 2.0,  # Reasonable bonus to avoid negative loss
@@ -513,14 +513,16 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
     
     # Reset specialists if stuck at low performance
     if v3_loaded and stage_start >= 6:  # For stages 6+, reset if needed
-        print(f"\033[93m🏛️ Resetting specialist output layers for stages 6+ to break out of local minimum\033[0m")
-        # Reset output layers of all specialists
+        print(f"\033[93m🏛️ Re-initializing specialist output layers for stages 6+ to break out of local minimum\033[0m")
+        # Re-initialize output layers of all specialists
         for name, specialist in olympus.specialists.items():
-            for param_name, param in specialist.named_parameters():
-                if any(layer in param_name for layer in ['output', 'final', 'head', 'classifier']):
-                    # Add noise to break symmetry
-                    with torch.no_grad():
-                        param.add_(torch.randn_like(param) * 0.1)
+            for module_name, module in specialist.named_modules():
+                if any(layer in module_name for layer in ['output', 'final', 'head', 'classifier']):
+                    # Properly reinitialize the layer
+                    if hasattr(module, 'weight'):
+                        nn.init.xavier_normal_(module.weight)
+                    if hasattr(module, 'bias') and module.bias is not None:
+                        nn.init.zeros_(module.bias)
     
     # Only load V2 if V3 was not loaded
     if not v3_loaded:
@@ -589,14 +591,28 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
     specialist_output_params = []
     specialist_core_params = []
     
-    for specialist in olympus.specialists.values():
+    # Create separate parameter groups for each specialist to encourage diversity
+    specialist_param_groups = []
+    for idx, (name, specialist) in enumerate(olympus.specialists.items()):
+        output_params = []
+        core_params = []
         for param_name, param in specialist.named_parameters():
             if param.requires_grad:
                 # Separate output layers from core layers
                 if any(layer in param_name for layer in ['output', 'final', 'head', 'classifier']):
+                    output_params.append(param)
                     specialist_output_params.append(param)
                 else:
+                    core_params.append(param)
                     specialist_core_params.append(param)
+        
+        # Add slight LR variation per specialist to encourage diversity
+        lr_variation = 1.0 + (idx - 2) * 0.1  # -20%, -10%, 0%, +10%, +20%
+        specialist_param_groups.append({
+            'params': output_params,
+            'lr': OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 2.0 * lr_variation,
+            'name': f'{name}_output'
+        })
     
     # Three separate optimizers for ultimate control
     fusion_optimizer = optim.AdamW(
@@ -608,8 +624,7 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
     )
     
     specialist_output_optimizer = optim.AdamW(
-        specialist_output_params,
-        lr=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 2.0,  # Higher LR for outputs
+        specialist_param_groups,  # Use param groups with varying LRs
         weight_decay=OLYMPUS_V3_CONFIG['weight_decay'] * 0.5,  # Less regularization
         betas=(0.9, 0.999),
         eps=1e-8

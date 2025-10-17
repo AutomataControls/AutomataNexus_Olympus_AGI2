@@ -47,7 +47,7 @@ OLYMPUS_V3_CONFIG = {
     
     # Ultimate Loss Configuration - AGGRESSIVE FOR 85%+
     'ensemble_loss_weight': 2.5,  # INCREASED ensemble focus
-    'specialist_sync_weight': 0.8,  # INCREASED synchronization
+    'specialist_sync_weight': -0.2,  # NEGATIVE to force diversity
     'consensus_weight': -0.3,  # NEGATIVE to encourage diversity
     'fusion_regularization': 0.1,  # REDUCED to allow more flexibility
     'transform_penalty': 0.01,  # ULTRA LOW penalty for tiny grid exploration
@@ -511,6 +511,17 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
         except Exception as e:
             print(f"\033[93m⚠️ Could not load V3 checkpoint: {e}\033[0m")
     
+    # Reset specialists if stuck at low performance
+    if v3_loaded and stage_start >= 6:  # For stages 6+, reset if needed
+        print(f"\033[93m🏛️ Resetting specialist output layers for stages 6+ to break out of local minimum\033[0m")
+        # Reset output layers of all specialists
+        for name, specialist in olympus.specialists.items():
+            for param_name, param in specialist.named_parameters():
+                if any(layer in param_name for layer in ['output', 'final', 'head', 'classifier']):
+                    # Add noise to break symmetry
+                    with torch.no_grad():
+                        param.add_(torch.randn_like(param) * 0.1)
+    
     # Only load V2 if V3 was not loaded
     if not v3_loaded:
         v2_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v2_best.pt'
@@ -598,8 +609,8 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
     
     specialist_output_optimizer = optim.AdamW(
         specialist_output_params,
-        lr=OLYMPUS_V3_CONFIG['specialist_learning_rate'],
-        weight_decay=OLYMPUS_V3_CONFIG['weight_decay'] * 1.5,
+        lr=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 2.0,  # Higher LR for outputs
+        weight_decay=OLYMPUS_V3_CONFIG['weight_decay'] * 0.5,  # Less regularization
         betas=(0.9, 0.999),
         eps=1e-8
     ) if specialist_output_params else None

@@ -694,16 +694,16 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
         
         # MAXIMIZE GPU USAGE for 85%+ on lower stages (80GB available!)
         if stage_config['max_grid_size'] <= 2:
-            batch_size = 16384
+            batch_size = 1024  # Reduced from 16384 to avoid OOM
             epochs_multiplier = 20.0
         elif stage_config['max_grid_size'] <= 3:
-            batch_size = 16384
+            batch_size = 1024  # Reduced from 16384 to avoid OOM
             epochs_multiplier = 30.0
         elif stage_config['max_grid_size'] <= 4:
-            batch_size = 12288
+            batch_size = 1024  # Reduced from 12288 to avoid OOM
             epochs_multiplier = 25.0
         elif stage_config['max_grid_size'] <= 5:
-            batch_size = 8192
+            batch_size = 512  # Reduced from 8192 to avoid OOM
             epochs_multiplier = 20.0
         elif stage_config['max_grid_size'] <= 6:
             batch_size = 512

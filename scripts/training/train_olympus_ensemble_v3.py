@@ -925,13 +925,7 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
             targets = targets.to(device)
             
             with autocast(device_type='cuda', dtype=torch.float16):
-                # Add temperature scaling for exploration in early epochs
-                temperature = 1.0
-                if epoch < epochs_for_stage // 2:  # First half of training
-                    # Higher temperature early for exploration
-                    temperature = 2.0 - (epoch / (epochs_for_stage // 2))  # 2.0 -> 1.0
-                    
-                ensemble_decision = olympus(inputs, targets, mode='train', temperature=temperature)
+                ensemble_decision = olympus(inputs, targets, mode='train')
                 loss_dict = criterion(ensemble_decision, targets, inputs)
                 loss = loss_dict['total'] / accumulation_steps
             

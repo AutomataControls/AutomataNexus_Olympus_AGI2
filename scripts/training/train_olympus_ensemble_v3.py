@@ -38,11 +38,11 @@ from src.models.olympus_ensemble import OlympusEnsemble, EnsembleDecision
 # OLYMPUS V3 Configuration - Ultimate Ensemble Training
 OLYMPUS_V3_CONFIG = {
     # Core Training Parameters - AGGRESSIVE 85%+ TARGET
-    'batch_size': 256,  # Balanced for V3's advanced features (self-attention, meta-learning)
-    'learning_rate': 0.0003,  # 2.5x HIGHER for aggressive learning
+    'batch_size': 512,  # Same as V2 - proven to work
+    'learning_rate': 0.0002,  # 2x V2 for faster exploration
     'num_epochs': 240,  # Ultimate training: Extended for lower stages
-    'gradient_accumulation': 1,  # No accumulation for speed
-    'epochs_per_stage': 5,  # INCREASE from 2 to 5 (base will be 5-15 epochs per stage)
+    'gradient_accumulation': 1,  # Same as V2
+    'epochs_per_stage': 20,  # More epochs to explore better solutions
     'curriculum_stages': 15,  # Full coverage like V2: 4x4 to 30x30
     
     # Ultimate Loss Configuration - AGGRESSIVE FOR 85%+
@@ -62,7 +62,7 @@ OLYMPUS_V3_CONFIG = {
     # OLYMPUS V3-Specific Ultimate Settings - AGGRESSIVE 85%+
     'freeze_specialists': False,  # Allow full specialist fine-tuning
     'fusion_training_only': False,  # Train everything together
-    'specialist_learning_rate': 0.00008,  # 4x HIGHER for aggressive updates
+    'specialist_learning_rate': 0.00005,  # 2.5x V2 to help specialists explore
     'consensus_threshold': 0.6,  # LOWER threshold for more exploration
     'specialist_dropout': 0.2,  # Increased dropout to prevent overfitting
     'ensemble_coordination': True,  # Ultimate coordination protocols
@@ -925,16 +925,13 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
             targets = targets.to(device)
             
             with autocast(device_type='cuda', dtype=torch.float16):
-                # Add specialist-specific dropout to force diversity
-                if epoch < 10 and stage_config['max_grid_size'] >= 6:  # Only for problematic stages
-                    for idx, (name, specialist) in enumerate(olympus.specialists.items()):
-                        # Apply different dropout rates to each specialist
-                        dropout_rate = 0.1 + idx * 0.05  # 0.1, 0.15, 0.2, 0.25, 0.3
-                        for module in specialist.modules():
-                            if isinstance(module, nn.Dropout):
-                                module.p = dropout_rate
-                
-                ensemble_decision = olympus(inputs, targets, mode='train')
+                # Add temperature scaling for exploration in early epochs
+                temperature = 1.0
+                if epoch < epochs_for_stage // 2:  # First half of training
+                    # Higher temperature early for exploration
+                    temperature = 2.0 - (epoch / (epochs_for_stage // 2))  # 2.0 -> 1.0
+                    
+                ensemble_decision = olympus(inputs, targets, mode='train', temperature=temperature)
                 loss_dict = criterion(ensemble_decision, targets, inputs)
                 loss = loss_dict['total'] / accumulation_steps
             
@@ -947,6 +944,13 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
                 
                 if specialist_output_optimizer is not None:
                     scaler.unscale_(specialist_output_optimizer)
+                    # Add gradient noise for exploration in stuck stages
+                    if stage_config['max_grid_size'] >= 6 and epoch < 10:
+                        for specialist in olympus.specialists.values():
+                            for param_name, p in specialist.named_parameters():
+                                if p.requires_grad and p.grad is not None:
+                                    noise = torch.randn_like(p.grad) * 0.01
+                                    p.grad.add_(noise)
                     torch.nn.utils.clip_grad_norm_([p for specialist in olympus.specialists.values() for param_name, p in specialist.named_parameters() if p.requires_grad and any(layer in param_name for layer in ['output', 'final', 'head', 'classifier'])], OLYMPUS_V3_CONFIG['gradient_clip'])
                     scaler.step(specialist_output_optimizer)
                 

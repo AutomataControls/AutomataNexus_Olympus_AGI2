@@ -48,10 +48,10 @@ OLYMPUS_V3_CONFIG = {
     # Ultimate Loss Configuration - AGGRESSIVE FOR 85%+
     'ensemble_loss_weight': 2.5,  # INCREASED ensemble focus
     'specialist_sync_weight': 0.8,  # INCREASED synchronization
-    'consensus_weight': 0.6,  # INCREASED consensus building
+    'consensus_weight': -0.3,  # NEGATIVE to encourage diversity
     'fusion_regularization': 0.1,  # REDUCED to allow more flexibility
     'transform_penalty': 0.01,  # ULTRA LOW penalty for tiny grid exploration
-    'exact_match_bonus': 50.0,  # ULTRA MASSIVE precision bonus for tiny grids
+    'exact_match_bonus': 2.0,  # Reasonable bonus to avoid negative loss
     'gradient_clip': 0.5,  # Increased for aggressive updates
     'weight_decay': 2e-6,  # Reduced regularization
     
@@ -64,7 +64,7 @@ OLYMPUS_V3_CONFIG = {
     'fusion_training_only': False,  # Train everything together
     'specialist_learning_rate': 0.00008,  # 4x HIGHER for aggressive updates
     'consensus_threshold': 0.6,  # LOWER threshold for more exploration
-    'specialist_dropout': 0.05,  # REDUCED dropout for more signal
+    'specialist_dropout': 0.2,  # Increased dropout to prevent overfitting
     'ensemble_coordination': True,  # Ultimate coordination protocols
     'adaptive_weights': True,  # Ultimate dynamic weighting
     'meta_ensemble_learning': True,  # NEW: Meta-ensemble optimization
@@ -789,12 +789,12 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
         else:
             # Fallback to CosineAnnealing for higher stages, ensuring they are fresh for each stage
             fusion_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
-                fusion_optimizer, T_0=max(stage_epochs // 3, 1), T_mult=1,
-                eta_min=OLYMPUS_V3_CONFIG['learning_rate'] * 0.001
+                fusion_optimizer, T_0=max(stage_epochs // 4, 2), T_mult=1,
+                eta_min=OLYMPUS_V3_CONFIG['learning_rate'] * lr_multiplier * 0.1  # Higher min LR
             )
             specialist_output_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
-                specialist_output_optimizer, T_0=max(stage_epochs // 3, 1), T_mult=1,
-                eta_min=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.001
+                specialist_output_optimizer, T_0=max(stage_epochs // 4, 2), T_mult=1,
+                eta_min=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * lr_multiplier * 0.1  # Higher min LR
             ) if specialist_output_optimizer else None
             specialist_core_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
                 specialist_core_optimizer, T_0=max(stage_epochs // 3, 1), T_mult=1,
@@ -807,7 +807,7 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
             fusion_optimizer, specialist_output_optimizer, specialist_core_optimizer,
             fusion_scheduler, specialist_output_scheduler, specialist_core_scheduler,
             scaler, stage_idx, stage_config, training_stats, stage_epochs,
-            use_onecycle=(use_onecycle and stage_idx <= 7),
+            use_onecycle=(use_onecycle and stage_idx <= 3),  # Only use OneCycle for stages 0-3
             accumulation_steps=accumulation_steps,
             global_epoch_counter=global_epoch_counter ### FIX 2: Pass the running counter
         )

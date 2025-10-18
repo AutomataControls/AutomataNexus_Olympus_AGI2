@@ -1,5 +1,5 @@
 """
-OLYMPUS Ensemble Training V3.4 - FINAL & FULLY OPTIMIZED
+OLYMPUS Ensemble Training V3.5 - FINAL & FULLY OPTIMIZED
 Ultimate ensemble training with an in-memory patch to fix specialist performance bottlenecks and all bugs corrected.
 This script is self-contained and does not require editing any specialist model files.
 Target: 95%+ performance with ultimate ensemble mastery
@@ -88,7 +88,7 @@ os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 
 
 print(f"\033[96m{'=' * 130}\033[0m")
-print(f"\033[96m🏛️ OLYMPUS Ensemble Training V3.4 (Final & Fully Optimized)\033[0m")
+print(f"\033[96m🏛️ OLYMPUS Ensemble Training V3.5 (Final & Fully Optimized)\033[0m")
 print(f"\033[96mTarget: 95%+ Performance with Ultimate Ensemble Mastery\033[0m")
 print(f"\033[96m{'=' * 130}\033[0m")
 
@@ -152,7 +152,6 @@ class OlympusV3UltimateDataset(OlympusV2AugmentedDataset):
             inp, out = random.choice(patterns); variation_type = random.randint(0, 4); inp_arr, out_arr = np.array(inp), np.array(out)
             if variation_type == 1: k = np.random.randint(1, 4); inp_arr, out_arr = np.rot90(inp_arr, k), np.rot90(out_arr, k)
             elif variation_type == 2: axis = np.random.randint(0, 2); inp_arr, out_arr = np.flip(inp_arr, axis), np.flip(out_arr, axis)
-            # --- FIX: Correctly access self.stage_config instead of local variable stage_config ---
             self.samples.append({'input': inp_arr, 'output': out_arr, 'is_arc': True, 'complexity': self.stage_config.get('complexity', 'ensemble')})
 
 def find_latest_checkpoint():
@@ -311,7 +310,7 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion, optimizer, sche
     return best_stage_performance
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Train OLYMPUS V3 Ensemble (v3.4) with Patched Specialists')
+    parser = argparse.ArgumentParser(description='Train OLYMPUS V3 Ensemble (v3.5) with Patched Specialists')
     parser.add_argument('--no-resume', action='store_true', help='Start training from scratch, ignoring any existing checkpoints.')
     parser.add_argument('--resume-from', type=str, default=None, help='Path to a specific checkpoint file to resume training from.')
     parser.add_argument('--lower-stages-only', action='store_true', help='Convenience flag to train stages 0-5')
@@ -324,7 +323,8 @@ if __name__ == "__main__":
     torch.manual_seed(42); np.random.seed(42); random.seed(42)
     
     if args.tiny_grids_only: args.start_stage, args.end_stage = 0, 2
-    elif args.lower-stages-only: args.start_stage, args.end_stage = 0, 5
-    elif args.upper-stages-only: args.start_stage, args.end_stage = 6, 15
+    # --- FIX: Changed hyphen to underscore ---
+    elif args.lower_stages_only: args.start_stage, args.end_stage = 0, 5
+    elif args.upper_stages_only: args.start_stage, args.end_stage = 6, 15
         
     train_olympus_ensemble_v3(args)

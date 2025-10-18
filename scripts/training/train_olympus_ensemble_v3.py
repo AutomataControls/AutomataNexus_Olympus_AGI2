@@ -614,9 +614,8 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
     
     print(f"\033[96m🏛️ Ultimate Training: {len(fusion_params)} fusion, {len(specialist_output_params)} specialist output, {len(specialist_core_params)} specialist core parameters\033[0m")
     
-    # AGGRESSIVE SCHEDULERS for 85%+ target - FIXED VERSION
-    # Using CosineAnnealing instead of OneCycleLR (more stable)
-    use_onecycle = False  # ⭐ DISABLED - OneCycleLR was causing stuck learning rates
+    # OPTIMIZED SCHEDULERS - CosineAnnealing with slower cycling
+    use_onecycle = False  # ⭐ DISABLED - CosineAnnealing is more stable
     
     if use_onecycle:
         # We'll create these per-stage for OneCycleLR
@@ -627,22 +626,22 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
         # CosineAnnealingWarmRestarts schedulers - STABLE AND WORKING
         fusion_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
             fusion_optimizer,
-            T_0=4,  # FASTER restarts for exploration
+            T_0=10,  # ⭐ SLOWER cycling (was 4) - gives 10 epochs at high LR
             T_mult=1,  # Keep constant restart interval
             eta_min=OLYMPUS_V3_CONFIG['learning_rate'] * 0.001
         )
         
         specialist_output_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
             specialist_output_optimizer,
-            T_0=4,  # FASTER restarts
-            T_mult=1,  # Keep constant restart interval
+            T_0=10,  # ⭐ SLOWER cycling
+            T_mult=1,
             eta_min=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.001
         ) if specialist_output_optimizer else None
         
         specialist_core_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
             specialist_core_optimizer,
-            T_0=4,  # FASTER restarts
-            T_mult=1,  # Keep constant restart interval
+            T_0=10,  # ⭐ SLOWER cycling
+            T_mult=1,
             eta_min=OLYMPUS_V3_CONFIG['specialist_learning_rate'] * 0.5 * 0.001
         ) if specialist_core_optimizer else None
     
@@ -664,13 +663,13 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
         print(f"\033[96m{'=' * 135}\033[0m")
         
         # Create ultimate augmented dataset for this stage
-        # OPTIMIZED AUGMENTATION for speed + quality balance
+        # OPTIMIZED AUGMENTATION - Fixed for 5x5 issues
         if stage_config['max_grid_size'] <= 3:
             augmentation_factor = 30
         elif stage_config['max_grid_size'] <= 4:
             augmentation_factor = 30
         elif stage_config['max_grid_size'] <= 5:
-            augmentation_factor = 30
+            augmentation_factor = 15  # ⭐ REDUCED from 30 - 5x5 was too complex
         elif stage_config['max_grid_size'] <= 6:
             augmentation_factor = 20
         elif stage_config['max_grid_size'] <= 8:
@@ -691,64 +690,64 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
             augmentation_factor=augmentation_factor
         )
         
-        # OPTIMIZED BATCH SIZES AND EPOCHS - BALANCED FOR SPEED + QUALITY
+        # OPTIMIZED BATCH SIZES AND EPOCHS - MAXED FOR A100 80GB
         if stage_config['max_grid_size'] <= 2:
-            batch_size = 8192   
-            epochs_multiplier = 5.0  # ⭐ REDUCED from 20.0 (15 epochs)
+            batch_size = 16384  # ⭐ MAXED for A100
+            epochs_multiplier = 5.0
         elif stage_config['max_grid_size'] <= 3:
-            batch_size = 8192
-            epochs_multiplier = 5.0  # ⭐ REDUCED from 20.0 (15 epochs)
+            batch_size = 16384  # ⭐ MAXED for A100
+            epochs_multiplier = 5.0
         elif stage_config['max_grid_size'] <= 4:
-            batch_size = 6144
-            epochs_multiplier = 4.0  # ⭐ REDUCED from 10.0 (12 epochs)
+            batch_size = 12288  # ⭐ 2x bigger
+            epochs_multiplier = 4.0
         elif stage_config['max_grid_size'] <= 5:
-            batch_size = 4096
-            epochs_multiplier = 3.0  # ⭐ REDUCED from 10.0 (9 epochs)
+            batch_size = 6144   # ⭐ REDUCED from 8192 - more gradient updates for problematic 5x5
+            epochs_multiplier = 6.0  # ⭐ INCREASED from 3.0 - more training for 5x5
         elif stage_config['max_grid_size'] <= 6:
-            batch_size = 2048
-            epochs_multiplier = 4.0  # ⭐ REDUCED from 10.0 (12 epochs)
+            batch_size = 4096   # ⭐ 2x bigger
+            epochs_multiplier = 4.0
         elif stage_config['max_grid_size'] <= 8:
-            batch_size = 1536
-            epochs_multiplier = 3.0  # ⭐ REDUCED from 10.0 (9 epochs)
+            batch_size = 3072   # ⭐ 2x bigger
+            epochs_multiplier = 3.0
         elif stage_config['max_grid_size'] <= 10:
-            batch_size = 1280
-            epochs_multiplier = 2.5  # ⭐ REDUCED from 10.0 (7.5 epochs)
+            batch_size = 2560   # ⭐ 2x bigger
+            epochs_multiplier = 2.5
         elif stage_config['max_grid_size'] <= 16:
-            batch_size = 1024
-            epochs_multiplier = 2.0  # ⭐ REDUCED from 10.0 (6 epochs)
+            batch_size = 2048   # ⭐ 2x bigger
+            epochs_multiplier = 2.0
         elif stage_config['max_grid_size'] <= 20:
-            batch_size = 512
-            epochs_multiplier = 1.5  # ⭐ REDUCED from 5.0 (4.5 epochs)
+            batch_size = 1024   # ⭐ 2x bigger
+            epochs_multiplier = 1.5
         elif stage_config['max_grid_size'] <= 22:
-            batch_size = 256
-            epochs_multiplier = 1.0  # (3 epochs)
+            batch_size = 512    # ⭐ 2x bigger
+            epochs_multiplier = 1.0
         elif stage_config['max_grid_size'] <= 27:
-            batch_size = 128
-            epochs_multiplier = 0.8  # (2.4 epochs)
+            batch_size = 256    # ⭐ 2x bigger
+            epochs_multiplier = 0.8
         else:
-            batch_size = 64
-            epochs_multiplier = 0.6  # (1.8 epochs)
+            batch_size = 128    # ⭐ 2x bigger
+            epochs_multiplier = 0.6
         
         # Calculate actual epochs for this stage
         stage_epochs = int(OLYMPUS_V3_CONFIG['epochs_per_stage'] * epochs_multiplier)
         
         # LEARNING RATE MULTIPLIERS - More aggressive for tiny grids
         if stage_config['max_grid_size'] <= 2:
-            lr_multiplier = 10.0  # 10X learning rate for 2x2
+            lr_multiplier = 10.0
         elif stage_config['max_grid_size'] <= 3:
-            lr_multiplier = 8.0  # 8X learning rate for 3x3
+            lr_multiplier = 12.0  # ⭐ INCREASED from 8.0 - more aggressive
         elif stage_config['max_grid_size'] <= 4:
-            lr_multiplier = 6.0  # 6X learning rate for 4x4
+            lr_multiplier = 8.0   # ⭐ INCREASED from 6.0
         elif stage_config['max_grid_size'] <= 5:
-            lr_multiplier = 5.0  # 5X learning rate for 5x5
+            lr_multiplier = 6.0   # ⭐ INCREASED from 5.0 - help 5x5 learn
         elif stage_config['max_grid_size'] <= 6:
-            lr_multiplier = 3.0  # 3X learning rate for 6x6
+            lr_multiplier = 4.0   # ⭐ INCREASED from 3.0
         elif stage_config['max_grid_size'] <= 8:
-            lr_multiplier = 2.0  # 2X learning rate for 7x7-8x8
+            lr_multiplier = 3.0   # ⭐ INCREASED from 2.0
         elif stage_config['max_grid_size'] <= 10:
-            lr_multiplier = 1.5  # 1.5x learning rate for 9x9-10x10
+            lr_multiplier = 2.0   # ⭐ INCREASED from 1.5
         else:
-            lr_multiplier = 1.0  # Normal learning rate for larger grids
+            lr_multiplier = 1.0
         
         # Adjust learning rates for this stage
         for param_group in fusion_optimizer.param_groups:
@@ -790,14 +789,12 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
         else:
             accumulation_steps = 2
         
-        # OneCycleLR - DISABLED (causes stuck learning rates)
-        # If you want to re-enable later, add cycle_momentum=False
+        # OneCycleLR - DISABLED (CosineAnnealing is more stable)
         if use_onecycle and stage_idx <= 7:
             steps_per_epoch = len(dataloader)
             steps_per_epoch_adjusted = (steps_per_epoch + accumulation_steps - 1) // accumulation_steps
             total_steps = steps_per_epoch_adjusted * stage_epochs
             
-            # AGGRESSIVE OneCycleLR for lower stages
             fusion_scheduler = optim.lr_scheduler.OneCycleLR(
                 fusion_optimizer,
                 max_lr=OLYMPUS_V3_CONFIG['learning_rate'] * lr_multiplier * 3,
@@ -807,7 +804,7 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
                 div_factor=25.0,
                 final_div_factor=1000.0,
                 last_epoch=-1,
-                cycle_momentum=False  # ⭐ CRITICAL FIX
+                cycle_momentum=False
             )
             
             specialist_output_scheduler = optim.lr_scheduler.OneCycleLR(
@@ -819,7 +816,7 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
                 div_factor=25.0,
                 final_div_factor=1000.0,
                 last_epoch=-1,
-                cycle_momentum=False  # ⭐ CRITICAL FIX
+                cycle_momentum=False
             ) if specialist_output_optimizer else None
             
             specialist_core_scheduler = optim.lr_scheduler.OneCycleLR(
@@ -831,7 +828,7 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
                 div_factor=25.0,
                 final_div_factor=1000.0,
                 last_epoch=-1,
-                cycle_momentum=False  # ⭐ CRITICAL FIX
+                cycle_momentum=False
             ) if specialist_core_optimizer else None
         
         # Stage-specific training with dynamic epochs
@@ -840,8 +837,8 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
             fusion_optimizer, specialist_output_optimizer, specialist_core_optimizer,
             fusion_scheduler, specialist_output_scheduler, specialist_core_scheduler,
             scaler, stage_idx, stage_config, training_stats, stage_epochs,
-            use_onecycle=(use_onecycle and stage_idx <= 7),  # Updated for new stages
-            accumulation_steps=accumulation_steps  # Pass accumulation steps
+            use_onecycle=(use_onecycle and stage_idx <= 7),
+            accumulation_steps=accumulation_steps
         )
         
         # Update best performance

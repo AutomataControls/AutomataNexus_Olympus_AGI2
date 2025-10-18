@@ -27,7 +27,8 @@ class EnsembleDecision:
                  specialist_predictions: Dict[str, torch.Tensor],
                  specialist_confidences: Dict[str, float],
                  fusion_weights: Dict[str, float],
-                 consensus_score: float):
+                 consensus_score: float,
+                 **kwargs): # Allow for additional metadata like meta_features
         self.prediction = prediction
         self.confidence = confidence
         self.specialist_predictions = specialist_predictions
@@ -35,6 +36,9 @@ class EnsembleDecision:
         self.fusion_weights = fusion_weights
         self.consensus_score = consensus_score
         self.metadata = {}
+        # Store any additional attributes passed during training
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
 
 class DecisionFusionEngine(nn.Module):
@@ -47,196 +51,133 @@ class DecisionFusionEngine(nn.Module):
         
         # Enhanced confidence analysis network
         self.confidence_analyzer = nn.Sequential(
-            nn.Linear(self.num_specialists, 256),  # 5 confidence scores -> 256
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(256, 128),
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Linear(64, self.num_specialists),  # Output fusion weights
-            nn.Softmax(dim=-1)
+            nn.Linear(self.num_specialists, 256), nn.ReLU(), nn.Dropout(0.1),
+            nn.Linear(256, 128), nn.ReLU(), nn.Dropout(0.1),
+            nn.Linear(128, 64), nn.ReLU(),
+            nn.Linear(64, self.num_specialists), nn.Softmax(dim=-1)
         )
         
         # Grid-size adaptive weighting
         self.grid_size_adapter = nn.Sequential(
-            nn.Linear(1, 64),  # Grid size as input
-            nn.ReLU(),
-            nn.Linear(64, 32),
-            nn.ReLU(),
-            nn.Linear(32, self.num_specialists),  # Grid-specific specialist weights
-            nn.Softmax(dim=-1)
+            nn.Linear(1, 64), nn.ReLU(),
+            nn.Linear(64, 32), nn.ReLU(),
+            nn.Linear(32, self.num_specialists), nn.Softmax(dim=-1)
         )
         
         # Specialist expertise router based on problem complexity
         self.expertise_router = nn.Sequential(
-            nn.Linear(self.num_specialists * 2, 128),  # Confidences + grid weights
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Linear(64, self.num_specialists),
-            nn.Softmax(dim=-1)
+            nn.Linear(self.num_specialists * 2, 128), nn.ReLU(), nn.Dropout(0.1),
+            nn.Linear(128, 64), nn.ReLU(),
+            nn.Linear(64, self.num_specialists), nn.Softmax(dim=-1)
         )
         
         # Fixed-size adaptive networks for proper state saving/loading
-        # Use maximum expected feature size for consistency across grid sizes
-        max_feature_size = 30 * 30 * 10 * self.num_specialists  # Max grid 30x30, 10 classes, 5 specialists
+        max_feature_size = 30 * 30 * 10 * self.num_specialists
         
         # Prediction similarity analyzer (fixed size)
         self.similarity_network = nn.Sequential(
-            nn.Linear(max_feature_size + self.num_specialists, 512),  # predictions + confidences
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(512, 256),
-            nn.ReLU(),
-            nn.Linear(256, 1),  # Consensus score
-            nn.Sigmoid()
+            nn.Linear(max_feature_size + self.num_specialists, 512), nn.ReLU(), nn.Dropout(0.1),
+            nn.Linear(512, 256), nn.ReLU(),
+            nn.Linear(256, 1), nn.Sigmoid()
         )
         
         # Meta-fusion network for final decision (fixed size)
         self.meta_fusion = nn.Sequential(
-            nn.Linear(max_feature_size + self.num_specialists + 1, 512),  # Predictions + confidences + consensus
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(512, 256),
-            nn.ReLU(),
-            nn.Linear(256, 10),  # Final prediction logits
-            nn.Softmax(dim=-1)
+            nn.Linear(max_feature_size + self.num_specialists + 1, 512), nn.ReLU(), nn.Dropout(0.1),
+            nn.Linear(512, 256), nn.ReLU(),
+            nn.Linear(256, 10), nn.Softmax(dim=-1)
         )
         
-        # IoU-based selection weights
-        self.iou_weight = 0.85  # ULTRA TEAL formula
-        self.exact_weight = 0.15
-        
-        # Track feature padding for consistency
         self.max_feature_size = max_feature_size
         
     def calculate_iou_scores(self, predictions: List[torch.Tensor], target: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """Calculate IoU scores between specialist predictions"""
         batch_size = predictions[0].shape[0]
         iou_scores = torch.zeros(len(predictions), batch_size, device=predictions[0].device)
         
         for i, pred in enumerate(predictions):
-            pred_indices = pred.argmax(dim=1)  # [batch, H, W]
+            pred_indices = pred.argmax(dim=1)
             
             if target is not None:
                 target_indices = target.argmax(dim=1) if target.dim() > 3 else target
-                # Calculate IoU with target
                 intersection = (pred_indices == target_indices).float().sum(dim=[1,2])
-                union = (pred_indices.shape[1] * pred_indices.shape[2])
+                union = float(pred_indices.shape[1] * pred_indices.shape[2])
                 iou_scores[i] = intersection / union
             else:
-                # Calculate average IoU with other predictions
                 for j, other_pred in enumerate(predictions):
                     if i != j:
                         other_indices = other_pred.argmax(dim=1)
                         intersection = (pred_indices == other_indices).float().sum(dim=[1,2])
-                        union = (pred_indices.shape[1] * pred_indices.shape[2])
+                        union = float(pred_indices.shape[1] * pred_indices.shape[2])
                         iou_scores[i] += intersection / union
                 iou_scores[i] /= (len(predictions) - 1)
         
-        return iou_scores.transpose(0, 1)  # [batch, num_specialists]
+        return iou_scores.transpose(0, 1)
     
     def _pad_features_to_max_size(self, features: torch.Tensor) -> torch.Tensor:
-        """Pad features to maximum size for consistent network input"""
         current_size = features.shape[1]
         if current_size < self.max_feature_size:
-            # Pad with zeros to max size
             padding = torch.zeros(features.shape[0], self.max_feature_size - current_size, 
                                 device=features.device, dtype=features.dtype)
             return torch.cat([features, padding], dim=1)
         elif current_size > self.max_feature_size:
-            # Truncate if somehow larger (shouldn't happen)
             return features[:, :self.max_feature_size]
         return features
     
+    # --- MODIFIED: ACCEPTS A DICTIONARY OF TENSORS FOR CONFIDENCES ---
     def forward(self, specialist_predictions: Dict[str, torch.Tensor],
-                specialist_confidences: Dict[str, float],
+                specialist_confidences_tensors: Dict[str, torch.Tensor],
                 target: Optional[torch.Tensor] = None) -> EnsembleDecision:
         """Fuse all specialist predictions into final OLYMPUS decision"""
         
-        # Organize specialist data
         specialist_names = ['minerva', 'atlas', 'iris', 'chronos', 'prometheus']
         predictions = []
-        confidences = []
+        confidences_tensors_list = []
+        
+        ref_device = list(specialist_predictions.values())[0].device
         
         for name in specialist_names:
             pred = specialist_predictions.get(name, torch.zeros_like(list(specialist_predictions.values())[0]))
-            conf = specialist_confidences.get(name, 0.5)
+            conf = specialist_confidences_tensors.get(name, torch.tensor(0.5, device=ref_device))
             predictions.append(pred)
-            confidences.append(conf)
+            confidences_tensors_list.append(conf)
         
-        # Stack predictions and confidences
-        stacked_predictions = torch.stack(predictions, dim=0)  # [5, batch, C, H, W]
-        confidence_tensor = torch.tensor(confidences, device=predictions[0].device).unsqueeze(0)  # [1, 5]
+        stacked_predictions = torch.stack(predictions, dim=0)
+        # --- FIX: Efficiently stack the list of tensors directly ---
+        confidence_tensor = torch.stack(confidences_tensors_list).unsqueeze(0)  # Shape: [1, 5]
         batch_size = predictions[0].shape[0]
         
-        # Get grid size for adaptive weighting
-        grid_size = max(predictions[0].shape[-2:])  # Get larger dimension
-        grid_size_tensor = torch.tensor([grid_size], dtype=torch.float32, device=predictions[0].device).unsqueeze(0)  # [1, 1]
+        grid_size = float(max(predictions[0].shape[-2:]))
+        grid_size_tensor = torch.tensor([grid_size], dtype=torch.float32, device=ref_device).unsqueeze(0)
         
-        # Calculate consensus score - make robust to different prediction shapes
-        flat_predictions = stacked_predictions.transpose(0, 1).reshape(batch_size, -1)  # [batch, 5*C*H*W]
-        
-        # Pad features to maximum size for consistent network input
+        flat_predictions = stacked_predictions.transpose(0, 1).reshape(batch_size, -1)
         padded_predictions = self._pad_features_to_max_size(flat_predictions)
         
-        # Calculate IoU-based quality scores
-        iou_scores = self.calculate_iou_scores(predictions, target)  # [batch, 5]
+        iou_scores = self.calculate_iou_scores(predictions, target)
         
-        # Generate enhanced fusion weights
-        base_fusion_weights = self.confidence_analyzer(confidence_tensor)  # [1, 5]
-        base_fusion_weights = base_fusion_weights.expand(batch_size, -1)  # [batch, 5]
+        base_fusion_weights = self.confidence_analyzer(confidence_tensor).expand(batch_size, -1)
+        grid_weights = self.grid_size_adapter(grid_size_tensor).expand(batch_size, -1)
         
-        # Grid-size adaptive weights
-        grid_weights = self.grid_size_adapter(grid_size_tensor)  # [1, 5]
-        grid_weights = grid_weights.expand(batch_size, -1)  # [batch, 5]
+        router_input = torch.cat([confidence_tensor.expand(batch_size, -1), grid_weights], dim=1)
+        expertise_weights = self.expertise_router(router_input)
         
-        # Expertise routing based on confidences and grid complexity
-        router_input = torch.cat([confidence_tensor.expand(batch_size, -1), grid_weights], dim=1)  # [batch, 10]
-        expertise_weights = self.expertise_router(router_input)  # [batch, 5]
-        
-        # Combine all weighting mechanisms
         fusion_weights = base_fusion_weights * grid_weights * expertise_weights
+        combined_weights = F.softmax(fusion_weights * iou_scores, dim=-1)
         
-        # Combine with IoU scores for final weights
-        combined_weights = fusion_weights * iou_scores
-        combined_weights = F.softmax(combined_weights, dim=-1)
-        
-        # Create consensus input with padded features
         consensus_input = torch.cat([padded_predictions, confidence_tensor.expand(batch_size, -1)], dim=1)
+        consensus_score_tensor = self.similarity_network(consensus_input) # Shape: [batch, 1]
         
-        # Use fixed-size similarity network (no reinitialization needed)
-        consensus_score = self.similarity_network(consensus_input).squeeze()  # [batch]
+        meta_input = torch.cat([padded_predictions, combined_weights, consensus_score_tensor], dim=1)
+        final_prediction = self.meta_fusion(meta_input)
         
-        # Generate final prediction using meta-fusion
-        # Ensure consensus_score has proper dimensions
-        if consensus_score.dim() == 0:  # Scalar tensor
-            consensus_score = consensus_score.unsqueeze(0)  # Make it [1]
-        if consensus_score.dim() == 1:  # [batch] tensor
-            consensus_score = consensus_score.unsqueeze(-1)  # Make it [batch, 1]
-            
-        meta_input = torch.cat([
-            padded_predictions,  # Padded prediction features (fixed size)
-            combined_weights,  # Final fusion weights
-            consensus_score  # Consensus score with proper dimensions
-        ], dim=1)
+        weighted_confidences = torch.sum(combined_weights * confidence_tensor.expand(batch_size, -1), dim=1, keepdim=True)
+        final_confidence_tensor = (weighted_confidences * consensus_score_tensor).mean()
         
-        # Use fixed-size meta-fusion network (no reinitialization needed)
-        final_prediction = self.meta_fusion(meta_input)  # [batch, 10]
+        # --- FINAL CONVERSION TO FLOATS (SAFE TO DO HERE) ---
+        final_confidence = final_confidence_tensor.item()
+        consensus_score = consensus_score_tensor.mean().item()
         
-        # Calculate final confidence
-        weighted_confidences = torch.sum(combined_weights * confidence_tensor.expand(batch_size, -1), dim=1)
-        final_confidence = (weighted_confidences * consensus_score).mean().item()
-        
-        # Create specialist confidence dict
-        specialist_conf_dict = {name: conf for name, conf in zip(specialist_names, confidences)}
-        
-        # Create fusion weights dict
-        fusion_weights_dict = {name: combined_weights[:, i].mean().item() 
-                              for i, name in enumerate(specialist_names)}
+        specialist_conf_dict = {name: conf.item() for name, conf in specialist_confidences_tensors.items()}
+        fusion_weights_dict = {name: combined_weights[:, i].mean().item() for i, name in enumerate(specialist_names)}
         
         return EnsembleDecision(
             prediction=final_prediction,
@@ -244,7 +185,8 @@ class DecisionFusionEngine(nn.Module):
             specialist_predictions=specialist_predictions,
             specialist_confidences=specialist_conf_dict,
             fusion_weights=fusion_weights_dict,
-            consensus_score=consensus_score.mean().item()
+            consensus_score=consensus_score,
+            meta_features=meta_input # Pass meta features for loss calculation in training
         )
 
 
@@ -259,7 +201,6 @@ class OlympusEnsemble(nn.Module):
         
         print(f"\033[96m🏛️ Initializing OLYMPUS Ensemble - Ultimate AGI2 System\033[0m")
         
-        # Initialize all 5 specialist models (latest enhanced versions that match your checkpoints)
         self.specialists = nn.ModuleDict({
             'minerva': MinervaV6Enhanced(max_grid_size, d_model, preserve_weights=True),
             'atlas': AtlasV5Enhanced(max_grid_size, d_model, 2, preserve_weights=True),
@@ -268,15 +209,11 @@ class OlympusEnsemble(nn.Module):
             'prometheus': PrometheusV6Enhanced(max_grid_size, d_model, 8, preserve_weights=True)
         })
         
-        # Decision fusion engine
         self.fusion_engine = DecisionFusionEngine(d_model)
-        
-        # Performance tracking
         self.ensemble_performance = []
         self.specialist_performance = defaultdict(list)
         self.decision_history = []
         
-        # Logging
         self.logger = logging.getLogger('OLYMPUS')
         if not self.logger.handlers:
             handler = logging.StreamHandler()
@@ -288,64 +225,25 @@ class OlympusEnsemble(nn.Module):
         total_params = sum(p.numel() for p in self.parameters())
         print(f"\033[96m🏛️ OLYMPUS initialized with {total_params:,} total parameters across all specialists\033[0m")
         
-    def load_all_specialists(self, weight_dir: str = '/mnt/d/opt/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels') -> Dict[str, bool]:
-        """Load pre-trained weights for all specialists"""
+    def load_all_specialists(self, weight_dir: str) -> Dict[str, bool]:
         print(f"\033[96m🏛️ Loading all specialist weights...\033[0m")
-        
-        # Define weight file patterns for each specialist (from InputBestModels directory)
-        weight_patterns = {
-            'minerva': ['minerva_best.pt'],      # MINERVA V6 Enhanced
-            'atlas': ['atlas_best.pt'],          # ATLAS V5 Enhanced  
-            'iris': ['iris_best.pt'],            # IRIS V6 Enhanced
-            'chronos': ['chronos_best.pt'],      # CHRONOS V4/V5 Enhanced
-            'prometheus': ['prometheus_best.pt'] # PROMETHEUS V6 Enhanced
-        }
-        
+        weight_patterns = {'minerva': ['minerva_best.pt'], 'atlas': ['atlas_best.pt'], 'iris': ['iris_best.pt'], 'chronos': ['chronos_best.pt'], 'prometheus': ['prometheus_best.pt']}
         load_results = {}
-        
         for specialist_name, patterns in weight_patterns.items():
             loaded = False
             for pattern in patterns:
                 weight_path = os.path.join(weight_dir, pattern)
-                print(f"\033[96m   Checking: {weight_path}\033[0m")
                 if os.path.exists(weight_path):
                     try:
-                        if hasattr(self.specialists[specialist_name], 'load_compatible_weights'):
-                            success = self.specialists[specialist_name].load_compatible_weights(weight_path)
-                        else:
-                            # Fallback manual loading
-                            checkpoint = torch.load(weight_path, map_location=self.device_name)
-                            if 'model_state_dict' in checkpoint:
-                                state_dict = checkpoint['model_state_dict']
-                            else:
-                                state_dict = checkpoint
-                            
-                            model_dict = self.specialists[specialist_name].state_dict()
-                            compatible_params = {}
-                            for name, param in state_dict.items():
-                                if name in model_dict and model_dict[name].shape == param.shape:
-                                    compatible_params[name] = param
-                            
-                            model_dict.update(compatible_params)
-                            self.specialists[specialist_name].load_state_dict(model_dict)
-                            success = len(compatible_params) > 0
-                        
+                        success = self.specialists[specialist_name].load_compatible_weights(weight_path)
                         if success:
                             print(f"\033[96m✅ {specialist_name.upper()}: Loaded weights from {pattern}\033[0m")
-                            loaded = True
-                            break
-                        
+                            loaded = True; break
                     except Exception as e:
                         print(f"\033[93m⚠️  {specialist_name.upper()}: Loading error: {e}\033[0m")
-                        continue
-            
             load_results[specialist_name] = loaded
-            if not loaded:
-                print(f"\033[93m⚠️  {specialist_name.upper()}: No compatible weights found, using random initialization\033[0m")
-        
-        successful_loads = sum(load_results.values())
-        print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 specialists\033[0m")
-        
+            if not loaded: print(f"\033[93m⚠️  {specialist_name.upper()}: No compatible weights found\033[0m")
+        print(f"\033[96m🏛️ Successfully loaded {sum(load_results.values())}/5 specialists\033[0m")
         return load_results
     
     def forward(self, input_grid: torch.Tensor, 
@@ -353,223 +251,101 @@ class OlympusEnsemble(nn.Module):
                 mode: str = 'inference') -> EnsembleDecision:
         """OLYMPUS forward pass - all specialists process every problem"""
         
-        # Training mode - process all specialists (removed verbose logging)
-        
-        # Prepare inputs for all specialists
         specialist_predictions = {}
-        specialist_confidences = {}
+        # --- MODIFIED: Store confidences as tensors to avoid breaking the computation graph ---
+        specialist_confidences_tensors = {} 
         specialist_features = {}
         
-        # Process with all 5 specialists in parallel
         specialist_names = ['minerva', 'atlas', 'iris', 'chronos', 'prometheus']
         
         for name in specialist_names:
             try:
                 specialist = self.specialists[name]
                 
-                # Handle different input requirements
                 if name == 'chronos':
-                    # CHRONOS expects sequence input
-                    if isinstance(input_grid, list):
-                        inputs = input_grid
-                    else:
-                        inputs = [input_grid]  # Convert single grid to sequence
+                    inputs = [input_grid] if not isinstance(input_grid, list) else input_grid
                     output = specialist(inputs, output_grid=target_grid, mode=mode)
                 else:
-                    # Other specialists expect single grid input
                     output = specialist(input_grid, output_grid=target_grid, mode=mode)
                 
-                # Extract outputs
                 specialist_predictions[name] = output['predicted_output']
                 
-                # Extract confidence robustly
-                confidence = output.get('confidence', 0.5)
-                if torch.is_tensor(confidence):
-                    if confidence.numel() == 1:
-                        specialist_confidences[name] = confidence.item()
-                    else:
-                        # Multiple confidence values - take mean
-                        specialist_confidences[name] = confidence.mean().item()
+                # --- FIX: Extract confidence but KEEP IT AS A TENSOR ---
+                confidence = output.get('confidence', torch.tensor(0.5, device=input_grid.device))
+                if not torch.is_tensor(confidence):
+                    confidence = torch.tensor(float(confidence), device=input_grid.device, dtype=torch.float32)
+
+                if confidence.numel() > 1:
+                    specialist_confidences_tensors[name] = confidence.mean()
                 else:
-                    specialist_confidences[name] = float(confidence)
+                    specialist_confidences_tensors[name] = confidence.squeeze()
                     
                 specialist_features[name] = output.get('features', None)
                 
                 if mode == 'inference':
-                    print(f"\033[96m   {name.upper()}: Confidence = {specialist_confidences[name]:.3f}\033[0m")
+                    print(f"\033[96m   {name.upper()}: Confidence = {specialist_confidences_tensors[name].item():.3f}\033[0m")
                 
             except Exception as e:
-                # Handle specialist errors gracefully
                 print(f"\033[91m❌ {name.upper()} failed: {e}\033[0m")
                 specialist_predictions[name] = torch.zeros_like(list(specialist_predictions.values())[0] if specialist_predictions else input_grid)
-                specialist_confidences[name] = 0.0
+                specialist_confidences_tensors[name] = torch.tensor(0.0, device=input_grid.device)
                 specialist_features[name] = None
         
-        # Fuse all specialist predictions
+        # --- MODIFIED: Pass the dictionary of tensors to the fusion engine ---
         ensemble_decision = self.fusion_engine(
             specialist_predictions, 
-            specialist_confidences,
+            specialist_confidences_tensors,
             target_grid
         )
         
-        # Add OLYMPUS metadata
         ensemble_decision.metadata.update({
             'active_specialists': list(specialist_predictions.keys()),
-            'total_specialists': len(self.specialists),
-            'processing_mode': 'parallel_all_specialists',
             'olympus_version': 'AGI2_V1.0'
         })
         
-        # Log decision summary
         if mode == 'inference':
-            primary_specialist = max(ensemble_decision.fusion_weights.items(), key=lambda x: x[1])
-            print(f"\033[96m🏛️ OLYMPUS Decision: Primary={primary_specialist[0].upper()} ({primary_specialist[1]:.2f}), "
+            primary = max(ensemble_decision.fusion_weights.items(), key=lambda x: x[1])
+            print(f"\033[96m🏛️ OLYMPUS Decision: Primary={primary[0].upper()} ({primary[1]:.2f}), "
                   f"Consensus={ensemble_decision.consensus_score:.3f}, Final_Confidence={ensemble_decision.confidence:.3f}\033[0m")
         
         return ensemble_decision
     
     def evaluate_performance(self, test_dataset, max_samples: int = 100) -> Dict[str, float]:
-        """Evaluate OLYMPUS ensemble performance on test dataset"""
         print(f"\033[96m🏛️ Evaluating OLYMPUS performance on {max_samples} samples...\033[0m")
-        
         self.eval()
-        correct_predictions = 0
-        total_samples = 0
+        correct_predictions, total_samples = 0, 0
         specialist_correct = defaultdict(int)
         
         with torch.no_grad():
             for i, (input_grid, target_grid, metadata) in enumerate(test_dataset):
-                if i >= max_samples:
-                    break
-                
-                # Get OLYMPUS decision
+                if i >= max_samples: break
                 decision = self.forward(input_grid, target_grid, mode='inference')
-                
-                # Check if ensemble prediction is correct
                 pred_indices = decision.prediction.argmax(dim=1)
                 target_indices = target_grid.argmax(dim=1) if target_grid.dim() > 3 else target_grid
-                
-                is_correct = torch.equal(pred_indices, target_indices)
-                if is_correct:
-                    correct_predictions += 1
-                
-                # Check individual specialist correctness
+                if torch.equal(pred_indices, target_indices): correct_predictions += 1
                 for name, pred in decision.specialist_predictions.items():
-                    spec_pred_indices = pred.argmax(dim=1)
-                    if torch.equal(spec_pred_indices, target_indices):
-                        specialist_correct[name] += 1
-                
+                    if torch.equal(pred.argmax(dim=1), target_indices): specialist_correct[name] += 1
                 total_samples += 1
-                
-                if (i + 1) % 10 == 0:
-                    current_accuracy = correct_predictions / total_samples
-                    print(f"\033[96m   Progress: {i+1}/{max_samples}, Current Accuracy: {current_accuracy:.1%}\033[0m")
         
-        # Calculate final performance metrics
         ensemble_accuracy = correct_predictions / total_samples if total_samples > 0 else 0.0
-        specialist_accuracies = {name: specialist_correct[name] / total_samples 
-                               for name in specialist_correct.keys()}
+        specialist_accuracies = {name: sc / total_samples for name, sc in specialist_correct.items()}
         
-        # Update performance history
-        self.ensemble_performance.append(ensemble_accuracy)
-        for name, acc in specialist_accuracies.items():
-            self.specialist_performance[name].append(acc)
-        
-        results = {
-            'ensemble_accuracy': ensemble_accuracy,
-            'total_samples': total_samples,
-            **{f'{name}_accuracy': acc for name, acc in specialist_accuracies.items()}
-        }
-        
-        print(f"\033[96m🏛️ OLYMPUS Evaluation Complete:\033[0m")
-        print(f"\033[96m   Ensemble Accuracy: {ensemble_accuracy:.1%}\033[0m")
-        for name, acc in specialist_accuracies.items():
-            print(f"\033[96m   {name.upper()} Accuracy: {acc:.1%}\033[0m")
-        
-        return results
-    
+        print(f"\033[96m🏛️ OLYMPUS Evaluation Complete: Accuracy: {ensemble_accuracy:.1%}\033[0m")
+        return {'ensemble_accuracy': ensemble_accuracy, **{f'{name}_accuracy': acc for name, acc in specialist_accuracies.items()}}
+
     def get_ensemble_state(self) -> Dict[str, Any]:
-        """Get comprehensive OLYMPUS ensemble state"""
-        return {
-            'ensemble_name': 'OLYMPUS_AGI2',
-            'total_specialists': len(self.specialists),
-            'specialist_names': list(self.specialists.keys()),
-            'total_parameters': sum(p.numel() for p in self.parameters()),
-            'ensemble_performance_history': self.ensemble_performance,
-            'specialist_performance_history': dict(self.specialist_performance),
-            'decision_count': len(self.decision_history),
-            'device': self.device_name,
-            'architecture': 'All_Specialists_Every_Problem',
-            'target_accuracy': 0.95,
-            'fusion_strategy': 'confidence_weighted_consensus'
-        }
+        return {'ensemble_name': 'OLYMPUS_AGI2', 'total_specialists': len(self.specialists), 'total_parameters': sum(p.numel() for p in self.parameters())}
     
     def save_ensemble(self, save_path: str):
-        """Save complete OLYMPUS ensemble state"""
-        ensemble_state = {
-            'ensemble_state_dict': self.state_dict(),
-            'ensemble_config': {
-                'max_grid_size': self.max_grid_size,
-                'd_model': self.d_model,
-                'device': self.device_name
-            },
-            'performance_metrics': self.get_ensemble_state()
-        }
-        
-        torch.save(ensemble_state, save_path)
+        torch.save({'ensemble_state_dict': self.state_dict(), 'ensemble_config': {'max_grid_size': self.max_grid_size, 'd_model': self.d_model}}, save_path)
         print(f"\033[96m🏛️ OLYMPUS ensemble saved to {save_path}\033[0m")
     
     def load_ensemble(self, load_path: str):
-        """Load complete OLYMPUS ensemble state"""
         try:
-            ensemble_state = torch.load(load_path, map_location=self.device_name)
-            
-            # Load state dict with proper error handling
-            if 'ensemble_state_dict' in ensemble_state:
-                state_dict = ensemble_state['ensemble_state_dict']
-                
-                # CRITICAL FIX: Load fusion engine state separately first
-                current_state = self.state_dict()
-                fusion_keys_loaded = 0
-                fusion_keys_missing = 0
-                
-                # Load fusion engine weights with detailed tracking
-                for key, param in state_dict.items():
-                    if 'fusion_engine' in key and key in current_state:
-                        if current_state[key].shape == param.shape:
-                            current_state[key] = param
-                            fusion_keys_loaded += 1
-                        else:
-                            print(f"\033[91m🏛️ FUSION KEY MISMATCH: {key} - saved: {param.shape} vs current: {current_state[key].shape}\033[0m")
-                            fusion_keys_missing += 1
-                    elif 'fusion_engine' in key and key not in current_state:
-                        print(f"\033[91m🏛️ FUSION KEY NOT FOUND: {key}\033[0m")
-                        fusion_keys_missing += 1
-                
-                print(f"\033[96m🏛️ FUSION ENGINE: {fusion_keys_loaded} loaded, {fusion_keys_missing} missing/mismatched\033[0m")
-                
-                # Load the updated state dict
-                missing_keys, unexpected_keys = self.load_state_dict(current_state, strict=True)
-                
-                # Detailed fusion engine validation
-                if fusion_keys_missing > 0:
-                    print(f"\033[91m🏛️ CRITICAL: {fusion_keys_missing} fusion engine keys failed to load - ensemble will reset!\033[0m")
-                    return False
-                else:
-                    print(f"\033[92m🏛️ SUCCESS: All {fusion_keys_loaded} fusion engine weights loaded successfully!\033[0m")
-            
-            # Load performance history if available
-            if 'performance_metrics' in ensemble_state:
-                metrics = ensemble_state['performance_metrics']
-                if 'ensemble_performance_history' in metrics:
-                    self.ensemble_performance = metrics['ensemble_performance_history']
-                if 'specialist_performance_history' in metrics:
-                    self.specialist_performance = defaultdict(list, metrics['specialist_performance_history'])
-            
+            state = torch.load(load_path, map_location=self.device_name)
+            self.load_state_dict(state['ensemble_state_dict'], strict=False)
             print(f"\033[96m🏛️ OLYMPUS ensemble loaded from {load_path}\033[0m")
             return True
-            
         except Exception as e:
-            print(f"\033[96m🏛️ Error loading OLYMPUS ensemble: {e}\033[0m")
-            print(f"\033[96m🏛️ Starting with fresh ensemble weights\033[0m")
+            print(f"\033[96m🏛️ Error loading OLYMPUS ensemble: {e}. Starting fresh.\033[0m")
             return False

@@ -667,23 +667,23 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
         # Create ultimate augmented dataset for this stage
         # AGGRESSIVE AUGMENTATION for 85%+ on lower stages
         if stage_config['max_grid_size'] <= 3:
-            augmentation_factor = 50
+            augmentation_factor = 30
         elif stage_config['max_grid_size'] <= 4:
-            augmentation_factor = 40
+            augmentation_factor = 30
         elif stage_config['max_grid_size'] <= 5:
             augmentation_factor = 30
         elif stage_config['max_grid_size'] <= 6:
-            augmentation_factor = 20
+            augmentation_factor = 30
         elif stage_config['max_grid_size'] <= 8:
-            augmentation_factor = 15
+            augmentation_factor = 30
         elif stage_idx >= 14:  # 27x27+
-            augmentation_factor = 10
+            augmentation_factor = 15
         elif stage_idx >= 12:  # 18x18-22x22
-            augmentation_factor = 10
+            augmentation_factor = 15
         elif stage_idx >= 10:  # 14x14-16x16
-            augmentation_factor = 10
+            augmentation_factor = 15
         else:  # 9x9-12x12
-            augmentation_factor = 10
+            augmentation_factor = 15
         
         dataset = OlympusV3UltimateDataset(
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',
@@ -694,16 +694,16 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
         
         # MAXIMIZE GPU USAGE for 85%+ on lower stages (80GB available!)
         if stage_config['max_grid_size'] <= 2:
-            batch_size = 1024  # Reduced from 16384 to avoid OOM
+            batch_size = 2048  # Reduced from 16384 to avoid OOM
             epochs_multiplier = 10.0
         elif stage_config['max_grid_size'] <= 3:
-            batch_size = 1024  # Reduced from 16384 to avoid OOM
+            batch_size = 2048  # Reduced from 16384 to avoid OOM
             epochs_multiplier = 10.0
         elif stage_config['max_grid_size'] <= 4:
-            batch_size = 1024  # Reduced from 12288 to avoid OOM
+            batch_size = 2024  # Reduced from 12288 to avoid OOM
             epochs_multiplier = 20.0
         elif stage_config['max_grid_size'] <= 5:
-            batch_size = 1024  # Reduced from 8192 to avoid OOM
+            batch_size = 2048  # Reduced from 8192 to avoid OOM
             epochs_multiplier = 20.0
         elif stage_config['max_grid_size'] <= 6:
             batch_size = 1024

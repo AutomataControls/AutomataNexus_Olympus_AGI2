@@ -614,9 +614,9 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
     
     print(f"\033[96m🏛️ Ultimate Training: {len(fusion_params)} fusion, {len(specialist_output_params)} specialist output, {len(specialist_core_params)} specialist core parameters\033[0m")
     
-    # AGGRESSIVE SCHEDULERS for 85%+ target
-    # Using OneCycleLR for aggressive training on lower stages
-    use_onecycle = True  # Flag to switch between schedulers
+    # AGGRESSIVE SCHEDULERS for 85%+ target - FIXED VERSION
+    # Using CosineAnnealing instead of OneCycleLR (more stable)
+    use_onecycle = False  # ⭐ DISABLED - OneCycleLR was causing stuck learning rates
     
     if use_onecycle:
         # We'll create these per-stage for OneCycleLR
@@ -624,7 +624,7 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
         specialist_output_scheduler = None
         specialist_core_scheduler = None
     else:
-        # Original schedulers as fallback
+        # CosineAnnealingWarmRestarts schedulers - STABLE AND WORKING
         fusion_scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
             fusion_optimizer,
             T_0=4,  # FASTER restarts for exploration
@@ -672,17 +672,17 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
         elif stage_config['max_grid_size'] <= 5:
             augmentation_factor = 30
         elif stage_config['max_grid_size'] <= 6:
-            augmentation_factor = 30
+            augmentation_factor = 20
         elif stage_config['max_grid_size'] <= 8:
             augmentation_factor = 15
         elif stage_idx >= 14:  # 27x27+
-            augmentation_factor = 5
+            augmentation_factor = 3
         elif stage_idx >= 12:  # 18x18-22x22
-            augmentation_factor = 5
+            augmentation_factor = 4
         elif stage_idx >= 10:  # 14x14-16x16
             augmentation_factor = 5
         else:  # 9x9-12x12
-            augmentation_factor = 5
+            augmentation_factor = 6
         
         dataset = OlympusV3UltimateDataset(
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',
@@ -691,50 +691,50 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
             augmentation_factor=augmentation_factor
         )
         
-        # OPTIMIZED BATCH SIZES AND EPOCHS - Balanced for speed
+        # OPTIMIZED BATCH SIZES AND EPOCHS - BALANCED FOR SPEED + QUALITY
         if stage_config['max_grid_size'] <= 2:
-            batch_size = 6144   
-            epochs_multiplier = 20.0  # REDUCED from 20.0 for speed
+            batch_size = 8192   
+            epochs_multiplier = 5.0  # ⭐ REDUCED from 20.0 (15 epochs)
         elif stage_config['max_grid_size'] <= 3:
-            batch_size = 6144
-            epochs_multiplier = 20.0  # REDUCED from 30.0 for speed (30 epochs)
+            batch_size = 8192
+            epochs_multiplier = 5.0  # ⭐ REDUCED from 20.0 (15 epochs)
         elif stage_config['max_grid_size'] <= 4:
-            batch_size = 4096
-            epochs_multiplier = 10.0   # REDUCED from 25.0 for speed (24 epochs)
+            batch_size = 6144
+            epochs_multiplier = 4.0  # ⭐ REDUCED from 10.0 (12 epochs)
         elif stage_config['max_grid_size'] <= 5:
             batch_size = 4096
-            epochs_multiplier = 10.0   # REDUCED from 20.0 for speed (18 epochs)
+            epochs_multiplier = 3.0  # ⭐ REDUCED from 10.0 (9 epochs)
         elif stage_config['max_grid_size'] <= 6:
             batch_size = 2048
-            epochs_multiplier = 10.0   # REDUCED from 6.0 for speed (12 epochs)
+            epochs_multiplier = 4.0  # ⭐ REDUCED from 10.0 (12 epochs)
         elif stage_config['max_grid_size'] <= 8:
-            batch_size = 1280
-            epochs_multiplier = 10.0   # REDUCED from 5.0 for speed (9 epochs)
+            batch_size = 1536
+            epochs_multiplier = 3.0  # ⭐ REDUCED from 10.0 (9 epochs)
         elif stage_config['max_grid_size'] <= 10:
             batch_size = 1280
-            epochs_multiplier = 10   # REDUCED from 4.0 for speed (7.5 epochs)
+            epochs_multiplier = 2.5  # ⭐ REDUCED from 10.0 (7.5 epochs)
         elif stage_config['max_grid_size'] <= 16:
-            batch_size = 512
-            epochs_multiplier = 10   # REDUCED from 3.0 for speed (6 epochs)
+            batch_size = 1024
+            epochs_multiplier = 2.0  # ⭐ REDUCED from 10.0 (6 epochs)
         elif stage_config['max_grid_size'] <= 20:
             batch_size = 512
-            epochs_multiplier = 5.0   # REDUCED from 2.0 for speed (4.5 epochs)
+            epochs_multiplier = 1.5  # ⭐ REDUCED from 5.0 (4.5 epochs)
         elif stage_config['max_grid_size'] <= 22:
-            batch_size = 64
-            epochs_multiplier = 5.0
+            batch_size = 256
+            epochs_multiplier = 1.0  # (3 epochs)
         elif stage_config['max_grid_size'] <= 27:
-            batch_size = 64
-            epochs_multiplier = 5
+            batch_size = 128
+            epochs_multiplier = 0.8  # (2.4 epochs)
         else:
             batch_size = 64
-            epochs_multiplier = 5
+            epochs_multiplier = 0.6  # (1.8 epochs)
         
         # Calculate actual epochs for this stage
         stage_epochs = int(OLYMPUS_V3_CONFIG['epochs_per_stage'] * epochs_multiplier)
         
-        # EXTREME LEARNING RATE BOOST for 85%+ on lower grids!
+        # LEARNING RATE MULTIPLIERS - More aggressive for tiny grids
         if stage_config['max_grid_size'] <= 2:
-            lr_multiplier = 10.0  # 10X INSANE learning rate for 2x2
+            lr_multiplier = 10.0  # 10X learning rate for 2x2
         elif stage_config['max_grid_size'] <= 3:
             lr_multiplier = 8.0  # 8X learning rate for 3x3
         elif stage_config['max_grid_size'] <= 4:
@@ -742,9 +742,11 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
         elif stage_config['max_grid_size'] <= 5:
             lr_multiplier = 5.0  # 5X learning rate for 5x5
         elif stage_config['max_grid_size'] <= 6:
-            lr_multiplier = 2.0  # DOUBLE learning rate for 6x6
+            lr_multiplier = 3.0  # 3X learning rate for 6x6
         elif stage_config['max_grid_size'] <= 8:
-            lr_multiplier = 1.5  # 1.5x learning rate for 7x7-8x8
+            lr_multiplier = 2.0  # 2X learning rate for 7x7-8x8
+        elif stage_config['max_grid_size'] <= 10:
+            lr_multiplier = 1.5  # 1.5x learning rate for 9x9-10x10
         else:
             lr_multiplier = 1.0  # Normal learning rate for larger grids
         
@@ -788,22 +790,24 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
         else:
             accumulation_steps = 2
         
-        # Create OneCycleLR schedulers per stage for lower stages
-        if use_onecycle and stage_idx <= 7:  # Updated to include all stages up to 8x8
+        # OneCycleLR - DISABLED (causes stuck learning rates)
+        # If you want to re-enable later, add cycle_momentum=False
+        if use_onecycle and stage_idx <= 7:
             steps_per_epoch = len(dataloader)
-            # FIX: Account for gradient accumulation - only step after accumulation_steps batches
             steps_per_epoch_adjusted = (steps_per_epoch + accumulation_steps - 1) // accumulation_steps
             total_steps = steps_per_epoch_adjusted * stage_epochs
             
             # AGGRESSIVE OneCycleLR for lower stages
             fusion_scheduler = optim.lr_scheduler.OneCycleLR(
                 fusion_optimizer,
-                max_lr=OLYMPUS_V3_CONFIG['learning_rate'] * lr_multiplier * 3,  # 3x peak
+                max_lr=OLYMPUS_V3_CONFIG['learning_rate'] * lr_multiplier * 3,
                 total_steps=total_steps,
-                pct_start=0.3,  # 30% warmup
+                pct_start=0.3,
                 anneal_strategy='cos',
-                div_factor=25.0,  # Start at max_lr/25
-                final_div_factor=1000.0  # End at max_lr/1000
+                div_factor=25.0,
+                final_div_factor=1000.0,
+                last_epoch=-1,
+                cycle_momentum=False  # ⭐ CRITICAL FIX
             )
             
             specialist_output_scheduler = optim.lr_scheduler.OneCycleLR(
@@ -813,7 +817,9 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
                 pct_start=0.3,
                 anneal_strategy='cos',
                 div_factor=25.0,
-                final_div_factor=1000.0
+                final_div_factor=1000.0,
+                last_epoch=-1,
+                cycle_momentum=False  # ⭐ CRITICAL FIX
             ) if specialist_output_optimizer else None
             
             specialist_core_scheduler = optim.lr_scheduler.OneCycleLR(
@@ -823,7 +829,9 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
                 pct_start=0.3,
                 anneal_strategy='cos',
                 div_factor=25.0,
-                final_div_factor=1000.0
+                final_div_factor=1000.0,
+                last_epoch=-1,
+                cycle_momentum=False  # ⭐ CRITICAL FIX
             ) if specialist_core_optimizer else None
         
         # Stage-specific training with dynamic epochs

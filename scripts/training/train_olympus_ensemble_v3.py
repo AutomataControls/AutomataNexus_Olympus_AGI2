@@ -136,143 +136,143 @@ class OlympusV3Loss(nn.Module):
     self.ultimate_coordination_weight = 0.15
     
     def forward(self, ensemble_decision: EnsembleDecision, targets: torch.Tensor, inputs: torch.Tensor) -> Dict:
-    """Calculate ultimate OLYMPUS V3 ensemble loss"""
-    pred_output = ensemble_decision.prediction
-    B = pred_output.shape[0]
-    
-    # Main ensemble loss (same foundation)
-    if targets.dim() > 1:
-        target_indices = targets.argmax(dim=1) if targets.dim() > 3 else targets.view(B, -1)
-    else:
-        target_indices = targets
-    
-    # Reshape predictions for loss calculation
-    pred_flat = pred_output.view(B, -1)
-    target_flat = target_indices.view(B, -1) if target_indices.dim() > 1 else target_indices
-    
-    # Use first 10 dimensions for loss (matching output classes)
-    if pred_flat.shape[1] > 10:
-        pred_flat = pred_flat[:, :10]
-    if target_flat.shape[1] > 1:
-        target_flat = target_flat[:, 0]  # Take first element
-    
-    ensemble_loss = self.focal_loss(pred_flat, target_flat.long())
-    
-    # ULTRA TEAL scoring for ensemble
-    pred_classes = pred_flat.argmax(dim=1)
-    exact_matches = (pred_classes == target_flat).float()
-    exact_count = exact_matches.sum()
-    exact_bonus = -exact_matches.mean() * self.exact_match_bonus
-    exact_bonus = exact_bonus.clamp(min=-12.0)  # Ultimate bonus
-    
-    # Ultimate specialist synchronization loss
-    specialist_predictions = ensemble_decision.specialist_predictions
-    sync_loss = 0.0
-    cross_attention_loss = 0.0
-    self_attention_loss = 0.0
-    
-    if len(specialist_predictions) > 1:
-        pred_values = list(specialist_predictions.values())
-        specialist_names = list(specialist_predictions.keys())
+        """Calculate ultimate OLYMPUS V3 ensemble loss"""
+        pred_output = ensemble_decision.prediction
+        B = pred_output.shape[0]
         
-        # Traditional and cross-attention synchronization
-        for i, pred1 in enumerate(pred_values):
-            for j, pred2 in enumerate(pred_values[i+1:], i+1):
-                pred1_flat = pred1.view(B, -1)[:, :10] if pred1.numel() > B*10 else pred1.view(B, -1)
-                pred2_flat = pred2.view(B, -1)[:, :10] if pred2.numel() > B*10 else pred2.view(B, -1)
-                
-                if pred1_flat.shape == pred2_flat.shape:
-                    # Enhanced synchronization
-                    sync_loss += F.mse_loss(pred1_flat, pred2_flat)
+        # Main ensemble loss (same foundation)
+        if targets.dim() > 1:
+            target_indices = targets.argmax(dim=1) if targets.dim() > 3 else targets.view(B, -1)
+        else:
+            target_indices = targets
+        
+        # Reshape predictions for loss calculation
+        pred_flat = pred_output.view(B, -1)
+        target_flat = target_indices.view(B, -1) if target_indices.dim() > 1 else target_indices
+        
+        # Use first 10 dimensions for loss (matching output classes)
+        if pred_flat.shape[1] > 10:
+            pred_flat = pred_flat[:, :10]
+        if target_flat.shape[1] > 1:
+            target_flat = target_flat[:, 0]  # Take first element
+        
+        ensemble_loss = self.focal_loss(pred_flat, target_flat.long())
+        
+        # ULTRA TEAL scoring for ensemble
+        pred_classes = pred_flat.argmax(dim=1)
+        exact_matches = (pred_classes == target_flat).float()
+        exact_count = exact_matches.sum()
+        exact_bonus = -exact_matches.mean() * self.exact_match_bonus
+        exact_bonus = exact_bonus.clamp(min=-12.0)  # Ultimate bonus
+        
+        # Ultimate specialist synchronization loss
+        specialist_predictions = ensemble_decision.specialist_predictions
+        sync_loss = 0.0
+        cross_attention_loss = 0.0
+        self_attention_loss = 0.0
+        
+        if len(specialist_predictions) > 1:
+            pred_values = list(specialist_predictions.values())
+            specialist_names = list(specialist_predictions.keys())
+            
+            # Traditional and cross-attention synchronization
+            for i, pred1 in enumerate(pred_values):
+                for j, pred2 in enumerate(pred_values[i+1:], i+1):
+                    pred1_flat = pred1.view(B, -1)[:, :10] if pred1.numel() > B*10 else pred1.view(B, -1)
+                    pred2_flat = pred2.view(B, -1)[:, :10] if pred2.numel() > B*10 else pred2.view(B, -1)
                     
-                    # Ultimate cross-attention
-                    attention_scores = torch.softmax(torch.matmul(pred1_flat, pred2_flat.transpose(-2, -1)), dim=-1)
-                    cross_attention_loss += -torch.log(attention_scores.diagonal(dim1=-2, dim2=-1) + 1e-8).mean()
+                    if pred1_flat.shape == pred2_flat.shape:
+                        # Enhanced synchronization
+                        sync_loss += F.mse_loss(pred1_flat, pred2_flat)
+                        
+                        # Ultimate cross-attention
+                        attention_scores = torch.softmax(torch.matmul(pred1_flat, pred2_flat.transpose(-2, -1)), dim=-1)
+                        cross_attention_loss += -torch.log(attention_scores.diagonal(dim1=-2, dim2=-1) + 1e-8).mean()
+            
+            # Ultimate self-attention across all specialists
+            if len(pred_values) >= 3:
+                # Stack all predictions for self-attention
+                try:
+                    pred_stack = torch.stack([p.view(B, -1)[:, :10] if p.numel() > B*10 else p.view(B, -1) 
+                                            for p in pred_values], dim=1)  # [B, num_specialists, features]
+                    
+                    # Self-attention mechanism
+                    attention_weights = F.softmax(torch.matmul(pred_stack, pred_stack.transpose(-2, -1)), dim=-1)
+                    attended_predictions = torch.matmul(attention_weights, pred_stack)
+                    
+                    # Self-attention loss (encourage diverse but coordinated attention)
+                    self_attention_loss = F.mse_loss(attended_predictions, pred_stack)
+                except:
+                    self_attention_loss = torch.tensor(0.0, device=pred_output.device)
         
-        # Ultimate self-attention across all specialists
-        if len(pred_values) >= 3:
-            # Stack all predictions for self-attention
-            try:
-                pred_stack = torch.stack([p.view(B, -1)[:, :10] if p.numel() > B*10 else p.view(B, -1) 
-                                        for p in pred_values], dim=1)  # [B, num_specialists, features]
-                
-                # Self-attention mechanism
-                attention_weights = F.softmax(torch.matmul(pred_stack, pred_stack.transpose(-2, -1)), dim=-1)
-                attended_predictions = torch.matmul(attention_weights, pred_stack)
-                
-                # Self-attention loss (encourage diverse but coordinated attention)
-                self_attention_loss = F.mse_loss(attended_predictions, pred_stack)
-            except:
-                self_attention_loss = torch.tensor(0.0, device=pred_output.device)
-    
-    # Ultimate consensus bonus with adaptive weighting
-    consensus_score = ensemble_decision.consensus_score
-    consensus_bonus = -torch.tensor(consensus_score, device=pred_output.device) * self.consensus_weight
-    
-    # Ultimate adaptive weight regularization
-    fusion_weights = list(ensemble_decision.fusion_weights.values())
-    adaptive_weight_loss = 0.0
-    ultimate_coordination_loss = 0.0
-    
-    if len(fusion_weights) > 1:
-        fusion_tensor = torch.tensor(fusion_weights, device=pred_output.device)
+        # Ultimate consensus bonus with adaptive weighting
+        consensus_score = ensemble_decision.consensus_score
+        consensus_bonus = -torch.tensor(consensus_score, device=pred_output.device) * self.consensus_weight
         
-        # Ultimate balanced specialization
-        fusion_entropy = -(fusion_tensor * torch.log(fusion_tensor + 1e-8)).sum()
-        fusion_reg = -fusion_entropy * self.fusion_reg_weight
+        # Ultimate adaptive weight regularization
+        fusion_weights = list(ensemble_decision.fusion_weights.values())
+        adaptive_weight_loss = 0.0
+        ultimate_coordination_loss = 0.0
         
-        # Ultimate coordination loss (encourage optimal weight distribution)
-        target_distribution = torch.ones_like(fusion_tensor) / len(fusion_weights)  # Uniform baseline
-        weight_kl_div = F.kl_div(F.log_softmax(fusion_tensor, dim=0), target_distribution, reduction='sum')
-        ultimate_coordination_loss = weight_kl_div * self.ultimate_coordination_weight
+        if len(fusion_weights) > 1:
+            fusion_tensor = torch.tensor(fusion_weights, device=pred_output.device)
+            
+            # Ultimate balanced specialization
+            fusion_entropy = -(fusion_tensor * torch.log(fusion_tensor + 1e-8)).sum()
+            fusion_reg = -fusion_entropy * self.fusion_reg_weight
+            
+            # Ultimate coordination loss (encourage optimal weight distribution)
+            target_distribution = torch.ones_like(fusion_tensor) / len(fusion_weights)  # Uniform baseline
+            weight_kl_div = F.kl_div(F.log_softmax(fusion_tensor, dim=0), target_distribution, reduction='sum')
+            ultimate_coordination_loss = weight_kl_div * self.ultimate_coordination_weight
+            
+            # Advanced adaptive weight penalty
+            weight_variance = fusion_tensor.var()
+            weight_skewness = ((fusion_tensor - fusion_tensor.mean()) ** 3).mean()
+            adaptive_weight_loss = (weight_variance + abs(weight_skewness)) * self.adaptive_weight_bonus
+        else:
+            fusion_reg = torch.tensor(0.0, device=pred_output.device)
         
-        # Advanced adaptive weight penalty
-        weight_variance = fusion_tensor.var()
-        weight_skewness = ((fusion_tensor - fusion_tensor.mean()) ** 3).mean()
-        adaptive_weight_loss = (weight_variance + abs(weight_skewness)) * self.adaptive_weight_bonus
-    else:
-        fusion_reg = torch.tensor(0.0, device=pred_output.device)
-    
-    # Ultimate meta-learning bonus
-    meta_learning_bonus = 0.0
-    if hasattr(ensemble_decision, 'meta_features') and ensemble_decision.meta_features is not None:
-        # Ultimate meta-feature diversity and quality
-        meta_entropy = -(F.softmax(ensemble_decision.meta_features, dim=-1) * 
-                       F.log_softmax(ensemble_decision.meta_features, dim=-1)).sum(dim=-1).mean()
-        meta_quality = F.mse_loss(ensemble_decision.meta_features, 
-                                torch.ones_like(ensemble_decision.meta_features) * 0.5)
-        meta_learning_bonus = -(meta_entropy + meta_quality) * self.meta_learning_weight
-    
-    # Transform penalty (encourage ultimate non-trivial solutions)
-    if inputs.dim() > 1:
-        input_flat = inputs.view(B, -1)[:, :10] if inputs.numel() > B*10 else inputs.view(B, -1)
-        copy_penalty = F.mse_loss(pred_flat, input_flat) * self.transform_penalty
-    else:
-        copy_penalty = torch.tensor(0.0, device=pred_output.device)
-    
-    total_loss = (ensemble_loss + exact_bonus + sync_loss * self.sync_weight + 
-                 consensus_bonus + fusion_reg + copy_penalty + 
-                 cross_attention_loss * self.cross_attention_weight + 
-                 adaptive_weight_loss + meta_learning_bonus +
-                 self_attention_loss * self.self_attention_weight +
-                 ultimate_coordination_loss)
-    
-    return {
-        'total': total_loss,
-        'ensemble': ensemble_loss,
-        'sync': sync_loss * self.sync_weight,
-        'consensus_bonus': consensus_bonus,
-        'fusion_reg': fusion_reg,
-        'exact_bonus': exact_bonus,
-        'copy_penalty': copy_penalty,
-        'cross_attention': cross_attention_loss * self.cross_attention_weight,
-        'adaptive_weights': adaptive_weight_loss,
-        'meta_learning': meta_learning_bonus,
-        'self_attention': self_attention_loss * self.self_attention_weight,
-        'ultimate_coordination': ultimate_coordination_loss,
-        'exact_count': exact_count,
-        'consensus_score': consensus_score
-    }
+        # Ultimate meta-learning bonus
+        meta_learning_bonus = 0.0
+        if hasattr(ensemble_decision, 'meta_features') and ensemble_decision.meta_features is not None:
+            # Ultimate meta-feature diversity and quality
+            meta_entropy = -(F.softmax(ensemble_decision.meta_features, dim=-1) * 
+                           F.log_softmax(ensemble_decision.meta_features, dim=-1)).sum(dim=-1).mean()
+            meta_quality = F.mse_loss(ensemble_decision.meta_features, 
+                                    torch.ones_like(ensemble_decision.meta_features) * 0.5)
+            meta_learning_bonus = -(meta_entropy + meta_quality) * self.meta_learning_weight
+        
+        # Transform penalty (encourage ultimate non-trivial solutions)
+        if inputs.dim() > 1:
+            input_flat = inputs.view(B, -1)[:, :10] if inputs.numel() > B*10 else inputs.view(B, -1)
+            copy_penalty = F.mse_loss(pred_flat, input_flat) * self.transform_penalty
+        else:
+            copy_penalty = torch.tensor(0.0, device=pred_output.device)
+        
+        total_loss = (ensemble_loss + exact_bonus + sync_loss * self.sync_weight + 
+                     consensus_bonus + fusion_reg + copy_penalty + 
+                     cross_attention_loss * self.cross_attention_weight + 
+                     adaptive_weight_loss + meta_learning_bonus +
+                     self_attention_loss * self.self_attention_weight +
+                     ultimate_coordination_loss)
+        
+        return {
+            'total': total_loss,
+            'ensemble': ensemble_loss,
+            'sync': sync_loss * self.sync_weight,
+            'consensus_bonus': consensus_bonus,
+            'fusion_reg': fusion_reg,
+            'exact_bonus': exact_bonus,
+            'copy_penalty': copy_penalty,
+            'cross_attention': cross_attention_loss * self.cross_attention_weight,
+            'adaptive_weights': adaptive_weight_loss,
+            'meta_learning': meta_learning_bonus,
+            'self_attention': self_attention_loss * self.self_attention_weight,
+            'ultimate_coordination': ultimate_coordination_loss,
+            'exact_count': exact_count,
+            'consensus_score': consensus_score
+        }
 # Import V2's augmented dataset for V3
 from train_olympus_ensemble_v2 import OlympusV2AugmentedDataset, olympus_v2_augmented_collate_fn as foundation_collate_fn
 # Extended dataset class for V3 that includes tiny grids
@@ -280,184 +280,184 @@ class OlympusV3UltimateDataset(OlympusV2AugmentedDataset):
     """Extended dataset for V3 that ensures tiny grids (2x2, 3x3) are included"""
 
     def __init__(self, data_dir: str, max_grid_size: int, stage_config: Dict, augmentation_factor: int = 6):
-    # Initialize with parent class
-    super().__init__(data_dir, max_grid_size, stage_config, augmentation_factor)
-    
-    # For tiny grids, ALWAYS add synthetic examples
-    if max_grid_size <= 5:  # Extended to 5x5!
-        print(f"\033[93m⚠️ Only {len(self.samples)} samples found for {max_grid_size}x{max_grid_size} grids\033[0m")
-        self._add_synthetic_tiny_grid_samples()
+        # Initialize with parent class
+        super().__init__(data_dir, max_grid_size, stage_config, augmentation_factor)
+        
+        # For tiny grids, ALWAYS add synthetic examples
+        if max_grid_size <= 5:  # Extended to 5x5!
+            print(f"\033[93m⚠️ Only {len(self.samples)} samples found for {max_grid_size}x{max_grid_size} grids\033[0m")
+            self._add_synthetic_tiny_grid_samples()
 
     def _add_synthetic_tiny_grid_samples(self):
-    """Add synthetic samples for tiny grids to ensure we have enough data"""
-    original_count = len(self.samples)
-    target_samples = 20000  # ULTRA MASSIVE - we have 80GB to fill!
-    
-    if self.max_grid_size == 2:
-        # Skip 2x2 - not in real ARC data
-        patterns = []
-    elif self.max_grid_size == 3:
-        # Create comprehensive 3x3 pattern examples
-        patterns = [
-            # Center patterns
-            ([[0, 0, 0], [0, 1, 0], [0, 0, 0]], [[1, 1, 1], [1, 0, 1], [1, 1, 1]]),  # Invert center
-            ([[1, 1, 1], [1, 0, 1], [1, 1, 1]], [[0, 0, 0], [0, 1, 0], [0, 0, 0]]),  # Fill center
-            ([[0, 0, 0], [0, 2, 0], [0, 0, 0]], [[2, 2, 2], [2, 0, 2], [2, 2, 2]]),  # Invert center color 2
-            ([[2, 2, 2], [2, 0, 2], [2, 2, 2]], [[0, 0, 0], [0, 2, 0], [0, 0, 0]]),  # Fill center color 2
-            
-            # Line patterns  
-            ([[1, 0, 0], [1, 0, 0], [1, 0, 0]], [[0, 0, 1], [0, 0, 1], [0, 0, 1]]),  # Vertical line move
-            ([[0, 1, 0], [0, 1, 0], [0, 1, 0]], [[1, 0, 0], [1, 0, 0], [1, 0, 0]]),  # Vertical line move
-            ([[1, 1, 1], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [1, 1, 1]]),  # Horizontal line move
-            ([[0, 0, 0], [1, 1, 1], [0, 0, 0]], [[1, 1, 1], [0, 0, 0], [0, 0, 0]]),  # Horizontal line move
-            
-            # Diagonal patterns
-            ([[1, 0, 0], [0, 1, 0], [0, 0, 1]], [[0, 0, 1], [0, 1, 0], [1, 0, 0]]),  # Flip diagonal
-            ([[0, 0, 1], [0, 1, 0], [1, 0, 0]], [[1, 0, 0], [0, 1, 0], [0, 0, 1]]),  # Flip diagonal
-            ([[2, 0, 0], [0, 2, 0], [0, 0, 2]], [[0, 0, 2], [0, 2, 0], [2, 0, 0]]),  # Flip diagonal color 2
-            
-            # Rotation patterns
-            ([[1, 2, 3], [0, 0, 0], [0, 0, 0]], [[1, 0, 0], [2, 0, 0], [3, 0, 0]]),  # 90 degree rotation
-            ([[0, 0, 0], [4, 5, 6], [0, 0, 0]], [[0, 4, 0], [0, 5, 0], [0, 6, 0]]),  # 90 degree rotation
-            ([[1, 2, 3], [4, 5, 6], [7, 8, 9]], [[7, 4, 1], [8, 5, 2], [9, 6, 3]]),  # Full 90 rotation
-            
-            # Color patterns
-            ([[1, 1, 1], [2, 2, 2], [3, 3, 3]], [[3, 3, 3], [2, 2, 2], [1, 1, 1]]),  # Row swap
-            ([[1, 2, 3], [1, 2, 3], [1, 2, 3]], [[3, 2, 1], [3, 2, 1], [3, 2, 1]]),  # Column swap
-            ([[1, 1, 1], [1, 1, 1], [1, 1, 1]], [[2, 2, 2], [2, 2, 2], [2, 2, 2]]),  # Color change
-            
-            # Corner patterns
-            ([[1, 0, 2], [0, 0, 0], [3, 0, 4]], [[4, 0, 3], [0, 0, 0], [2, 0, 1]]),  # Rotate corners
-            ([[1, 0, 1], [0, 0, 0], [1, 0, 1]], [[0, 1, 0], [1, 0, 1], [0, 1, 0]]),  # Swap corners/edges
-            
-            # Cross patterns
-            ([[0, 1, 0], [1, 1, 1], [0, 1, 0]], [[1, 0, 1], [0, 0, 0], [1, 0, 1]]),  # Cross to corners
-            ([[1, 0, 1], [0, 0, 0], [1, 0, 1]], [[0, 1, 0], [1, 1, 1], [0, 1, 0]]),  # Corners to cross
-            
-            # Frame patterns
-            ([[1, 1, 1], [1, 0, 1], [1, 1, 1]], [[0, 0, 0], [0, 1, 0], [0, 0, 0]]),  # Frame to center
-            ([[0, 0, 0], [0, 1, 0], [0, 0, 0]], [[1, 1, 1], [1, 0, 1], [1, 1, 1]]),  # Center to frame
-        ]
-    elif self.max_grid_size == 4:
-        # Create 4x4 pattern examples for better training
-        patterns = [
-            # Simple fills
-            ([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], 
-             [[0, 0, 1, 1], [0, 0, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]]),  # Move square
-            ([[0, 0, 0, 0], [0, 1, 1, 0], [0, 1, 1, 0], [0, 0, 0, 0]], 
-             [[1, 1, 1, 1], [1, 0, 0, 1], [1, 0, 0, 1], [1, 1, 1, 1]]),  # Invert center
-            # Line patterns
-            ([[1, 0, 0, 0], [1, 0, 0, 0], [1, 0, 0, 0], [1, 0, 0, 0]], 
-             [[0, 0, 0, 1], [0, 0, 0, 1], [0, 0, 0, 1], [0, 0, 0, 1]]),  # Move line
-            # Diagonal patterns
-            ([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], 
-             [[0, 0, 0, 1], [0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 0]]),  # Flip diagonal
-            # Checkerboard
-            ([[1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1]], 
-             [[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]]),  # Invert checker
-        ]
-    elif self.max_grid_size == 5:
-        # Create 5x5 pattern examples
-        patterns = [
-            # Cross pattern
-            ([[0, 0, 1, 0, 0], [0, 0, 1, 0, 0], [1, 1, 1, 1, 1], [0, 0, 1, 0, 0], [0, 0, 1, 0, 0]], 
-             [[1, 1, 0, 1, 1], [1, 1, 0, 1, 1], [0, 0, 0, 0, 0], [1, 1, 0, 1, 1], [1, 1, 0, 1, 1]]),  # Invert cross
-            # Center patterns
-            ([[0, 0, 0, 0, 0], [0, 1, 1, 1, 0], [0, 1, 0, 1, 0], [0, 1, 1, 1, 0], [0, 0, 0, 0, 0]], 
-             [[1, 1, 1, 1, 1], [1, 0, 0, 0, 1], [1, 0, 1, 0, 1], [1, 0, 0, 0, 1], [1, 1, 1, 1, 1]]),  # Frame/center swap
-            # Corner patterns
-            ([[1, 0, 0, 0, 2], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [3, 0, 0, 0, 4]], 
-             [[4, 0, 0, 0, 3], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [2, 0, 0, 0, 1]]),  # Rotate corners
-        ]
-    else:
-        patterns = []
-    
-    # Add patterns multiple times with variations
-    variation_count = 0
-    max_variations_per_pattern = 500  # INSANE variations - fill that GPU!
-    
-    while len(self.samples) < target_samples and patterns:
-        for inp, out in patterns:
-            if len(self.samples) >= target_samples:
-                break
-            
-            # Generate multiple variations of each pattern
-            for _ in range(max_variations_per_pattern):
+        """Add synthetic samples for tiny grids to ensure we have enough data"""
+        original_count = len(self.samples)
+        target_samples = 20000  # ULTRA MASSIVE - we have 80GB to fill!
+        
+        if self.max_grid_size == 2:
+            # Skip 2x2 - not in real ARC data
+            patterns = []
+        elif self.max_grid_size == 3:
+            # Create comprehensive 3x3 pattern examples
+            patterns = [
+                # Center patterns
+                ([[0, 0, 0], [0, 1, 0], [0, 0, 0]], [[1, 1, 1], [1, 0, 1], [1, 1, 1]]),  # Invert center
+                ([[1, 1, 1], [1, 0, 1], [1, 1, 1]], [[0, 0, 0], [0, 1, 0], [0, 0, 0]]),  # Fill center
+                ([[0, 0, 0], [0, 2, 0], [0, 0, 0]], [[2, 2, 2], [2, 0, 2], [2, 2, 2]]),  # Invert center color 2
+                ([[2, 2, 2], [2, 0, 2], [2, 2, 2]], [[0, 0, 0], [0, 2, 0], [0, 0, 0]]),  # Fill center color 2
+                
+                # Line patterns  
+                ([[1, 0, 0], [1, 0, 0], [1, 0, 0]], [[0, 0, 1], [0, 0, 1], [0, 0, 1]]),  # Vertical line move
+                ([[0, 1, 0], [0, 1, 0], [0, 1, 0]], [[1, 0, 0], [1, 0, 0], [1, 0, 0]]),  # Vertical line move
+                ([[1, 1, 1], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [1, 1, 1]]),  # Horizontal line move
+                ([[0, 0, 0], [1, 1, 1], [0, 0, 0]], [[1, 1, 1], [0, 0, 0], [0, 0, 0]]),  # Horizontal line move
+                
+                # Diagonal patterns
+                ([[1, 0, 0], [0, 1, 0], [0, 0, 1]], [[0, 0, 1], [0, 1, 0], [1, 0, 0]]),  # Flip diagonal
+                ([[0, 0, 1], [0, 1, 0], [1, 0, 0]], [[1, 0, 0], [0, 1, 0], [0, 0, 1]]),  # Flip diagonal
+                ([[2, 0, 0], [0, 2, 0], [0, 0, 2]], [[0, 0, 2], [0, 2, 0], [2, 0, 0]]),  # Flip diagonal color 2
+                
+                # Rotation patterns
+                ([[1, 2, 3], [0, 0, 0], [0, 0, 0]], [[1, 0, 0], [2, 0, 0], [3, 0, 0]]),  # 90 degree rotation
+                ([[0, 0, 0], [4, 5, 6], [0, 0, 0]], [[0, 4, 0], [0, 5, 0], [0, 6, 0]]),  # 90 degree rotation
+                ([[1, 2, 3], [4, 5, 6], [7, 8, 9]], [[7, 4, 1], [8, 5, 2], [9, 6, 3]]),  # Full 90 rotation
+                
+                # Color patterns
+                ([[1, 1, 1], [2, 2, 2], [3, 3, 3]], [[3, 3, 3], [2, 2, 2], [1, 1, 1]]),  # Row swap
+                ([[1, 2, 3], [1, 2, 3], [1, 2, 3]], [[3, 2, 1], [3, 2, 1], [3, 2, 1]]),  # Column swap
+                ([[1, 1, 1], [1, 1, 1], [1, 1, 1]], [[2, 2, 2], [2, 2, 2], [2, 2, 2]]),  # Color change
+                
+                # Corner patterns
+                ([[1, 0, 2], [0, 0, 0], [3, 0, 4]], [[4, 0, 3], [0, 0, 0], [2, 0, 1]]),  # Rotate corners
+                ([[1, 0, 1], [0, 0, 0], [1, 0, 1]], [[0, 1, 0], [1, 0, 1], [0, 1, 0]]),  # Swap corners/edges
+                
+                # Cross patterns
+                ([[0, 1, 0], [1, 1, 1], [0, 1, 0]], [[1, 0, 1], [0, 0, 0], [1, 0, 1]]),  # Cross to corners
+                ([[1, 0, 1], [0, 0, 0], [1, 0, 1]], [[0, 1, 0], [1, 1, 1], [0, 1, 0]]),  # Corners to cross
+                
+                # Frame patterns
+                ([[1, 1, 1], [1, 0, 1], [1, 1, 1]], [[0, 0, 0], [0, 1, 0], [0, 0, 0]]),  # Frame to center
+                ([[0, 0, 0], [0, 1, 0], [0, 0, 0]], [[1, 1, 1], [1, 0, 1], [1, 1, 1]]),  # Center to frame
+            ]
+        elif self.max_grid_size == 4:
+            # Create 4x4 pattern examples for better training
+            patterns = [
+                # Simple fills
+                ([[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], 
+                 [[0, 0, 1, 1], [0, 0, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]]),  # Move square
+                ([[0, 0, 0, 0], [0, 1, 1, 0], [0, 1, 1, 0], [0, 0, 0, 0]], 
+                 [[1, 1, 1, 1], [1, 0, 0, 1], [1, 0, 0, 1], [1, 1, 1, 1]]),  # Invert center
+                # Line patterns
+                ([[1, 0, 0, 0], [1, 0, 0, 0], [1, 0, 0, 0], [1, 0, 0, 0]], 
+                 [[0, 0, 0, 1], [0, 0, 0, 1], [0, 0, 0, 1], [0, 0, 0, 1]]),  # Move line
+                # Diagonal patterns
+                ([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], 
+                 [[0, 0, 0, 1], [0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 0]]),  # Flip diagonal
+                # Checkerboard
+                ([[1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1]], 
+                 [[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]]),  # Invert checker
+            ]
+        elif self.max_grid_size == 5:
+            # Create 5x5 pattern examples
+            patterns = [
+                # Cross pattern
+                ([[0, 0, 1, 0, 0], [0, 0, 1, 0, 0], [1, 1, 1, 1, 1], [0, 0, 1, 0, 0], [0, 0, 1, 0, 0]], 
+                 [[1, 1, 0, 1, 1], [1, 1, 0, 1, 1], [0, 0, 0, 0, 0], [1, 1, 0, 1, 1], [1, 1, 0, 1, 1]]),  # Invert cross
+                # Center patterns
+                ([[0, 0, 0, 0, 0], [0, 1, 1, 1, 0], [0, 1, 0, 1, 0], [0, 1, 1, 1, 0], [0, 0, 0, 0, 0]], 
+                 [[1, 1, 1, 1, 1], [1, 0, 0, 0, 1], [1, 0, 1, 0, 1], [1, 0, 0, 0, 1], [1, 1, 1, 1, 1]]),  # Frame/center swap
+                # Corner patterns
+                ([[1, 0, 0, 0, 2], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [3, 0, 0, 0, 4]], 
+                 [[4, 0, 0, 0, 3], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [2, 0, 0, 0, 1]]),  # Rotate corners
+            ]
+        else:
+            patterns = []
+        
+        # Add patterns multiple times with variations
+        variation_count = 0
+        max_variations_per_pattern = 500  # INSANE variations - fill that GPU!
+        
+        while len(self.samples) < target_samples and patterns:
+            for inp, out in patterns:
                 if len(self.samples) >= target_samples:
                     break
+                
+                # Generate multiple variations of each pattern
+                for _ in range(max_variations_per_pattern):
+                    if len(self.samples) >= target_samples:
+                        break
+                        
+                    # Decide which variation to apply
+                    variation_type = variation_count % 5
                     
-                # Decide which variation to apply
-                variation_type = variation_count % 5
-                
-                if variation_type == 0:
-                    # Add original
-                    sample = {
-                        'input': np.array(inp),
-                        'output': np.array(out),
-                        'is_arc': True,
-                        'complexity': self.stage_config.get('complexity', 'ensemble')
-                    }
-                    self.samples.append(sample)
-                
-                elif variation_type == 1:
-                    # Add with random color permutations
-                    colors = list(set(np.array(inp).flatten()) | set(np.array(out).flatten()))
-                    if len(colors) > 1:
-                        # Generate random permutation
-                        color_map = dict(zip(colors, np.random.permutation(colors)))
-                        inp_perm = np.vectorize(color_map.get)(np.array(inp))
-                        out_perm = np.vectorize(color_map.get)(np.array(out))
-                        sample_perm = {
-                            'input': inp_perm,
-                            'output': out_perm,
+                    if variation_type == 0:
+                        # Add original
+                        sample = {
+                            'input': np.array(inp),
+                            'output': np.array(out),
                             'is_arc': True,
                             'complexity': self.stage_config.get('complexity', 'ensemble')
                         }
-                        self.samples.append(sample_perm)
-                
-                elif variation_type == 2:
-                    # Add rotated version (if square)
-                    inp_arr = np.array(inp)
-                    out_arr = np.array(out)
-                    if inp_arr.shape[0] == inp_arr.shape[1] and out_arr.shape[0] == out_arr.shape[1]:
-                        k = np.random.randint(1, 4)  # 90, 180, or 270 degrees
-                        sample_rot = {
-                            'input': np.rot90(inp_arr, k),
-                            'output': np.rot90(out_arr, k),
+                        self.samples.append(sample)
+                    
+                    elif variation_type == 1:
+                        # Add with random color permutations
+                        colors = list(set(np.array(inp).flatten()) | set(np.array(out).flatten()))
+                        if len(colors) > 1:
+                            # Generate random permutation
+                            color_map = dict(zip(colors, np.random.permutation(colors)))
+                            inp_perm = np.vectorize(color_map.get)(np.array(inp))
+                            out_perm = np.vectorize(color_map.get)(np.array(out))
+                            sample_perm = {
+                                'input': inp_perm,
+                                'output': out_perm,
+                                'is_arc': True,
+                                'complexity': self.stage_config.get('complexity', 'ensemble')
+                            }
+                            self.samples.append(sample_perm)
+                    
+                    elif variation_type == 2:
+                        # Add rotated version (if square)
+                        inp_arr = np.array(inp)
+                        out_arr = np.array(out)
+                        if inp_arr.shape[0] == inp_arr.shape[1] and out_arr.shape[0] == out_arr.shape[1]:
+                            k = np.random.randint(1, 4)  # 90, 180, or 270 degrees
+                            sample_rot = {
+                                'input': np.rot90(inp_arr, k),
+                                'output': np.rot90(out_arr, k),
+                                'is_arc': True,
+                                'complexity': self.stage_config.get('complexity', 'ensemble')
+                            }
+                            self.samples.append(sample_rot)
+                    
+                    elif variation_type == 3:
+                        # Add flipped version
+                        inp_arr = np.array(inp)
+                        out_arr = np.array(out)
+                        axis = np.random.randint(0, 2)  # Horizontal or vertical flip
+                        sample_flip = {
+                            'input': np.flip(inp_arr, axis),
+                            'output': np.flip(out_arr, axis),
                             'is_arc': True,
                             'complexity': self.stage_config.get('complexity', 'ensemble')
                         }
-                        self.samples.append(sample_rot)
-                
-                elif variation_type == 3:
-                    # Add flipped version
-                    inp_arr = np.array(inp)
-                    out_arr = np.array(out)
-                    axis = np.random.randint(0, 2)  # Horizontal or vertical flip
-                    sample_flip = {
-                        'input': np.flip(inp_arr, axis),
-                        'output': np.flip(out_arr, axis),
-                        'is_arc': True,
-                        'complexity': self.stage_config.get('complexity', 'ensemble')
-                    }
-                    self.samples.append(sample_flip)
-                
-                elif variation_type == 4:
-                    # Add with color shift (all colors +1 mod 10)
-                    inp_arr = np.array(inp)
-                    out_arr = np.array(out)
-                    sample_shift = {
-                        'input': (inp_arr + np.random.randint(1, 10)) % 10,
-                        'output': (out_arr + np.random.randint(1, 10)) % 10,
-                        'is_arc': True,
-                        'complexity': self.stage_config.get('complexity', 'ensemble')
-                    }
-                    self.samples.append(sample_shift)
-                
-                variation_count += 1
-    
-    print(f"\033[92m✅ Added {len(self.samples) - original_count} synthetic samples for {self.max_grid_size}x{self.max_grid_size} grids\033[0m")
-    print(f"\033[92m✅ Total samples now: {len(self.samples)}\033[0m")
+                        self.samples.append(sample_flip)
+                    
+                    elif variation_type == 4:
+                        # Add with color shift (all colors +1 mod 10)
+                        inp_arr = np.array(inp)
+                        out_arr = np.array(out)
+                        sample_shift = {
+                            'input': (inp_arr + np.random.randint(1, 10)) % 10,
+                            'output': (out_arr + np.random.randint(1, 10)) % 10,
+                            'is_arc': True,
+                            'complexity': self.stage_config.get('complexity', 'ensemble')
+                        }
+                        self.samples.append(sample_shift)
+                    
+                    variation_count += 1
+        
+        print(f"\033[92m✅ Added {len(self.samples) - original_count} synthetic samples for {self.max_grid_size}x{self.max_grid_size} grids\033[0m")
+        print(f"\033[92m✅ Total samples now: {len(self.samples)}\033[0m")
 def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
     """Main training function for OLYMPUS Ensemble V3
 
@@ -1004,14 +1004,14 @@ if stage_idx >= 12:
     time.sleep(1)
 
 return best_stage_performance
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Train OLYMPUS V3 Ensemble with stage selection')
-    parser.add_argument('--lower-stages-only', action='store_true', help='Train only lower stages (0-7, grids 2x2-8x8)')
-    parser.add_argument('--tiny-grids-only', action='store_true', help='FOCUS ONLY on tiny grids (0-3, grids 2x2-5x5) with AGGRESSIVE settings')
-    parser.add_argument('--upper-stages-only', action='store_true', help='Train only upper stages (8-16, grids 9x9-30x30)')
-    parser.add_argument('--start-stage', type=int, default=None, help='Start from specific stage (0-16)')
-    parser.add_argument('--end-stage', type=int, default=None, help='End at specific stage (0-16)')
-    args = parser.parse_args()
+if __name__ == "__main__": # This was not indented correctly
+    parser = argparse.ArgumentParser(description='Train OLYMPUS V3 Ensemble with stage selection') # This was not indented correctly
+    parser.add_argument('--lower-stages-only', action='store_true', help='Train only lower stages (0-7, grids 2x2-8x8)') # This was not indented correctly
+    parser.add_argument('--tiny-grids-only', action='store_true', help='FOCUS ONLY on tiny grids (0-3, grids 2x2-5x5) with AGGRESSIVE settings') # This was not indented correctly
+    parser.add_argument('--upper-stages-only', action='store_true', help='Train only upper stages (8-16, grids 9x9-30x30)') # This was not indented correctly
+    parser.add_argument('--start-stage', type=int, default=None, help='Start from specific stage (0-16)') # This was not indented correctly
+    parser.add_argument('--end-stage', type=int, default=None, help='End at specific stage (0-16)') # This was not indented correctly
+    args = parser.parse_args() # This was not indented correctly
 
     torch.manual_seed(42)
 np.random.seed(42)

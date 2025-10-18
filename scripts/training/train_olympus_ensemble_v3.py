@@ -40,9 +40,9 @@ OLYMPUS_V3_CONFIG = {
     # Core Training Parameters - AGGRESSIVE 85%+ TARGET
     'batch_size': 512,  # Same as V2 - proven to work
     'learning_rate': 0.0002,  # 2x V2 for faster exploration
-    'num_epochs': 240,  # Ultimate training: Extended for lower stages
+    'num_epochs': 50,  # Ultimate training: Extended for lower stages
     'gradient_accumulation': 1,  # Same as V2
-    'epochs_per_stage': 20,  # More epochs to explore better solutions
+    'epochs_per_stage': 3,  # More epochs to explore better solutions
     'curriculum_stages': 15,  # Full coverage like V2: 4x4 to 30x30
     
     # Ultimate Loss Configuration - AGGRESSIVE FOR 85%+
@@ -84,7 +84,7 @@ OLYMPUS_V3_CONFIG = {
     'ultimate_fusion_networks': True,  # NEW: Multiple fusion networks
     
     # Learning Rate Scheduling - AGGRESSIVE CYCLING
-    'warmup_epochs': 5,  # FAST warmup for quick adaptation
+    'warmup_epochs': 7,  # FAST warmup for quick adaptation
     'cosine_restarts': True,
     'restart_multiplier': 1.0,  # Constant restarts for exploration
     'plateau_patience': 10,  # Quick adaptation
@@ -677,13 +677,13 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
         elif stage_config['max_grid_size'] <= 8:
             augmentation_factor = 15
         elif stage_idx >= 14:  # 27x27+
-            augmentation_factor = 1
+            augmentation_factor = 10
         elif stage_idx >= 12:  # 18x18-22x22
-            augmentation_factor = 3
+            augmentation_factor = 10
         elif stage_idx >= 10:  # 14x14-16x16
-            augmentation_factor = 5
+            augmentation_factor = 10
         else:  # 9x9-12x12
-            augmentation_factor = 6
+            augmentation_factor = 10
         
         dataset = OlympusV3UltimateDataset(
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',
@@ -695,34 +695,34 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
         # MAXIMIZE GPU USAGE for 85%+ on lower stages (80GB available!)
         if stage_config['max_grid_size'] <= 2:
             batch_size = 1024  # Reduced from 16384 to avoid OOM
-            epochs_multiplier = 20.0
+            epochs_multiplier = 10.0
         elif stage_config['max_grid_size'] <= 3:
             batch_size = 1024  # Reduced from 16384 to avoid OOM
-            epochs_multiplier = 30.0
+            epochs_multiplier = 10.0
         elif stage_config['max_grid_size'] <= 4:
             batch_size = 1024  # Reduced from 12288 to avoid OOM
-            epochs_multiplier = 25.0
+            epochs_multiplier = 15.0
         elif stage_config['max_grid_size'] <= 5:
             batch_size = 512  # Reduced from 8192 to avoid OOM
-            epochs_multiplier = 20.0
+            epochs_multiplier = 10.0
         elif stage_config['max_grid_size'] <= 6:
             batch_size = 512
-            epochs_multiplier = 6.0
+            epochs_multiplier = 20.0
         elif stage_config['max_grid_size'] <= 8:
             batch_size = 512
-            epochs_multiplier = 5.0
+            epochs_multiplier = 20.0
         elif stage_config['max_grid_size'] <= 10:
             batch_size = 256  # Reduced from 384 to avoid OOM
-            epochs_multiplier = 4.0
+            epochs_multiplier = 20.0
         elif stage_config['max_grid_size'] <= 16:
             batch_size = 384
-            epochs_multiplier = 3.0
+            epochs_multiplier = 20.0
         elif stage_config['max_grid_size'] <= 20:
             batch_size = 256
-            epochs_multiplier = 2.0
+            epochs_multiplier = 20.0
         elif stage_config['max_grid_size'] <= 22:
             batch_size = 64
-            epochs_multiplier = 1.5
+            epochs_multiplier = 20.0
         elif stage_config['max_grid_size'] <= 27:
             batch_size = 48
             epochs_multiplier = 1.0
@@ -898,13 +898,13 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
     if stage_config['max_grid_size'] <= 2:
         warmup_epochs = 6
     elif stage_config['max_grid_size'] <= 3:
-        warmup_epochs = 5
+        warmup_epochs =7
     elif stage_config['max_grid_size'] <= 4:
-        warmup_epochs = 4
+        warmup_epochs = 7
     elif stage_config['max_grid_size'] <= 5:
-        warmup_epochs = 3
+        warmup_epochs = 7
     elif stage_config['max_grid_size'] <= 8:
-        warmup_epochs = 2
+        warmup_epochs = 7
     
     best_stage_performance = 0.0
     first_batch = True

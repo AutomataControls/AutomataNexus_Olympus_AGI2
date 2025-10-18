@@ -706,10 +706,10 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=16):
             batch_size = 1024  # Reduced from 8192 to avoid OOM
             epochs_multiplier = 20.0
         elif stage_config['max_grid_size'] <= 6:
-            batch_size = 512
+            batch_size = 1024
             epochs_multiplier = 20.0
         elif stage_config['max_grid_size'] <= 8:
-            batch_size = 512
+            batch_size = 1024
             epochs_multiplier = 20.0
         elif stage_config['max_grid_size'] <= 10:
             batch_size = 256  # Reduced from 384 to avoid OOM

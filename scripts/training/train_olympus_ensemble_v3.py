@@ -614,7 +614,7 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
     
     print(f"\033[96m🏛️ Ultimate Training: {len(fusion_params)} fusion, {len(specialist_output_params)} specialist output, {len(specialist_core_params)} specialist core parameters\033[0m")
     
-    # OPTIMIZED SCHEDULERS - CosineAnnealing with slower cycling
+    # ⭐ OPTIMIZED SCHEDULERS - CosineAnnealing with slower cycling
     use_onecycle = False  # ⭐ DISABLED - CosineAnnealing is more stable
     
     if use_onecycle:
@@ -663,13 +663,13 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
         print(f"\033[96m{'=' * 135}\033[0m")
         
         # Create ultimate augmented dataset for this stage
-        # OPTIMIZED AUGMENTATION - Fixed for 5x5 issues
+        # ⭐ OPTIMIZED AUGMENTATION - Fixed 5x5 issues
         if stage_config['max_grid_size'] <= 3:
             augmentation_factor = 30
         elif stage_config['max_grid_size'] <= 4:
             augmentation_factor = 30
         elif stage_config['max_grid_size'] <= 5:
-            augmentation_factor = 15  # ⭐ REDUCED from 30 - 5x5 was too complex
+            augmentation_factor = 8   # ⭐ REDUCED from 15 - much less synthetic
         elif stage_config['max_grid_size'] <= 6:
             augmentation_factor = 20
         elif stage_config['max_grid_size'] <= 8:
@@ -690,62 +690,62 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
             augmentation_factor=augmentation_factor
         )
         
-        # OPTIMIZED BATCH SIZES AND EPOCHS - MAXED FOR A100 80GB
+        # ⭐ OPTIMIZED BATCH SIZES AND EPOCHS - SAFE FOR A100 80GB
         if stage_config['max_grid_size'] <= 2:
-            batch_size = 8192  # ⭐ MAXED for A100
-            epochs_multiplier = 15.0
-        elif stage_config['max_grid_size'] <= 3:
-            batch_size = 8192  # ⭐ MAXED for A100
-            epochs_multiplier = 15.0
-        elif stage_config['max_grid_size'] <= 4:
-            batch_size = 8192  # ⭐ 2x bigger
-            epochs_multiplier = 15.0
-        elif stage_config['max_grid_size'] <= 5:
-            batch_size = 6144   # ⭐ REDUCED from 8192 - more gradient updates for problematic 5x5
-            epochs_multiplier = 10.0  # ⭐ INCREASED from 3.0 - more training for 5x5
-        elif stage_config['max_grid_size'] <= 6:
-            batch_size = 4096   # ⭐ 2x bigger
-            epochs_multiplier = 10.0
-        elif stage_config['max_grid_size'] <= 8:
-            batch_size = 3072   # ⭐ 2x bigger
-            epochs_multiplier = 10.0
-        elif stage_config['max_grid_size'] <= 10:
-            batch_size = 2560   # ⭐ 2x bigger
-            epochs_multiplier = 10
-        elif stage_config['max_grid_size'] <= 16:
-            batch_size = 2048   # ⭐ 2x bigger
-            epochs_multiplier = 10.0
-        elif stage_config['max_grid_size'] <= 20:
-            batch_size = 1024   # ⭐ 2x bigger
-            epochs_multiplier = 10.0
-        elif stage_config['max_grid_size'] <= 22:
-            batch_size = 512    # ⭐ 2x bigger
+            batch_size = 8192   # Safe for A100
             epochs_multiplier = 5.0
+        elif stage_config['max_grid_size'] <= 3:
+            batch_size = 8192   # Safe for A100
+            epochs_multiplier = 5.0
+        elif stage_config['max_grid_size'] <= 4:
+            batch_size = 8192   # Safe
+            epochs_multiplier = 4.0
+        elif stage_config['max_grid_size'] <= 5:
+            batch_size = 4096   # ⭐ REDUCED from 6144 - smaller batches for better gradients
+            epochs_multiplier = 8.0  # ⭐ INCREASED from 6.0 - more training time
+        elif stage_config['max_grid_size'] <= 6:
+            batch_size = 4096   # Safe
+            epochs_multiplier = 4.0
+        elif stage_config['max_grid_size'] <= 8:
+            batch_size = 3072   # Safe
+            epochs_multiplier = 3.0
+        elif stage_config['max_grid_size'] <= 10:
+            batch_size = 2048   # Reduced from 2560
+            epochs_multiplier = 2.5
+        elif stage_config['max_grid_size'] <= 16:
+            batch_size = 1536   # Reduced from 2048
+            epochs_multiplier = 2.0
+        elif stage_config['max_grid_size'] <= 20:
+            batch_size = 1024   # Keep
+            epochs_multiplier = 1.5
+        elif stage_config['max_grid_size'] <= 22:
+            batch_size = 512    # Keep
+            epochs_multiplier = 1.0
         elif stage_config['max_grid_size'] <= 27:
-            batch_size = 256    # ⭐ 2x bigger
-            epochs_multiplier = 2
+            batch_size = 256    # Keep
+            epochs_multiplier = 0.8
         else:
-            batch_size = 128    # ⭐ 2x bigger
+            batch_size = 128    # Keep
             epochs_multiplier = 0.6
         
         # Calculate actual epochs for this stage
         stage_epochs = int(OLYMPUS_V3_CONFIG['epochs_per_stage'] * epochs_multiplier)
         
-        # LEARNING RATE MULTIPLIERS - More aggressive for tiny grids
+        # ⭐ LEARNING RATE MULTIPLIERS - Special handling for 5x5
         if stage_config['max_grid_size'] <= 2:
             lr_multiplier = 10.0
         elif stage_config['max_grid_size'] <= 3:
-            lr_multiplier = 12.0  # ⭐ INCREASED from 8.0 - more aggressive
+            lr_multiplier = 12.0  # ⭐ Aggressive for 3x3
         elif stage_config['max_grid_size'] <= 4:
-            lr_multiplier = 8.0   # ⭐ INCREASED from 6.0
+            lr_multiplier = 8.0
         elif stage_config['max_grid_size'] <= 5:
-            lr_multiplier = 6.0   # ⭐ INCREASED from 5.0 - help 5x5 learn
+            lr_multiplier = 10.0  # ⭐ INCREASED from 6.0 - need higher LR for 5x5 to escape local minimum
         elif stage_config['max_grid_size'] <= 6:
-            lr_multiplier = 4.0   # ⭐ INCREASED from 3.0
+            lr_multiplier = 4.0
         elif stage_config['max_grid_size'] <= 8:
-            lr_multiplier = 3.0   # ⭐ INCREASED from 2.0
+            lr_multiplier = 3.0
         elif stage_config['max_grid_size'] <= 10:
-            lr_multiplier = 2.0   # ⭐ INCREASED from 1.5
+            lr_multiplier = 2.0
         else:
             lr_multiplier = 1.0
         
@@ -767,10 +767,10 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
             batch_size=batch_size,
             shuffle=True,
             collate_fn=foundation_collate_fn,
-            num_workers=8,  # Use multiple workers to load data faster!
+            num_workers=8,
             pin_memory=True,
-            persistent_workers=True,  # Keep workers alive
-            prefetch_factor=4  # Prefetch more batches
+            persistent_workers=True,
+            prefetch_factor=4
         )
         
         # Dynamic gradient accumulation - AGGRESSIVE for lower stages

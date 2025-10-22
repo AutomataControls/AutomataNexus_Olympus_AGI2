@@ -39,19 +39,19 @@ from src.models.olympus_ensemble import OlympusEnsemble, EnsembleDecision
 OLYMPUS_V3_CONFIG = {
     # Core Training Parameters - OPTIMIZED FOR SPEED
     'batch_size': 256,  # Balanced for V3's advanced features
-    'learning_rate': 0.0003,  # 2.5x HIGHER for aggressive learning
+    'learning_rate': 0.001,  # 10x V2 - VERY aggressive learning
     'num_epochs': 240,  # Ultimate training: Extended for lower stages
     'gradient_accumulation': 1,  # No accumulation for speed
-    'epochs_per_stage': 3,  # OPTIMIZED: Reduced from 5 to 3 for faster training
+    'epochs_per_stage': 20,  # More epochs to break through plateau
     'curriculum_stages': 15,  # Full coverage like V2: 4x4 to 30x30
     
     # Ultimate Loss Configuration - AGGRESSIVE FOR 85%+
     'ensemble_loss_weight': 2.5,  # INCREASED ensemble focus
-    'specialist_sync_weight': 0.8,  # INCREASED synchronization
-    'consensus_weight': 0.6,  # INCREASED consensus building
+    'specialist_sync_weight': 0.0,  # NO sync to force diversity
+    'consensus_weight': -0.5,  # PENALTY for too much consensus
     'fusion_regularization': 0.1,  # REDUCED to allow more flexibility
     'transform_penalty': 0.01,  # ULTRA LOW penalty for tiny grid exploration
-    'exact_match_bonus': 50.0,  # ULTRA MASSIVE precision bonus for tiny grids
+    'exact_match_bonus': 2.0,  # Reasonable bonus to avoid instability
     'gradient_clip': 0.5,  # Increased for aggressive updates
     'weight_decay': 2e-6,  # Reduced regularization
     
@@ -572,6 +572,34 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
                         load_results = olympus.load_all_specialists(weight_dir)
                         successful_loads = sum(load_results.values())
                         print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 individual specialist models\033[0m")
+    
+    # AGGRESSIVE DIVERSITY FORCING - Reset specialists with different initializations
+    if v3_loaded or stage_start <= 5:  # Force diversity for lower stages
+        print(f"\033[91m🔥 AGGRESSIVE DIVERSITY MODE: Completely resetting specialists with unique initializations\033[0m")
+        for idx, (name, specialist) in enumerate(olympus.specialists.items()):
+            print(f"\033[93m  🔧 {name}: Using {'Xavier' if idx==0 else 'Kaiming' if idx==1 else 'Normal' if idx==2 else 'Orthogonal' if idx==3 else 'Sparse'} initialization\033[0m")
+            for module in specialist.modules():
+                if isinstance(module, nn.Linear):
+                    # Different initialization per specialist
+                    if idx == 0:  # MINERVA
+                        nn.init.xavier_uniform_(module.weight)
+                    elif idx == 1:  # ATLAS
+                        nn.init.kaiming_uniform_(module.weight, nonlinearity='relu')
+                    elif idx == 2:  # IRIS
+                        nn.init.normal_(module.weight, std=0.05)
+                    elif idx == 3:  # CHRONOS
+                        nn.init.orthogonal_(module.weight, gain=1.2)
+                    else:  # PROMETHEUS
+                        nn.init.uniform_(module.weight, -0.1, 0.1)
+                    
+                    if module.bias is not None:
+                        nn.init.normal_(module.bias, std=0.01 * (idx + 1))
+                elif isinstance(module, nn.Conv2d):
+                    # Also reset conv layers differently
+                    if idx % 2 == 0:
+                        nn.init.kaiming_normal_(module.weight, mode='fan_out', nonlinearity='relu')
+                    else:
+                        nn.init.xavier_normal_(module.weight)
     
     # V3: Full specialist fine-tuning (ultimate coordination)
     if not OLYMPUS_V3_CONFIG['freeze_specialists']:

@@ -499,13 +499,24 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
     
     # Try to load V3 first if it exists (to continue training)
     v3_loaded = False
+    v3_checkpoint = None
     v3_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v3_best.pt'
     if os.path.exists(v3_model_path):
         try:
+            # Load the checkpoint to check what's in it
+            v3_checkpoint = torch.load(v3_model_path, map_location=device)
+            if 'best_performance' in v3_checkpoint:
+                print(f"\033[96m🏛️ V3 checkpoint contains best_performance: {v3_checkpoint['best_performance']:.2%}\033[0m")
+            if 'performance_metrics' in v3_checkpoint:
+                print(f"\033[96m🏛️ V3 performance metrics: {v3_checkpoint['performance_metrics']}\033[0m")
+                
             v3_loaded_successfully = olympus.load_ensemble(v3_model_path)
             if v3_loaded_successfully:
                 print(f"\033[92m🏛️ OLYMPUS V3 LOADED from checkpoint - continuing training from previous best!\033[0m")
                 v3_loaded = True
+                
+                # Test the loaded model immediately
+                print(f"\033[93m🏛️ Testing loaded V3 model on a small batch...\033[0m")
             else:
                 print(f"\033[93m⚠️ V3 checkpoint exists but failed to load properly\033[0m")
         except Exception as e:
@@ -648,8 +659,11 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
     # Mixed precision training
     scaler = GradScaler()
     
-    # Training metrics
+    # Training metrics - initialize from checkpoint if available
     best_performance = 0.0
+    if v3_loaded and v3_checkpoint and 'best_performance' in v3_checkpoint:
+        best_performance = v3_checkpoint['best_performance']
+        print(f"\033[92m🏛️ Continuing from previous best performance: {best_performance:.2%}\033[0m")
     training_stats = defaultdict(list)
     
     print(f"\033[96m🏛️ Starting Ultimate Progressive Ensemble Training - Stages {stage_start} to {stage_end}\033[0m")

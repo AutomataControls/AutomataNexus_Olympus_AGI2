@@ -633,10 +633,26 @@ def train_olympus_ensemble_v2():
             augmentation_factor=6  # 6x augmentation like specialists
         )
         
+        # Dynamic batch size based on grid size to prevent OOM
+        grid_size = stage_config['max_grid_size']
+        if grid_size <= 12:
+            batch_size = OLYMPUS_V2_CONFIG['batch_size']  # 512
+        elif grid_size <= 18:
+            batch_size = 256  # Medium grids
+        elif grid_size <= 22:
+            batch_size = 128  # Large grids
+        elif grid_size <= 27:
+            batch_size = 64   # Very large grids - prevent OOM
+        else:  # 30x30
+            batch_size = 32   # Ultra large grids - minimum batch size
+        
+        if batch_size != OLYMPUS_V2_CONFIG['batch_size']:
+            print(f"\033[93m⚠️ Grid size {grid_size}x{grid_size}: Reduced batch size to {batch_size} to prevent OOM\033[0m")
+        
         # Create data loader
         dataloader = DataLoader(
             dataset,
-            batch_size=OLYMPUS_V2_CONFIG['batch_size'],
+            batch_size=batch_size,
             shuffle=True,
             collate_fn=olympus_v2_augmented_collate_fn,
             num_workers=16,  # Optimized worker count

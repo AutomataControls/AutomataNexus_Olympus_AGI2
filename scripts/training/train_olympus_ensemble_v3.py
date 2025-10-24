@@ -311,7 +311,9 @@ class OlympusV3UltimateDataset(OlympusV2AugmentedDataset):
     def _add_synthetic_tiny_grid_samples(self):
         """Add synthetic samples for tiny grids to ensure we have enough data"""
         original_count = len(self.samples)
-        target_samples = 20000  # ULTRA MASSIVE - we have 80GB to fill!
+        # Reduce synthetic data - too much was overwhelming real patterns
+        # Use 3x the original samples as target, not 20x
+        target_samples = min(len(self.samples) * 3, 5000)  # Cap at 5000 total
         
         if self.max_grid_size == 2:
             # Skip 2x2 - not in real ARC data
@@ -698,9 +700,12 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
         # Calculate actual epochs for this stage
         stage_epochs = int(OLYMPUS_V3_CONFIG['epochs_per_stage'] * epochs_multiplier)
         
-        # Special handling for 4x4 grids - need more training
-        if stage_config['max_grid_size'] == 4:  # Stage 1 (4x4 grids)
-            stage_epochs = int(stage_epochs * 2.5)  # 2.5x more epochs for 4x4
+        # Special handling for tiny grids - need more training
+        if stage_config['max_grid_size'] == 3:  # Stage 0 (3x3 grids)
+            stage_epochs = int(stage_epochs * 3)  # 3x more epochs for 3x3
+            print(f"\033[93m🎯 3x3 GRIDS: Extended to {stage_epochs} epochs for better training\033[0m")
+        elif stage_config['max_grid_size'] == 4:  # Stage 1 (4x4 grids)
+            stage_epochs = int(stage_epochs * 3)  # 3x more epochs for 4x4 (was 2.5x)
             print(f"\033[93m🎯 4x4 GRIDS: Extended to {stage_epochs} epochs for better training\033[0m")
         
         # Use consistent learning rate like V2 (no aggressive multipliers)

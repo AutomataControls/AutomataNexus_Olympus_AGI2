@@ -823,11 +823,27 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
         torch.cuda.empty_cache()
         gc.collect()
     
+    # Save individual specialist models as final versions
+    print(f"\n\033[96m🏛️ Saving final OLYMPUS specialist models...\033[0m")
+    save_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
+    
+    # Save each specialist as final best version
+    for name, specialist in olympus.specialists.items():
+        specialist_path = os.path.join(save_dir, f'{name.lower()}_best.pt')
+        torch.save({
+            'model_state_dict': specialist.state_dict(),
+            'model_name': name,
+            'performance': best_performance,
+            'training_stage': 'V3_ultimate',
+            'grid_sizes': f'{STAGE_CONFIG[stage_start]["max_grid_size"]}x{STAGE_CONFIG[stage_start]["max_grid_size"]}-{STAGE_CONFIG[stage_end]["max_grid_size"]}x{STAGE_CONFIG[stage_end]["max_grid_size"]}'
+        }, specialist_path)
+        print(f"\033[92m✅ Saved {name} final specialist model\033[0m")
+    
     print(f"\n\033[96m{'=' * 140}\033[0m")
     print(f"\033[96m🏛️ OLYMPUS Ensemble V3 ULTIMATE Training Complete!\033[0m")
     print(f"\033[96m🏛️ Trained stages {stage_start} to {stage_end} (grids {STAGE_CONFIG[stage_start]['max_grid_size']}x{STAGE_CONFIG[stage_start]['max_grid_size']} to {STAGE_CONFIG[stage_end]['max_grid_size']}x{STAGE_CONFIG[stage_end]['max_grid_size']})\033[0m")
     print(f"\033[96m🏛️ Best V3 ULTIMATE Performance: {best_performance:.2%}\033[0m")
-    print(f"\033[96m🏛️ OLYMPUS Ultimate Intelligence Achieved - Ready for ARC-AGI-2 Challenge!\033[0m")
+    print(f"\033[96m🏛️ All 5 Final Specialists Saved and Ready for ARC-AGI-2 Challenge!\033[0m")
     print(f"\033[96m{'=' * 140}\033[0m")
     
     return olympus, best_performance

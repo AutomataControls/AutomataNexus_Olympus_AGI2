@@ -533,10 +533,26 @@ def train_olympus_ensemble_v1():
         torch.cuda.empty_cache()
         gc.collect()
     
+    # Save individual specialist models for V2 to load
+    print(f"\n\033[96m🏛️ Saving individual specialist models for V2...\033[0m")
+    save_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
+    
+    # Save each specialist with V1 suffix
+    for name, specialist in olympus.specialists.items():
+        specialist_path = os.path.join(save_dir, f'{name.lower()}_v1_best.pt')
+        torch.save({
+            'model_state_dict': specialist.state_dict(),
+            'model_name': name,
+            'performance': best_performance,
+            'training_stage': 'V1_ensemble',
+            'grid_sizes': '3x3-30x30'
+        }, specialist_path)
+        print(f"\033[92m✅ Saved {name} V1 specialist model\033[0m")
+    
     print(f"\n\033[96m{'=' * 130}\033[0m")
     print(f"\033[96m🏛️ OLYMPUS Ensemble V1 Foundation Training Complete!\033[0m")
     print(f"\033[96m🏛️ Best V1 Foundation Performance: {best_performance:.2%}\033[0m")
-    print(f"\033[96m🏛️ All 5 Specialists Coordinated and Ready for Advanced Training\033[0m")
+    print(f"\033[96m🏛️ All 5 Specialists Saved and Ready for V2 Advanced Training\033[0m")
     print(f"\033[96m{'=' * 130}\033[0m")
     
     return olympus, best_performance

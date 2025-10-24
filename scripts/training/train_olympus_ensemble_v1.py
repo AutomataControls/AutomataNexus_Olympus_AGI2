@@ -541,6 +541,26 @@ def train_olympus_ensemble_v1():
         # Update global best performance
         if stage_performance > best_performance:
             best_performance = stage_performance
+            # Create ensemble state if not already created
+            if stage_idx not in stage_best_performances or stage_performance == stage_best_performances[stage_idx]:
+                # We already have ensemble_state from above
+                pass
+            else:
+                # Create ensemble_state for global best
+                ensemble_state = {
+                    'ensemble_state_dict': olympus.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'scheduler_state_dict': scheduler.state_dict(),
+                    'best_performance': stage_performance,
+                    'stage': stage_idx,
+                    'grid_size': stage_config['max_grid_size'],
+                    'ensemble_config': {
+                        'max_grid_size': olympus.max_grid_size,
+                        'd_model': olympus.d_model,
+                        'device': olympus.device_name
+                    },
+                    'performance_metrics': olympus.get_ensemble_state()
+                }
             # Also save as global best
             torch.save(ensemble_state, '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt')
             print(f"\033[96m🏛️ New global best V1 ensemble performance: {best_performance:.2%}\033[0m")

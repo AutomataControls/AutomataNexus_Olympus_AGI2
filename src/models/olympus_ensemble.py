@@ -227,7 +227,13 @@ class OlympusEnsemble(nn.Module):
         
     def load_all_specialists(self, weight_dir: str) -> Dict[str, bool]:
         print(f"\033[96m🏛️ Loading all specialist weights...\033[0m")
-        weight_patterns = {'minerva': ['minerva_best.pt'], 'atlas': ['atlas_best.pt'], 'iris': ['iris_best.pt'], 'chronos': ['chronos_best.pt'], 'prometheus': ['prometheus_best.pt']}
+        weight_patterns = {
+            'minerva': ['minerva_v1_best.pt', 'minerva_v2_best.pt', 'minerva_v3_best.pt', 'minerva_best.pt'], 
+            'atlas': ['atlas_v1_best.pt', 'atlas_v2_best.pt', 'atlas_v3_best.pt', 'atlas_best.pt'], 
+            'iris': ['iris_v1_best.pt', 'iris_v2_best.pt', 'iris_v3_best.pt', 'iris_best.pt'], 
+            'chronos': ['chronos_v1_best.pt', 'chronos_v2_best.pt', 'chronos_v3_best.pt', 'chronos_best.pt'], 
+            'prometheus': ['prometheus_v1_best.pt', 'prometheus_v2_best.pt', 'prometheus_v3_best.pt', 'prometheus_best.pt']
+        }
         load_results = {}
         for specialist_name, patterns in weight_patterns.items():
             loaded = False

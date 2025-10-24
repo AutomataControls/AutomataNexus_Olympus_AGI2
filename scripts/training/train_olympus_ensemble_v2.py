@@ -80,23 +80,24 @@ OLYMPUS_V2_CONFIG = {
     'plateau_patience': 20,
 }
 
-# Advanced 15-Stage Progressive Configuration
+# Advanced 16-Stage Progressive Configuration - Including 3x3
 STAGE_CONFIG = [
-    {'stage': 0, 'max_grid_size': 4, 'synthesis_ratio': 0.95, 'complexity': 'advanced_micro_ensemble', 'focus': 'advanced_micro_grid_specialist_coordination'},
-    {'stage': 1, 'max_grid_size': 5, 'synthesis_ratio': 0.90, 'complexity': 'advanced_basic_shapes', 'focus': 'advanced_ensemble_shape_coordination'},
-    {'stage': 2, 'max_grid_size': 6, 'synthesis_ratio': 0.85, 'complexity': 'advanced_simple_fusion', 'focus': 'advanced_decision_fusion_learning'},
-    {'stage': 3, 'max_grid_size': 7, 'synthesis_ratio': 0.80, 'complexity': 'advanced_pattern_sync', 'focus': 'advanced_pattern_synchronization_training'},
-    {'stage': 4, 'max_grid_size': 8, 'synthesis_ratio': 0.75, 'complexity': 'advanced_consensus_basic', 'focus': 'advanced_specialist_consensus'},
-    {'stage': 5, 'max_grid_size': 9, 'synthesis_ratio': 0.70, 'complexity': 'advanced_fusion_intermediate', 'focus': 'advanced_intermediate_fusion_protocols'},
-    {'stage': 6, 'max_grid_size': 10, 'synthesis_ratio': 0.65, 'complexity': 'advanced_composite_ensemble', 'focus': 'advanced_composite_ensemble_decisions'},
-    {'stage': 7, 'max_grid_size': 11, 'synthesis_ratio': 0.60, 'complexity': 'advanced_coordination_scaling', 'focus': 'advanced_scaling_coordination_protocols'},
-    {'stage': 8, 'max_grid_size': 12, 'synthesis_ratio': 0.55, 'complexity': 'advanced_complex_consensus', 'focus': 'advanced_complex_consensus_building'},
-    {'stage': 9, 'max_grid_size': 14, 'synthesis_ratio': 0.50, 'complexity': 'advanced_pattern_ensemble', 'focus': 'advanced_pattern_ensemble_coordination'},
-    {'stage': 10, 'max_grid_size': 16, 'synthesis_ratio': 0.45, 'complexity': 'advanced_ensemble_intelligence', 'focus': 'advanced_ensemble_intelligence_emergence'},
-    {'stage': 11, 'max_grid_size': 18, 'synthesis_ratio': 0.40, 'complexity': 'advanced_multiscale_ensemble', 'focus': 'advanced_multiscale_ensemble_reasoning'},
-    {'stage': 12, 'max_grid_size': 22, 'synthesis_ratio': 0.35, 'complexity': 'advanced_coordination_mastery', 'focus': 'advanced_coordination_protocols_mastery'},
-    {'stage': 13, 'max_grid_size': 27, 'synthesis_ratio': 0.30, 'complexity': 'advanced_ensemble_mastery', 'focus': 'advanced_ensemble_coordination_mastery'},
-    {'stage': 14, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'complexity': 'advanced_olympus_foundation', 'focus': 'advanced_olympus_intelligence_mastery'}
+    {'stage': 0, 'max_grid_size': 3, 'synthesis_ratio': 0.98, 'complexity': 'advanced_tiny_ensemble', 'focus': 'advanced_tiny_grid_basic_coordination'},
+    {'stage': 1, 'max_grid_size': 4, 'synthesis_ratio': 0.95, 'complexity': 'advanced_micro_ensemble', 'focus': 'advanced_micro_grid_specialist_coordination'},
+    {'stage': 2, 'max_grid_size': 5, 'synthesis_ratio': 0.90, 'complexity': 'advanced_basic_shapes', 'focus': 'advanced_ensemble_shape_coordination'},
+    {'stage': 3, 'max_grid_size': 6, 'synthesis_ratio': 0.85, 'complexity': 'advanced_simple_fusion', 'focus': 'advanced_decision_fusion_learning'},
+    {'stage': 4, 'max_grid_size': 7, 'synthesis_ratio': 0.80, 'complexity': 'advanced_pattern_sync', 'focus': 'advanced_pattern_synchronization_training'},
+    {'stage': 5, 'max_grid_size': 8, 'synthesis_ratio': 0.75, 'complexity': 'advanced_consensus_basic', 'focus': 'advanced_specialist_consensus'},
+    {'stage': 6, 'max_grid_size': 9, 'synthesis_ratio': 0.70, 'complexity': 'advanced_fusion_intermediate', 'focus': 'advanced_intermediate_fusion_protocols'},
+    {'stage': 7, 'max_grid_size': 10, 'synthesis_ratio': 0.65, 'complexity': 'advanced_composite_ensemble', 'focus': 'advanced_composite_ensemble_decisions'},
+    {'stage': 8, 'max_grid_size': 11, 'synthesis_ratio': 0.60, 'complexity': 'advanced_coordination_scaling', 'focus': 'advanced_scaling_coordination_protocols'},
+    {'stage': 9, 'max_grid_size': 12, 'synthesis_ratio': 0.55, 'complexity': 'advanced_complex_consensus', 'focus': 'advanced_complex_consensus_building'},
+    {'stage': 10, 'max_grid_size': 14, 'synthesis_ratio': 0.50, 'complexity': 'advanced_pattern_ensemble', 'focus': 'advanced_pattern_ensemble_coordination'},
+    {'stage': 11, 'max_grid_size': 16, 'synthesis_ratio': 0.45, 'complexity': 'advanced_ensemble_intelligence', 'focus': 'advanced_ensemble_intelligence_emergence'},
+    {'stage': 12, 'max_grid_size': 18, 'synthesis_ratio': 0.40, 'complexity': 'advanced_multiscale_ensemble', 'focus': 'advanced_multiscale_ensemble_reasoning'},
+    {'stage': 13, 'max_grid_size': 22, 'synthesis_ratio': 0.35, 'complexity': 'advanced_coordination_mastery', 'focus': 'advanced_coordination_protocols_mastery'},
+    {'stage': 14, 'max_grid_size': 27, 'synthesis_ratio': 0.30, 'complexity': 'advanced_ensemble_mastery', 'focus': 'advanced_ensemble_coordination_mastery'},
+    {'stage': 15, 'max_grid_size': 30, 'synthesis_ratio': 0.25, 'complexity': 'advanced_olympus_foundation', 'focus': 'advanced_olympus_intelligence_mastery'}
 ]
 
 # Device setup
@@ -593,6 +594,7 @@ def train_olympus_ensemble_v2():
     
     # Training metrics
     best_performance = v2_saved_checkpoint.get('best_performance', 0.0) if v2_saved_checkpoint else 0.0
+    stage_best_performances = {}  # Track best performance per stage
     training_stats = defaultdict(list)
     
     print(f"\033[96m🏛️ Starting Advanced Progressive Ensemble Training - 15 Advanced Coordination Stages\033[0m")
@@ -603,6 +605,25 @@ def train_olympus_ensemble_v2():
         print(f"\033[38;2;255;204;153m🏛️ V2 Stage {stage_idx}: Grid Size {stage_config['max_grid_size']} | "
               f"Complexity: {stage_config['complexity']} | Focus: {stage_config['focus']}\033[0m")
         print(f"\033[38;2;255;204;153m{'=' * 130}\033[0m")
+        
+        # Try to load stage-specific checkpoint
+        stage_model_path = f'/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v2_stage{stage_idx}_best.pt'
+        if os.path.exists(stage_model_path):
+            try:
+                stage_checkpoint = torch.load(stage_model_path, map_location=device)
+                olympus.load_state_dict(stage_checkpoint['ensemble_state_dict'])
+                # Update optimizers and schedulers for this stage
+                fusion_optimizer.load_state_dict(stage_checkpoint['fusion_optimizer_state_dict'])
+                if specialist_optimizer and 'specialist_optimizer_state_dict' in stage_checkpoint:
+                    specialist_optimizer.load_state_dict(stage_checkpoint['specialist_optimizer_state_dict'])
+                fusion_scheduler.load_state_dict(stage_checkpoint['fusion_scheduler_state_dict'])
+                if specialist_scheduler and 'specialist_scheduler_state_dict' in stage_checkpoint:
+                    specialist_scheduler.load_state_dict(stage_checkpoint['specialist_scheduler_state_dict'])
+                stage_best = stage_checkpoint.get('best_performance', 0.0)
+                stage_best_performances[stage_idx] = stage_best
+                print(f"\033[92m🏛️ Loaded Stage {stage_idx} checkpoint - Previous best: {stage_best:.2%}\033[0m")
+            except Exception as e:
+                print(f"\033[93m⚠️ Could not load stage {stage_idx} checkpoint: {e}\033[0m")
         
         # Create advanced dataset for this stage
         dataset = OlympusV2AugmentedDataset(
@@ -631,21 +652,22 @@ def train_olympus_ensemble_v2():
             scaler, stage_idx, stage_config, training_stats
         )
         
-        # Update best performance
-        if stage_performance > best_performance:
-            best_performance = stage_performance
-            # Save best OLYMPUS V2 model in InputBestModels directory
+        # Check if this is best performance for THIS specific stage
+        if stage_idx not in stage_best_performances or stage_performance > stage_best_performances[stage_idx]:
+            stage_best_performances[stage_idx] = stage_performance
+            # Save stage-specific best model
             os.makedirs('/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels', exist_ok=True)
             
-            # Enhanced save with optimizer and scheduler state (similar to V1)
+            # Enhanced save with optimizer and scheduler state
             ensemble_state = {
                 'ensemble_state_dict': olympus.state_dict(),
                 'fusion_optimizer_state_dict': fusion_optimizer.state_dict(),
-                'specialist_optimizer_state_dict': specialist_optimizer.state_dict(),
+                'specialist_optimizer_state_dict': specialist_optimizer.state_dict() if specialist_optimizer else None,
                 'fusion_scheduler_state_dict': fusion_scheduler.state_dict(),
-                'specialist_scheduler_state_dict': specialist_scheduler.state_dict(),
-                'best_performance': best_performance,
+                'specialist_scheduler_state_dict': specialist_scheduler.state_dict() if specialist_scheduler else None,
+                'best_performance': stage_performance,
                 'stage': stage_idx,
+                'grid_size': stage_config['max_grid_size'],
                 'ensemble_config': {
                     'max_grid_size': olympus.max_grid_size,
                     'd_model': olympus.d_model,
@@ -654,8 +676,17 @@ def train_olympus_ensemble_v2():
                 'performance_metrics': olympus.get_ensemble_state()
             }
             
+            # Save stage-specific checkpoint
+            stage_model_path = f'/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v2_stage{stage_idx}_best.pt'
+            torch.save(ensemble_state, stage_model_path)
+            print(f"\033[92m🏛️ New best V2 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}) performance: {stage_performance:.2%} - Saved!\033[0m")
+        
+        # Update global best performance
+        if stage_performance > best_performance:
+            best_performance = stage_performance
+            # Also save as global best
             torch.save(ensemble_state, '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v2_best.pt')
-            print(f"\033[96m🏛️ New best V2 ensemble performance: {best_performance:.2%} - OLYMPUS V2 saved!\033[0m")
+            print(f"\033[96m🏛️ New global best V2 ensemble performance: {best_performance:.2%}\033[0m")
         
         # Memory cleanup
         torch.cuda.empty_cache()
@@ -678,6 +709,12 @@ def train_advanced_coordination_stage(olympus, dataloader, criterion,
     olympus.train()
     
     epochs_for_stage = OLYMPUS_V2_CONFIG['epochs_per_stage']
+    
+    # Extra epochs for tiny grids that need more training
+    if stage_config['max_grid_size'] <= 5:  # 3x3, 4x4 and 5x5
+        epochs_for_stage = int(epochs_for_stage * 2)  # 2x epochs for small grids
+        print(f"\033[93m🎯 Small grid ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): Extended to {epochs_for_stage} epochs\033[0m")
+    
     accumulation_steps = OLYMPUS_V2_CONFIG['gradient_accumulation']
     
     best_stage_performance = 0.0

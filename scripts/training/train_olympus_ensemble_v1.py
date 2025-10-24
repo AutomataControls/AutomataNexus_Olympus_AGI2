@@ -345,7 +345,7 @@ def train_olympus_ensemble_v1():
     ).to(device)
     
     # Load all specialist weights from InputBestModels directory
-    weight_dir = '/mnt/d/opt/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
+    weight_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
     load_results = olympus.load_all_specialists(weight_dir)
     successful_loads = sum(load_results.values())
     print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 specialist models\033[0m")
@@ -458,7 +458,7 @@ def train_olympus_ensemble_v1():
         print(f"\033[96m{'=' * 125}\033[0m")
         
         # Try to load stage-specific checkpoint
-        stage_model_path = f'/mnt/d/opt/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_stage{stage_idx}_best.pt'
+        stage_model_path = f'/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_stage{stage_idx}_best.pt'
         if os.path.exists(stage_model_path):
             try:
                 stage_checkpoint = torch.load(stage_model_path, map_location=device)
@@ -474,7 +474,7 @@ def train_olympus_ensemble_v1():
         
         # Create foundation dataset for this stage
         dataset = FoundationEnsembleDataset(
-            data_dir='/mnt/d/opt/AutomataNexus_Olympus_AGI2/data',
+            data_dir='/content/AutomataNexus_Olympus_AGI2/data',
             max_grid_size=stage_config['max_grid_size'],
             stage_config=stage_config
         )
@@ -499,7 +499,7 @@ def train_olympus_ensemble_v1():
         if stage_idx not in stage_best_performances or stage_performance > stage_best_performances[stage_idx]:
             stage_best_performances[stage_idx] = stage_performance
             # Save stage-specific best model
-            os.makedirs('/mnt/d/opt/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels', exist_ok=True)
+            os.makedirs('/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels', exist_ok=True)
             
             # Enhanced save with optimizer and scheduler state
             ensemble_state = {
@@ -518,7 +518,7 @@ def train_olympus_ensemble_v1():
             }
             
             # Save stage-specific checkpoint
-            stage_model_path = f'/mnt/d/opt/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_stage{stage_idx}_best.pt'
+            stage_model_path = f'/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_stage{stage_idx}_best.pt'
             torch.save(ensemble_state, stage_model_path)
             print(f"\033[92m🏛️ New best V1 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}) performance: {stage_performance:.2%} - Saved!\033[0m")
         
@@ -526,7 +526,7 @@ def train_olympus_ensemble_v1():
         if stage_performance > best_performance:
             best_performance = stage_performance
             # Also save as global best
-            torch.save(ensemble_state, '/mnt/d/opt/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt')
+            torch.save(ensemble_state, '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_best.pt')
             print(f"\033[96m🏛️ New global best V1 ensemble performance: {best_performance:.2%}\033[0m")
         
         # Memory cleanup

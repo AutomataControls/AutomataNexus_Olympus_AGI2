@@ -698,6 +698,11 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
         # Calculate actual epochs for this stage
         stage_epochs = int(OLYMPUS_V3_CONFIG['epochs_per_stage'] * epochs_multiplier)
         
+        # Special handling for 4x4 grids - need more training
+        if stage_config['max_grid_size'] == 4:  # Stage 1 (4x4 grids)
+            stage_epochs = int(stage_epochs * 2.5)  # 2.5x more epochs for 4x4
+            print(f"\033[93m🎯 4x4 GRIDS: Extended to {stage_epochs} epochs for better training\033[0m")
+        
         # Use consistent learning rate like V2 (no aggressive multipliers)
         lr_multiplier = 1.0  # V2 doesn't use stage-specific LR multipliers
         

@@ -38,21 +38,21 @@ from src.models.olympus_ensemble import OlympusEnsemble, EnsembleDecision
 # OLYMPUS V3 Configuration - Ultimate Ensemble Training (OPTIMIZED)
 OLYMPUS_V3_CONFIG = {
     # Core Training Parameters - OPTIMIZED FOR SPEED
-    'batch_size': 256,  # Balanced for V3's advanced features
-    'learning_rate': 0.001,  # 10x V2 - VERY aggressive learning
+    'batch_size': 512,  # Same as V2 proven batch size
+    'learning_rate': 0.0001,  # Same as V2 proven rate
     'num_epochs': 240,  # Ultimate training: Extended for lower stages
     'gradient_accumulation': 1,  # No accumulation for speed
-    'epochs_per_stage': 20,  # More epochs to break through plateau
+    'epochs_per_stage': 12,  # Same as V2 proven epochs
     'curriculum_stages': 15,  # Full coverage like V2: 4x4 to 30x30
     
     # Ultimate Loss Configuration - AGGRESSIVE FOR 85%+
-    'ensemble_loss_weight': 2.5,  # INCREASED ensemble focus
-    'specialist_sync_weight': 0.0,  # NO sync to force diversity
-    'consensus_weight': -0.5,  # PENALTY for too much consensus
+    'ensemble_loss_weight': 1.2,  # Same as V2 proven weight
+    'specialist_sync_weight': 0.4,  # Enhanced synchronization like V2
+    'consensus_weight': 0.3,  # Positive consensus like V2
     'fusion_regularization': 0.1,  # REDUCED to allow more flexibility
-    'transform_penalty': 0.01,  # ULTRA LOW penalty for tiny grid exploration
-    'exact_match_bonus': 2.0,  # Reasonable bonus to avoid instability
-    'gradient_clip': 0.5,  # Increased for aggressive updates
+    'transform_penalty': 0.08,  # Same as V2 proven penalty
+    'exact_match_bonus': 12.0,  # Same as V2 proven bonus
+    'gradient_clip': 0.4,  # Same as V2 proven clip
     'weight_decay': 2e-6,  # Reduced regularization
     
     # ULTRA TEAL Enhanced (proven formula)
@@ -62,7 +62,7 @@ OLYMPUS_V3_CONFIG = {
     # OLYMPUS V3-Specific Ultimate Settings - AGGRESSIVE 85%+
     'freeze_specialists': False,  # Allow full specialist fine-tuning
     'fusion_training_only': False,  # Train everything together
-    'specialist_learning_rate': 0.00008,  # 4x HIGHER for aggressive updates
+    'specialist_learning_rate': 0.00003,  # Same as V2 proven rate
     'consensus_threshold': 0.6,  # LOWER threshold for more exploration
     'specialist_dropout': 0.05,  # REDUCED dropout for more signal
     'ensemble_coordination': True,  # Ultimate coordination protocols
@@ -573,33 +573,9 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
                         successful_loads = sum(load_results.values())
                         print(f"\033[96m🏛️ Successfully loaded {successful_loads}/5 individual specialist models\033[0m")
     
-    # AGGRESSIVE DIVERSITY FORCING - Reset specialists with different initializations
-    if v3_loaded or stage_start <= 5:  # Force diversity for lower stages
-        print(f"\033[91m🔥 AGGRESSIVE DIVERSITY MODE: Completely resetting specialists with unique initializations\033[0m")
-        for idx, (name, specialist) in enumerate(olympus.specialists.items()):
-            print(f"\033[93m  🔧 {name}: Using {'Xavier' if idx==0 else 'Kaiming' if idx==1 else 'Normal' if idx==2 else 'Orthogonal' if idx==3 else 'Sparse'} initialization\033[0m")
-            for module in specialist.modules():
-                if isinstance(module, nn.Linear):
-                    # Different initialization per specialist
-                    if idx == 0:  # MINERVA
-                        nn.init.xavier_uniform_(module.weight)
-                    elif idx == 1:  # ATLAS
-                        nn.init.kaiming_uniform_(module.weight, nonlinearity='relu')
-                    elif idx == 2:  # IRIS
-                        nn.init.normal_(module.weight, std=0.05)
-                    elif idx == 3:  # CHRONOS
-                        nn.init.orthogonal_(module.weight, gain=1.2)
-                    else:  # PROMETHEUS
-                        nn.init.uniform_(module.weight, -0.1, 0.1)
-                    
-                    if module.bias is not None:
-                        nn.init.normal_(module.bias, std=0.01 * (idx + 1))
-                elif isinstance(module, nn.Conv2d):
-                    # Also reset conv layers differently
-                    if idx % 2 == 0:
-                        nn.init.kaiming_normal_(module.weight, mode='fan_out', nonlinearity='relu')
-                    else:
-                        nn.init.xavier_normal_(module.weight)
+    # V3 builds on V2's success - DO NOT reset pre-trained weights!
+    # The whole point is to build on the existing specialists, not destroy them
+    print(f"\033[92m🏛️ V3 builds upon V2's pre-trained specialists - NO aggressive resets\033[0m")
     
     # V3: Full specialist fine-tuning (ultimate coordination)
     if not OLYMPUS_V3_CONFIG['freeze_specialists']:
@@ -705,25 +681,8 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
         print(f"\033[96m{'=' * 135}\033[0m")
         
         # Create ultimate augmented dataset for this stage
-        # ⭐ OPTIMIZED AUGMENTATION - Fixed 5x5 issues
-        if stage_config['max_grid_size'] <= 3:
-            augmentation_factor = 30
-        elif stage_config['max_grid_size'] <= 4:
-            augmentation_factor = 30
-        elif stage_config['max_grid_size'] <= 5:
-            augmentation_factor = 8   # ⭐ REDUCED from 15 - much less synthetic
-        elif stage_config['max_grid_size'] <= 6:
-            augmentation_factor = 20
-        elif stage_config['max_grid_size'] <= 8:
-            augmentation_factor = 15
-        elif stage_idx >= 14:  # 27x27+
-            augmentation_factor = 3
-        elif stage_idx >= 12:  # 18x18-22x22
-            augmentation_factor = 4
-        elif stage_idx >= 10:  # 14x14-16x16
-            augmentation_factor = 5
-        else:  # 9x9-12x12
-            augmentation_factor = 6
+        # Use V2's proven augmentation factor
+        augmentation_factor = 6  # V2 uses fixed augmentation_factor: 6 for all stages
         
         dataset = OlympusV3UltimateDataset(
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',
@@ -732,64 +691,15 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
             augmentation_factor=augmentation_factor
         )
         
-        # ⭐ OPTIMIZED BATCH SIZES AND EPOCHS - SAFE FOR A100 80GB
-        if stage_config['max_grid_size'] <= 2:
-            batch_size = 8192   # Safe for A100
-            epochs_multiplier = 5.0
-        elif stage_config['max_grid_size'] <= 3:
-            batch_size = 8192   # Safe for A100
-            epochs_multiplier = 5.0
-        elif stage_config['max_grid_size'] <= 4:
-            batch_size = 8192   # Safe
-            epochs_multiplier = 4.0
-        elif stage_config['max_grid_size'] <= 5:
-            batch_size = 4096   # ⭐ REDUCED from 6144 - smaller batches for better gradients
-            epochs_multiplier = 8.0  # ⭐ INCREASED from 6.0 - more training time
-        elif stage_config['max_grid_size'] <= 6:
-            batch_size = 4096   # Safe
-            epochs_multiplier = 4.0
-        elif stage_config['max_grid_size'] <= 8:
-            batch_size = 3072   # Safe
-            epochs_multiplier = 3.0
-        elif stage_config['max_grid_size'] <= 10:
-            batch_size = 2048   # Reduced from 2560
-            epochs_multiplier = 2.5
-        elif stage_config['max_grid_size'] <= 16:
-            batch_size = 1536   # Reduced from 2048
-            epochs_multiplier = 2.0
-        elif stage_config['max_grid_size'] <= 20:
-            batch_size = 1024   # Keep
-            epochs_multiplier = 1.5
-        elif stage_config['max_grid_size'] <= 22:
-            batch_size = 512    # Keep
-            epochs_multiplier = 1.0
-        elif stage_config['max_grid_size'] <= 27:
-            batch_size = 256    # Keep
-            epochs_multiplier = 0.8
-        else:
-            batch_size = 128    # Keep
-            epochs_multiplier = 0.6
+        # Use V2's proven stable batch size for all stages
+        batch_size = 512  # V2's proven batch size that works for all grid sizes
+        epochs_multiplier = 1.0  # Consistent epochs like V2
         
         # Calculate actual epochs for this stage
         stage_epochs = int(OLYMPUS_V3_CONFIG['epochs_per_stage'] * epochs_multiplier)
         
-        # ⭐ LEARNING RATE MULTIPLIERS - Special handling for 5x5
-        if stage_config['max_grid_size'] <= 2:
-            lr_multiplier = 10.0
-        elif stage_config['max_grid_size'] <= 3:
-            lr_multiplier = 12.0  # ⭐ Aggressive for 3x3
-        elif stage_config['max_grid_size'] <= 4:
-            lr_multiplier = 8.0
-        elif stage_config['max_grid_size'] <= 5:
-            lr_multiplier = 10.0  # ⭐ INCREASED from 6.0 - need higher LR for 5x5 to escape local minimum
-        elif stage_config['max_grid_size'] <= 6:
-            lr_multiplier = 4.0
-        elif stage_config['max_grid_size'] <= 8:
-            lr_multiplier = 3.0
-        elif stage_config['max_grid_size'] <= 10:
-            lr_multiplier = 2.0
-        else:
-            lr_multiplier = 1.0
+        # Use consistent learning rate like V2 (no aggressive multipliers)
+        lr_multiplier = 1.0  # V2 doesn't use stage-specific LR multipliers
         
         # Adjust learning rates for this stage
         for param_group in fusion_optimizer.param_groups:
@@ -815,21 +725,8 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
             prefetch_factor=4
         )
         
-        # Dynamic gradient accumulation - AGGRESSIVE for lower stages
-        if stage_config['max_grid_size'] >= 27:
-            accumulation_steps = 8
-        elif stage_config['max_grid_size'] >= 22:
-            accumulation_steps = 6
-        elif stage_config['max_grid_size'] >= 18:
-            accumulation_steps = 4
-        elif stage_config['max_grid_size'] >= 14:
-            accumulation_steps = 4
-        elif stage_config['max_grid_size'] <= 5:
-            accumulation_steps = 8
-        elif stage_config['max_grid_size'] <= 9:
-            accumulation_steps = 4
-        else:
-            accumulation_steps = 2
+        # Use V2's proven gradient accumulation (none)
+        accumulation_steps = 1  # V2 uses gradient_accumulation: 1
         
         # OneCycleLR - DISABLED (CosineAnnealing is more stable)
         if use_onecycle and stage_idx <= 7:

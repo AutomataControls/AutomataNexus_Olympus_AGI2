@@ -633,24 +633,24 @@ def train_olympus_ensemble_v2():
             augmentation_factor=6  # 6x augmentation like specialists
         )
         
-        # Dynamic batch size based on grid size - optimized for 80GB GPU
+        # Dynamic batch size based on grid size - conservative speedup for V2
         grid_size = stage_config['max_grid_size']
         if grid_size <= 10:
-            batch_size = OLYMPUS_V2_CONFIG['batch_size']  # 512
+            batch_size = 640   # 25% increase from 512
         elif grid_size <= 12:
-            batch_size = 768  # Increased for better efficiency
+            batch_size = 768   # Keep current
         elif grid_size <= 14:
-            batch_size = 512  # Medium grids
+            batch_size = 576   # 12% increase from 512
         elif grid_size <= 16:
-            batch_size = 384  # Medium-large grids
+            batch_size = 448   # 16% increase from 384
         elif grid_size <= 18:
-            batch_size = 320  # Large grids
+            batch_size = 384   # 20% increase from 320
         elif grid_size <= 22:
-            batch_size = 256  # Larger grids
+            batch_size = 320   # 25% increase from 256
         elif grid_size <= 27:
-            batch_size = 128  # Very large grids
+            batch_size = 160   # 25% increase from 128
         else:  # 30x30
-            batch_size = 64   # Ultra large grids - still safe with 80GB
+            batch_size = 96    # 50% increase from 64
         
         if batch_size != OLYMPUS_V2_CONFIG['batch_size']:
             if batch_size > OLYMPUS_V2_CONFIG['batch_size']:

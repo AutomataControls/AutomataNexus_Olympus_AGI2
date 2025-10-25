@@ -601,10 +601,10 @@ def train_foundation_stage(olympus, dataloader, criterion, optimizer, scheduler,
     
     epochs_for_stage = OLYMPUS_V1_CONFIG['epochs_per_stage']
     
-    # Extra epochs for tiny grids that need more training
-    if stage_config['max_grid_size'] <= 5:  # 4x4 and 5x5
-        epochs_for_stage = int(epochs_for_stage * 2)  # 2x epochs for small grids
-        print(f"\033[93m🎯 Small grid ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): Extended to {epochs_for_stage} epochs\033[0m")
+    # Extra epochs for small grids that need more training
+    if stage_idx <= 6:  # Stages 0-6 (3x3 through 9x9)
+        epochs_for_stage = 60  # Fixed 60 epochs for proper convergence
+        print(f"\033[93m🎯 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): Extended to {epochs_for_stage} epochs for better training\033[0m")
     
     accumulation_steps = OLYMPUS_V1_CONFIG['gradient_accumulation']
     

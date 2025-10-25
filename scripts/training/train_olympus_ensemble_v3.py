@@ -693,21 +693,30 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
             augmentation_factor=augmentation_factor
         )
         
-        # Dynamic batch size based on grid size to prevent OOM
+        # Dynamic batch size based on grid size - optimized for 80GB GPU
         grid_size = stage_config['max_grid_size']
-        if grid_size <= 12:
+        if grid_size <= 10:
             batch_size = 512  # V2's proven batch size
+        elif grid_size <= 12:
+            batch_size = 768  # Increased for better efficiency
+        elif grid_size <= 14:
+            batch_size = 512  # Medium grids
+        elif grid_size <= 16:
+            batch_size = 384  # Medium-large grids
         elif grid_size <= 18:
-            batch_size = 256  # Medium grids
+            batch_size = 320  # Large grids
         elif grid_size <= 22:
-            batch_size = 128  # Large grids
+            batch_size = 256  # Larger grids
         elif grid_size <= 27:
-            batch_size = 64   # Very large grids - prevent OOM
+            batch_size = 128  # Very large grids
         else:  # 30x30
-            batch_size = 32   # Ultra large grids - minimum batch size
+            batch_size = 64   # Ultra large grids - still safe with 80GB
         
         if batch_size != 512:
-            print(f"\033[93m⚠️ Grid size {grid_size}x{grid_size}: Reduced batch size to {batch_size} to prevent OOM\033[0m")
+            if batch_size > 512:
+                print(f"\033[92m⚡ Grid size {grid_size}x{grid_size}: Increased batch size to {batch_size} for faster training\033[0m")
+            else:
+                print(f"\033[93m⚠️ Grid size {grid_size}x{grid_size}: Adjusted batch size to {batch_size} for optimal GPU usage\033[0m")
         
         epochs_multiplier = 1.0  # Consistent epochs like V2
         

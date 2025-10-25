@@ -11,29 +11,47 @@ input_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports'
 output_dir = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels'
 os.makedirs(output_dir, exist_ok=True)
 
-# Map individual model files to OLYMPUS names
+# Check what files are actually in the directory
+print("📁 Files found in InputBestModels:")
+if os.path.exists(output_dir):
+    for f in os.listdir(output_dir):
+        if f.endswith('.pt'):
+            print(f"  - {f}")
+print()
+
+# Map individual model files to OLYMPUS names - check multiple possible locations
 specialist_models = {
     'minerva': [
+        f'{output_dir}/minerva_v1_best.pt',
+        f'{output_dir}/minerva_best.pt',
         f'{input_dir}/Minerva/Stage5_Weights/minerva_v6_enhanced_stage5_best_state_dict_only.pt',
         f'{input_dir}/Minerva/minerva_v6_enhanced_best.pt',
         f'{input_dir}/Minerva/minerva_v6_enhanced_best_state_dict_only.pt'
     ],
     'atlas': [
+        f'{output_dir}/atlas_v1_best.pt',
+        f'{output_dir}/atlas_best.pt',
         f'{input_dir}/Atlas/Stage5_Weights/atlas_v5_enhanced_stage5_best_state_dict_only.pt',
         f'{input_dir}/Atlas/atlas_v5_enhanced_best.pt',
         f'{input_dir}/Atlas/atlas_v5_enhanced_best_state_dict_only.pt'
     ],
     'iris': [
+        f'{output_dir}/iris_v1_best.pt',
+        f'{output_dir}/iris_best.pt',
         f'{input_dir}/Iris/Stage5_Weights/iris_v6_enhanced_stage5_best_state_dict_only.pt',
         f'{input_dir}/Iris/iris_v6_enhanced_best.pt',
         f'{input_dir}/Iris/iris_v6_enhanced_best_state_dict_only.pt'
     ],
     'chronos': [
+        f'{output_dir}/chronos_v1_best.pt',
+        f'{output_dir}/chronos_best.pt',
         f'{input_dir}/Chronos/Stage5_Weights/chronos_v4_enhanced_stage5_best_state_dict_only.pt',
         f'{input_dir}/Chronos/chronos_v4_enhanced_best.pt',
         f'{input_dir}/Chronos/chronos_v4_enhanced_best_state_dict_only.pt'
     ],
     'prometheus': [
+        f'{output_dir}/prometheus_v1_best.pt',
+        f'{output_dir}/prometheus_best.pt',
         f'{input_dir}/Prometheus/Stage5_Weights/prometheus_v6_enhanced_stage5_best_state_dict_only.pt',
         f'{input_dir}/Prometheus/prometheus_v6_enhanced_best.pt',
         f'{input_dir}/Prometheus/prometheus_v6_enhanced_best_state_dict_only.pt'

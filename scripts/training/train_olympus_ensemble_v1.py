@@ -479,24 +479,24 @@ def train_olympus_ensemble_v1():
             stage_config=stage_config
         )
         
-        # Dynamic batch size based on grid size - optimized for 80GB GPU
+        # Dynamic batch size based on grid size - optimized for 80GB GPU with more headroom
         grid_size = stage_config['max_grid_size']
         if grid_size <= 10:
-            batch_size = OLYMPUS_V1_CONFIG['batch_size']  # 512
+            batch_size = 1024  # Doubled from 512
         elif grid_size <= 12:
-            batch_size = 768  # Increased for better efficiency
+            batch_size = 1024  # Increased for better efficiency
         elif grid_size <= 14:
-            batch_size = 512  # Medium grids
+            batch_size = 768   # Increased from 512
         elif grid_size <= 16:
-            batch_size = 384  # Medium-large grids
+            batch_size = 640   # Increased from 384
         elif grid_size <= 18:
-            batch_size = 320  # Large grids
+            batch_size = 512   # Increased from 320
         elif grid_size <= 22:
-            batch_size = 256  # Larger grids
+            batch_size = 384   # Increased from 256
         elif grid_size <= 27:
-            batch_size = 128  # Very large grids
+            batch_size = 256   # Doubled from 128
         else:  # 30x30
-            batch_size = 64   # Ultra large grids - still safe with 80GB
+            batch_size = 192   # Tripled from 64 - still only ~50GB usage
         
         if batch_size != OLYMPUS_V1_CONFIG['batch_size']:
             if batch_size > OLYMPUS_V1_CONFIG['batch_size']:

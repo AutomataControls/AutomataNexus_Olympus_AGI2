@@ -606,8 +606,10 @@ def train_olympus_ensemble_v2():
               f"Complexity: {stage_config['complexity']} | Focus: {stage_config['focus']}\033[0m")
         print(f"\033[38;2;255;204;153m{'=' * 130}\033[0m")
         
-        # Try to load stage-specific checkpoint
+        # Try to load stage-specific checkpoint - V2 first, then fallback to V1
         stage_model_path = f'/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v2_stage{stage_idx}_best.pt'
+        v1_stage_model_path = f'/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v1_stage{stage_idx}_best.pt'
+        
         if os.path.exists(stage_model_path):
             try:
                 stage_checkpoint = torch.load(stage_model_path, map_location=device)
@@ -621,9 +623,19 @@ def train_olympus_ensemble_v2():
                     specialist_scheduler.load_state_dict(stage_checkpoint['specialist_scheduler_state_dict'])
                 stage_best = stage_checkpoint.get('best_performance', 0.0)
                 stage_best_performances[stage_idx] = stage_best
-                print(f"\033[92m🏛️ Loaded Stage {stage_idx} checkpoint - Previous best: {stage_best:.2%}\033[0m")
+                print(f"\033[92m🏛️ Loaded V2 Stage {stage_idx} checkpoint - Previous best: {stage_best:.2%}\033[0m")
             except Exception as e:
-                print(f"\033[93m⚠️ Could not load stage {stage_idx} checkpoint: {e}\033[0m")
+                print(f"\033[93m⚠️ Could not load V2 stage {stage_idx} checkpoint: {e}\033[0m")
+        elif os.path.exists(v1_stage_model_path):
+            # Fallback to V1 stage checkpoint if V2 doesn't exist
+            try:
+                v1_stage_checkpoint = torch.load(v1_stage_model_path, map_location=device)
+                olympus.load_state_dict(v1_stage_checkpoint['ensemble_state_dict'])
+                stage_best = v1_stage_checkpoint.get('best_performance', 0.0)
+                stage_best_performances[stage_idx] = stage_best
+                print(f"\033[96m🏛️ Loaded V1 Stage {stage_idx} checkpoint (V2 not found) - Previous best: {stage_best:.2%}\033[0m")
+            except Exception as e:
+                print(f"\033[93m⚠️ Could not load V1 stage {stage_idx} checkpoint: {e}\033[0m")
         
         # Create advanced dataset for this stage
         dataset = OlympusV2AugmentedDataset(

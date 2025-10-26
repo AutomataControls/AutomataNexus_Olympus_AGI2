@@ -633,24 +633,24 @@ def train_olympus_ensemble_v2():
             augmentation_factor=6  # 6x augmentation like specialists
         )
         
-        # Dynamic batch size based on grid size - conservative speedup for V2
+        # Dynamic batch size based on grid size - boosted for higher grids
         grid_size = stage_config['max_grid_size']
         if grid_size <= 10:
-            batch_size = 640   # 25% increase from 512
+            batch_size = 640   # Keep for lower grids
         elif grid_size <= 12:
             batch_size = 768   # Keep current
         elif grid_size <= 14:
-            batch_size = 576   # 12% increase from 512
+            batch_size = 640   # Increased from 576
         elif grid_size <= 16:
-            batch_size = 448   # 16% increase from 384
+            batch_size = 512   # Increased from 448
         elif grid_size <= 18:
-            batch_size = 384   # 20% increase from 320
+            batch_size = 448   # Increased from 384
         elif grid_size <= 22:
-            batch_size = 320   # 25% increase from 256
+            batch_size = 384   # Increased from 320
         elif grid_size <= 27:
-            batch_size = 160   # 25% increase from 128
+            batch_size = 256   # Significantly increased from 160
         else:  # 30x30
-            batch_size = 96    # 50% increase from 64
+            batch_size = 192   # Doubled from 96
         
         if batch_size != OLYMPUS_V2_CONFIG['batch_size']:
             if batch_size > OLYMPUS_V2_CONFIG['batch_size']:

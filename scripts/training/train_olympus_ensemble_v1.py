@@ -37,7 +37,7 @@ OLYMPUS_V1_CONFIG = {
     'learning_rate': 0.0001,  # Conservative for ensemble coordination
     'num_epochs': 375,  # Extended foundation training: 15 stages x 25 epochs
     'gradient_accumulation': 1,  # No accumulation for cleaner gradients
-    'epochs_per_stage': 20,  # Balanced epochs per stage
+    'epochs_per_stage': 15,  # Reduced epochs per stage for faster training
     'curriculum_stages': 15,  # All stages - just faster
     
     # Enhanced Loss Configuration
@@ -594,7 +594,7 @@ def train_foundation_stage(olympus, dataloader, criterion, optimizer, scheduler,
     
     # Extra epochs for small grids that need more training
     if stage_idx <= 6:  # Stages 0-6 (3x3 through 9x9)
-        epochs_for_stage = 60  # Fixed 60 epochs for proper convergence
+        epochs_for_stage = 30  # More reasonable epoch count
         print(f"\033[93m🎯 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): Extended to {epochs_for_stage} epochs for better training\033[0m")
     
     accumulation_steps = OLYMPUS_V1_CONFIG['gradient_accumulation']

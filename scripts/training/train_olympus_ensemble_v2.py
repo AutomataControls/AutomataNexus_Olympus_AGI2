@@ -654,17 +654,17 @@ def train_olympus_ensemble_v2():
         elif grid_size == 12:  # Stage 9
             batch_size = 896   # Increased from 768
         elif grid_size == 14:  # Stage 10
-            batch_size = 768   # Increased from 640
+            batch_size = 896   # Increased from 640
         elif grid_size == 16:  # Stage 11
-            batch_size = 640   # Increased from 512
+            batch_size = 896   # Increased from 512
         elif grid_size == 18:  # Stage 12
-            batch_size = 512   # Increased from 448
+            batch_size = 640   # Increased from 640
         elif grid_size == 22:  # Stage 13
-            batch_size = 448   # Increased from 384
+            batch_size = 512   # Increased from 512
         elif grid_size == 27:  # Stage 14
-            batch_size = 320   # Increased from 256
+            batch_size = 448   # Increased from 448
         else:  # 30x30 - Stage 15
-            batch_size = 256   # Increased from 192
+            batch_size = 448   # Increased from 448
         
         if batch_size != OLYMPUS_V2_CONFIG['batch_size']:
             if batch_size > OLYMPUS_V2_CONFIG['batch_size']:

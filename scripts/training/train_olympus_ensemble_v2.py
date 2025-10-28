@@ -642,7 +642,7 @@ def train_olympus_ensemble_v2():
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',
             max_grid_size=stage_config['max_grid_size'],
             stage_config=stage_config,
-            augmentation_factor=6  # 6x augmentation like specialists
+            augmentation_factor=10  # 10x augmentation like specialists
         )
         
         # Dynamic batch size based on grid size - extra boost for stages 8-15
@@ -658,13 +658,13 @@ def train_olympus_ensemble_v2():
         elif grid_size == 16:  # Stage 11
             batch_size = 1024   # Increased from 512
         elif grid_size == 18:  # Stage 12
-            batch_size = 768   # Increased from 640
+            batch_size = 1024   # Increased from 640
         elif grid_size == 22:  # Stage 13
-            batch_size = 768   # Increased from 512
+            batch_size = 1024   # Increased from 512
         elif grid_size == 27:  # Stage 14
-            batch_size = 512   # Increased from 448
+            batch_size = 1024   # Increased from 448
         else:  # 30x30 - Stage 15
-            batch_size = 512   # Increased from 448
+            batch_size = 1024   # Increased from 448
 
         if batch_size != OLYMPUS_V2_CONFIG['batch_size']:
             if batch_size > OLYMPUS_V2_CONFIG['batch_size']:

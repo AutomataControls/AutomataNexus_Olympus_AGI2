@@ -35,24 +35,24 @@ OLYMPUS_V2_CONFIG = {
     # Core Training Parameters - Advanced Level (Memory Optimized)
     'batch_size': 512,  # Memory-safe for all grid sizes including 27x27 and 30x30
     'learning_rate': 0.0001,  # Lower rate for fine-tuning specialists
-    'num_epochs': 225,  # Advanced training: 15 stages x 15 epochs
+    'num_epochs': 450,  # Advanced training: 15 stages x 15 epochs
     'gradient_accumulation': 1,  # Keep at 1 for optimal speed
     'epochs_per_stage': 12,  # Reduced epochs for speed
     'curriculum_stages': 15,  # Advanced curriculum stages
     
     # Enhanced Loss Configuration
-    'ensemble_loss_weight': 1.2,  # Increased ensemble focus
-    'specialist_sync_weight': 0.4,  # Enhanced synchronization
-    'consensus_weight': 0.3,  # Stronger consensus building
+    'ensemble_loss_weight': 1.3,  # Increased ensemble focus
+    'specialist_sync_weight': 0.3,  # Enhanced synchronization
+    'consensus_weight': 0.2,  # Stronger consensus building
     'fusion_regularization': 0.15,  # More sophisticated fusion
-    'transform_penalty': 0.08,  # Encourage complex transformations
+    'transform_penalty': 0.18,  # Encourage complex transformations
     'exact_match_bonus': 12.0,  # Higher precision bonus
-    'gradient_clip': 0.4,  # Tighter gradient control
+    'gradient_clip': 1.0,  # Tighter gradient control
     'weight_decay': 3e-6,  # Balanced regularization
     
     # ULTRA TEAL Enhanced (proven formula)
-    'ultra_teal_iou_weight': 0.85,  # 85% IoU weighting
-    'strict_match_weight': 0.15,   # 15% strict matching
+    'ultra_teal_iou_weight': 0.95,  # 95% IoU weighting
+    'strict_match_weight': 0.25,   # 25% strict matching
     
     # OLYMPUS V2-Specific Advanced Settings
     'freeze_specialists': False,  # Allow partial specialist fine-tuning
@@ -74,7 +74,7 @@ OLYMPUS_V2_CONFIG = {
     'dynamic_fusion_weights': True,  # NEW: Adaptive fusion weighting
     
     # Learning Rate Scheduling
-    'warmup_epochs': 15,  # Advanced warmup
+    'warmup_epochs': 30,  # Advanced warmup
     'cosine_restarts': True,
     'restart_multiplier': 1.4,
     'plateau_patience': 20,
@@ -767,7 +767,7 @@ def train_advanced_coordination_stage(olympus, dataloader, criterion,
     
     # Extra epochs for small grids that need more training
     if stage_idx <= 6:  # Stages 0-6 (3x3 through 9x9)
-        epochs_for_stage = 60  # Fixed 60 epochs for proper convergence
+        epochs_for_stage = 100  # Fixed 100 epochs for proper convergence
         print(f"\033[93m🎯 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): Extended to {epochs_for_stage} epochs for better training\033[0m")
     
     accumulation_steps = OLYMPUS_V2_CONFIG['gradient_accumulation']

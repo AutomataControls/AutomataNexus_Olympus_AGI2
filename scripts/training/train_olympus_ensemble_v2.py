@@ -648,24 +648,24 @@ def train_olympus_ensemble_v2():
         # Dynamic batch size based on grid size - extra boost for stages 8-15
         grid_size = stage_config['max_grid_size']
         if grid_size <= 10:
-            batch_size = 640   # Keep for lower grids
+            batch_size = 1024   # Keep for lower grids
         elif grid_size == 11:  # Stage 8
             batch_size = 1024  # Big boost for stage 8
         elif grid_size == 12:  # Stage 9
-            batch_size = 896   # Increased from 768
+            batch_size = 1024   # Increased from 768
         elif grid_size == 14:  # Stage 10
-            batch_size = 896   # Increased from 640
+            batch_size = 1024   # Increased from 640
         elif grid_size == 16:  # Stage 11
-            batch_size = 896   # Increased from 512
+            batch_size = 1024   # Increased from 512
         elif grid_size == 18:  # Stage 12
-            batch_size = 640   # Increased from 640
+            batch_size = 768   # Increased from 640
         elif grid_size == 22:  # Stage 13
-            batch_size = 512   # Increased from 512
+            batch_size = 768   # Increased from 512
         elif grid_size == 27:  # Stage 14
-            batch_size = 448   # Increased from 448
+            batch_size = 512   # Increased from 448
         else:  # 30x30 - Stage 15
-            batch_size = 448   # Increased from 448
-        
+            batch_size = 512   # Increased from 448
+
         if batch_size != OLYMPUS_V2_CONFIG['batch_size']:
             if batch_size > OLYMPUS_V2_CONFIG['batch_size']:
                 print(f"\033[92m⚡ Grid size {grid_size}x{grid_size}: Increased batch size to {batch_size} for faster training\033[0m")

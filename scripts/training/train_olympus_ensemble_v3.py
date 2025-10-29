@@ -482,7 +482,7 @@ class OlympusV3UltimateDataset(OlympusV2AugmentedDataset):
         print(f"\033[92m✅ Total samples now: {len(self.samples)}\033[0m")
 
 
-def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
+def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
     """Main training function for OLYMPUS Ensemble V3
     
     Args:
@@ -704,13 +704,13 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
         elif grid_size <= 16:
             batch_size = 320  # Reduced from 448 to prevent OOM
         elif grid_size <= 18:
-            batch_size = 256  # Reduced from 384 to prevent OOM
+            batch_size = 192  # Further reduced from 256 to prevent OOM
         elif grid_size <= 22:
-            batch_size = 192  # Reduced from 320 to prevent OOM
+            batch_size = 128  # Further reduced from 192 to prevent OOM
         elif grid_size <= 27:
-            batch_size = 128  # Reduced from 160 to prevent OOM
+            batch_size = 64   # Further reduced from 128 to prevent OOM
         else:  # 30x30
-            batch_size = 64   # Reduced from 96 to prevent OOM
+            batch_size = 32   # Further reduced from 64 to prevent OOM
         
         if batch_size != 512:
             if batch_size > 512:
@@ -727,6 +727,9 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
         if stage_idx <= 6:  # Stages 0-6 (3x3 through 9x9)
             stage_epochs = 60  # Fixed 60 epochs for proper convergence
             print(f"\033[93m🎯 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): Extended to {stage_epochs} epochs for better training\033[0m")
+        elif stage_idx >= 13:  # Stages 13-15 (22x22+)
+            stage_epochs = 6   # Reduced epochs for speed
+            print(f"\033[93m⚡ Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): Reduced to {stage_epochs} epochs for speed\033[0m")
         
         # Use consistent learning rate like V2 (no aggressive multipliers)
         lr_multiplier = 1.0  # V2 doesn't use stage-specific LR multipliers

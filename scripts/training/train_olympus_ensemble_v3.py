@@ -693,7 +693,7 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
             augmentation_factor=augmentation_factor
         )
         
-        # Dynamic batch size based on grid size - optimized for 80GB GPU (slightly increased)
+        # Dynamic batch size based on grid size - optimized for 80GB GPU (reduced for OOM prevention)
         grid_size = stage_config['max_grid_size']
         if grid_size <= 10:
             batch_size = 640  # Increased from 512
@@ -702,15 +702,15 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
         elif grid_size <= 14:
             batch_size = 640  # Increased from 512
         elif grid_size <= 16:
-            batch_size = 448  # Increased from 384
+            batch_size = 320  # Reduced from 448 to prevent OOM
         elif grid_size <= 18:
-            batch_size = 384  # Increased from 320
+            batch_size = 256  # Reduced from 384 to prevent OOM
         elif grid_size <= 22:
-            batch_size = 320  # Increased from 256
+            batch_size = 192  # Reduced from 320 to prevent OOM
         elif grid_size <= 27:
-            batch_size = 160  # Increased from 128
+            batch_size = 128  # Reduced from 160 to prevent OOM
         else:  # 30x30
-            batch_size = 96   # Increased from 64
+            batch_size = 64   # Reduced from 96 to prevent OOM
         
         if batch_size != 512:
             if batch_size > 512:

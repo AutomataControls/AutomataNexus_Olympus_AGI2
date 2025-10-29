@@ -74,7 +74,7 @@ OLYMPUS_V2_CONFIG = {
     'dynamic_fusion_weights': True,  # NEW: Adaptive fusion weighting
     
     # Learning Rate Scheduling
-    'warmup_epochs': 30,  # Advanced warmup
+    'warmup_epochs': 10,  # Advanced warmup
     'cosine_restarts': True,
     'restart_multiplier': 1.4,
     'plateau_patience': 20,

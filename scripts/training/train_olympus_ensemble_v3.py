@@ -693,24 +693,24 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
             augmentation_factor=augmentation_factor
         )
         
-        # Dynamic batch size based on grid size - optimized for 80GB GPU
+        # Dynamic batch size based on grid size - optimized for 80GB GPU (slightly increased)
         grid_size = stage_config['max_grid_size']
         if grid_size <= 10:
-            batch_size = 512  # V2's proven batch size
+            batch_size = 640  # Increased from 512
         elif grid_size <= 12:
-            batch_size = 768  # Increased for better efficiency
+            batch_size = 896  # Increased from 768
         elif grid_size <= 14:
-            batch_size = 512  # Medium grids
+            batch_size = 640  # Increased from 512
         elif grid_size <= 16:
-            batch_size = 384  # Medium-large grids
+            batch_size = 448  # Increased from 384
         elif grid_size <= 18:
-            batch_size = 320  # Large grids
+            batch_size = 384  # Increased from 320
         elif grid_size <= 22:
-            batch_size = 256  # Larger grids
+            batch_size = 320  # Increased from 256
         elif grid_size <= 27:
-            batch_size = 128  # Very large grids
+            batch_size = 160  # Increased from 128
         else:  # 30x30
-            batch_size = 64   # Ultra large grids - still safe with 80GB
+            batch_size = 96   # Increased from 64
         
         if batch_size != 512:
             if batch_size > 512:
@@ -810,31 +810,38 @@ def train_olympus_ensemble_v3(stage_start=0, stage_end=15):
             accumulation_steps=accumulation_steps
         )
         
-        # Update best performance
+        # Always create ensemble_state for potential saving
+        ensemble_state = {
+            'ensemble_state_dict': olympus.state_dict(),
+            'fusion_optimizer_state_dict': fusion_optimizer.state_dict(),
+            'specialist_output_optimizer_state_dict': specialist_output_optimizer.state_dict() if specialist_output_optimizer else None,
+            'specialist_core_optimizer_state_dict': specialist_core_optimizer.state_dict() if specialist_core_optimizer else None,
+            'fusion_scheduler_state_dict': fusion_scheduler.state_dict() if fusion_scheduler else None,
+            'specialist_output_scheduler_state_dict': specialist_output_scheduler.state_dict() if specialist_output_scheduler else None,
+            'specialist_core_scheduler_state_dict': specialist_core_scheduler.state_dict() if specialist_core_scheduler else None,
+            'best_performance': stage_performance,
+            'stage': stage_idx,
+            'grid_size': stage_config['max_grid_size'],
+            'ensemble_config': {
+                'max_grid_size': olympus.max_grid_size,
+                'd_model': olympus.d_model,
+                'device': olympus.device_name
+            },
+            'performance_metrics': olympus.get_ensemble_state()
+        }
+        
+        # Save stage-specific checkpoint
+        os.makedirs('/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels', exist_ok=True)
+        stage_checkpoint_path = f'/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v3_stage{stage_idx}_best.pt'
+        torch.save(ensemble_state, stage_checkpoint_path)
+        print(f"\033[92m🏛️ Stage {stage_idx} performance: {stage_performance:.2%} - Stage checkpoint saved!\033[0m")
+        
+        # Update best performance and save global checkpoint
         if stage_performance > best_performance:
             best_performance = stage_performance
-            # Save best OLYMPUS V3 model in InputBestModels directory
-            os.makedirs('/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels', exist_ok=True)
-            
-            # Enhanced save with optimizer and scheduler state (similar to V2)
-            ensemble_state = {
-                'ensemble_state_dict': olympus.state_dict(),
-                'fusion_optimizer_state_dict': fusion_optimizer.state_dict(),
-                'specialist_output_optimizer_state_dict': specialist_output_optimizer.state_dict() if specialist_output_optimizer else None,
-                'specialist_core_optimizer_state_dict': specialist_core_optimizer.state_dict() if specialist_core_optimizer else None,
-                'fusion_scheduler_state_dict': fusion_scheduler.state_dict() if fusion_scheduler else None,
-                'specialist_output_scheduler_state_dict': specialist_output_scheduler.state_dict() if specialist_output_scheduler else None,
-                'specialist_core_scheduler_state_dict': specialist_core_scheduler.state_dict() if specialist_core_scheduler else None,
-                'best_performance': best_performance,
-                'stage': stage_idx,
-                'stage_range_trained': {'start': stage_start, 'end': stage_end},  # Track which stages were trained
-                'ensemble_config': {
-                    'max_grid_size': olympus.max_grid_size,
-                    'd_model': olympus.d_model,
-                    'device': olympus.device_name
-                },
-                'performance_metrics': olympus.get_ensemble_state()
-            }
+            # Update ensemble_state with global best performance
+            ensemble_state['best_performance'] = best_performance
+            ensemble_state['stage_range_trained'] = {'start': stage_start, 'end': stage_end}  # Track which stages were trained
             
             torch.save(ensemble_state, '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v3_best.pt')
             print(f"\033[96m🏛️ New best V3 ultimate performance: {best_performance:.2%} - OLYMPUS V3 ULTIMATE saved!\033[0m")

@@ -39,7 +39,7 @@ from src.models.olympus_ensemble import OlympusEnsemble, EnsembleDecision
 OLYMPUS_V3_CONFIG = {
     # Core Training Parameters - OPTIMIZED FOR SPEED
     'batch_size': 512,  # Same as V2 proven batch size
-    'learning_rate': 0.0001,  # Same as V2 proven rate
+    'learning_rate': 0.00005,  # EMERGENCY: Halved learning rate for stability
     'num_epochs': 240,  # Ultimate training: Extended for lower stages
     'gradient_accumulation': 1,  # No accumulation for speed
     'epochs_per_stage': 12,  # Same as V2 proven epochs
@@ -52,7 +52,7 @@ OLYMPUS_V3_CONFIG = {
     'fusion_regularization': 0.1,  # REDUCED to allow more flexibility
     'transform_penalty': 0.08,  # Same as V2 proven penalty
     'exact_match_bonus': 12.0,  # Same as V2 proven bonus
-    'gradient_clip': 0.2,  # Reduced for stability (prevent gradient explosion)
+    'gradient_clip': 0.05,  # EMERGENCY: Ultra-tight clipping to prevent NaN
     'weight_decay': 2e-6,  # Reduced regularization
     
     # ULTRA TEAL Enhanced (proven formula)
@@ -62,7 +62,7 @@ OLYMPUS_V3_CONFIG = {
     # OLYMPUS V3-Specific Ultimate Settings - AGGRESSIVE 85%+
     'freeze_specialists': False,  # Allow full specialist fine-tuning
     'fusion_training_only': False,  # Train everything together
-    'specialist_learning_rate': 0.00003,  # Same as V2 proven rate
+    'specialist_learning_rate': 0.000015,  # EMERGENCY: Halved specialist LR for stability
     'consensus_threshold': 0.6,  # LOWER threshold for more exploration
     'specialist_dropout': 0.05,  # REDUCED dropout for more signal
     'ensemble_coordination': True,  # Ultimate coordination protocols
@@ -725,16 +725,16 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
             augmentation_factor=augmentation_factor
         )
         
-        # STABLE batch sizes to prevent gradient explosion
+        # EMERGENCY STABILITY: Ultra-conservative batch sizes to stop NaN collapse
         grid_size = stage_config['max_grid_size']
         if grid_size <= 8:
-            batch_size = 512   # Reduced from 1024 for stability
+            batch_size = 64    # EMERGENCY: Reduced from 512 - massive stability fix
         elif grid_size <= 10:
-            batch_size = 384   # Reduced from 768 for stability
+            batch_size = 48    # EMERGENCY: Reduced from 384 - prevent NaN cascade
         elif grid_size <= 12:
-            batch_size = 256   # Reduced from 640 for stability
+            batch_size = 32    # EMERGENCY: Reduced from 256 - stop gradient explosion
         elif grid_size <= 14:
-            batch_size = 192   # Reduced from 512 for stability
+            batch_size = 24    # EMERGENCY: Reduced from 192 - ultra-stable
         elif grid_size <= 16:
             batch_size = 128   # Reduced from 320 for stability
         elif grid_size <= 18:
@@ -946,6 +946,8 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
     
     best_stage_performance = 0.0
     first_batch = True  # Track first batch to avoid scheduler warning
+    nan_batch_count = 0  # Track NaN batches for early stopping
+    max_nan_batches = 10  # Emergency stop if too many NaN batches
     
     for epoch in range(epochs_for_stage):
         epoch_losses = defaultdict(float)
@@ -993,6 +995,10 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
                 if torch.isnan(loss) or torch.isinf(loss):
                     print(f"\033[91m💥 NaN/Inf loss detected! Loss: {loss.item()}, Stage: {stage_idx}, Batch: {batch_idx}\033[0m")
                     print(f"\033[91m🛑 Skipping this batch to prevent training collapse\033[0m")
+                    nan_batch_count += 1
+                    if nan_batch_count >= max_nan_batches:
+                        print(f"\033[91m🚨 EMERGENCY STOP: {nan_batch_count} NaN batches detected - stopping epoch to prevent collapse\033[0m")
+                        break
                     continue
             
             # Backward pass

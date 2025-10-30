@@ -52,7 +52,7 @@ OLYMPUS_V3_CONFIG = {
     'fusion_regularization': 0.1,  # REDUCED to allow more flexibility
     'transform_penalty': 0.08,  # Same as V2 proven penalty
     'exact_match_bonus': 12.0,  # Same as V2 proven bonus
-    'gradient_clip': 0.4,  # Same as V2 proven clip
+    'gradient_clip': 0.2,  # Reduced for stability (prevent gradient explosion)
     'weight_decay': 2e-6,  # Reduced regularization
     
     # ULTRA TEAL Enhanced (proven formula)
@@ -725,24 +725,26 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
             augmentation_factor=augmentation_factor
         )
         
-        # Dynamic batch size based on grid size - optimized for 80GB GPU (reduced for OOM prevention)
+        # STABLE batch sizes to prevent gradient explosion
         grid_size = stage_config['max_grid_size']
-        if grid_size <= 10:
-            batch_size = 640  # Increased from 512
+        if grid_size <= 8:
+            batch_size = 512   # Reduced from 1024 for stability
+        elif grid_size <= 10:
+            batch_size = 384   # Reduced from 768 for stability
         elif grid_size <= 12:
-            batch_size = 896  # Increased from 768
+            batch_size = 256   # Reduced from 640 for stability
         elif grid_size <= 14:
-            batch_size = 640  # Increased from 512
+            batch_size = 192   # Reduced from 512 for stability
         elif grid_size <= 16:
-            batch_size = 320  # Reduced from 448 to prevent OOM
+            batch_size = 128   # Reduced from 320 for stability
         elif grid_size <= 18:
-            batch_size = 192  # Further reduced from 256 to prevent OOM
+            batch_size = 96    # Reduced from 192 for stability
         elif grid_size <= 22:
-            batch_size = 128  # Further reduced from 192 to prevent OOM
+            batch_size = 64    # Reduced from 128 for stability
         elif grid_size <= 27:
-            batch_size = 64   # Further reduced from 128 to prevent OOM
+            batch_size = 32    # Reduced from 64 for stability
         else:  # 30x30
-            batch_size = 32   # Further reduced from 64 to prevent OOM
+            batch_size = 16    # Reduced from 32 for stability
         
         if batch_size != 512:
             if batch_size > 512:
@@ -755,13 +757,19 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
         # Calculate actual epochs for this stage
         stage_epochs = int(OLYMPUS_V3_CONFIG['epochs_per_stage'] * epochs_multiplier)
         
-        # Extra epochs for small grids that need more training
+        # BALANCED epochs for speed and stability
         if stage_idx <= 6:  # Stages 0-6 (3x3 through 9x9)
-            stage_epochs = 60  # Fixed 60 epochs for proper convergence
-            print(f"\033[93m🎯 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): Extended to {stage_epochs} epochs for better training\033[0m")
-        elif stage_idx >= 13:  # Stages 13-15 (22x22+)
-            stage_epochs = 6   # Reduced epochs for speed
-            print(f"\033[93m⚡ Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): Reduced to {stage_epochs} epochs for speed\033[0m")
+            stage_epochs = 8   # Good for small grids
+            print(f"\033[93m⚡ Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): SPEED OPTIMIZED to {stage_epochs} epochs\033[0m")
+        elif stage_idx <= 8:  # Stages 7-8 (10x10-11x11)
+            stage_epochs = 8   # Increased from 6 for stability
+            print(f"\033[93m🛡️ Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): STABILITY FOCUSED {stage_epochs} epochs\033[0m")
+        elif stage_idx <= 11:  # Stages 9-11 (12x12 through 18x18)
+            stage_epochs = 12  # Increased from 6 for NaN prevention
+            print(f"\033[93m🛡️ Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): STABILITY FOCUSED {stage_epochs} epochs\033[0m")
+        elif stage_idx >= 12:  # Stages 12-15 (20x20+)
+            stage_epochs = 8   # Increased from 4 for stability
+            print(f"\033[93m🛡️ Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): STABILITY FOCUSED {stage_epochs} epochs\033[0m")
         
         # Use consistent learning rate like V2 (no aggressive multipliers)
         lr_multiplier = 1.0  # V2 doesn't use stage-specific LR multipliers
@@ -974,12 +982,18 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
             inputs = inputs.to(device)
             targets = targets.to(device)
             
-            # Forward pass with mixed precision - MORE AGGRESSIVE
+            # Forward pass with mixed precision and NaN detection
             with autocast(device_type='cuda', dtype=torch.float16):
                 # OLYMPUS ensemble forward pass
                 ensemble_decision = olympus(inputs, targets, mode='train')
                 loss_dict = criterion(ensemble_decision, targets, inputs)
                 loss = loss_dict['total'] / accumulation_steps
+                
+                # NaN detection and early stopping
+                if torch.isnan(loss) or torch.isinf(loss):
+                    print(f"\033[91m💥 NaN/Inf loss detected! Loss: {loss.item()}, Stage: {stage_idx}, Batch: {batch_idx}\033[0m")
+                    print(f"\033[91m🛑 Skipping this batch to prevent training collapse\033[0m")
+                    continue
             
             # Backward pass
             scaler.scale(loss).backward()

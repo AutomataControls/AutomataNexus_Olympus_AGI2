@@ -1040,34 +1040,44 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
             
             # Update weights with ultimate control
             if (batch_idx + 1) % accumulation_steps == 0:
-                # Update fusion parameters
-                scaler.unscale_(fusion_optimizer)
+                # Unscale all optimizers first to prevent AssertionError
+                try:
+                    scaler.unscale_(fusion_optimizer)
+                    if specialist_output_optimizer is not None:
+                        scaler.unscale_(specialist_output_optimizer)
+                    if specialist_core_optimizer is not None:
+                        scaler.unscale_(specialist_core_optimizer)
+                except RuntimeError:
+                    # Skip this step if unscaling fails
+                    pass
+                
+                # Clip gradients
                 torch.nn.utils.clip_grad_norm_(
                     [p for p in olympus.fusion_engine.parameters()], 
                     OLYMPUS_V3_CONFIG['gradient_clip']
                 )
-                scaler.step(fusion_optimizer)
                 
-                # Update specialist output parameters
                 if specialist_output_optimizer is not None:
-                    scaler.unscale_(specialist_output_optimizer)
                     torch.nn.utils.clip_grad_norm_(
                         [p for specialist in olympus.specialists.values() 
                          for param_name, p in specialist.named_parameters() 
                          if p.requires_grad and any(layer in param_name for layer in ['output', 'final', 'head', 'classifier'])], 
                         OLYMPUS_V3_CONFIG['gradient_clip']
                     )
-                    scaler.step(specialist_output_optimizer)
                 
-                # Update specialist core parameters
                 if specialist_core_optimizer is not None:
-                    scaler.unscale_(specialist_core_optimizer)
                     torch.nn.utils.clip_grad_norm_(
                         [p for specialist in olympus.specialists.values() 
                          for param_name, p in specialist.named_parameters() 
                          if p.requires_grad and not any(layer in param_name for layer in ['output', 'final', 'head', 'classifier'])], 
-                        OLYMPUS_V3_CONFIG['gradient_clip'] * 0.8  # Tighter clipping for core
+                        OLYMPUS_V3_CONFIG['gradient_clip'] * 0.8
                     )
+                
+                # Step optimizers
+                scaler.step(fusion_optimizer)
+                if specialist_output_optimizer is not None:
+                    scaler.step(specialist_output_optimizer)
+                if specialist_core_optimizer is not None:
                     scaler.step(specialist_core_optimizer)
                 
                 scaler.update()

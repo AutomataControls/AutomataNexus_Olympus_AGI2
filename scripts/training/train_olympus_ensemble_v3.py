@@ -1033,7 +1033,8 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
                     if nan_batch_count >= max_nan_batches:
                         print(f"\033[91m🚨 EMERGENCY STOP: {nan_batch_count} NaN batches detected - stopping epoch to prevent collapse\033[0m")
                         break
-                    continue
+                    # Replace NaN loss with a small valid loss to keep scaler happy
+                    loss = torch.tensor(0.01, device=loss.device, requires_grad=True)
             
             # Backward pass
             scaler.scale(loss).backward()
@@ -1073,14 +1074,24 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
                         OLYMPUS_V3_CONFIG['gradient_clip'] * 0.8
                     )
                 
-                # Step optimizers
-                scaler.step(fusion_optimizer)
-                if specialist_output_optimizer is not None:
-                    scaler.step(specialist_output_optimizer)
-                if specialist_core_optimizer is not None:
-                    scaler.step(specialist_core_optimizer)
-                
-                scaler.update()
+                # Step optimizers with error handling
+                try:
+                    scaler.step(fusion_optimizer)
+                    if specialist_output_optimizer is not None:
+                        scaler.step(specialist_output_optimizer)
+                    if specialist_core_optimizer is not None:
+                        scaler.step(specialist_core_optimizer)
+                    scaler.update()
+                except (RuntimeError, AssertionError) as e:
+                    print(f"\033[93m⚠️ Scaler step failed: {e}. Resetting scaler and continuing.\033[0m")
+                    # Reset the scaler and continue training
+                    from torch.amp import GradScaler
+                    scaler = GradScaler()
+                    fusion_optimizer.zero_grad()
+                    if specialist_output_optimizer is not None:
+                        specialist_output_optimizer.zero_grad()
+                    if specialist_core_optimizer is not None:
+                        specialist_core_optimizer.zero_grad()
                 
                 # Step OneCycleLR per batch (AFTER optimizer.step()) with safety check
                 if use_onecycle and not first_batch:

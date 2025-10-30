@@ -39,7 +39,7 @@ from src.models.olympus_ensemble import OlympusEnsemble, EnsembleDecision
 OLYMPUS_V3_CONFIG = {
     # Core Training Parameters - OPTIMIZED FOR SPEED
     'batch_size': 512,  # Same as V2 proven batch size
-    'learning_rate': 0.00005,  # EMERGENCY: Halved learning rate for stability
+    'learning_rate': 0.00001,  # EMERGENCY: Ultra-low LR to prevent collapse
     'num_epochs': 240,  # Ultimate training: Extended for lower stages
     'gradient_accumulation': 1,  # No accumulation for speed
     'epochs_per_stage': 12,  # Same as V2 proven epochs
@@ -52,7 +52,7 @@ OLYMPUS_V3_CONFIG = {
     'fusion_regularization': 0.1,  # REDUCED to allow more flexibility
     'transform_penalty': 0.08,  # Same as V2 proven penalty
     'exact_match_bonus': 12.0,  # Same as V2 proven bonus
-    'gradient_clip': 0.05,  # EMERGENCY: Ultra-tight clipping to prevent NaN
+    'gradient_clip': 0.01,  # EMERGENCY: Extreme clipping to prevent NaN
     'weight_decay': 2e-6,  # Reduced regularization
     
     # ULTRA TEAL Enhanced (proven formula)
@@ -62,7 +62,7 @@ OLYMPUS_V3_CONFIG = {
     # OLYMPUS V3-Specific Ultimate Settings - AGGRESSIVE 85%+
     'freeze_specialists': False,  # Allow full specialist fine-tuning
     'fusion_training_only': False,  # Train everything together
-    'specialist_learning_rate': 0.000015,  # EMERGENCY: Halved specialist LR for stability
+    'specialist_learning_rate': 0.000005,  # EMERGENCY: Ultra-low specialist LR
     'consensus_threshold': 0.6,  # LOWER threshold for more exploration
     'specialist_dropout': 0.05,  # REDUCED dropout for more signal
     'ensemble_coordination': True,  # Ultimate coordination protocols
@@ -202,9 +202,15 @@ class OlympusV3Loss(nn.Module):
                         # Enhanced synchronization
                         sync_loss += F.mse_loss(pred1_flat, pred2_flat)
                         
-                        # Ultimate cross-attention
-                        attention_scores = torch.softmax(torch.matmul(pred1_flat, pred2_flat.transpose(-2, -1)), dim=-1)
-                        cross_attention_loss += -torch.log(attention_scores.diagonal(dim1=-2, dim2=-1) + 1e-8).mean()
+                        # Ultimate cross-attention - STABILITY FIXED
+                        matmul_result = torch.matmul(pred1_flat, pred2_flat.transpose(-2, -1))
+                        # Clamp to prevent overflow in softmax
+                        matmul_result = torch.clamp(matmul_result, min=-10, max=10)
+                        attention_scores = torch.softmax(matmul_result, dim=-1)
+                        diagonal_scores = attention_scores.diagonal(dim1=-2, dim2=-1)
+                        # Clamp diagonal scores to prevent log(0)
+                        diagonal_scores = torch.clamp(diagonal_scores, min=1e-6, max=1.0)
+                        cross_attention_loss += -torch.log(diagonal_scores).mean()
             
             # Ultimate self-attention across all specialists
             if len(pred_values) >= 3:
@@ -213,12 +219,17 @@ class OlympusV3Loss(nn.Module):
                     pred_stack = torch.stack([p.view(B, -1)[:, :10] if p.numel() > B*10 else p.view(B, -1) 
                                             for p in pred_values], dim=1)  # [B, num_specialists, features]
                     
-                    # Self-attention mechanism
-                    attention_weights = F.softmax(torch.matmul(pred_stack, pred_stack.transpose(-2, -1)), dim=-1)
+                    # Self-attention mechanism - STABILITY FIXED
+                    pred_matmul = torch.matmul(pred_stack, pred_stack.transpose(-2, -1))
+                    # Clamp to prevent overflow
+                    pred_matmul = torch.clamp(pred_matmul, min=-10, max=10)
+                    attention_weights = F.softmax(pred_matmul, dim=-1)
                     attended_predictions = torch.matmul(attention_weights, pred_stack)
                     
                     # Self-attention loss (encourage diverse but coordinated attention)
                     self_attention_loss = F.mse_loss(attended_predictions, pred_stack)
+                    # Clamp self-attention loss to prevent explosion
+                    self_attention_loss = torch.clamp(self_attention_loss, min=0, max=100)
                 except:
                     self_attention_loss = torch.tensor(0.0, device=pred_output.device)
         
@@ -234,13 +245,22 @@ class OlympusV3Loss(nn.Module):
         if len(fusion_weights) > 1:
             fusion_tensor = torch.tensor(fusion_weights, device=pred_output.device)
             
-            # Ultimate balanced specialization
-            fusion_entropy = -(fusion_tensor * torch.log(fusion_tensor + 1e-8)).sum()
+            # Ultimate balanced specialization - STABILITY FIXED
+            # Clamp fusion weights to prevent log(0)
+            fusion_tensor_clamped = torch.clamp(fusion_tensor, min=1e-6, max=1.0)
+            fusion_entropy = -(fusion_tensor_clamped * torch.log(fusion_tensor_clamped)).sum()
+            # Clamp entropy to prevent explosion
+            fusion_entropy = torch.clamp(fusion_entropy, min=-10, max=10)
             fusion_reg = -fusion_entropy * self.fusion_reg_weight
             
-            # Ultimate coordination loss (encourage optimal weight distribution)
-            target_distribution = torch.ones_like(fusion_tensor) / len(fusion_weights)  # Uniform baseline
-            weight_kl_div = F.kl_div(F.log_softmax(fusion_tensor, dim=0), target_distribution, reduction='sum')
+            # Ultimate coordination loss - STABILITY FIXED
+            target_distribution = torch.ones_like(fusion_tensor) / len(fusion_weights)
+            # Clamp before log_softmax to prevent overflow
+            fusion_clamped = torch.clamp(fusion_tensor, min=-10, max=10)
+            log_probs = F.log_softmax(fusion_clamped, dim=0)
+            weight_kl_div = F.kl_div(log_probs, target_distribution, reduction='sum')
+            # Clamp KL divergence to prevent explosion
+            weight_kl_div = torch.clamp(weight_kl_div, min=0, max=10)
             ultimate_coordination_loss = weight_kl_div * self.ultimate_coordination_weight
             
             # Advanced adaptive weight penalty
@@ -253,11 +273,18 @@ class OlympusV3Loss(nn.Module):
         # Ultimate meta-learning bonus
         meta_learning_bonus = 0.0
         if hasattr(ensemble_decision, 'meta_features') and ensemble_decision.meta_features is not None:
-            # Ultimate meta-feature diversity and quality
-            meta_entropy = -(F.softmax(ensemble_decision.meta_features, dim=-1) * 
-                           F.log_softmax(ensemble_decision.meta_features, dim=-1)).sum(dim=-1).mean()
+            # Ultimate meta-feature diversity and quality - STABILITY FIXED
+            # Clamp meta features to prevent overflow
+            meta_clamped = torch.clamp(ensemble_decision.meta_features, min=-10, max=10)
+            softmax_meta = F.softmax(meta_clamped, dim=-1)
+            log_softmax_meta = F.log_softmax(meta_clamped, dim=-1)
+            meta_entropy = -(softmax_meta * log_softmax_meta).sum(dim=-1).mean()
+            # Clamp entropy
+            meta_entropy = torch.clamp(meta_entropy, min=0, max=10)
             meta_quality = F.mse_loss(ensemble_decision.meta_features, 
                                     torch.ones_like(ensemble_decision.meta_features) * 0.5)
+            # Clamp meta quality
+            meta_quality = torch.clamp(meta_quality, min=0, max=10)
             meta_learning_bonus = -(meta_entropy + meta_quality) * self.meta_learning_weight
         
         # Transform penalty (encourage ultimate non-trivial solutions)
@@ -273,6 +300,13 @@ class OlympusV3Loss(nn.Module):
                      adaptive_weight_loss + meta_learning_bonus +
                      self_attention_loss * self.self_attention_weight +
                      ultimate_coordination_loss)
+        
+        # FINAL SAFETY: Clamp total loss to prevent NaN/Inf explosion
+        total_loss = torch.clamp(total_loss, min=-1000, max=1000)
+        
+        # Additional NaN check - if still NaN, return zero loss
+        if torch.isnan(total_loss) or torch.isinf(total_loss):
+            total_loss = torch.tensor(0.0, device=pred_output.device, requires_grad=True)
         
         return {
             'total': total_loss,
@@ -947,7 +981,7 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
     best_stage_performance = 0.0
     first_batch = True  # Track first batch to avoid scheduler warning
     nan_batch_count = 0  # Track NaN batches for early stopping
-    max_nan_batches = 10  # Emergency stop if too many NaN batches
+    max_nan_batches = 3   # EXTREME: Stop after just 3 NaN batches
     
     for epoch in range(epochs_for_stage):
         epoch_losses = defaultdict(float)

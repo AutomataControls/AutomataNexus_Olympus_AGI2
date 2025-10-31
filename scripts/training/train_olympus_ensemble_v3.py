@@ -1020,21 +1020,21 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
             
             # Forward pass WITHOUT mixed precision to avoid scaler issues
             # with autocast(device_type='cuda', dtype=torch.float16):
-                # OLYMPUS ensemble forward pass
-                ensemble_decision = olympus(inputs, targets, mode='train')
-                loss_dict = criterion(ensemble_decision, targets, inputs)
-                loss = loss_dict['total'] / accumulation_steps
-                
-                # NaN detection and early stopping
-                if torch.isnan(loss) or torch.isinf(loss):
-                    print(f"\033[91m💥 NaN/Inf loss detected! Loss: {loss.item()}, Stage: {stage_idx}, Batch: {batch_idx}\033[0m")
-                    print(f"\033[91m🛑 Skipping this batch to prevent training collapse\033[0m")
-                    nan_batch_count += 1
-                    if nan_batch_count >= max_nan_batches:
-                        print(f"\033[91m🚨 EMERGENCY STOP: {nan_batch_count} NaN batches detected - stopping epoch to prevent collapse\033[0m")
-                        break
-                    # Replace NaN loss with a small valid loss to keep scaler happy
-                    loss = torch.tensor(0.01, device=loss.device, requires_grad=True)
+            # OLYMPUS ensemble forward pass
+            ensemble_decision = olympus(inputs, targets, mode='train')
+            loss_dict = criterion(ensemble_decision, targets, inputs)
+            loss = loss_dict['total'] / accumulation_steps
+            
+            # NaN detection and early stopping
+            if torch.isnan(loss) or torch.isinf(loss):
+                print(f"\033[91m💥 NaN/Inf loss detected! Loss: {loss.item()}, Stage: {stage_idx}, Batch: {batch_idx}\033[0m")
+                print(f"\033[91m🛑 Skipping this batch to prevent training collapse\033[0m")
+                nan_batch_count += 1
+                if nan_batch_count >= max_nan_batches:
+                    print(f"\033[91m🚨 EMERGENCY STOP: {nan_batch_count} NaN batches detected - stopping epoch to prevent collapse\033[0m")
+                    break
+                # Replace NaN loss with a small valid loss
+                loss = torch.tensor(0.01, device=loss.device, requires_grad=True)
             
             # Backward pass WITHOUT scaler
             # scaler.scale(loss).backward()

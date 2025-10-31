@@ -753,7 +753,7 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
         augmentation_factor = 4  # Reduced from 6 for speed
         
         dataset = OlympusV3UltimateDataset(
-            data_dir='/content/drive/MyDrive/AutomataNexus_Olympus_AGI2/data',
+            data_dir='/content/AutomataNexus_Olympus_AGI2/data',
             max_grid_size=stage_config['max_grid_size'],
             stage_config=stage_config,
             augmentation_factor=augmentation_factor

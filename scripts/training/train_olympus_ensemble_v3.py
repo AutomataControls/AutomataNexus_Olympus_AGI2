@@ -750,7 +750,7 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
         
         # Create ultimate augmented dataset for this stage
         # Reduced augmentation factor for faster training
-        augmentation_factor = 4  # Reduced from 6 for speed
+        augmentation_factor = 2  # Reduced from 4 for speed
         
         dataset = OlympusV3UltimateDataset(
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',

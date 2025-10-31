@@ -39,7 +39,7 @@ from src.models.olympus_ensemble import OlympusEnsemble, EnsembleDecision
 OLYMPUS_V3_CONFIG = {
     # Core Training Parameters - OPTIMIZED FOR SPEED
     'batch_size': 512,  # Same as V2 proven batch size
-    'learning_rate': 0.00001,  # EMERGENCY: Ultra-low LR to prevent collapse
+    'learning_rate': 0.0001,  # Restored balanced LR
     'num_epochs': 240,  # Ultimate training: Extended for lower stages
     'gradient_accumulation': 1,  # No accumulation for speed
     'epochs_per_stage': 12,  # Same as V2 proven epochs
@@ -52,7 +52,7 @@ OLYMPUS_V3_CONFIG = {
     'fusion_regularization': 0.1,  # REDUCED to allow more flexibility
     'transform_penalty': 0.08,  # Same as V2 proven penalty
     'exact_match_bonus': 12.0,  # Same as V2 proven bonus
-    'gradient_clip': 0.01,  # EMERGENCY: Extreme clipping to prevent NaN
+    'gradient_clip': 0.3,  # Balanced clipping for stability
     'weight_decay': 2e-6,  # Reduced regularization
     
     # ULTRA TEAL Enhanced (proven formula)
@@ -62,7 +62,7 @@ OLYMPUS_V3_CONFIG = {
     # OLYMPUS V3-Specific Ultimate Settings - AGGRESSIVE 85%+
     'freeze_specialists': False,  # Allow full specialist fine-tuning
     'fusion_training_only': False,  # Train everything together
-    'specialist_learning_rate': 0.000005,  # EMERGENCY: Ultra-low specialist LR
+    'specialist_learning_rate': 0.00005,  # Balanced specialist LR
     'consensus_threshold': 0.6,  # LOWER threshold for more exploration
     'specialist_dropout': 0.05,  # REDUCED dropout for more signal
     'ensemble_coordination': True,  # Ultimate coordination protocols
@@ -749,8 +749,8 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
                 print(f"\033[93m⚠️ Could not load V1 stage {stage_idx} checkpoint: {e}\033[0m")
         
         # Create ultimate augmented dataset for this stage
-        # Use V2's proven augmentation factor
-        augmentation_factor = 6  # V2 uses fixed augmentation_factor: 6 for all stages
+        # Reduced augmentation factor for faster training
+        augmentation_factor = 4  # Reduced from 6 for speed
         
         dataset = OlympusV3UltimateDataset(
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',
@@ -1018,8 +1018,8 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
             inputs = inputs.to(device)
             targets = targets.to(device)
             
-            # Forward pass with mixed precision and NaN detection
-            with autocast(device_type='cuda', dtype=torch.float16):
+            # Forward pass WITHOUT mixed precision to avoid scaler issues
+            # with autocast(device_type='cuda', dtype=torch.float16):
                 # OLYMPUS ensemble forward pass
                 ensemble_decision = olympus(inputs, targets, mode='train')
                 loss_dict = criterion(ensemble_decision, targets, inputs)
@@ -1036,21 +1036,21 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
                     # Replace NaN loss with a small valid loss to keep scaler happy
                     loss = torch.tensor(0.01, device=loss.device, requires_grad=True)
             
-            # Backward pass
-            scaler.scale(loss).backward()
+            # Backward pass WITHOUT scaler
+            # scaler.scale(loss).backward()
+            loss.backward()
             
             # Update weights with ultimate control
             if (batch_idx + 1) % accumulation_steps == 0:
-                # Unscale all optimizers first to prevent AssertionError
-                try:
-                    scaler.unscale_(fusion_optimizer)
-                    if specialist_output_optimizer is not None:
-                        scaler.unscale_(specialist_output_optimizer)
-                    if specialist_core_optimizer is not None:
-                        scaler.unscale_(specialist_core_optimizer)
-                except RuntimeError:
-                    # Skip this step if unscaling fails
-                    pass
+                # No unscaling needed without mixed precision
+                # try:
+                #     scaler.unscale_(fusion_optimizer)
+                #     if specialist_output_optimizer is not None:
+                #         scaler.unscale_(specialist_output_optimizer)
+                #     if specialist_core_optimizer is not None:
+                #         scaler.unscale_(specialist_core_optimizer)
+                # except RuntimeError:
+                #     pass
                 
                 # Clip gradients
                 torch.nn.utils.clip_grad_norm_(
@@ -1074,24 +1074,20 @@ def train_ultimate_mastery_stage(olympus, dataloader, criterion,
                         OLYMPUS_V3_CONFIG['gradient_clip'] * 0.8
                     )
                 
-                # Step optimizers with error handling
-                try:
-                    scaler.step(fusion_optimizer)
-                    if specialist_output_optimizer is not None:
-                        scaler.step(specialist_output_optimizer)
-                    if specialist_core_optimizer is not None:
-                        scaler.step(specialist_core_optimizer)
-                    scaler.update()
-                except (RuntimeError, AssertionError) as e:
-                    print(f"\033[93m⚠️ Scaler step failed: {e}. Resetting scaler and continuing.\033[0m")
-                    # Reset the scaler and continue training
-                    from torch.amp import GradScaler
-                    scaler = GradScaler()
-                    fusion_optimizer.zero_grad()
-                    if specialist_output_optimizer is not None:
-                        specialist_output_optimizer.zero_grad()
-                    if specialist_core_optimizer is not None:
-                        specialist_core_optimizer.zero_grad()
+                # Step optimizers directly without scaler
+                fusion_optimizer.step()
+                if specialist_output_optimizer is not None:
+                    specialist_output_optimizer.step()
+                if specialist_core_optimizer is not None:
+                    specialist_core_optimizer.step()
+                # No scaler update needed
+                
+                # Clear gradients
+                fusion_optimizer.zero_grad()
+                if specialist_output_optimizer is not None:
+                    specialist_output_optimizer.zero_grad()
+                if specialist_core_optimizer is not None:
+                    specialist_core_optimizer.zero_grad()
                 
                 # Step OneCycleLR per batch (AFTER optimizer.step()) with safety check
                 if use_onecycle and not first_batch:

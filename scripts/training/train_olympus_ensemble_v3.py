@@ -759,26 +759,26 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
             augmentation_factor=augmentation_factor
         )
         
-        # EMERGENCY STABILITY: Ultra-conservative batch sizes to stop NaN collapse
+        # BALANCED batch sizes - doubled starting at stage 7
         grid_size = stage_config['max_grid_size']
         if grid_size <= 8:
-            batch_size = 64    # EMERGENCY: Reduced from 512 - massive stability fix
+            batch_size = 64    # Stages 0-6: Keep conservative for small grids
         elif grid_size <= 10:
-            batch_size = 48    # EMERGENCY: Reduced from 384 - prevent NaN cascade
+            batch_size = 96    # Stage 7: Doubled from 48
         elif grid_size <= 12:
-            batch_size = 32    # EMERGENCY: Reduced from 256 - stop gradient explosion
+            batch_size = 64    # Stage 8: Doubled from 32
         elif grid_size <= 14:
-            batch_size = 24    # EMERGENCY: Reduced from 192 - ultra-stable
+            batch_size = 48    # Stage 9: Doubled from 24
         elif grid_size <= 16:
-            batch_size = 128   # Reduced from 320 for stability
+            batch_size = 256   # Stage 10: Doubled from 128
         elif grid_size <= 18:
-            batch_size = 96    # Reduced from 192 for stability
+            batch_size = 192   # Stage 11: Doubled from 96
         elif grid_size <= 22:
-            batch_size = 64    # Reduced from 128 for stability
+            batch_size = 128   # Stage 12: Doubled from 64
         elif grid_size <= 27:
-            batch_size = 32    # Reduced from 64 for stability
+            batch_size = 64    # Stage 13: Doubled from 32
         else:  # 30x30
-            batch_size = 16    # Reduced from 32 for stability
+            batch_size = 32    # Stage 14-15: Doubled from 16
         
         if batch_size != 512:
             if batch_size > 512:

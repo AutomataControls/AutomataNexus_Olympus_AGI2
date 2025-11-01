@@ -749,8 +749,8 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
                 print(f"\033[93m⚠️ Could not load V1 stage {stage_idx} checkpoint: {e}\033[0m")
         
         # Create ultimate augmented dataset for this stage
-        # Reduced augmentation factor for faster training
-        augmentation_factor = 2  # Reduced from 4 for speed
+        # Increased augmentation factor for better training
+        augmentation_factor = 8  # Increased from 2 for better data coverage
         
         dataset = OlympusV3UltimateDataset(
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',
@@ -759,16 +759,16 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
             augmentation_factor=augmentation_factor
         )
         
-        # BALANCED batch sizes - doubled starting at stage 7
+        # INCREASED batch sizes for stages 0-9
         grid_size = stage_config['max_grid_size']
         if grid_size <= 8:
-            batch_size = 64    # Stages 0-6: Keep conservative for small grids
+            batch_size = 128   # Stages 0-6: Doubled from 64
         elif grid_size <= 10:
-            batch_size = 96    # Stage 7: Doubled from 48
+            batch_size = 192   # Stage 7: Doubled from 96
         elif grid_size <= 12:
-            batch_size = 64    # Stage 8: Doubled from 32
+            batch_size = 128   # Stage 8: Doubled from 64
         elif grid_size <= 14:
-            batch_size = 48    # Stage 9: Doubled from 24
+            batch_size = 96    # Stage 9: Doubled from 48
         elif grid_size <= 16:
             batch_size = 256   # Stage 10: Doubled from 128
         elif grid_size <= 18:

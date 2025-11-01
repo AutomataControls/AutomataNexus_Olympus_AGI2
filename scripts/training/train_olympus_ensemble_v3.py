@@ -791,14 +791,11 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
         # Calculate actual epochs for this stage
         stage_epochs = int(OLYMPUS_V3_CONFIG['epochs_per_stage'] * epochs_multiplier)
         
-        # BALANCED epochs for speed and stability
-        if stage_idx <= 6:  # Stages 0-6 (3x3 through 9x9)
-            stage_epochs = 8   # Good for small grids
-            print(f"\033[93m⚡ Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): SPEED OPTIMIZED to {stage_epochs} epochs\033[0m")
-        elif stage_idx <= 8:  # Stages 7-8 (10x10-11x11)
-            stage_epochs = 8   # Increased from 6 for stability
-            print(f"\033[93m🛡️ Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): STABILITY FOCUSED {stage_epochs} epochs\033[0m")
-        elif stage_idx <= 11:  # Stages 9-11 (12x12 through 18x18)
+        # HIGH epochs for stages 0-9, balanced for 10-15
+        if stage_idx <= 9:  # Stages 0-9 (3x3 through 14x14)
+            stage_epochs = 60  # High training for stages 0-9
+            print(f"\033[93m🔥 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): INTENSIVE TRAINING {stage_epochs} epochs\033[0m")
+        elif stage_idx <= 11:  # Stages 10-11 (16x16 through 18x18)
             stage_epochs = 12  # Increased from 6 for NaN prevention
             print(f"\033[93m🛡️ Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): STABILITY FOCUSED {stage_epochs} epochs\033[0m")
         elif stage_idx >= 12:  # Stages 12-15 (20x20+)

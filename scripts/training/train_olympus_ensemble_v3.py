@@ -754,8 +754,8 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
             augmentation_factor = 8  # High augmentation for stages 0-5
         elif stage_idx <= 9:  # Stages 6-9: Medium augmentation
             augmentation_factor = 4  # Medium augmentation for stages 6-9
-        else:  # Stages 10-15: Reduced augmentation
-            augmentation_factor = 4  # Reduced for stages 10-15
+        else:  # Stages 10-15: Lower augmentation
+            augmentation_factor = 2  # Lower for stages 10-15
         
         dataset = OlympusV3UltimateDataset(
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',

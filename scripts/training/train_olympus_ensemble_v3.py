@@ -798,15 +798,15 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
         if stage_idx <= 9:  # Stages 0-9 (3x3 through 14x14)
             stage_epochs = 60  # High training for stages 0-9
             print(f"\033[93m🔥 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): INTENSIVE TRAINING {stage_epochs} epochs\033[0m")
-        elif stage_idx <= 11:  # Stages 10-11 (16x16 through 18x18)
-            stage_epochs = 12  # Increased from 6 for NaN prevention
-            print(f"\033[93m🛡️ Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): STABILITY FOCUSED {stage_epochs} epochs\033[0m")
-        elif stage_idx >= 12:  # Stages 12-15 (20x20+)
-            stage_epochs = 8   # Increased from 4 for stability
-            print(f"\033[93m🛡️ Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): STABILITY FOCUSED {stage_epochs} epochs\033[0m")
+        elif stage_idx >= 10:  # Stages 10-15 (14x14+) - reduced epochs since no improvement
+            stage_epochs = 6   # Reduced from 12/8 - model plateaus quickly
+            print(f"\033[93m⚡ Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): PLATEAU BREAKING {stage_epochs} epochs\033[0m")
         
-        # Use consistent learning rate like V2 (no aggressive multipliers)
-        lr_multiplier = 1.0  # V2 doesn't use stage-specific LR multipliers
+        # Stage-specific learning rate multipliers to break plateau
+        if stage_idx >= 10:  # Higher stages need higher LR to break plateau
+            lr_multiplier = 3.0  # 3x LR for stages 10-15
+        else:
+            lr_multiplier = 1.0  # Normal LR for stages 0-9
         
         # Adjust learning rates for this stage
         for param_group in fusion_optimizer.param_groups:

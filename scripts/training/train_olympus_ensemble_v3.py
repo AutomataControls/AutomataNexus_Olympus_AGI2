@@ -750,8 +750,10 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
         
         # Create ultimate augmented dataset for this stage
         # Stage-specific augmentation factor
-        if stage_idx <= 9:  # Stages 0-9: High augmentation
-            augmentation_factor = 8  # High augmentation for stages 0-9
+        if stage_idx <= 5:  # Stages 0-5: Very high augmentation
+            augmentation_factor = 8  # High augmentation for stages 0-5
+        elif stage_idx <= 9:  # Stages 6-9: Medium augmentation
+            augmentation_factor = 4  # Medium augmentation for stages 6-9
         else:  # Stages 10-15: Reduced augmentation
             augmentation_factor = 4  # Reduced for stages 10-15
         
@@ -765,7 +767,7 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
         # INCREASED batch sizes for stages 0-9
         grid_size = stage_config['max_grid_size']
         if grid_size <= 8:
-            batch_size = 1024  # Stages 0-6: Doubled from 512
+            batch_size = 1536  # Stages 0-5: Increased further due to 8x augmentation
         elif grid_size <= 10:
             batch_size = 768   # Stage 7: Doubled from 384  
         elif grid_size <= 12:

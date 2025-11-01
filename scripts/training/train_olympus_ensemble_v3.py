@@ -759,7 +759,7 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
             augmentation_factor=augmentation_factor
         )
         
-        # HIGH batch sizes for stages 0-9 to use more GPU memory
+        # HIGH batch sizes for stages 0-10 to use more GPU memory
         grid_size = stage_config['max_grid_size']
         if grid_size <= 8:
             batch_size = 512   # Stages 0-6: 4x increase for small grids
@@ -770,7 +770,7 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
         elif grid_size <= 14:
             batch_size = 192   # Stage 9: 4x increase
         elif grid_size <= 16:
-            batch_size = 256   # Stage 10: Doubled from 128
+            batch_size = 512   # Stage 10: 4x increase from 128
         elif grid_size <= 18:
             batch_size = 192   # Stage 11: Doubled from 96
         elif grid_size <= 22:

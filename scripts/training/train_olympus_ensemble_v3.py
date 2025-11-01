@@ -749,8 +749,11 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
                 print(f"\033[93m⚠️ Could not load V1 stage {stage_idx} checkpoint: {e}\033[0m")
         
         # Create ultimate augmented dataset for this stage
-        # Increased augmentation factor for better training
-        augmentation_factor = 8  # Increased from 2 for better data coverage
+        # Stage-specific augmentation factor
+        if stage_idx <= 9:  # Stages 0-9: High augmentation
+            augmentation_factor = 8  # High augmentation for stages 0-9
+        else:  # Stages 10-15: Reduced augmentation
+            augmentation_factor = 4  # Reduced for stages 10-15
         
         dataset = OlympusV3UltimateDataset(
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',

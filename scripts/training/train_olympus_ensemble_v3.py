@@ -803,7 +803,7 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
             stage_epochs = 60  # High training for stages 0-9
             print(f"\033[93m🔥 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): INTENSIVE TRAINING {stage_epochs} epochs\033[0m")
         elif stage_idx >= 7 and stage_idx <= 9:  # Stages 7-9 - INTENSIVE to break plateau
-            stage_epochs = 30  # INTENSIVE training for plateau stages 7-9
+            stage_epochs = 60  # INTENSIVE training for plateau stages 7-9
         elif stage_idx >= 10 and stage_idx <= 15:  # Stages 10-15 - FAST SHOCK training
             stage_epochs = 20  # FAST SHOCK training for stuck stages 10-15
             print(f"\033[93m🔥 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): INTENSIVE TRAINING {stage_epochs} epochs\033[0m")

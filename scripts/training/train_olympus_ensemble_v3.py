@@ -807,8 +807,8 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
             print(f"\033[93m🔥 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): INTENSIVE TRAINING {stage_epochs} epochs\033[0m")
         
         # Stage-specific learning rate multipliers to break plateau
-        if stage_idx >= 10:  # Higher stages need AGGRESSIVE LR to break plateau
-            lr_multiplier = 8.0  # 8x LR for stages 10-15 to break plateau
+        if stage_idx >= 10:  # Higher stages need EXTREME LR to break plateau
+            lr_multiplier = 20.0  # 20x LR for stages 10-15 to break plateau
         elif stage_idx >= 7 and stage_idx <= 9:  # EXTREME LR for plateau stages 7-9
             lr_multiplier = 15.0  # 15x LR for stages 7-9 to break plateau
         else:

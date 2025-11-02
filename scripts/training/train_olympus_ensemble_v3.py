@@ -716,37 +716,41 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
               f"Complexity: {stage_config['complexity']} | Focus: {stage_config['focus']}\033[0m")
         print(f"\033[96m{'=' * 135}\033[0m")
         
-        # Try to load stage-specific checkpoint - V3 first, then fallback to V2, then V1
-        v3_stage_model_path = f'/content/drive/MyDrive/AutomataNexus_Olympus_AGI2/bestmodels/olympus_v3_stage{stage_idx}_best.pt'
-        v2_stage_model_path = f'/content/drive/MyDrive/AutomataNexus_Olympus_AGI2/bestmodels/olympus_v2_stage{stage_idx}_best.pt'
-        v1_stage_model_path = f'/content/drive/MyDrive/AutomataNexus_Olympus_AGI2/bestmodels/olympus_v1_stage{stage_idx}_best.pt'
-        
-        if os.path.exists(v3_stage_model_path):
-            try:
-                stage_checkpoint = torch.load(v3_stage_model_path, map_location=device)
-                olympus.load_state_dict(stage_checkpoint['ensemble_state_dict'])
-                stage_best = stage_checkpoint.get('best_performance', 0.0)
-                print(f"\033[92m🏛️ Loaded V3 Stage {stage_idx} checkpoint - Previous best: {stage_best:.2%}\033[0m")
-            except Exception as e:
-                print(f"\033[93m⚠️ Could not load V3 stage {stage_idx} checkpoint: {e}\033[0m")
-        elif os.path.exists(v2_stage_model_path):
-            # Fallback to V2 stage checkpoint if V3 doesn't exist
-            try:
-                v2_stage_checkpoint = torch.load(v2_stage_model_path, map_location=device)
-                olympus.load_state_dict(v2_stage_checkpoint['ensemble_state_dict'])
-                stage_best = v2_stage_checkpoint.get('best_performance', 0.0)
-                print(f"\033[96m🏛️ Loaded V2 Stage {stage_idx} checkpoint (V3 not found) - Previous best: {stage_best:.2%}\033[0m")
-            except Exception as e:
-                print(f"\033[93m⚠️ Could not load V2 stage {stage_idx} checkpoint: {e}\033[0m")
-        elif os.path.exists(v1_stage_model_path):
-            # Fallback to V1 stage checkpoint if V2 doesn't exist
-            try:
-                v1_stage_checkpoint = torch.load(v1_stage_model_path, map_location=device)
-                olympus.load_state_dict(v1_stage_checkpoint['ensemble_state_dict'])
-                stage_best = v1_stage_checkpoint.get('best_performance', 0.0)
-                print(f"\033[94m🏛️ Loaded V1 Stage {stage_idx} checkpoint (V2/V3 not found) - Previous best: {stage_best:.2%}\033[0m")
-            except Exception as e:
-                print(f"\033[93m⚠️ Could not load V1 stage {stage_idx} checkpoint: {e}\033[0m")
+        # EMERGENCY: Skip loading stuck checkpoints for stages 10-15 - fresh start
+        if stage_idx >= 10 and stage_idx <= 15:
+            print(f"\033[91m🔥 EMERGENCY: Skipping checkpoint load for stuck Stage {stage_idx} - FRESH START\033[0m")
+        else:
+            # Try to load stage-specific checkpoint - V3 first, then fallback to V2, then V1
+            v3_stage_model_path = f'/content/drive/MyDrive/AutomataNexus_Olympus_AGI2/bestmodels/olympus_v3_stage{stage_idx}_best.pt'
+            v2_stage_model_path = f'/content/drive/MyDrive/AutomataNexus_Olympus_AGI2/bestmodels/olympus_v2_stage{stage_idx}_best.pt'
+            v1_stage_model_path = f'/content/drive/MyDrive/AutomataNexus_Olympus_AGI2/bestmodels/olympus_v1_stage{stage_idx}_best.pt'
+            
+            if os.path.exists(v3_stage_model_path):
+                try:
+                    stage_checkpoint = torch.load(v3_stage_model_path, map_location=device)
+                    olympus.load_state_dict(stage_checkpoint['ensemble_state_dict'])
+                    stage_best = stage_checkpoint.get('best_performance', 0.0)
+                    print(f"\033[92m🏛️ Loaded V3 Stage {stage_idx} checkpoint - Previous best: {stage_best:.2%}\033[0m")
+                except Exception as e:
+                    print(f"\033[93m⚠️ Could not load V3 stage {stage_idx} checkpoint: {e}\033[0m")
+            elif os.path.exists(v2_stage_model_path):
+                # Fallback to V2 stage checkpoint if V3 doesn't exist
+                try:
+                    v2_stage_checkpoint = torch.load(v2_stage_model_path, map_location=device)
+                    olympus.load_state_dict(v2_stage_checkpoint['ensemble_state_dict'])
+                    stage_best = v2_stage_checkpoint.get('best_performance', 0.0)
+                    print(f"\033[96m🏛️ Loaded V2 Stage {stage_idx} checkpoint (V3 not found) - Previous best: {stage_best:.2%}\033[0m")
+                except Exception as e:
+                    print(f"\033[93m⚠️ Could not load V2 stage {stage_idx} checkpoint: {e}\033[0m")
+            elif os.path.exists(v1_stage_model_path):
+                # Fallback to V1 stage checkpoint if V2 doesn't exist
+                try:
+                    v1_stage_checkpoint = torch.load(v1_stage_model_path, map_location=device)
+                    olympus.load_state_dict(v1_stage_checkpoint['ensemble_state_dict'])
+                    stage_best = v1_stage_checkpoint.get('best_performance', 0.0)
+                    print(f"\033[94m🏛️ Loaded V1 Stage {stage_idx} checkpoint (V2/V3 not found) - Previous best: {stage_best:.2%}\033[0m")
+                except Exception as e:
+                    print(f"\033[93m⚠️ Could not load V1 stage {stage_idx} checkpoint: {e}\033[0m")
         
         # Create ultimate augmented dataset for this stage
         # Stage-specific augmentation factor - OPTIMIZED FOR PLATEAU BREAKING

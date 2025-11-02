@@ -756,8 +756,8 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
             augmentation_factor = 4  # Medium augmentation for stage 6
         elif stage_idx <= 9:  # Stages 7-9: REDUCED augmentation to break plateau
             augmentation_factor = 1  # MINIMAL augmentation for stages 7-9 to break plateau
-        else:  # Stages 10-15: MINIMAL augmentation to break plateau
-            augmentation_factor = 1  # MINIMAL for stages 10-15 to break plateau
+        else:  # Stages 10-15: NO augmentation to break plateau
+            augmentation_factor = 0  # ZERO augmentation for stages 10-15 to break plateau
         
         dataset = OlympusV3UltimateDataset(
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',

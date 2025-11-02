@@ -881,11 +881,11 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
             'performance_metrics': olympus.get_ensemble_state()
         }
         
-        # FINAL TRAINING: Skip saving individual stage checkpoints - only save best global model
-        # os.makedirs('/content/AutomataNexus_Olympus_AGI2/finalmodels', exist_ok=True)
-        # stage_checkpoint_path = f'/content/AutomataNexus_Olympus_AGI2/finalmodels/olympus_v3_stage{stage_idx}_best.pt'
-        # torch.save(ensemble_state, stage_checkpoint_path)
-        print(f"\033[92m🏛️ Stage {stage_idx} performance: {stage_performance:.2%} - Global tracking only\033[0m")
+        # Save stage-specific checkpoint
+        os.makedirs('/content/AutomataNexus_Olympus_AGI2/finalmodels', exist_ok=True)
+        stage_checkpoint_path = f'/content/AutomataNexus_Olympus_AGI2/finalmodels/olympus_v3_stage{stage_idx}_best.pt'
+        torch.save(ensemble_state, stage_checkpoint_path)
+        print(f"\033[92m🏛️ Stage {stage_idx} performance: {stage_performance:.2%} - Stage checkpoint saved!\033[0m")
         
         # Update best performance and save global checkpoint
         if stage_performance > best_performance:

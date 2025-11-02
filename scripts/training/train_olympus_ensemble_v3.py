@@ -803,7 +803,7 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
             stage_epochs = 60  # High training for stages 0-9
             print(f"\033[93m🔥 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): INTENSIVE TRAINING {stage_epochs} epochs\033[0m")
         elif stage_idx >= 10:  # Stages 10-15 (14x14+) - increased epochs to break plateau
-            stage_epochs = 100  # Increased to 100 - need more training for larger grids
+            stage_epochs = 30  # Increased to 30 - need more training for larger grids
             print(f"\033[93m🔥 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): INTENSIVE TRAINING {stage_epochs} epochs\033[0m")
         
         # Stage-specific learning rate multipliers to break plateau

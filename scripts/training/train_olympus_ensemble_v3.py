@@ -716,8 +716,8 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
               f"Complexity: {stage_config['complexity']} | Focus: {stage_config['focus']}\033[0m")
         print(f"\033[96m{'=' * 135}\033[0m")
         
-        # EMERGENCY: Skip loading stuck checkpoints for stages 7-15 - fresh start
-        if stage_idx >= 7 and stage_idx <= 15:
+        # EMERGENCY: Skip loading stuck checkpoints for stages 7-11 - fresh start
+        if stage_idx >= 7 and stage_idx <= 11:
             print(f"\033[91m🔥 EMERGENCY: Skipping checkpoint load for stuck Stage {stage_idx} - FRESH START\033[0m")
         else:
             # Try to load stage-specific checkpoint - V3 first, then fallback to V2, then V1

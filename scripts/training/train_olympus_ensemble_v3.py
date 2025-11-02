@@ -809,8 +809,8 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
         # Stage-specific learning rate multipliers to break plateau
         if stage_idx >= 10:  # Higher stages need AGGRESSIVE LR to break plateau
             lr_multiplier = 8.0  # 8x LR for stages 10-15 to break plateau
-        elif stage_idx >= 7 and stage_idx <= 9:  # AGGRESSIVE LR for plateau stages 7-9
-            lr_multiplier = 5.0  # 5x LR for stages 7-9 to break plateau
+        elif stage_idx >= 7 and stage_idx <= 9:  # EXTREME LR for plateau stages 7-9
+            lr_multiplier = 15.0  # 15x LR for stages 7-9 to break plateau
         else:
             lr_multiplier = 1.0  # Normal LR for stages 0-6
         

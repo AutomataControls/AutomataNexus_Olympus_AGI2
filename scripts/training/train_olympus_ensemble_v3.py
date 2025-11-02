@@ -749,13 +749,15 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
                 print(f"\033[93m⚠️ Could not load V1 stage {stage_idx} checkpoint: {e}\033[0m")
         
         # Create ultimate augmented dataset for this stage
-        # Stage-specific augmentation factor
+        # Stage-specific augmentation factor - OPTIMIZED FOR PLATEAU BREAKING
         if stage_idx <= 5:  # Stages 0-5: Very high augmentation
             augmentation_factor = 8  # High augmentation for stages 0-5
-        elif stage_idx <= 9:  # Stages 6-9: Medium augmentation
-            augmentation_factor = 4  # Medium augmentation for stages 6-9
-        else:  # Stages 10-15: Lower augmentation
-            augmentation_factor = 2  # Lower for stages 10-15
+        elif stage_idx <= 6:  # Stage 6: Medium augmentation
+            augmentation_factor = 4  # Medium augmentation for stage 6
+        elif stage_idx <= 9:  # Stages 7-9: REDUCED augmentation to break plateau
+            augmentation_factor = 1  # MINIMAL augmentation for stages 7-9 to break plateau
+        else:  # Stages 10-15: MINIMAL augmentation to break plateau
+            augmentation_factor = 1  # MINIMAL for stages 10-15 to break plateau
         
         dataset = OlympusV3UltimateDataset(
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',
@@ -764,16 +766,16 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
             augmentation_factor=augmentation_factor
         )
         
-        # INCREASED batch sizes for stages 0-9
+        # OPTIMIZED batch sizes for plateau breaking
         grid_size = stage_config['max_grid_size']
         if grid_size <= 8:
             batch_size = 1536  # Stages 0-5: Increased further due to 8x augmentation
         elif grid_size <= 10:
-            batch_size = 768   # Stage 7: Doubled from 384  
+            batch_size = 1024  # Stage 7: INCREASED for better gradient estimates
         elif grid_size <= 12:
-            batch_size = 512   # Stage 8: Doubled from 256
+            batch_size = 768   # Stage 8: INCREASED for better gradient estimates
         elif grid_size <= 14:
-            batch_size = 384   # Stage 9: Doubled from 192
+            batch_size = 512   # Stage 9: INCREASED for better gradient estimates
         elif grid_size <= 16:
             batch_size = 256   # Stage 10-11: Middle ground to prevent OOM
         elif grid_size <= 18:
@@ -805,10 +807,12 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
             print(f"\033[93m🔥 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): INTENSIVE TRAINING {stage_epochs} epochs\033[0m")
         
         # Stage-specific learning rate multipliers to break plateau
-        if stage_idx >= 10:  # Higher stages need higher LR to break plateau
-            lr_multiplier = 3.0  # 3x LR for stages 10-15
+        if stage_idx >= 10:  # Higher stages need AGGRESSIVE LR to break plateau
+            lr_multiplier = 8.0  # 8x LR for stages 10-15 to break plateau
+        elif stage_idx >= 7 and stage_idx <= 9:  # AGGRESSIVE LR for plateau stages 7-9
+            lr_multiplier = 5.0  # 5x LR for stages 7-9 to break plateau
         else:
-            lr_multiplier = 1.0  # Normal LR for stages 0-9
+            lr_multiplier = 1.0  # Normal LR for stages 0-6
         
         # Adjust learning rates for this stage
         for param_group in fusion_optimizer.param_groups:

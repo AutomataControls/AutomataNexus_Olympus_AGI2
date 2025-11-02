@@ -536,7 +536,7 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
     # Try to load V3 first if it exists (to continue training)
     v3_loaded = False
     v3_checkpoint = None
-    v3_model_path = '/content/AutomataNexus_Olympus_AGI2/src/models/reports/Olympus/InputBestModels/olympus_v3_best.pt'
+    v3_model_path = '/content/AutomataNexus_Olympus_AGI2/bestmodels/olympus_v3_best.pt'
     if os.path.exists(v3_model_path):
         try:
             # Load the checkpoint to check what's in it
@@ -717,7 +717,7 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
         print(f"\033[96m{'=' * 135}\033[0m")
         
         # FINAL TRAINING: Load V3 best checkpoint for optimal performance
-        v3_stage_model_path = f'/content/drive/MyDrive/AutomataNexus_Olympus_AGI2/bestmodels/olympus_v3_stage{stage_idx}_best.pt'
+        v3_stage_model_path = f'/content/AutomataNexus_Olympus_AGI2/bestmodels/olympus_v3_stage{stage_idx}_best.pt'
         
         if os.path.exists(v3_stage_model_path):
             try:
@@ -882,8 +882,8 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
         }
         
         # Save stage-specific checkpoint
-        os.makedirs('/content/drive/MyDrive/AutomataNexus_Olympus_AGI2/bestmodels', exist_ok=True)
-        stage_checkpoint_path = f'/content/drive/MyDrive/AutomataNexus_Olympus_AGI2/bestmodels/olympus_v3_stage{stage_idx}_best.pt'
+        os.makedirs('/content/AutomataNexus_Olympus_AGI2/finalmodels', exist_ok=True)
+        stage_checkpoint_path = f'/content/AutomataNexus_Olympus_AGI2/finalmodels/olympus_v3_stage{stage_idx}_best.pt'
         torch.save(ensemble_state, stage_checkpoint_path)
         print(f"\033[92m🏛️ Stage {stage_idx} performance: {stage_performance:.2%} - Stage checkpoint saved!\033[0m")
         
@@ -894,7 +894,7 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
             ensemble_state['best_performance'] = best_performance
             ensemble_state['stage_range_trained'] = {'start': stage_start, 'end': stage_end}  # Track which stages were trained
             
-            torch.save(ensemble_state, '/content/drive/MyDrive/AutomataNexus_Olympus_AGI2/bestmodels/olympus_v3_best.pt')
+            torch.save(ensemble_state, '/content/AutomataNexus_Olympus_AGI2/finalmodels/olympus_v3_best.pt')
             print(f"\033[96m🏛️ New best V3 ultimate performance: {best_performance:.2%} - OLYMPUS V3 ULTIMATE saved!\033[0m")
         
         # Memory cleanup
@@ -903,7 +903,7 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
     
     # Save individual specialist models as final versions
     print(f"\n\033[96m🏛️ Saving final OLYMPUS specialist models...\033[0m")
-    save_dir = '/content/drive/MyDrive/AutomataNexus_Olympus_AGI2/bestmodels'
+    save_dir = '/content/AutomataNexus_Olympus_AGI2/finalmodels'
     
     # Save each specialist as final best version
     for name, specialist in olympus.specialists.items():

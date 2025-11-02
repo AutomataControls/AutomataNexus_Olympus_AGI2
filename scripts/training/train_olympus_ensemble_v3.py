@@ -754,8 +754,8 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
             augmentation_factor = 8  # High augmentation for stages 0-5
         elif stage_idx <= 6:  # Stage 6: Medium augmentation
             augmentation_factor = 4  # Medium augmentation for stage 6
-        elif stage_idx <= 12:  # Stages 7-12: NO augmentation to break plateau
-            augmentation_factor = 0  # ZERO augmentation for stages 7-12 to break plateau
+        elif stage_idx <= 13:  # Stages 7-13: NO augmentation to break plateau
+            augmentation_factor = 0  # ZERO augmentation for stages 7-13 to break plateau
         else:  # Stages 13-15: Normal augmentation
             augmentation_factor = 2  # Normal for stages 13-15
         
@@ -802,15 +802,19 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
         if stage_idx <= 9:  # Stages 0-9 (3x3 through 14x14)
             stage_epochs = 60  # High training for stages 0-9
             print(f"\033[93m🔥 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): INTENSIVE TRAINING {stage_epochs} epochs\033[0m")
-        elif stage_idx >= 7 and stage_idx <= 12:  # Stages 7-12 - INTENSIVE to break plateau
-            stage_epochs = 30  # INTENSIVE training for plateau stages 7-12
+        elif stage_idx >= 7 and stage_idx <= 9:  # Stages 7-9 - INTENSIVE to break plateau
+            stage_epochs = 30  # INTENSIVE training for plateau stages 7-9
+        elif stage_idx >= 10 and stage_idx <= 13:  # Stages 10-13 - NUCLEAR training
+            stage_epochs = 50  # NUCLEAR training for stuck stages 10-13
         elif stage_idx >= 13:  # Stages 13-15 - normal training
             stage_epochs = 30  # Normal training for stages 13-15
             print(f"\033[93m🔥 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): INTENSIVE TRAINING {stage_epochs} epochs\033[0m")
         
         # Stage-specific learning rate multipliers to break plateau
-        if stage_idx >= 7 and stage_idx <= 12:  # EXTREME LR for plateau stages 7-12
-            lr_multiplier = 20.0  # 20x LR for stages 7-12 to break plateau
+        if stage_idx >= 7 and stage_idx <= 9:  # EXTREME LR for plateau stages 7-9
+            lr_multiplier = 20.0  # 20x LR for stages 7-9 to break plateau
+        elif stage_idx >= 10 and stage_idx <= 13:  # NUCLEAR LR for stuck stages 10-13
+            lr_multiplier = 50.0  # 50x LR for stages 10-13 to force breakthrough
         elif stage_idx >= 13:  # Normal LR for stages 13-15
             lr_multiplier = 3.0  # 3x LR for stages 13-15
         else:

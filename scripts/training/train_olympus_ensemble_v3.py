@@ -781,7 +781,7 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
         elif grid_size <= 18:
             batch_size = 512   # Stage 12: MASSIVE batch for gradient stability
         elif grid_size <= 22:
-            batch_size = 256   # Stage 13: MASSIVE batch for gradient stability
+            batch_size = 128   # Stage 13: Smaller batch for memory
         elif grid_size <= 27:
             batch_size = 64    # Stage 13: Doubled from 32
         else:  # 30x30

@@ -760,8 +760,8 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
             augmentation_factor = 4  # Medium augmentation for stage 6
         elif stage_idx >= 7 and stage_idx <= 9:  # Stages 7-9: NO augmentation
             augmentation_factor = 0  # ZERO augmentation for stages 7-9
-        elif stage_idx >= 10 and stage_idx <= 15:  # Stages 10-15: High augmentation shock
-            augmentation_factor = 4  # High augmentation for stages 10-15
+        elif stage_idx >= 10 and stage_idx <= 15:  # Stages 10-15: Medium augmentation
+            augmentation_factor = 2  # Reduced augmentation for stages 10-15
         
         dataset = OlympusV3UltimateDataset(
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',
@@ -802,9 +802,12 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
         # Calculate actual epochs for this stage
         stage_epochs = int(OLYMPUS_V3_CONFIG['epochs_per_stage'] * epochs_multiplier)
         
-        # HIGH epochs for stages 0-9, balanced for 10-15
-        if stage_idx <= 9:  # Stages 0-9 (3x3 through 14x14)
-            stage_epochs = 60  # High training for stages 0-9
+        # BALANCED epochs for stages 0-6, intensive for 7-9, fast for 10-15
+        if stage_idx <= 6:  # Stages 0-6
+            stage_epochs = 30  # Balanced training for stages 0-6
+            print(f"\033[93m🔥 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): BALANCED TRAINING {stage_epochs} epochs\033[0m")
+        elif stage_idx <= 9:  # Stages 7-9 (3x3 through 14x14)
+            stage_epochs = 60  # High training for stages 7-9
             print(f"\033[93m🔥 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): INTENSIVE TRAINING {stage_epochs} epochs\033[0m")
         elif stage_idx >= 7 and stage_idx <= 9:  # Stages 7-9 - INTENSIVE to break plateau
             stage_epochs = 60  # INTENSIVE training for plateau stages 7-9

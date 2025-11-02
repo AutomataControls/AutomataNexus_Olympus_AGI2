@@ -716,52 +716,23 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
               f"Complexity: {stage_config['complexity']} | Focus: {stage_config['focus']}\033[0m")
         print(f"\033[96m{'=' * 135}\033[0m")
         
-        # EMERGENCY: Skip loading stuck checkpoints for stages 7-11 - fresh start
-        if stage_idx >= 7 and stage_idx <= 11:
-            print(f"\033[91m🔥 EMERGENCY: Skipping checkpoint load for stuck Stage {stage_idx} - FRESH START\033[0m")
+        # FINAL TRAINING: Load V3 best checkpoint for optimal performance
+        v3_stage_model_path = f'/content/drive/MyDrive/AutomataNexus_Olympus_AGI2/bestmodels/olympus_v3_stage{stage_idx}_best.pt'
+        
+        if os.path.exists(v3_stage_model_path):
+            try:
+                stage_checkpoint = torch.load(v3_stage_model_path, map_location=device)
+                olympus.load_state_dict(stage_checkpoint['ensemble_state_dict'])
+                stage_best = stage_checkpoint.get('best_performance', 0.0)
+                print(f"\033[92m🏛️ Loaded V3 Stage {stage_idx} checkpoint - Previous best: {stage_best:.2%}\033[0m")
+            except Exception as e:
+                print(f"\033[93m⚠️ Could not load V3 stage {stage_idx} checkpoint: {e}\033[0m")
         else:
-            # Try to load stage-specific checkpoint - V3 first, then fallback to V2, then V1
-            v3_stage_model_path = f'/content/drive/MyDrive/AutomataNexus_Olympus_AGI2/bestmodels/olympus_v3_stage{stage_idx}_best.pt'
-            v2_stage_model_path = f'/content/drive/MyDrive/AutomataNexus_Olympus_AGI2/bestmodels/olympus_v2_stage{stage_idx}_best.pt'
-            v1_stage_model_path = f'/content/drive/MyDrive/AutomataNexus_Olympus_AGI2/bestmodels/olympus_v1_stage{stage_idx}_best.pt'
-            
-            if os.path.exists(v3_stage_model_path):
-                try:
-                    stage_checkpoint = torch.load(v3_stage_model_path, map_location=device)
-                    olympus.load_state_dict(stage_checkpoint['ensemble_state_dict'])
-                    stage_best = stage_checkpoint.get('best_performance', 0.0)
-                    print(f"\033[92m🏛️ Loaded V3 Stage {stage_idx} checkpoint - Previous best: {stage_best:.2%}\033[0m")
-                except Exception as e:
-                    print(f"\033[93m⚠️ Could not load V3 stage {stage_idx} checkpoint: {e}\033[0m")
-            elif os.path.exists(v2_stage_model_path):
-                # Fallback to V2 stage checkpoint if V3 doesn't exist
-                try:
-                    v2_stage_checkpoint = torch.load(v2_stage_model_path, map_location=device)
-                    olympus.load_state_dict(v2_stage_checkpoint['ensemble_state_dict'])
-                    stage_best = v2_stage_checkpoint.get('best_performance', 0.0)
-                    print(f"\033[96m🏛️ Loaded V2 Stage {stage_idx} checkpoint (V3 not found) - Previous best: {stage_best:.2%}\033[0m")
-                except Exception as e:
-                    print(f"\033[93m⚠️ Could not load V2 stage {stage_idx} checkpoint: {e}\033[0m")
-            elif os.path.exists(v1_stage_model_path):
-                # Fallback to V1 stage checkpoint if V2 doesn't exist
-                try:
-                    v1_stage_checkpoint = torch.load(v1_stage_model_path, map_location=device)
-                    olympus.load_state_dict(v1_stage_checkpoint['ensemble_state_dict'])
-                    stage_best = v1_stage_checkpoint.get('best_performance', 0.0)
-                    print(f"\033[94m🏛️ Loaded V1 Stage {stage_idx} checkpoint (V2/V3 not found) - Previous best: {stage_best:.2%}\033[0m")
-                except Exception as e:
-                    print(f"\033[93m⚠️ Could not load V1 stage {stage_idx} checkpoint: {e}\033[0m")
+            print(f"\033[93m⚠️ No V3 checkpoint found for stage {stage_idx} - using current weights\033[0m")
         
         # Create ultimate augmented dataset for this stage
-        # Stage-specific augmentation factor - OPTIMIZED FOR PLATEAU BREAKING
-        if stage_idx <= 5:  # Stages 0-5: Very high augmentation
-            augmentation_factor = 8  # High augmentation for stages 0-5
-        elif stage_idx <= 6:  # Stage 6: Medium augmentation
-            augmentation_factor = 4  # Medium augmentation for stage 6
-        elif stage_idx >= 7 and stage_idx <= 9:  # Stages 7-9: NO augmentation
-            augmentation_factor = 0  # ZERO augmentation for stages 7-9
-        elif stage_idx >= 10 and stage_idx <= 15:  # Stages 10-15: Medium augmentation
-            augmentation_factor = 2  # Reduced augmentation for stages 10-15
+        # FINAL TRAINING: No augmentation for all stages - load best checkpoints only
+        augmentation_factor = 0  # NO augmentation for final training run
         
         dataset = OlympusV3UltimateDataset(
             data_dir='/content/AutomataNexus_Olympus_AGI2/data',
@@ -802,26 +773,12 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
         # Calculate actual epochs for this stage
         stage_epochs = int(OLYMPUS_V3_CONFIG['epochs_per_stage'] * epochs_multiplier)
         
-        # BALANCED epochs for stages 0-6, intensive for 7-9, fast for 10-15
-        if stage_idx <= 6:  # Stages 0-6
-            stage_epochs = 30  # Balanced training for stages 0-6
-            print(f"\033[93m🔥 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): BALANCED TRAINING {stage_epochs} epochs\033[0m")
-        elif stage_idx <= 9:  # Stages 7-9 (3x3 through 14x14)
-            stage_epochs = 60  # High training for stages 7-9
-            print(f"\033[93m🔥 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): INTENSIVE TRAINING {stage_epochs} epochs\033[0m")
-        elif stage_idx >= 7 and stage_idx <= 9:  # Stages 7-9 - INTENSIVE to break plateau
-            stage_epochs = 60  # INTENSIVE training for plateau stages 7-9
-        elif stage_idx >= 10 and stage_idx <= 15:  # Stages 10-15 - FAST SHOCK training
-            stage_epochs = 20  # FAST SHOCK training for stuck stages 10-15
-            print(f"\033[93m🔥 Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): INTENSIVE TRAINING {stage_epochs} epochs\033[0m")
+        # FINAL TRAINING: 10 epochs for all stages - fast convergence on best checkpoints
+        stage_epochs = 10  # Fast final training for all stages
+        print(f"\033[93m🔥 FINAL Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): FINAL TRAINING {stage_epochs} epochs\033[0m")
         
-        # Stage-specific learning rate multipliers to break plateau
-        if stage_idx >= 7 and stage_idx <= 9:  # EXTREME LR for plateau stages 7-9
-            lr_multiplier = 20.0  # 20x LR for stages 7-9 to break plateau
-        elif stage_idx >= 10 and stage_idx <= 15:  # MEDIUM LR + HIGH DATA for stuck stages 10-15
-            lr_multiplier = 5.0  # MEDIUM LR with high augmentation for stages 10-15
-        else:
-            lr_multiplier = 1.0  # Normal LR for stages 0-6
+        # FINAL TRAINING: Normal learning rates for fine-tuning
+        lr_multiplier = 1.0  # Normal LR for final training - fine-tuning best models
         
         # Adjust learning rates for this stage
         for param_group in fusion_optimizer.param_groups:

@@ -536,7 +536,7 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
     # Try to load V3 first if it exists (to continue training)
     v3_loaded = False
     v3_checkpoint = None
-    v3_model_path = '/content/AutomataNexus_Olympus_AGI2/bestmodels/olympus_v3_best.pt'
+    v3_model_path = '/content/AutomataNexus_Olympus_AGI2/finalmodels/olympus_v3_best.pt'
     if os.path.exists(v3_model_path):
         try:
             # Load the checkpoint to check what's in it
@@ -717,7 +717,7 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
         print(f"\033[96m{'=' * 135}\033[0m")
         
         # FINAL TRAINING: Load V3 best checkpoint for optimal performance
-        v3_stage_model_path = f'/content/AutomataNexus_Olympus_AGI2/bestmodels/olympus_v3_stage{stage_idx}_best.pt'
+        v3_stage_model_path = f'/content/AutomataNexus_Olympus_AGI2/finalmodels/olympus_v3_stage{stage_idx}_best.pt'
         
         if os.path.exists(v3_stage_model_path):
             try:
@@ -773,11 +773,9 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
         # Calculate actual epochs for this stage
         stage_epochs = int(OLYMPUS_V3_CONFIG['epochs_per_stage'] * epochs_multiplier)
         
-        # FINAL TRAINING: 40 epoch warmup + 10 final epochs = 50 total per stage
-        warmup_epochs = 40  # Warmup training to adapt to stage
-        final_epochs = 10   # Final training for convergence
-        stage_epochs = warmup_epochs + final_epochs  # Total training epochs
-        print(f"\033[93m🔥 FINAL Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): WARMUP {warmup_epochs} + FINAL {final_epochs} = {stage_epochs} epochs\033[0m")
+        # FINAL TRAINING: 10 epochs only - fast convergence on best checkpoints
+        stage_epochs = 10  # Fast final training for all stages
+        print(f"\033[93m🔥 FINAL Stage {stage_idx} ({stage_config['max_grid_size']}x{stage_config['max_grid_size']}): FINAL TRAINING {stage_epochs} epochs\033[0m")
         
         # FINAL TRAINING: Normal learning rates for fine-tuning
         lr_multiplier = 1.0  # Normal LR for final training - fine-tuning best models

@@ -760,7 +760,7 @@ def train_olympus_ensemble_v3(stage_start=12, stage_end=15):  # Skip stages 0-11
         elif grid_size <= 27:
             batch_size = 64    # Stage 13: Doubled from 32
         else:  # 30x30
-            batch_size = 64    # Stage 14-15: Memory optimized
+            batch_size = 48    # Stage 14-15: Memory optimized
         
         if batch_size != 512:
             if batch_size > 512:
